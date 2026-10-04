@@ -25,8 +25,8 @@ docker compose exec -T laravel.test npm run build
 ```
 
 On PowerShell, replace `$(pwd)` with `${PWD}`. The app is served at http://localhost.
-The seed creates the anonymised pilot company and two local accounts, X
-(Platform Admin) and the pilot company admin. Both use `SEED_DEFAULT_PASSWORD`.
+The seed creates the anonymised pilot company and two local accounts, `platform.admin@example.test`
+(Platform Admin) and `company.admin@example.test` (pilot company admin). Both use `SEED_DEFAULT_PASSWORD`.
 
 ## Gates (run before every commit)
 
