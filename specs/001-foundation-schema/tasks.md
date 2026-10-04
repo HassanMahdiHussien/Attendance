@@ -89,7 +89,7 @@ Gate commands (run inside the app container):
 - [x] T041 [P] `WEIRDNESS.md`: denormalised company_id + composite FKs; users outside the throwing scope; DB triggers for immutability; reference auto-numbering skips manual values
 - [x] T042 [P] `docs/adr/0009-filament-v5-livewire-4.md` + index row
 - [x] T043 README.md with the quickstart (orchestrator)
-- [ ] T044 Validate quickstart from a clean clone; full gate; Pint (orchestrator)
+- [x] T044 Validate quickstart from a clean clone; full gate; Pint (orchestrator)
 
 ## Dependencies
 
