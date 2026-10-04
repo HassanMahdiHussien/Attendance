@@ -57,15 +57,15 @@ Gate commands (run inside the app container):
 
 ## Phase 4: User Story 2 — Legal record integrity (P1) (Codex run B)
 
-- [ ] T023 [US2] `app/Services/SequenceService.php` (row lock, transaction required, per company/year)
-- [ ] T024 [US2] Case-number and employee-code assignment in model `creating` hooks via SequenceService
-- [ ] T025 [US2] `app/Services/CaseEventLogger.php`, `app/Services/AuditLogger.php`
-- [ ] T026 [US2] `app/Services/Documents/DocumentIssuer.php` (issue + previewReference + gate R6b + manual-skip numbering + supersede previous)
-- [ ] T027 [US2] `app/Services/Documents/DocumentCorrector.php`
-- [ ] T028 [P] [US2] `tests/Feature/Immutability/*Test.php`: full invariant matrix rows for logs, attachments, documents, contents, citations, approvals, legal units (Eloquent, builder, raw SQL)
-- [ ] T029 [P] [US2] `tests/Feature/Sequences/SequenceTest.php`: case numbers, employee codes (given vs generated), reference per year reset, manual override, manual skip, duplicate manual rejected, outside-transaction throws, rollback doesn't consume
-- [ ] T030 [P] [US2] `tests/Feature/Documents/IssueAndCorrectTest.php`: gate (languages, second review, Doc A approvals), issue, correct, abandoned correction, supersede on re-issue, case events written
-- [ ] T031 [P] [US2] `tests/Feature/Migrations/TriggerLifecycleTest.php`: migrate:fresh + rollback recreate/drop triggers
+- [x] T023 [US2] `app/Services/SequenceService.php` (row lock, transaction required, per company/year)
+- [x] T024 [US2] Case-number and employee-code assignment in model `creating` hooks via SequenceService
+- [x] T025 [US2] `app/Services/CaseEventLogger.php`, `app/Services/AuditLogger.php`
+- [x] T026 [US2] `app/Services/Documents/DocumentIssuer.php` (issue + previewReference + gate R6b + manual-skip numbering + supersede previous)
+- [x] T027 [US2] `app/Services/Documents/DocumentCorrector.php`
+- [x] T028 [P] [US2] `tests/Feature/Immutability/*Test.php`: full invariant matrix rows for logs, attachments, documents, contents, citations, approvals, legal units (Eloquent, builder, raw SQL)
+- [x] T029 [P] [US2] `tests/Feature/Sequences/SequenceTest.php`: case numbers, employee codes (given vs generated), reference per year reset, manual override, manual skip, duplicate manual rejected, outside-transaction throws, rollback doesn't consume
+- [x] T030 [P] [US2] `tests/Feature/Documents/IssueAndCorrectTest.php`: gate (languages, second review, Doc A approvals), issue, correct, abandoned correction, supersede on re-issue, case events written
+- [x] T031 [P] [US2] `tests/Feature/Migrations/TriggerLifecycleTest.php`: migrate:fresh + rollback recreate/drop triggers
 
 **Checkpoint**: gate green → review → commit.
 

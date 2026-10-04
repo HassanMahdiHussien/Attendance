@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Enums\SequenceKey;
 use App\Models\Concerns\BelongsToCompany;
+use App\Services\SequenceService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,6 +20,16 @@ class Employee extends Model
     protected $guarded = [];
 
     protected array $companyParents = ['branch'];
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $employee): void {
+            if (blank($employee->employee_code)) {
+                $number = app(SequenceService::class)->next((int) $employee->company_id, SequenceKey::EmployeeCode);
+                $employee->employee_code = 'EMP-'.str_pad((string) $number, 4, '0', STR_PAD_LEFT);
+            }
+        });
+    }
 
     protected function casts(): array
     {

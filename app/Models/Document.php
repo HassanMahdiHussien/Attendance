@@ -29,7 +29,8 @@ class Document extends Model
     protected static function booted(): void
     {
         static::saving(function (self $document): void {
-            if ($document->previous_version_id !== null && blank($document->correction_reason)) {
+            if (! ($document->exists && $document->getRawOriginal('is_locked'))
+                && $document->previous_version_id !== null && blank($document->correction_reason)) {
                 throw ValidationException::withMessages(['correction_reason' => 'A correction reason is required.']);
             }
         });
@@ -55,6 +56,15 @@ class Document extends Model
             }
         });
         static::deleting(fn () => throw new ImmutableRecordException('Documents cannot be deleted.'));
+    }
+
+    public function setCompanyIdAttribute($value): void
+    {
+        if ($this->exists && $this->getRawOriginal('is_locked') && (int) $this->getRawOriginal('company_id') !== (int) $value) {
+            throw new ImmutableRecordException('Locked documents cannot change company.');
+        }
+
+        $this->attributes['company_id'] = $value;
     }
 
     protected function casts(): array

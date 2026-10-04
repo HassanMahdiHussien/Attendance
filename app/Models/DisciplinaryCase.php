@@ -6,8 +6,10 @@ use App\Enums\CaseStatus;
 use App\Enums\DefenseAcceptance;
 use App\Enums\Jurisdiction;
 use App\Enums\Outcome;
+use App\Enums\SequenceKey;
 use App\Exceptions\ImmutableRecordException;
 use App\Models\Concerns\BelongsToCompany;
+use App\Services\SequenceService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -30,6 +32,11 @@ class DisciplinaryCase extends Model
 
     protected static function booted(): void
     {
+        static::creating(function (self $case): void {
+            if (blank($case->case_number)) {
+                $case->case_number = app(SequenceService::class)->next((int) $case->company_id, SequenceKey::CaseNumber);
+            }
+        });
         static::saving(function (self $case): void {
             if (! $case->exists) {
                 $branch = Branch::withoutGlobalScopes()->find($case->branch_id);
