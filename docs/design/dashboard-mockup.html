@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>معاينة تصميم ٢ — عصري</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&family=Amiri:wght@400;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#111827;
+    --bg:#F7F8FB;
+    --primary:#4F46E5;
+    --primary-light:#EEF0FE;
+    --amber:#F59E0B;
+    --amber-light:#FEF6E6;
+    --red:#EF4444;
+    --red-light:#FEECEC;
+    --green:#10B981;
+    --green-light:#E9FBF3;
+  }
+  body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--ink);}
+  .doc-font{font-family:'Amiri',serif;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  .card{box-shadow:0 1px 2px rgba(17,24,39,.04), 0 8px 24px -12px rgba(17,24,39,.08);}
+  .step-line{background:linear-gradient(90deg, var(--primary) var(--p,60%), #E5E7EB var(--p,60%));}
+</style>
+</head>
+<body>
+
+<!-- ============ شاشة 1: الداشبورد ============ -->
+<div class="min-h-screen">
+  <!-- شريط علوي -->
+  <header class="bg-white border-b border-gray-100 px-8 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-8">
+      <div class="font-black text-lg" style="color:var(--primary)">نظام الانضباط</div>
+      <nav class="flex gap-1 text-sm text-gray-500">
+        <a class="px-3 py-2 rounded-lg bg-[var(--primary-light)] text-[var(--primary)] font-medium">الحالات</a>
+        <a class="px-3 py-2 rounded-lg hover:bg-gray-50">اللجنة</a>
+        <a class="px-3 py-2 rounded-lg hover:bg-gray-50">التقارير</a>
+        <a class="px-3 py-2 rounded-lg hover:bg-gray-50">الموظفون</a>
+      </nav>
+    </div>
+    <div class="flex items-center gap-3">
+      <span class="text-sm text-gray-400">شركة الواحة</span>
+      <div class="w-8 h-8 rounded-full bg-[var(--primary)] text-white text-xs flex items-center justify-center font-bold">ب.ج</div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto p-8">
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h1 class="text-2xl font-black">لوحة الحالات</h1>
+        <p class="text-sm text-gray-400 mt-1">٣ حالات نشطة، حالتان بحاجة متابعة</p>
+      </div>
+      <button class="bg-[var(--primary)] text-white text-sm font-bold px-5 py-3 rounded-xl shadow-lg shadow-indigo-200">+ فتح حالة جديدة</button>
+    </div>
+
+    <!-- تنبيه -->
+    <div class="bg-[var(--red-light)] rounded-2xl p-4 mb-6 flex items-center gap-3">
+      <div class="w-8 h-8 rounded-full bg-[var(--red)] text-white flex items-center justify-center text-sm">!</div>
+      <div class="text-sm">
+        <span class="font-bold" style="color:var(--red)">حالتان قاربتا مهلة الـ١٥ يوم القانونية</span>
+        <span class="text-gray-500"> — يلزم اتخاذ قرار قريباً</span>
+      </div>
+    </div>
+
+    <!-- بطاقات نظيفة -->
+    <div class="grid grid-cols-1 gap-3">
+
+      <div class="card bg-white rounded-2xl p-4 flex items-center gap-4">
+        <div class="w-11 h-11 rounded-full bg-[var(--primary-light)] text-[var(--primary)] font-bold flex items-center justify-center shrink-0">ر.ح</div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2">
+            <span class="font-bold">رياض حامد عبدالله</span>
+            <span class="text-xs mono text-gray-300">٠١٤٢</span>
+          </div>
+          <div class="text-xs text-gray-400 mt-0.5">مشغل — قسم الإنتاج</div>
+        </div>
+        <!-- ستيبر نقطي مبسّط -->
+        <div class="hidden sm:flex items-center gap-1.5 shrink-0">
+          <span class="w-2 h-2 rounded-full bg-[var(--primary)]"></span>
+          <span class="w-2 h-2 rounded-full bg-[var(--primary)]"></span>
+          <span class="w-2 h-2 rounded-full bg-[var(--primary)]"></span>
+          <span class="w-2 h-2 rounded-full bg-[var(--primary)]"></span>
+          <span class="w-2 h-2 rounded-full bg-gray-200"></span>
+        </div>
+        <span class="text-xs font-bold px-3 py-1.5 rounded-full shrink-0" style="background:var(--red-light);color:var(--red)">باقي يومان</span>
+      </div>
+
+      <div class="card bg-white rounded-2xl p-4 flex items-center gap-4">
+        <div class="w-11 h-11 rounded-full bg-[var(--primary-light)] text-[var(--primary)] font-bold flex items-center justify-center shrink-0">م.ه</div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2">
+            <span class="font-bold">مريم هاشم داخل</span>
+            <span class="text-xs mono text-gray-300">٠١٣٩</span>
+          </div>
+          <div class="text-xs text-gray-400 mt-0.5">موظفة — الموارد البشرية</div>
+        </div>
+        <div class="hidden sm:flex items-center gap-1.5 shrink-0">
+          <span class="w-2 h-2 rounded-full bg-[var(--primary)]"></span>
+          <span class="w-2 h-2 rounded-full bg-[var(--primary)]"></span>
+          <span class="w-2 h-2 rounded-full bg-[var(--primary)]"></span>
+          <span class="w-2 h-2 rounded-full bg-[var(--primary)]"></span>
+          <span class="w-2 h-2 rounded-full bg-[var(--primary)]"></span>
+        </div>
+        <span class="text-xs font-bold px-3 py-1.5 rounded-full shrink-0" style="background:var(--amber-light);color:var(--amber)">بانتظار توقيع</span>
+      </div>
+
+      <div class="card bg-white rounded-2xl p-4 flex items-center gap-4 opacity-60">
+        <div class="w-11 h-11 rounded-full bg-gray-100 text-gray-400 font-bold flex items-center justify-center shrink-0">م.خ</div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2">
+            <span class="font-bold">محمد خيرالله غازي</span>
+            <span class="text-xs mono text-gray-300">٠١٣٥</span>
+          </div>
+          <div class="text-xs text-gray-400 mt-0.5">مشغل — قسم الصيانة</div>
+        </div>
+        <div class="hidden sm:flex items-center gap-1.5 shrink-0">
+          <span class="w-2 h-2 rounded-full bg-[var(--green)]"></span>
+          <span class="w-2 h-2 rounded-full bg-[var(--green)]"></span>
+          <span class="w-2 h-2 rounded-full bg-[var(--green)]"></span>
+          <span class="w-2 h-2 rounded-full bg-[var(--green)]"></span>
+          <span class="w-2 h-2 rounded-full bg-[var(--green)]"></span>
+        </div>
+        <span class="text-xs font-bold px-3 py-1.5 rounded-full shrink-0" style="background:var(--green-light);color:var(--green)">مغلقة</span>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- فاصل -->
+<div class="text-center py-3 bg-[var(--ink)] text-white/60 text-xs">
+  معاينة ٢ — شاشة تأكيد إصدار مستند
+</div>
+
+<!-- ============ شاشة 2: تأكيد الإصدار ============ -->
+<div class="min-h-screen flex items-center justify-center py-16 px-4" style="background:var(--bg)">
+  <div class="w-full max-w-xl">
+
+    <div class="card bg-white rounded-3xl p-8">
+      <div class="text-xs font-bold text-gray-400 mb-4 flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-[var(--amber)]"></span> مسودة — بانتظار تأكيدك
+      </div>
+
+      <!-- بطاقة معاينة المستند -->
+      <div class="rounded-2xl border border-gray-100 p-8 doc-font bg-gray-50">
+        <div class="text-center mb-6">
+          <div class="text-xs text-gray-400 font-sans">شركة الواحة للمشروبات</div>
+          <div class="text-2xl font-bold mt-2">طلب دفاع</div>
+        </div>
+        <div class="text-sm leading-8 space-y-1">
+          <div><span class="font-bold">من:</span> اللجنة الانضباطية</div>
+          <div><span class="font-bold">إلى:</span> رياض حامد عبدالله</div>
+          <div><span class="font-bold">التاريخ:</span> ١٨ حزيران ٢٠٢٦</div>
+          <p class="pt-3">عزيزي السيد رياض، أنت تعمل مع الشركة منذ ١ تموز ٢٠١٣...</p>
+        </div>
+      </div>
+
+      <div class="mt-4 flex items-start gap-2 text-xs text-[var(--amber)] font-medium">
+        <span>⚠</span>
+        <span>تأكد من صحة الأسماء والتواريخ — لا يمكن التعديل بعد الإصدار</span>
+      </div>
+
+      <div class="flex gap-3 mt-6">
+        <button class="flex-1 bg-[var(--primary)] text-white font-bold text-sm py-4 rounded-2xl shadow-lg shadow-indigo-200 flex items-center justify-center gap-2">
+          ✓ تأكيد وإصدار
+        </button>
+        <button class="px-6 py-4 rounded-2xl text-sm font-bold text-gray-400 border border-gray-200">تعديل</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
