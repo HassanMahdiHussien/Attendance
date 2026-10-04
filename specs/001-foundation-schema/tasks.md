@@ -20,38 +20,38 @@ Gate commands (run inside the app container):
 
 ## Phase 1: Setup (orchestrator)
 
-- [ ] T001 Create Laravel 13 skeleton via `laravelsail/php84-composer` and move it into the repo root, keeping existing docs, `.specify/`, `.claude/`, `.gitignore`, `.gitattributes`
-- [ ] T002 Install Sail with MySQL (`sail:install --with=mysql`), PHP 8.4 runtime; `.env`/`.env.example` set to `DB_CONNECTION=mysql`, `QUEUE_CONNECTION=database`, `FILESYSTEM_DISK=local`, `SEED_DEFAULT_PASSWORD=`
-- [ ] T003 Add `queue` (`php artisan queue:work --tries=3`) and `scheduler` (`php artisan schedule:work`) services to `compose.yaml`
-- [ ] T004 Replace PHPUnit tests with Pest 5 + pest-plugin-laravel; configure `phpunit.xml` to use MySQL database `testing`
-- [ ] T005 [P] Install livewire/livewire 4, filament/filament 5 (no panel yet), spatie/laravel-permission 8 (publish config + migration)
-- [ ] T006 [P] `npm install` + `npm run build` succeed in container
-- [ ] T007 Bring the stack up, run default migrations and the default test suite; confirm green
+- [x] T001 Create Laravel 13 skeleton via `laravelsail/php84-composer` and move it into the repo root, keeping existing docs, `.specify/`, `.claude/`, `.gitignore`, `.gitattributes`
+- [x] T002 Install Sail with MySQL (`sail:install --with=mysql`), PHP 8.4 runtime; `.env`/`.env.example` set to `DB_CONNECTION=mysql`, `QUEUE_CONNECTION=database`, `FILESYSTEM_DISK=local`, `SEED_DEFAULT_PASSWORD=`
+- [x] T003 Add `queue` (`php artisan queue:work --tries=3`) and `scheduler` (`php artisan schedule:work`) services to `compose.yaml`
+- [x] T004 Replace PHPUnit tests with Pest 5 + pest-plugin-laravel; configure `phpunit.xml` to use MySQL database `testing`
+- [x] T005 [P] Install livewire/livewire 4, filament/filament 5 (no panel yet), spatie/laravel-permission 8 (publish config + migration)
+- [x] T006 [P] `npm install` + `npm run build` succeed in container
+- [x] T007 Bring the stack up, run default migrations and the default test suite; confirm green
 
 ---
 
 ## Phase 2: Foundational (Codex run A)
 
-- [ ] T008 [P] Enums in `app/Enums/`: CaseStatus (exact list in data-model.md), DocumentType, DocumentStatus, DraftedBy, PenaltyType, Outcome, DefenseAcceptance, Jurisdiction, PoolRole, UserRole, ReportSource, ReportStatus, CaseLinkType, Vote, SignaturePurpose, SignatureStatus, PresenceCheck, AttachmentKind, LawKind, LawApprovalStatus, LegalUnitStatus, RelevanceCheck, SequenceKey, ApprovalDecision, SubscriptionStatus, AiGenerationStatus
-- [ ] T009 [P] Exceptions in `app/Exceptions/`: ImmutableRecordException, MissingTenantContext, TenantMismatch, IssuanceBlocked
-- [ ] T010 `app/Support/Tenancy/TenantContext.php` (scoped singleton), `CompanyScope.php`, `LegalLibraryScope.php` per contracts
-- [ ] T011 `app/Models/Concerns/BelongsToCompany.php` (scope + stamping + parent copy/mismatch) and `AppendOnly.php` (model guard)
-- [ ] T012 Migrations, platform tables: companies (incl. subscription_status), hr_partners, law_firm_partners, pivots; modify users (company_id, employee_id unique, primary_role, partner FKs, is_active)
-- [ ] T013 Migrations, tenant tables with `unique(company_id,id)` and composite FKs: branches, locations, employees, branch_user, committee_mandates, committee_pool_members, violation_reports, report_witnesses, cases, case_witnesses, case_events, case_links, committee_session_attendances, appeal_trackings, attachments, documents, document_contents, document_approvals, signatures, citations, company_sequences
-- [ ] T014 Migrations, legal library: laws, law_jurisdictions, legal_units
-- [ ] T015 Migrations, audit_logs and ai_generation_logs
-- [ ] T016 Triggers migration (up creates / down drops) implementing every DB rule in contracts/domain-services.md
-- [ ] T017 Eloquent models for every table (relations, casts, BelongsToCompany/AppendOnly, guards for locked documents/contents/citations/approvals, verified legal units, no-delete on cases/documents/signatures/approvals, users role/company invariant, enabled_languages ar+en invariant); case model `DisciplinaryCase` on table `cases`
-- [ ] T018 Factories for every model (create inside transactions where numbering applies)
+- [x] T008 [P] Enums in `app/Enums/`: CaseStatus (exact list in data-model.md), DocumentType, DocumentStatus, DraftedBy, PenaltyType, Outcome, DefenseAcceptance, Jurisdiction, PoolRole, UserRole, ReportSource, ReportStatus, CaseLinkType, Vote, SignaturePurpose, SignatureStatus, PresenceCheck, AttachmentKind, LawKind, LawApprovalStatus, LegalUnitStatus, RelevanceCheck, SequenceKey, ApprovalDecision, SubscriptionStatus, AiGenerationStatus
+- [x] T009 [P] Exceptions in `app/Exceptions/`: ImmutableRecordException, MissingTenantContext, TenantMismatch, IssuanceBlocked
+- [x] T010 `app/Support/Tenancy/TenantContext.php` (scoped singleton), `CompanyScope.php`, `LegalLibraryScope.php` per contracts
+- [x] T011 `app/Models/Concerns/BelongsToCompany.php` (scope + stamping + parent copy/mismatch) and `AppendOnly.php` (model guard)
+- [x] T012 Migrations, platform tables: companies (incl. subscription_status), hr_partners, law_firm_partners, pivots; modify users (company_id, employee_id unique, primary_role, partner FKs, is_active)
+- [x] T013 Migrations, tenant tables with `unique(company_id,id)` and composite FKs: branches, locations, employees, branch_user, committee_mandates, committee_pool_members, violation_reports, report_witnesses, cases, case_witnesses, case_events, case_links, committee_session_attendances, appeal_trackings, attachments, documents, document_contents, document_approvals, signatures, citations, company_sequences
+- [x] T014 Migrations, legal library: laws, law_jurisdictions, legal_units
+- [x] T015 Migrations, audit_logs and ai_generation_logs
+- [x] T016 Triggers migration (up creates / down drops) implementing every DB rule in contracts/domain-services.md
+- [x] T017 Eloquent models for every table (relations, casts, BelongsToCompany/AppendOnly, guards for locked documents/contents/citations/approvals, verified legal units, no-delete on cases/documents/signatures/approvals, users role/company invariant, enabled_languages ar+en invariant); case model `DisciplinaryCase` on table `cases`
+- [x] T018 Factories for every model (create inside transactions where numbering applies)
 
 ## Phase 3: User Story 1 — Tenant isolation (P1) (Codex run A)
 
 **Independent test**: two companies; a company-A context never reads/writes company-B data; Platform Admin sees both.
 
-- [ ] T019 [US1] `app/Http/Middleware/SetTenantContext.php` registered in web group; Queue before/after listener resetting context (`AppServiceProvider`)
-- [ ] T020 [P] [US1] `tests/Feature/Tenancy/IsolationTest.php`: dataset over every T model — list, find, count, builder update/delete, create stamping, explicit mismatch
-- [ ] T021 [P] [US1] `tests/Feature/Tenancy/ContextTest.php`: fail-closed when unset, runForCompany restore, runAcrossAllCompanies, platform admin all, job context reset, legal library scope (statutes global, regulation own-company)
-- [ ] T022 [P] [US1] `tests/Feature/Tenancy/CompositeForeignKeyTest.php`: each tenant FK rejects another company's row via Eloquent and raw SQL; citation/attachment/user model validations
+- [x] T019 [US1] `app/Http/Middleware/SetTenantContext.php` registered in web group; Queue before/after listener resetting context (`AppServiceProvider`)
+- [x] T020 [P] [US1] `tests/Feature/Tenancy/IsolationTest.php`: dataset over every T model — list, find, count, builder update/delete, create stamping, explicit mismatch
+- [x] T021 [P] [US1] `tests/Feature/Tenancy/ContextTest.php`: fail-closed when unset, runForCompany restore, runAcrossAllCompanies, platform admin all, job context reset, legal library scope (statutes global, regulation own-company)
+- [x] T022 [P] [US1] `tests/Feature/Tenancy/CompositeForeignKeyTest.php`: each tenant FK rejects another company's row via Eloquent and raw SQL; citation/attachment/user model validations
 
 **Checkpoint**: gate green → review → commit.
 
