@@ -4,6 +4,18 @@
 @source '../../storage/framework/views/*.php';
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+    --color-ink: #111827;
+    --color-bg: #F7F8FB;
+    --color-primary: #4F46E5;
+    --color-primary-light: #EEF0FE;
+    --color-amber: #F59E0B;
+    --color-amber-light: #FEF6E6;
+    --color-red: #EF4444;
+    --color-red-light: #FEECEC;
+    --color-green: #10B981;
+    --color-green-light: #E9FBF3;
+    --font-sans: 'Tajawal', sans-serif;
+    --font-tajawal: 'Tajawal', sans-serif;
+    --font-amiri: 'Amiri', serif;
+    --font-mono: 'JetBrains Mono', monospace;
 }

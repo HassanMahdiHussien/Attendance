@@ -71,24 +71,24 @@ Gate commands (run inside the app container):
 
 ## Phase 5: User Story 3 — Pilot seed data (P2) (Codex run C)
 
-- [ ] T032 [US3] `database/seeders/LawsSeeder.php` (37/2015 federal_iraq, 71/1987 kurdistan_region, 18/2023 both; no units)
-- [ ] T033 [US3] `database/seeders/PilotCompanySeeder.php` (anonymised: company, Hilla branch federal_iraq, locations, ~12 employees incl. GM, mandate 1097 dated 2026-08-26, pool 5 HR / 2 Legal / 2 Union)
-- [ ] T034 [US3] `database/seeders/LocalUsersSeeder.php` (platform admin + company admin; password from `SEED_DEFAULT_PASSWORD`, refuse to run if empty) and `DatabaseSeeder`
-- [ ] T035 [P] [US3] `tests/Feature/Seed/PilotSeedTest.php`: structure counts, jurisdictions, no real names from the Administrative Order (list of the 9 real names + GM name in the test)
+- [x] T032 [US3] `database/seeders/LawsSeeder.php` (37/2015 federal_iraq, 71/1987 kurdistan_region, 18/2023 both; no units)
+- [x] T033 [US3] `database/seeders/PilotCompanySeeder.php` (anonymised: company, Hilla branch federal_iraq, locations, ~12 employees incl. GM, mandate 1097 dated 2026-08-26, pool 5 HR / 2 Legal / 2 Union)
+- [x] T034 [US3] `database/seeders/LocalUsersSeeder.php` (platform admin + company admin; password from `SEED_DEFAULT_PASSWORD`, refuse to run if empty) and `DatabaseSeeder`
+- [x] T035 [P] [US3] `tests/Feature/Seed/PilotSeedTest.php`: structure counts, jurisdictions, no real names from the Administrative Order (list of the 9 real names + GM name in the test)
 
 ## Phase 6: User Story 4 — Arabic shell (P3) (Codex run C)
 
-- [ ] T036 [US4] `resources/css/app.css` tokens (§18) + `resources/views/layouts/app.blade.php` (`lang="ar" dir="rtl"`, Tajawal/Amiri/JetBrains Mono) + Arabic home view
-- [ ] T037 [US4] `app/Jobs/HeartbeatJob.php`, `app/Console/Commands/Heartbeat.php` (`app:heartbeat [--dispatch]`), scheduled every minute in `routes/console.php`
-- [ ] T038 [P] [US4] `tests/Feature/Shell/HomePageTest.php` (RTL, Arabic, fonts) and heartbeat job test
+- [x] T036 [US4] `resources/css/app.css` tokens (§18) + `resources/views/layouts/app.blade.php` (`lang="ar" dir="rtl"`, Tajawal/Amiri/JetBrains Mono) + Arabic home view
+- [x] T037 [US4] `app/Jobs/HeartbeatJob.php`, `app/Console/Commands/Heartbeat.php` (`app:heartbeat [--dispatch]`), scheduled every minute in `routes/console.php`
+- [x] T038 [P] [US4] `tests/Feature/Shell/HomePageTest.php` (RTL, Arabic, fonts) and heartbeat job test
 
 ## Phase 7: Polish (Codex run C + orchestrator)
 
-- [ ] T039 [P] Rewrite `docs/ERD.md` to match the implemented schema and CLAUDE.md (drop LEGAL_ARTICLES / COMPANY_LEGAL_EXCERPTS / content_snapshot; add missing tables/columns; note composite FKs and triggers)
-- [ ] T040 [P] Update `docs/LAUNCH-CHECKLIST.md` (sensitive trigger = request-only; leave does not pause deadlines — both resolved per CLAUDE.md)
-- [ ] T041 [P] `WEIRDNESS.md`: denormalised company_id + composite FKs; users outside the throwing scope; DB triggers for immutability; reference auto-numbering skips manual values
-- [ ] T042 [P] `docs/adr/0009-filament-v5-livewire-4.md` + index row
-- [ ] T043 README.md with the quickstart (orchestrator)
+- [x] T039 [P] Rewrite `docs/ERD.md` to match the implemented schema and CLAUDE.md (drop LEGAL_ARTICLES / COMPANY_LEGAL_EXCERPTS / content_snapshot; add missing tables/columns; note composite FKs and triggers)
+- [x] T040 [P] Update `docs/LAUNCH-CHECKLIST.md` (sensitive trigger = request-only; leave does not pause deadlines — both resolved per CLAUDE.md)
+- [x] T041 [P] `WEIRDNESS.md`: denormalised company_id + composite FKs; users outside the throwing scope; DB triggers for immutability; reference auto-numbering skips manual values
+- [x] T042 [P] `docs/adr/0009-filament-v5-livewire-4.md` + index row
+- [x] T043 README.md with the quickstart (orchestrator)
 - [ ] T044 Validate quickstart from a clean clone; full gate; Pint (orchestrator)
 
 ## Dependencies

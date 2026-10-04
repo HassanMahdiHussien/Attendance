@@ -19,8 +19,8 @@ A single reference to confirm before onboarding the first real paying/live compa
 - [ ] Pilot company's internal work regulation (if they have one) uploaded and scoped correctly as company-private (PRD Section 22.2).
 - [ ] Standard blank Administrative Order template ready for companies without one (PRD Section 24.1).
 - [ ] Defense letter / recommendations / warning-termination templates reviewed and approved by the law firm partner — not just matched to the sample documents provided.
-- [ ] "Sensitive case" trigger definition finalized (currently open — CLAUDE.md Section 12).
-- [ ] Confirmation from the law firm partner on whether employee leave pauses the 15-day/3-day deadlines (currently open).
+- [x] "Sensitive case" trigger resolved: external legal consultation is request-only, never automatic (CLAUDE.md §3).
+- [x] Leave does not pause the 15-day/3-day deadlines: discipline uses calendar days with no pausing (CLAUDE.md §3).
 
 ## Business / contracts
 

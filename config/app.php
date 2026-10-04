@@ -15,6 +15,8 @@ return [
 
     'name' => env('APP_NAME', 'Laravel'),
 
+    'seed_default_password' => env('SEED_DEFAULT_PASSWORD'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Environment
