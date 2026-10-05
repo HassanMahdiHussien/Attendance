@@ -110,6 +110,7 @@ test('employee form generates a number and surfaces the single general manager r
     actingInAdminTenant($this, $this->admin, $this->company);
     $firstForm->fillForm([
         'name' => 'المدير الأول',
+        'gender' => 'male',
         'branch_id' => $branch->id,
         'department' => 'الإدارة',
         'position' => 'مدير عام',
@@ -127,6 +128,7 @@ test('employee form generates a number and surfaces the single general manager r
     actingInAdminTenant($this, $this->admin, $this->company);
     $secondForm->fillForm([
         'name' => 'المدير الثاني',
+        'gender' => 'male',
         'branch_id' => $branch->id,
         'department' => 'الإدارة',
         'position' => 'مدير عام',

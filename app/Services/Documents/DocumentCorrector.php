@@ -50,13 +50,16 @@ class DocumentCorrector
                 'created_by' => $actor->id,
             ]);
             if ($source->document_type === DocumentType::Recommendations) {
-                app(RecommendationsEditor::class)->update($correction, $source->contents->pluck('body', 'language_code')->all(), $actor);
+                app(RecommendationsEditor::class)->update($correction, $source->contents->mapWithKeys(
+                    fn ($content) => [$content->language_code => ['body' => $content->body,
+                        'secondary_body' => $content->secondary_body]])->all(), $actor);
             } else {
                 foreach ($source->contents as $content) {
                     $correction->contents()->create([
                         'company_id' => $source->company_id,
                         'language_code' => $content->language_code,
                         'body' => $content->body,
+                        'secondary_body' => $content->secondary_body,
                         'is_authoritative' => $content->is_authoritative,
                     ]);
                 }

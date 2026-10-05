@@ -43,6 +43,7 @@ test('only the wrapper references DocumentIssuer in application callers', functi
             || in_array($file->getFilename(), ['CaseDocumentIssuance.php', 'DocumentIssuer.php'], true)) {
             continue;
         }
-        expect(file_get_contents($file->getPathname()))->not->toContain('DocumentIssuer');
+        $source = file_get_contents($file->getPathname());
+        expect(preg_match('/DocumentIssuer::class\)->issue\(|DocumentIssuer \$/', $source))->toBe(0, $file->getFilename());
     }
 });

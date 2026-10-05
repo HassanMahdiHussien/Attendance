@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'pdf' => ['chrome_path' => env('DISPLANERY_CHROME_PATH', '/usr/local/bin/chrome-headless-shell')],
     'idle_timeout_minutes' => ['default' => 60, 'platform' => 30],
     'permissions' => ['review_internal_regulation', 'view_all_company_cases'],
     'deadlines' => [

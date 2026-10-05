@@ -10,10 +10,16 @@ test('trigger migrations drop and recreate every trigger with identical definiti
     $default = DB::getDefaultConnection();
     config(['database.connections.trigger_lifecycle' => config("database.connections.{$default}")]);
     DB::setDefaultConnection('trigger_lifecycle');
-    $migrations = array_map(fn (string $file) => require database_path("migrations/{$file}"), [
-        '2026_10_04_203000_create_immutability_triggers.php',
-        '2026_10_05_011000_add_workflow_triggers.php',
-    ]);
+    // Roll back every migration from the first trigger migration onward, not only the trigger ones:
+    // a migration that also creates tables would otherwise be recreated without later column changes.
+    $files = collect(glob(database_path('migrations/*.php')))->map(fn (string $path) => basename($path))
+        ->filter(fn (string $file) => $file >= '2026_10_04_203000_create_immutability_triggers.php')
+        ->sort()->values()->all();
+    $migrations = array_map(fn (string $file) => require database_path("migrations/{$file}"), $files);
+    $columns = fn () => DB::table('information_schema.COLUMNS')->where('TABLE_SCHEMA', DB::getDatabaseName())
+        ->orderBy('TABLE_NAME')->orderBy('COLUMN_NAME')->get(['TABLE_NAME', 'COLUMN_NAME'])
+        ->map(fn ($column) => $column->TABLE_NAME.'.'.$column->COLUMN_NAME)->all();
+    $columnsBefore = $columns();
     $triggers = fn () => DB::table('information_schema.TRIGGERS')
         ->where('TRIGGER_SCHEMA', DB::getDatabaseName())
         ->orderBy('TRIGGER_NAME')
@@ -36,7 +42,8 @@ test('trigger migrations drop and recreate every trigger with identical definiti
             }
         }
 
-        expect($triggers())->toBe($before);
+        expect($triggers())->toBe($before)
+            ->and($columns())->toBe($columnsBefore);
     } finally {
         DB::setDefaultConnection($default);
         DB::purge('trigger_lifecycle');

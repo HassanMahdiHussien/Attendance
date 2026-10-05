@@ -48,13 +48,22 @@ class PilotCompanySeeder extends Seeder
                 ];
 
                 $employees = [];
-                foreach ($people as [$name, $department, $position, $isGeneralManager]) {
+                $englishNames = ['Laith Fadil Karim', 'Rana Yaser Jabbar', 'Marwan Nazim Taha', 'Salma Fuad Jasim', 'Nadir Kazim Raouf', 'Dalal Haider Abbas', 'Yumna Qasim Falah', 'Ziyad Khalil Dawood', 'Huda Raed Mohsen', 'Firas Adil Samir', 'Safaa Walid Mahmoud', 'Maysoun Thamir Youssef'];
+                foreach ($people as $index => [$name, $department, $position, $isGeneralManager]) {
                     $employees[] = Employee::create([
                         'company_id' => $company->id,
                         'branch_id' => $branch->id,
                         'name' => $name,
+                        'name_en' => $englishNames[$index],
                         'department' => $department,
+                        'department_en' => match ($index) {
+                            0 => 'Administration', 6, 7 => 'Legal Affairs', 8, 9 => 'Labour Union', 10 => 'Production', 11 => 'Warehouse', default => 'Human Resources'
+                        },
                         'position' => $position,
+                        'position_en' => match ($index) {
+                            0 => 'General Manager', 8, 9 => 'Labour Union Representative', 10 => 'Production Supervisor', 11 => 'Warehouse Clerk', default => 'Staff Member'
+                        },
+                        'gender' => in_array($index, [1, 3, 5, 6, 8, 11], true) ? 'female' : 'male',
                         'hire_date' => '2024-01-01',
                         'is_general_manager' => $isGeneralManager,
                     ]);
@@ -75,6 +84,7 @@ class PilotCompanySeeder extends Seeder
                             'branch_id' => null,
                             'role_type' => $role,
                             'person_name' => $employees[$index]->name,
+                            'person_name_en' => $employees[$index]->name_en,
                             'employee_id' => $employees[$index]->id,
                         ]);
                     }

@@ -2,6 +2,8 @@
 
 namespace App\Services\Documents;
 
+use App\Documents\CitationGate;
+use App\Documents\DocumentRenderer;
 use App\Enums\ApprovalDecision;
 use App\Enums\DocumentStatus;
 use App\Enums\DocumentType;
@@ -9,6 +11,7 @@ use App\Enums\PenaltyType;
 use App\Enums\PoolRole;
 use App\Enums\SequenceKey;
 use App\Exceptions\IssuanceBlocked;
+use App\Jobs\GenerateDocumentPdf;
 use App\Models\Document;
 use App\Models\User;
 use App\Services\CaseEventLogger;
@@ -18,7 +21,8 @@ use Illuminate\Validation\ValidationException;
 
 class DocumentIssuer
 {
-    public function __construct(private SequenceService $sequences, private CaseEventLogger $events) {}
+    public function __construct(private SequenceService $sequences, private CaseEventLogger $events,
+        private CitationGate $citationGate, private DocumentRenderer $renderer) {}
 
     public function issue(Document $draft, User $actor, ?string $manualReference = null): Document
     {
@@ -46,7 +50,12 @@ class DocumentIssuer
                 if (blank($document->contents()->where('language_code', $language)->value('body'))) {
                     throw new IssuanceBlocked("Missing content for language {$language}.");
                 }
+                if ($document->document_type === DocumentType::Recommendations
+                    && blank($document->contents()->where('language_code', $language)->value('secondary_body'))) {
+                    throw new IssuanceBlocked("Missing recommendations for language {$language}.");
+                }
             }
+            $this->citationGate->assertIssuable($document);
             if ($company->requires_second_review && ($document->second_reviewed_by === null
                 || $document->second_reviewed_at === null || (int) $document->second_reviewed_by === (int) $actor->id)) {
                 throw new IssuanceBlocked('A completed review by another user is required.');
@@ -89,6 +98,12 @@ class DocumentIssuer
                 'reference_is_manual' => $manual,
                 'issued_at' => now(),
                 'issued_by' => $actor->id,
+            ]);
+            $html = $this->renderer->render($document);
+            $document->forceFill([
+                'rendered_html' => $html,
+                'render_snapshot' => $this->renderer->snapshot(),
+                'pdf_status' => 'pending',
                 'status' => DocumentStatus::Issued,
                 'is_locked' => true,
             ])->save();
@@ -110,6 +125,7 @@ class DocumentIssuer
                 'version' => $document->version,
                 'reference_number' => $reference,
             ], actor: $actor);
+            GenerateDocumentPdf::dispatch($document->id, $document->company_id);
 
             return $document;
         });

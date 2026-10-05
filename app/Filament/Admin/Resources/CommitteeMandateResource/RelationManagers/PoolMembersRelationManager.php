@@ -37,6 +37,7 @@ class PoolMembersRelationManager extends RelationManager
             Select::make('branch_id')->label('الفرع (فارغ = الشركة كلها)')
                 ->options(fn (): array => Branch::query()->pluck('name', 'id')->all()),
             TextInput::make('person_name')->label('الاسم')->required(),
+            TextInput::make('person_name_en')->label('الاسم بالإنجليزية'),
             Select::make('employee_id')->label('الموظف المرتبط')
                 ->options(fn (): array => Employee::query()->pluck('name', 'id')->all())->searchable(),
             Select::make('user_id')->label('دخول عضو اللجنة')

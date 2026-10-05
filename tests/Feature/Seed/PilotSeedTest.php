@@ -57,7 +57,9 @@ it('seeds the anonymised pilot structure and built-in laws', function () {
             ->and($jurisdictions['18']->source_file_path)->toBe('docs/laws/gazette-4734-incl-social-security-law-18-2023.pdf')
             ->and($jurisdictions['18']->jurisdictions->pluck('jurisdiction')->all())->toEqualCanonicalizing([Jurisdiction::FederalIraq, Jurisdiction::KurdistanRegion]);
 
-        expect(User::count())->toBe(2)
+        // Platform admin + company admin, plus one demo approver per pool category (Legal, HR, Union).
+        expect(User::count())->toBe(5)
+            ->and(User::where('primary_role', UserRole::CommitteeMember)->count())->toBe(3)
             ->and(User::where('primary_role', UserRole::PlatformAdmin)->sole()->company_id)->toBeNull()
             ->and(User::where('primary_role', UserRole::CompanyAdmin)->sole()->company_id)->toBe($company->id);
 
