@@ -1,12 +1,14 @@
 <?php
 
 use App\Enums\DocumentStatus;
+use App\Enums\DocumentType;
 use App\Exceptions\IssuanceBlocked;
 use App\Models\Company;
 use App\Models\Document;
 use App\Models\User;
 use App\Services\AuditLogger;
 use App\Services\CaseEventLogger;
+use App\Services\Cases\RecommendationsEditor;
 use App\Services\Documents\DocumentCorrector;
 use App\Services\Documents\DocumentIssuer;
 use App\Support\Tenancy\TenantContext;
@@ -24,6 +26,19 @@ function documentFixture(array $companyAttributes = [], string $type = 'defense_
 
 function addContents(Document $document, array $languages = ['ar', 'en']): void
 {
+    // Recommendations drafts may only be written through RecommendationsEditor (which also
+    // invalidates approvals), so route them through it like production code does.
+    if ($document->document_type === DocumentType::Recommendations) {
+        $editor = User::factory()->create(['company_id' => $document->company_id, 'primary_role' => 'company_admin']);
+        $current = $document->contents()->pluck('body', 'language_code')->all();
+        foreach ($languages as $language) {
+            $current[$language] = 'Text in '.$language;
+        }
+        app(RecommendationsEditor::class)->update($document, $current, $editor);
+
+        return;
+    }
+
     foreach ($languages as $language) {
         $document->contents()->create(['company_id' => $document->company_id, 'language_code' => $language,
             'body' => 'Text in '.$language, 'is_authoritative' => $language === 'ar']);

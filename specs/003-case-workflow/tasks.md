@@ -34,21 +34,21 @@ after each run.
 **Checkpoint run F**: gates green → review → commit.
 
 ## Phase 6: US3 committee (P1) (run G)
-- [ ] T016 [US3] `CommitteeSessionService` (R4 + R10 conflicts; re-vote; majority flag; minutes, outcome, defense acceptance)
-- [ ] T017 [P] [US3] `CommitteeSessionTest.php`: full guard matrix from R10
+- [x] T016 [US3] `CommitteeSessionService` (R4 + R10 conflicts; re-vote; majority flag; minutes, outcome, defense acceptance)
+- [x] T017 [P] [US3] `CommitteeSessionTest.php`: full guard matrix from R10
 
 ## Phase 7: US4 approvals (P1) (run G)
-- [ ] T018 [US4] `DocumentApprovalService` (approve / reject, eligibility snapshot, document lock) + `RecommendationsEditor` (atomic edit + invalidation + return to citation check; hooks refuse other content writes on recommendations drafts)
-- [ ] T019 [P] [US4] `ApprovalGateTest.php`: R10 approval cases
+- [x] T018 [US4] `DocumentApprovalService` (approve / reject, eligibility snapshot, document lock) + `RecommendationsEditor` (atomic edit + invalidation + return to citation check; hooks refuse other content writes on recommendations drafts)
+- [x] T019 [P] [US4] `ApprovalGateTest.php`: R10 approval cases
 
 ## Phase 8: US6 hand-offs, consultation, appeal, leave (P2) (run G)
-- [ ] T020 [US6] `HandOffService`, `ConsultationService` (request any open stage; reviewer access only from signed Doc A; completion), `AppealService`, `TerminationLeaveConfirmation`; DocumentIssuer gates for consultation and leave; `CaseVisibility` external-reviewer status condition
-- [ ] T021 [P] [US6] `HandOffTest.php`, `ConsultationAppealLeaveTest.php`
+- [x] T020 [US6] `HandOffService`, `ConsultationService` (request any open stage; reviewer access only from signed Doc A; completion), `AppealService`, `TerminationLeaveConfirmation`; DocumentIssuer gates for consultation and leave; `CaseVisibility` external-reviewer status condition
+- [x] T021 [P] [US6] `HandOffTest.php`, `ConsultationAppealLeaveTest.php`
 
 ## Phase 9: End-to-end & docs (run G + orchestrator)
-- [ ] T022 `EndToEndTest.php`: warning path (manual drafting) and no-penalty path, asserting the full case-history sequence and deadlines (SC-005)
-- [ ] T023 [P] WEIRDNESS: status trigger boundary; corrections never move anchors or stage; consultation visible only after signed Doc A; name-only conflict clearance; alert outbox. docs/ERD.md: new tables / columns
-- [ ] T024 Orchestrator: gates, quickstart V3–V5, PR
+- [x] T022 `EndToEndTest.php`: warning path (manual drafting) and no-penalty path, asserting the full case-history sequence and deadlines (SC-005)
+- [x] T023 [P] WEIRDNESS: status trigger boundary; corrections never move anchors or stage; consultation visible only after signed Doc A; name-only conflict clearance; alert outbox. docs/ERD.md: new tables / columns
+- [x] T024 Orchestrator: gates, quickstart V3–V5, PR
 
 ## Dependencies
 Phase 1 → 2 → US1 → (US2, US5) → US3 → US4 → US6 → E2E.

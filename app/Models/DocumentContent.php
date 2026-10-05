@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\Enums\DocumentType;
 use App\Exceptions\ImmutableRecordException;
 use App\Models\Concerns\BelongsToCompany;
+use App\Services\Cases\RecommendationsEditor;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -26,6 +28,9 @@ class DocumentContent extends Model
             if ($document?->is_locked) {
                 throw new ImmutableRecordException('Locked document contents cannot be changed.');
             }
+            if ($document?->document_type === DocumentType::Recommendations && ! RecommendationsEditor::isWriting()) {
+                throw new ImmutableRecordException('Recommendations drafts must be edited through RecommendationsEditor.');
+            }
             if ($document !== null) {
                 $company = Company::find($document->company_id);
                 if (! in_array($content->language_code, $company->enabled_languages, true)) {
@@ -37,8 +42,12 @@ class DocumentContent extends Model
             }
         });
         static::deleting(function (self $content): void {
-            if (Document::withoutGlobalScopes()->find($content->document_id)?->is_locked) {
+            $document = Document::withoutGlobalScopes()->find($content->document_id);
+            if ($document?->is_locked) {
                 throw new ImmutableRecordException('Locked document contents cannot be deleted.');
+            }
+            if ($document?->document_type === DocumentType::Recommendations && ! RecommendationsEditor::isWriting()) {
+                throw new ImmutableRecordException('Recommendations drafts must be edited through RecommendationsEditor.');
             }
         });
     }

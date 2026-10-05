@@ -2,6 +2,8 @@
 
 This reflects `database/migrations/` as implemented. Relationship lines show the principal domain paths; the tables below include every table created by the migrations. Columns shown are identifiers and the fields most relevant to relationships and legal records. The migrations define the full column types, nullability, indexes, and foreign keys.
 
+The `cases` BEFORE UPDATE trigger refuses status changes unless `CaseWorkflow` sets `@displanery_workflow_transition = 1` for its transaction. `case_alerts` is a retryable outbox; `case_events` remains append-only.
+
 ```mermaid
 erDiagram
     COMPANIES ||--o{ BRANCHES : owns
@@ -25,6 +27,9 @@ erDiagram
     EMPLOYEES ||--o{ CASES : subject
     CASES ||--o{ CASE_WITNESSES : records
     CASES ||--o{ CASE_EVENTS : logs
+    CASES ||--o{ CASE_ALERTS : queues
+    CASES ||--o{ CASE_CONFLICT_CLEARANCES : records
+    COMMITTEE_POOL_MEMBERS ||--o{ CASE_CONFLICT_CLEARANCES : cleared_for
     CASES ||--o{ CASE_LINKS : links
     CASES ||--o{ COMMITTEE_SESSION_ATTENDANCES : holds
     COMMITTEE_POOL_MEMBERS ||--o{ COMMITTEE_SESSION_ATTENDANCES : attends
@@ -153,6 +158,12 @@ erDiagram
         int case_number
         string status
         timestamp defense_letter_issued_at
+        boolean session_majority_reached
+        bigint legal_review_requested_by FK
+        timestamp legal_review_requested_at
+        bigint legal_review_completed_by FK
+        timestamp legal_review_completed_at
+        text legal_review_note
     }
     CASE_WITNESSES {
         bigint id PK
@@ -168,6 +179,26 @@ erDiagram
         bigint actor_user_id FK
         string event_type
         json payload
+        timestamp created_at
+    }
+    CASE_ALERTS {
+        bigint id PK
+        bigint company_id FK
+        bigint case_id FK
+        string alert_type
+        string stage
+        string status
+        int attempts
+        text last_error
+        timestamp sent_at
+    }
+    CASE_CONFLICT_CLEARANCES {
+        bigint id PK
+        bigint company_id FK
+        bigint case_id FK
+        bigint committee_pool_member_id FK
+        bigint cleared_by FK
+        text reason
         timestamp created_at
     }
     CASE_LINKS {
@@ -216,6 +247,8 @@ erDiagram
         string reference_number
         smallint reference_year
         boolean reference_is_manual
+        bigint leave_confirmed_by FK
+        timestamp leave_confirmed_at
     }
     DOCUMENT_CONTENTS {
         bigint id PK
@@ -230,6 +263,7 @@ erDiagram
         bigint company_id FK
         bigint document_id FK
         bigint approver_user_id FK
+        bigint committee_pool_member_id FK
         string role_category
         string decision
         json languages_present
@@ -265,6 +299,7 @@ erDiagram
         bigint id PK
         bigint company_id FK
         string kind
+        string category
         string name
         string number
         smallint year

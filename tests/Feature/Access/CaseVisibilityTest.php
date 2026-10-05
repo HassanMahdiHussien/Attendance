@@ -1,11 +1,13 @@
 <?php
 
+use App\Enums\CaseStatus;
 use App\Enums\UserRole;
 use App\Models\CommitteePoolMember;
 use App\Models\CommitteeSessionAttendance;
 use App\Models\Company;
 use App\Models\DisciplinaryCase;
 use App\Models\HrPartner;
+use App\Models\Law;
 use App\Models\LawFirmPartner;
 use App\Models\User;
 use App\Support\Access\CaseVisibility;
@@ -48,11 +50,12 @@ test('each role sees exactly its contracted case IDs in a mixed two-company data
     ]);
 
     $context = app(TenantContext::class);
+    $law = Law::factory()->create();
     $cases = [];
     $cases['a_opened'] = $context->runForCompany($a, fn () => DisciplinaryCase::factory()->create(['opened_by_user_id' => $users['hr']->id]));
     $cases['a_assigned'] = $context->runForCompany($a, fn () => DisciplinaryCase::factory()->create(['assigned_hr_user_id' => $users['hr']->id]));
     $cases['a_attended'] = $context->runForCompany($a, fn () => DisciplinaryCase::factory()->create());
-    $cases['a_requested'] = $context->runForCompany($a, fn () => DisciplinaryCase::factory()->create(['legal_review_requested_at' => now()]));
+    $cases['a_requested'] = $context->runForCompany($a, fn () => DisciplinaryCase::factory()->create(['legal_review_requested_at' => now(), 'status' => CaseStatus::SignedRecommendationsUploaded, 'law_version_id' => $law->id]));
     $cases['a_other'] = $context->runForCompany($a, fn () => DisciplinaryCase::factory()->create());
     $cases['b_requested'] = $context->runForCompany($b, fn () => DisciplinaryCase::factory()->create(['legal_review_requested_at' => now()]));
     $cases['b_partner'] = $context->runForCompany($b, fn () => DisciplinaryCase::factory()->create());

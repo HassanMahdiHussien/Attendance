@@ -25,7 +25,7 @@ Builds on `specs/001-foundation-schema/data-model.md` and `docs/ERD.md`. Only ch
 | last active company admin cannot be deactivated or demoted | `UserAccountService` |
 | new mandate supersedes the currently effective one at its `effective_from` | `CommitteeMandateService` |
 | branch scope (`branch_user`) only for reporter / dept_manager | `UserAccountService` |
-| pool member `user_id` must be a committee_member of the same company | `CommitteePoolMember` saving guard |
+| pool member `user_id` must be a committee_member, hr_staff or company_admin of the same company (relaxed in feature 003 so HR alternates keep one account) | `CommitteePoolMember` saving guard |
 | external reviewer must have `law_firm_partner_id`; HR-partner staff must have `hr_partner_id` | `User` saving guard |
 
 ## Config

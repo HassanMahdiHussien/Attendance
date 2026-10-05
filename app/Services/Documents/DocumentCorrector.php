@@ -3,12 +3,14 @@
 namespace App\Services\Documents;
 
 use App\Enums\DocumentStatus;
+use App\Enums\DocumentType;
 use App\Enums\DraftedBy;
 use App\Exceptions\IssuanceBlocked;
 use App\Models\DisciplinaryCase;
 use App\Models\Document;
 use App\Models\User;
 use App\Services\CaseEventLogger;
+use App\Services\Cases\RecommendationsEditor;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -47,13 +49,17 @@ class DocumentCorrector
                 'correction_reason' => $reason,
                 'created_by' => $actor->id,
             ]);
-            foreach ($source->contents as $content) {
-                $correction->contents()->create([
-                    'company_id' => $source->company_id,
-                    'language_code' => $content->language_code,
-                    'body' => $content->body,
-                    'is_authoritative' => $content->is_authoritative,
-                ]);
+            if ($source->document_type === DocumentType::Recommendations) {
+                app(RecommendationsEditor::class)->update($correction, $source->contents->pluck('body', 'language_code')->all(), $actor);
+            } else {
+                foreach ($source->contents as $content) {
+                    $correction->contents()->create([
+                        'company_id' => $source->company_id,
+                        'language_code' => $content->language_code,
+                        'body' => $content->body,
+                        'is_authoritative' => $content->is_authoritative,
+                    ]);
+                }
             }
             $this->events->log($case, 'document_correction_started', [
                 'from_version' => $source->version,
