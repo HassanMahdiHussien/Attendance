@@ -377,6 +377,8 @@ erDiagram
 ## Integrity notes
 
 - Tenant children carry `company_id` directly. Their tenant parent references use composite foreign keys such as `(company_id, branch_id) -> branches(company_id, id)`. Users remain outside the fail-closed model scope so authentication can locate them; authorization must check role and company.
+- `users.primary_role` is one of `platform_admin`, `company_admin`, `hr_staff`, `dept_manager`, `reporter`, `committee_member`, `external_legal_reviewer`, or `hr_partner_staff`. The legacy `company_legal_reviewer` value migrates to an inactive `reporter`.
+- Spatie permissions add abilities, not primary roles: `review_internal_regulation` and `view_all_company_cases` live in `permissions` and `model_has_permissions` with the `web` guard. Teams mode is off.
 - `laws.company_id` is null for platform statutes. `law_jurisdictions` is a many-to-many applicability setting. No legal units are seeded until verified extraction; only verified units may be cited.
 - `documents` and `legal_units` version through previous/superseded row IDs. `document_contents` stores language variants; there is no content snapshot column. Official document reference numbers are assigned at issuance. `company_sequences` also tracks case and employee numbers.
 - MySQL triggers protect append-only events, audit and AI logs, attachments, locked documents and their contents/citations, approvals, and verified legal units. Production MySQL needs `log_bin_trust_function_creators=1` to create the triggers.

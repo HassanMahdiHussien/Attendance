@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class HrPartner extends Model
 {
-    use HasFactory;
+    use Concerns\Audited, HasFactory;
 
     protected $table = 'hr_partners';
 

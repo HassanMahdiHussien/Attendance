@@ -10,10 +10,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Validation\ValidationException;
 
 class Employee extends Model
 {
-    use BelongsToCompany, HasFactory;
+    use BelongsToCompany, Concerns\Audited, HasFactory;
+
+    protected $attributes = ['is_active' => true, 'is_general_manager' => false];
 
     protected $table = 'employees';
 
@@ -23,6 +26,15 @@ class Employee extends Model
 
     protected static function booted(): void
     {
+        static::saving(function (self $employee): void {
+            if ($employee->is_general_manager && $employee->is_active && self::query()
+                ->where('company_id', $employee->company_id)
+                ->where('is_general_manager', true)->where('is_active', true)
+                ->when($employee->exists, fn ($query) => $query->whereKeyNot($employee->getKey()))
+                ->exists()) {
+                throw ValidationException::withMessages(['is_general_manager' => 'Only one active General Manager is allowed.']);
+            }
+        });
         static::creating(function (self $employee): void {
             if (blank($employee->employee_code)) {
                 $number = app(SequenceService::class)->next((int) $employee->company_id, SequenceKey::EmployeeCode);

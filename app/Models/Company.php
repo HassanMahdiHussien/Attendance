@@ -10,13 +10,13 @@ use Illuminate\Validation\ValidationException;
 
 class Company extends Model
 {
-    use HasFactory;
+    use Concerns\Audited, HasFactory;
 
     protected $table = 'companies';
 
     protected $guarded = [];
 
-    protected $attributes = ['enabled_languages' => '["ar","en"]'];
+    protected $attributes = ['enabled_languages' => '["ar","en"]', 'is_active' => true];
 
     protected static function booted(): void
     {

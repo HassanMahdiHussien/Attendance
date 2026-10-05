@@ -10,7 +10,6 @@ enum UserRole: string
     case DeptManager = 'dept_manager';
     case Reporter = 'reporter';
     case CommitteeMember = 'committee_member';
-    case CompanyLegalReviewer = 'company_legal_reviewer';
     case ExternalLegalReviewer = 'external_legal_reviewer';
     case HrPartnerStaff = 'hr_partner_staff';
 }

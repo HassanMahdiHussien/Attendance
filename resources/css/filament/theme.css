@@ -1,0 +1,18 @@
+@import '../../../vendor/filament/filament/resources/css/theme.css';
+
+@source '../../../app/Filament/**/*';
+@source '../../views/filament/**/*';
+
+@theme {
+    --font-sans: 'Tajawal', sans-serif;
+    --color-primary-600: #4F46E5;
+    --color-warning-500: #F59E0B;
+    --color-danger-500: #EF4444;
+    --color-success-500: #10B981;
+}
+
+:root {
+    --status-pending: #F59E0B;
+    --status-urgent: #EF4444;
+    --status-complete: #10B981;
+}

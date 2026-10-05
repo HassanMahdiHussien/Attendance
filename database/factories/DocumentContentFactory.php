@@ -19,7 +19,7 @@ class DocumentContentFactory extends Factory
             'document_id' => Document::factory(),
             'language_code' => 'ar',
             'body' => $this->faker->sentence(),
-            'is_authoritative' => true,
+            'is_authoritative' => fn (array $attributes): bool => ($attributes['language_code'] ?? 'ar') === 'ar',
         ];
     }
 }

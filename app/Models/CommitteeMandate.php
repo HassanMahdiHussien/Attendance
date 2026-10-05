@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CommitteeMandate extends Model
 {
-    use BelongsToCompany, HasFactory;
+    use BelongsToCompany, Concerns\Audited, HasFactory;
 
     protected $table = 'committee_mandates';
 
