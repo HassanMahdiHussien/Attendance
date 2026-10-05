@@ -2,7 +2,6 @@
 
 namespace App\Livewire\Cases;
 
-use App\Enums\CaseStatus;
 use App\Enums\UserRole;
 use App\Models\Branch;
 use App\Models\DisciplinaryCase;
@@ -50,7 +49,7 @@ class Board extends Component
             'cases' => $board->page($user, $this->search, $this->branch, $this->stage),
             'urgentCount' => $board->urgentCount($user, $this->search, $this->branch, $this->stage),
             'branches' => Branch::query()->where('company_id', auth()->user()->company_id)->orderBy('name')->get(),
-            'statuses' => CaseStatus::cases(), 'deadlines' => app(Deadlines::class),
+            'stages' => range(1, 5), 'deadlines' => app(Deadlines::class),
         ])->layout('layouts.workspace');
     }
 }

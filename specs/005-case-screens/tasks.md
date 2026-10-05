@@ -12,9 +12,9 @@ Gates: `docker compose exec -T laravel.test php artisan test` · `… ./vendor/b
 - [x] T006 Tests: role landing + route matrix (contracts/screens.md), shared throttle, report scope / status privacy, convert / dismiss, duplicate step, board sort / pill / visibility
 
 ## Run K
-- [ ] T007 ShowCase (header, banners: priors / responsible person / conflicts / deadline, deadlines panel, timeline in Arabic, documents + versions + PDF status, attachments, stage actions per contract)
-- [ ] T008 DocumentDrafts (+ documents.last_edited_by; clears second review on change) + EditDocument (ar / en bodies, live preview via DocumentRenderer draft mode, save draft, submit for review → workflow transitions incl. CitationGate; back to edit)
-- [ ] T009 ConfirmDocument per mockup (Amiri preview card, warning, provisional reference with dirty flag, SecondReview, DefenseLetterFlow::confirmAndIssue, send back); nested-binding 404s; PDF download states; correction with reason
-- [ ] T010 AttachmentService (R8 B3) + attachment download route (R8 B2); ResponseService (recordHandOff, attachScan atomic, markNoResponse without transition); receipt hand-off form
-- [ ] T011 Tests: every case-page action (auth, validation, state, case event) incl. service-level refusals per role; Livewire update-endpoint tests (reassignment, deactivated user, stale stage message); nested 404s; upload rules; second review stale after edit; provisional reference concurrency; correction flow
-- [ ] T012 docs: WEIRDNESS (shared sign-in admits all roles to their landing while panels stay role-limited; 404 for invisible cases); orchestrator walkthrough + PR
+- [x] T007 ShowCase (header, banners: priors / responsible person / conflicts / deadline, deadlines panel, timeline in Arabic, documents + versions + PDF status, attachments, stage actions per contract)
+- [x] T008 DocumentDrafts (+ documents.last_edited_by; clears second review on change) + EditDocument (ar / en bodies, live preview via DocumentRenderer draft mode, save draft, submit for review → workflow transitions incl. CitationGate; back to edit)
+- [x] T009 ConfirmDocument per mockup (Amiri preview card, warning, provisional reference with dirty flag, SecondReview, DefenseLetterFlow::confirmAndIssue, send back); nested-binding 404s; PDF download states; correction with reason
+- [x] T010 AttachmentService (R8 B3) + attachment download route (R8 B2); ResponseService (recordHandOff, attachScan atomic, markNoResponse without transition); receipt hand-off form
+- [x] T011 Tests: every case-page action (auth, validation, state, case event) incl. service-level refusals per role; Livewire update-endpoint tests (reassignment, deactivated user, stale stage message); nested 404s; upload rules; second review stale after edit; provisional reference concurrency; correction flow
+- [x] T012 docs: WEIRDNESS (shared sign-in admits all roles to their landing while panels stay role-limited; 404 for invisible cases); orchestrator walkthrough + PR

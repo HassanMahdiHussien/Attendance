@@ -10,7 +10,7 @@ class CaseTransitions
         S::Draft->value => [S::Open],
         S::Open->value => [S::AiDraftingDefenseLetter, S::DefenseLetterCitationCheck],
         S::AiDraftingDefenseLetter->value => [S::DefenseLetterCitationCheck, S::Open],
-        S::DefenseLetterCitationCheck->value => [S::DefenseLetterReadyForReview],
+        S::DefenseLetterCitationCheck->value => [S::DefenseLetterReadyForReview, S::Open],
         S::DefenseLetterReadyForReview->value => [S::DefenseLetterConfirmed, S::Open],
         S::DefenseLetterConfirmed->value => [S::DefenseLetterIssued],
         S::DefenseLetterIssued->value => [S::AwaitingEmployeeResponse],

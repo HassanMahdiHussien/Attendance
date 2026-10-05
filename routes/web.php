@@ -4,7 +4,9 @@ use App\Http\Controllers\AttachmentDownloadController;
 use App\Http\Controllers\DocumentOutputController;
 use App\Livewire\Auth\Login;
 use App\Livewire\Cases\Board;
+use App\Livewire\Cases\ConfirmDocument;
 use App\Livewire\Cases\CreateCase;
+use App\Livewire\Cases\EditDocument;
 use App\Livewire\Cases\MyCases;
 use App\Livewire\Cases\ShowCase;
 use App\Livewire\Home;
@@ -33,6 +35,8 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/cases', Board::class)->name('cases.index');
     Route::get('/cases/new', CreateCase::class)->name('cases.create');
     Route::get('/cases/{case}', ShowCase::class)->name('cases.show');
+    Route::get('/cases/{case}/documents/{document}/edit', EditDocument::class)->name('cases.documents.edit');
+    Route::get('/cases/{case}/documents/{document}/confirm', ConfirmDocument::class)->name('cases.documents.confirm');
     Route::get('/reports', MyReports::class)->name('reports.mine');
     Route::get('/reports/new', SubmitReport::class)->name('reports.create');
     Route::get('/reports/inbox', Inbox::class)->name('reports.inbox');

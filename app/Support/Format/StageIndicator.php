@@ -23,10 +23,23 @@ class StageIndicator
 
     public static function label(CaseStatus $status): string
     {
-        return match (self::step($status)) {
+        return self::stageLabel(self::step($status));
+    }
+
+    public static function stageLabel(int $stage): string
+    {
+        return match ($stage) {
             1 => 'فتح الحالة', 2 => 'خطاب الدفاع', 3 => 'رد الموظف',
             4 => 'اللجنة', 5 => 'القرار',
         };
+    }
+
+    public static function statusesFor(int $stage): array
+    {
+        return array_values(array_map(
+            fn (CaseStatus $status): string => $status->value,
+            array_filter(CaseStatus::cases(), fn (CaseStatus $status): bool => self::step($status) === $stage),
+        ));
     }
 
     public static function remaining(int $days): string

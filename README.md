@@ -18,10 +18,10 @@ Everything runs in Docker; the host needs only Docker Desktop and Git.
 cp .env.example .env          # then set SEED_DEFAULT_PASSWORD
 docker run --rm -v "$(pwd):/var/www/html" -w /var/www/html laravelsail/php84-composer:latest composer install --ignore-platform-reqs
 docker compose up -d          # app, mysql, queue worker, scheduler
-docker compose exec -T laravel.test php artisan key:generate
-docker compose exec -T laravel.test php artisan migrate --seed
-docker compose exec -T laravel.test npm install
-docker compose exec -T laravel.test npm run build
+docker compose exec -T -u sail laravel.test php artisan key:generate
+docker compose exec -T -u sail laravel.test php artisan migrate --seed
+docker compose exec -T -u sail laravel.test npm install
+docker compose exec -T -u sail laravel.test npm run build
 ```
 
 On PowerShell, replace `$(pwd)` with `${PWD}`. The app is served at http://localhost.
@@ -31,8 +31,8 @@ The seed creates the anonymised pilot company and two local accounts, `platform.
 ## Gates (run before every commit)
 
 ```bash
-docker compose exec -T laravel.test php artisan test
-docker compose exec -T laravel.test ./vendor/bin/pint --test
+docker compose exec -T -u sail laravel.test php artisan test
+docker compose exec -T -u sail laravel.test ./vendor/bin/pint --test
 ```
 
 Tests run against the MySQL `testing` database. SQLite is never used, because the immutability

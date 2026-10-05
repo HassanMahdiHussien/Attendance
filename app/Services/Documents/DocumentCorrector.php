@@ -50,6 +50,7 @@ class DocumentCorrector
                 'previous_version_id' => $source->id,
                 'correction_reason' => $reason,
                 'created_by' => $actor->id,
+                'last_edited_by' => $actor->id,
             ]);
             if ($source->document_type === DocumentType::Recommendations) {
                 app(RecommendationsEditor::class)->update($correction, $source->contents->mapWithKeys(

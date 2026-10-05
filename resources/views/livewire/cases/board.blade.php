@@ -12,7 +12,7 @@
     <div class="flex flex-wrap gap-3 mb-6">
         <input wire:model.live.debounce.300ms="search" aria-label="بحث" placeholder="ابحث بالاسم أو رقم الحالة" class="rounded-xl border border-gray-200 p-3 flex-1 min-w-48">
         <select wire:model.live="branch" aria-label="الفرع" class="rounded-xl border border-gray-200 p-3"><option value="">كل الفروع</option>@foreach($branches as $row)<option value="{{ $row->id }}">{{ $row->name }}</option>@endforeach</select>
-        <select wire:model.live="stage" aria-label="المرحلة" class="rounded-xl border border-gray-200 p-3"><option value="">كل المراحل</option>@foreach($statuses as $row)<option value="{{ $row->value }}">{{ \App\Support\Format\StageIndicator::label($row) }}</option>@endforeach</select>
+        <select wire:model.live="stage" aria-label="المرحلة" class="rounded-xl border border-gray-200 p-3"><option value="">كل المراحل</option>@foreach($stages as $number)<option value="{{ $number }}">{{ \App\Support\Format\StageIndicator::stageLabel($number) }}</option>@endforeach</select>
     </div>
     <div class="grid grid-cols-1 gap-3">
         @forelse($cases as $case)

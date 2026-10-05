@@ -5,6 +5,9 @@
 <style>
     @page { size: A4; margin: 18mm 16mm 20mm; }
     * { box-sizing: border-box; }
+    /* A legal document is always ink on white paper, whatever the viewer's colour scheme. */
+    :root { color-scheme: light; }
+    html, body { background: #ffffff; }
     body { margin: 0; color: #171717; font-family: 'Displanery Amiri', 'Displanery Naskh', serif; font-size: 13.5pt; line-height: 1.45; }
     .page { width: 100%; page-break-after: always; }
     .page:last-child { page-break-after: auto; }

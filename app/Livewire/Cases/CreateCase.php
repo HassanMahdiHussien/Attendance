@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Cases;
 
+use App\Enums\CaseStatus;
 use App\Enums\UserRole;
 use App\Models\Branch;
 use App\Models\DisciplinaryCase;
@@ -63,6 +64,26 @@ class CreateCase extends Component
     public function mount(): void
     {
         $this->authorizeCreate();
+        if ($id = request()->query('draft')) {
+            $draft = CaseVisibility::for(auth()->user())->findOrFail($id);
+            Gate::authorize('update', $draft);
+            abort_unless($draft->status === CaseStatus::Draft, 404);
+            $this->draftId = $draft->id;
+            $this->branchId = (string) $draft->branch_id;
+            $this->employeeId = (string) $draft->employee_id;
+            $this->locationId = (string) $draft->location_id;
+            $this->place = (string) $draft->violation_place_freetext;
+            $this->violationTime = Carbon::parse($draft->violation_time)->format('Y-m-d\TH:i');
+            $this->violationType = (string) $draft->violation_type;
+            $this->description = (string) $draft->description;
+            $this->responsibleEmployeeId = (string) $draft->alleged_responsible_employee_id;
+            $this->responsibleName = (string) $draft->alleged_responsible_person_freetext;
+            $this->assignedHrUserId = (string) $draft->assigned_hr_user_id;
+            $this->witnessNames = $draft->witnesses->pluck('name')->implode(', ');
+            $this->includePriorRecord = (bool) $draft->include_prior_record;
+
+            return;
+        }
         if ($id = request()->query('report')) {
             $report = ViolationReportVisibility::inbox(auth()->user())->findOrFail($id);
             $this->reportId = $report->id;

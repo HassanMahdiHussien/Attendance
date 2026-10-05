@@ -57,7 +57,8 @@ class DocumentIssuer
             }
             $this->citationGate->assertIssuable($document);
             if ($company->requires_second_review && ($document->second_reviewed_by === null
-                || $document->second_reviewed_at === null || (int) $document->second_reviewed_by === (int) $actor->id)) {
+                || $document->second_reviewed_at === null || (int) $document->second_reviewed_by === (int) $actor->id
+                || (int) $document->second_reviewed_by === (int) $document->last_edited_by)) {
                 throw new IssuanceBlocked('A completed review by another user is required.');
             }
             if ($document->document_type === DocumentType::Recommendations) {

@@ -6,6 +6,7 @@ use App\Enums\CaseStatus;
 use App\Models\Employee;
 use App\Models\User;
 use App\Support\Access\CaseVisibility;
+use App\Support\Format\StageIndicator;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -48,7 +49,7 @@ class CaseBoard
     {
         return CaseVisibility::for($user)
             ->when($branch !== '', fn ($q) => $q->where('branch_id', $branch))
-            ->when($stage !== '', fn ($q) => $q->where('status', $stage))
+            ->when($stage !== '', fn ($q) => $q->whereIn('status', StageIndicator::statusesFor((int) $stage)))
             ->when($search !== '', fn ($q) => $q->where(fn ($filter) => $filter
                 ->where('case_number', 'like', '%'.$search.'%')
                 ->orWhereHas('employee', fn ($employee) => $employee->where('name', 'like', '%'.$search.'%'))));
