@@ -5,6 +5,7 @@ namespace App\Services\Documents;
 use App\Enums\ApprovalDecision;
 use App\Enums\DocumentStatus;
 use App\Enums\DocumentType;
+use App\Enums\PenaltyType;
 use App\Enums\PoolRole;
 use App\Enums\SequenceKey;
 use App\Exceptions\IssuanceBlocked;
@@ -28,6 +29,16 @@ class DocumentIssuer
             }
             if ($actor->company_id !== $document->company_id) {
                 throw new IssuanceBlocked('The issuer must belong to the document company.');
+            }
+            if ($document->document_type === DocumentType::DecisionLetter) {
+                $case = $document->disciplinaryCase;
+                if ($case->legal_review_requested_at !== null && $case->legal_review_completed_at === null) {
+                    throw new IssuanceBlocked('The requested consultation must be completed.');
+                }
+                if ($document->penalty_type === PenaltyType::Termination
+                    && ($document->leave_confirmed_by === null || $document->leave_confirmed_at === null)) {
+                    throw new IssuanceBlocked('HR leave confirmation is required for termination.');
+                }
             }
 
             $company = $document->company;

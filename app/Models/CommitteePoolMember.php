@@ -19,8 +19,11 @@ class CommitteePoolMember extends Model
         static::saving(function (self $member): void {
             if ($member->user_id !== null) {
                 $user = User::find($member->user_id);
-                if (! $user || $user->primary_role !== UserRole::CommitteeMember || (int) $user->company_id !== (int) $member->company_id) {
-                    throw ValidationException::withMessages(['user_id' => 'The login must be a committee member of this company.']);
+                // HR and Legal alternates are often the company's own HR staff or admin; they keep one
+                // account. Reporters and department managers can never sit on the committee.
+                $poolRoles = [UserRole::CommitteeMember, UserRole::HrStaff, UserRole::CompanyAdmin];
+                if (! $user || ! in_array($user->primary_role, $poolRoles, true) || (int) $user->company_id !== (int) $member->company_id) {
+                    throw ValidationException::withMessages(['user_id' => 'The login must be a committee member, HR staff or company admin of this company.']);
                 }
             }
         });

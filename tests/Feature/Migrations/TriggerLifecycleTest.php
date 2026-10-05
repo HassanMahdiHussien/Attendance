@@ -2,27 +2,41 @@
 
 use Illuminate\Support\Facades\DB;
 
-test('trigger migration creates, drops, and recreates every trigger', function (): void {
+// Rolls back and re-applies every trigger migration in order, then checks that each trigger's
+// definition is identical. Running a single older migration on its own would silently restore a
+// superseded trigger body in the test database.
+test('trigger migrations drop and recreate every trigger with identical definitions', function (): void {
     // DDL runs on a separate connection so RefreshDatabase keeps its test transaction.
     $default = DB::getDefaultConnection();
     config(['database.connections.trigger_lifecycle' => config("database.connections.{$default}")]);
     DB::setDefaultConnection('trigger_lifecycle');
-    $path = database_path('migrations/2026_10_04_203000_create_immutability_triggers.php');
-    $migration = require $path;
-    $names = fn () => DB::table('information_schema.TRIGGERS')
+    $migrations = array_map(fn (string $file) => require database_path("migrations/{$file}"), [
+        '2026_10_04_203000_create_immutability_triggers.php',
+        '2026_10_05_011000_add_workflow_triggers.php',
+    ]);
+    $triggers = fn () => DB::table('information_schema.TRIGGERS')
         ->where('TRIGGER_SCHEMA', DB::getDatabaseName())
-        ->where('TRIGGER_NAME', 'like', 'immutable_%')
-        ->pluck('TRIGGER_NAME')->sort()->values()->all();
+        ->orderBy('TRIGGER_NAME')
+        ->pluck('ACTION_STATEMENT', 'TRIGGER_NAME')->all();
+
     try {
-        $expected = $names();
-        expect($expected)->toHaveCount(21);
+        $before = $triggers();
+        expect($before)->toHaveKey('workflow_cases_status_update')
+            ->and($before)->toHaveKey('immutable_documents_update')
+            ->and($before['immutable_documents_update'])->toContain('leave_confirmed_by');
+
         try {
-            $migration->down();
-            expect($names())->toBe([]);
+            foreach (array_reverse($migrations) as $migration) {
+                $migration->down();
+            }
+            expect($triggers())->toBe([]);
         } finally {
-            $migration->up();
+            foreach ($migrations as $migration) {
+                $migration->up();
+            }
         }
-        expect($names())->toBe($expected);
+
+        expect($triggers())->toBe($before);
     } finally {
         DB::setDefaultConnection($default);
         DB::purge('trigger_lifecycle');

@@ -9,6 +9,7 @@ use App\Enums\Outcome;
 use App\Enums\SequenceKey;
 use App\Exceptions\ImmutableRecordException;
 use App\Models\Concerns\BelongsToCompany;
+use App\Services\Cases\CaseWorkflow;
 use App\Services\SequenceService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -50,6 +51,9 @@ class DisciplinaryCase extends Model
             } elseif ($case->isDirty('jurisdiction_at_opening')) {
                 throw ValidationException::withMessages(['jurisdiction_at_opening' => 'Opening jurisdiction cannot change.']);
             }
+            if ($case->exists && $case->isDirty('status') && ! CaseWorkflow::isWritingStatus()) {
+                throw new ImmutableRecordException('Case status changes only through the workflow.');
+            }
             if ($case->status !== CaseStatus::Draft && $case->law_version_id === null) {
                 throw ValidationException::withMessages(['law_version_id' => 'A law version is required after draft.']);
             }
@@ -70,6 +74,9 @@ class DisciplinaryCase extends Model
             'defense_acceptance' => DefenseAcceptance::class,
             'include_prior_record' => 'boolean',
             'is_sensitive' => 'boolean',
+            'session_majority_reached' => 'boolean',
+            'defense_letter_issued_at' => 'datetime',
+            'decision_issued_at' => 'datetime',
         ];
     }
 

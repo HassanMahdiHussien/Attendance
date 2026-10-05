@@ -5,6 +5,8 @@ use App\Models\AppealTracking;
 use App\Models\Attachment;
 use App\Models\Branch;
 use App\Models\BranchUser;
+use App\Models\CaseAlert;
+use App\Models\CaseConflictClearance;
 use App\Models\CaseEvent;
 use App\Models\CaseLink;
 use App\Models\CaseWitness;
@@ -32,7 +34,7 @@ dataset('tenant models', [
     CaseEvent::class, CaseLink::class, CommitteeSessionAttendance::class,
     AppealTracking::class, Attachment::class, Document::class,
     DocumentContent::class, DocumentApproval::class, Signature::class,
-    Citation::class, CompanySequence::class,
+    Citation::class, CompanySequence::class, CaseAlert::class, CaseConflictClearance::class,
 ]);
 
 test('every tenant model isolates reads and builder writes and stamps creation', function (string $model): void {
