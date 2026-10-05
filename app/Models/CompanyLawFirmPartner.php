@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CompanyLawFirmPartner extends Model
 {
-    use HasFactory;
+    use Concerns\Audited, HasFactory;
 
     protected $table = 'company_law_firm_partner';
 

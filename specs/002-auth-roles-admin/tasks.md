@@ -11,34 +11,34 @@ fix briefs.
 
 ## Phase 1: Setup (run D)
 
-- [ ] T001 `config/app.php` timezone `env('APP_TIMEZONE','Asia/Baghdad')`; `APP_TIMEZONE=Asia/Baghdad` in `.env.example` (orchestrator mirrors into `.env`)
-- [ ] T002 `config/displanery.php` (idle timeouts default 60 / platform 30; add-on permission names)
-- [ ] T003 Migration: remove `company_legal_reviewer` role rows → deactivated `reporter` + permission (R3); remove enum case; update factories/tests that referenced it
-- [ ] T004 Migration: insert spatie permissions `review_internal_regulation`, `view_all_company_cases` (guard web), idempotent, reversible; `User` uses `HasRoles`
+- [x] T001 `config/app.php` timezone `env('APP_TIMEZONE','Asia/Baghdad')`; `APP_TIMEZONE=Asia/Baghdad` in `.env.example` (orchestrator mirrors into `.env`)
+- [x] T002 `config/displanery.php` (idle timeouts default 60 / platform 30; add-on permission names)
+- [x] T003 Migration: remove `company_legal_reviewer` role rows → deactivated `reporter` + permission (R3); remove enum case; update factories/tests that referenced it
+- [x] T004 Migration: insert spatie permissions `review_internal_regulation`, `view_all_company_cases` (guard web), idempotent, reversible; `User` uses `HasRoles`
 
 ## Phase 2: Foundational (run D)
 
-- [ ] T005 `app/Models/Concerns/Audited.php` (R5) applied to Company, User, Branch, Location, Employee, CommitteeMandate, CommitteePoolMember, LawFirmPartner, HrPartner
-- [ ] T006 `app/Listeners/AuditAuthEvents.php` for Login / Logout / Failed (explicit safe metadata)
-- [ ] T007 Middleware `EnsureAccountIsActive`, `EnforceIdleTimeout` appended to web group; `SetTenantFromFilament` (persistent tenant middleware) per R1
-- [ ] T008 `User` implements `FilamentUser`, `HasTenants`; `canAccessPanel` (role + active user + active company), `getTenants`, `canAccessTenant`; scope `inCompany()`; guards from data-model (partner ids for platform roles)
-- [ ] T009 Panel providers `PlatformPanelProvider` (/platform) and `AdminPanelProvider` (/admin, tenant Company), both using `App\Filament\Auth\Login` (per-email limiter, R2) and custom `LoginResponse`; Arabic, Tajawal, indigo primary (theme in run E)
-- [ ] T010 Services: `CompanyOnboardingService`, `UserAccountService`, `CommitteeMandateService`, `PartnershipService` (R6, R4b, audit)
-- [ ] T011 `Employee` single-active-GM guard; `CommitteePoolMember` login-link guard
-- [ ] T012 Policies: Company, Branch, Location, Employee, User, CommitteeMandate, CommitteePoolMember, LawFirmPartner, HrPartner, DisciplinaryCase (view via CaseVisibility) per access matrix
+- [x] T005 `app/Models/Concerns/Audited.php` (R5) applied to Company, User, Branch, Location, Employee, CommitteeMandate, CommitteePoolMember, LawFirmPartner, HrPartner
+- [x] T006 `app/Listeners/AuditAuthEvents.php` for Login / Logout / Failed (explicit safe metadata)
+- [x] T007 Middleware `EnsureAccountIsActive`, `EnforceIdleTimeout` appended to web group; `SetTenantFromFilament` (persistent tenant middleware) per R1
+- [x] T008 `User` implements `FilamentUser`, `HasTenants`; `canAccessPanel` (role + active user + active company), `getTenants`, `canAccessTenant`; scope `inCompany()`; guards from data-model (partner ids for platform roles)
+- [x] T009 Panel providers `PlatformPanelProvider` (/platform) and `AdminPanelProvider` (/admin, tenant Company), both using `App\Filament\Auth\Login` (per-email limiter, R2) and custom `LoginResponse`; Arabic, Tajawal, indigo primary (theme in run E)
+- [x] T010 Services: `CompanyOnboardingService`, `UserAccountService`, `CommitteeMandateService`, `PartnershipService` (R6, R4b, audit)
+- [x] T011 `Employee` single-active-GM guard; `CommitteePoolMember` login-link guard
+- [x] T012 Policies: Company, Branch, Location, Employee, User, CommitteeMandate, CommitteePoolMember, LawFirmPartner, HrPartner, DisciplinaryCase (view via CaseVisibility) per access matrix
 
 ## Phase 3: US1 sign-in (P1) (run D)
 
-- [ ] T013 [P] [US1] `tests/Feature/Auth/SignInTest.php`: per role allowed/refused, identical public message (unknown / wrong / inactive / wrong panel), platform admin redirect
-- [ ] T014 [P] [US1] `tests/Feature/Auth/ThrottleTest.php`: 5 failures then correct password refused; normalisation; per-IP; `auth.failed` / `auth.throttled` without password
-- [ ] T015 [P] [US1] `tests/Feature/Auth/SessionTest.php`: deactivated user / company refused on every request type (contract list); session rows purged; idle 60 / 30 minutes
+- [x] T013 [P] [US1] `tests/Feature/Auth/SignInTest.php`: per role allowed/refused, identical public message (unknown / wrong / inactive / wrong panel), platform admin redirect
+- [x] T014 [P] [US1] `tests/Feature/Auth/ThrottleTest.php`: 5 failures then correct password refused; normalisation; per-IP; `auth.failed` / `auth.throttled` without password
+- [x] T015 [P] [US1] `tests/Feature/Auth/SessionTest.php`: deactivated user / company refused on every request type (contract list); session rows purged; idle 60 / 30 minutes
 
 ## Phase 4: US4 visibility (P2) (run D)
 
-- [ ] T016 [US4] `app/Support/Access/CaseVisibility.php`, `ViolationReportVisibility.php` (R4)
-- [ ] T017 [P] [US4] `tests/Feature/Access/CaseVisibilityTest.php`: two-company mixed dataset, every role, exact sets (SC-002)
-- [ ] T018 [P] [US4] `tests/Feature/Access/ScopeBypassGuardTest.php`: `withoutGlobalScope(CompanyScope` appears only in allowed files
-- [ ] T019 [P] [US4] `tests/Feature/Timezone/BaghdadClockTest.php`: app tz, reference_year rollover at 00:30 Baghdad 1 Jan
+- [x] T016 [US4] `app/Support/Access/CaseVisibility.php`, `ViolationReportVisibility.php` (R4)
+- [x] T017 [P] [US4] `tests/Feature/Access/CaseVisibilityTest.php`: two-company mixed dataset, every role, exact sets (SC-002)
+- [x] T018 [P] [US4] `tests/Feature/Access/ScopeBypassGuardTest.php`: `withoutGlobalScope(CompanyScope` appears only in allowed files
+- [x] T019 [P] [US4] `tests/Feature/Timezone/BaghdadClockTest.php`: app tz, reference_year rollover at 00:30 Baghdad 1 Jan
 
 **Checkpoint run D**: gates green → review → commit.
 

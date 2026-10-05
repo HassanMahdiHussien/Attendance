@@ -3,14 +3,28 @@
 namespace App\Models;
 
 use App\Enums\PoolRole;
+use App\Enums\UserRole;
 use App\Models\Concerns\BelongsToCompany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Validation\ValidationException;
 
 class CommitteePoolMember extends Model
 {
-    use BelongsToCompany, HasFactory;
+    use BelongsToCompany, Concerns\Audited, HasFactory;
+
+    protected static function booted(): void
+    {
+        static::saving(function (self $member): void {
+            if ($member->user_id !== null) {
+                $user = User::find($member->user_id);
+                if (! $user || $user->primary_role !== UserRole::CommitteeMember || (int) $user->company_id !== (int) $member->company_id) {
+                    throw ValidationException::withMessages(['user_id' => 'The login must be a committee member of this company.']);
+                }
+            }
+        });
+    }
 
     protected $table = 'committee_pool_members';
 

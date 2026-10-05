@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Location extends Model
 {
-    use BelongsToCompany, HasFactory;
+    use BelongsToCompany, Concerns\Audited, HasFactory;
 
     protected $table = 'locations';
 

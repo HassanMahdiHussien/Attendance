@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Branch extends Model
 {
-    use BelongsToCompany, HasFactory;
+    use BelongsToCompany, Concerns\Audited, HasFactory;
 
     protected $table = 'branches';
 
