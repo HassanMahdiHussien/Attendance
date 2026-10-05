@@ -5,6 +5,8 @@ use App\Models\AppealTracking;
 use App\Models\Attachment;
 use App\Models\Branch;
 use App\Models\BranchUser;
+use App\Models\CaseAlert;
+use App\Models\CaseConflictClearance;
 use App\Models\CaseEvent;
 use App\Models\CaseLink;
 use App\Models\CaseWitness;
@@ -41,6 +43,7 @@ test('every tenant foreign key rejects a row from another company through models
         'appeal_trackings' => AppealTracking::class, 'documents' => Document::class,
         'document_contents' => DocumentContent::class, 'document_approvals' => DocumentApproval::class,
         'signatures' => Signature::class, 'citations' => Citation::class,
+        'case_alerts' => CaseAlert::class, 'case_conflict_clearances' => CaseConflictClearance::class,
     ];
     $keys = DB::select("SELECT TABLE_NAME AS source_table, CONSTRAINT_NAME AS constraint_name, REFERENCED_TABLE_NAME AS target_table, MAX(CASE WHEN COLUMN_NAME <> 'company_id' THEN COLUMN_NAME END) AS foreign_column FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = DATABASE() AND REFERENCED_TABLE_NAME IS NOT NULL GROUP BY TABLE_NAME, CONSTRAINT_NAME, REFERENCED_TABLE_NAME HAVING COUNT(*) = 2 AND SUM(COLUMN_NAME = 'company_id') = 1");
     expect(count($keys))->toBeGreaterThan(25);

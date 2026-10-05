@@ -67,4 +67,9 @@ class DocumentApproval extends Model
     {
         return $this->belongsTo(User::class, 'approver_user_id');
     }
+
+    public function poolMember(): BelongsTo
+    {
+        return $this->belongsTo(CommitteePoolMember::class, 'committee_pool_member_id');
+    }
 }

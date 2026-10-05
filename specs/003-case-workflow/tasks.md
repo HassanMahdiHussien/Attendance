@@ -7,29 +7,29 @@ The orchestrator runs `docker compose exec -T laravel.test php artisan test` and
 after each run.
 
 ## Phase 1: Setup (run F)
-- [ ] T001 Migrations per data-model.md: laws.category (+ backfill), cases consultation/majority columns, documents leave-confirmation columns, document_approvals.committee_pool_member_id, case_alerts outbox, case_conflict_clearances, notifications table
-- [ ] T002 Trigger migration: recreate the locked-documents trigger with the new protected columns; add the cases status-boundary trigger (R10); reversible `down()`
-- [ ] T003 `config/displanery.php` deadlines block; update LawsSeeder with categories
+- [x] T001 Migrations per data-model.md: laws.category (+ backfill), cases consultation/majority columns, documents leave-confirmation columns, document_approvals.committee_pool_member_id, case_alerts outbox, case_conflict_clearances, notifications table
+- [x] T002 Trigger migration: recreate the locked-documents trigger with the new protected columns; add the cases status-boundary trigger (R10); reversible `down()`
+- [x] T003 `config/displanery.php` deadlines block; update LawsSeeder with categories
 
 ## Phase 2: Foundational (run F)
-- [ ] T004 `app/Workflow/CaseTransitions.php` (exact map from contracts/transitions.md); exceptions IllegalTransition, TransitionBlocked
-- [ ] T005 `CaseWorkflow::transition()` (row lock, map check, guard hook, session variable for the trigger, `status_changed` event); model guard refusing dirty status outside the workflow
-- [ ] T006 `CaseDocumentIssuance` wrapper around DocumentIssuer (first-issuance stage rules + transitions; corrected versions without transition, anchors set only when null) (R10)
+- [x] T004 `app/Workflow/CaseTransitions.php` (exact map from contracts/transitions.md); exceptions IllegalTransition, TransitionBlocked
+- [x] T005 `CaseWorkflow::transition()` (row lock, map check, guard hook, session variable for the trigger, `status_changed` event); model guard refusing dirty status outside the workflow
+- [x] T006 `CaseDocumentIssuance` wrapper around DocumentIssuer (first-issuance stage rules + transitions; corrected versions without transition, anchors set only when null) (R10)
 
 ## Phase 3: US1 state machine (P1) (run F)
-- [ ] T007 [US1] `CaseOpening` (draft → open: facts, case number, jurisdiction, law_version_id via laws.category; prior links; conflicts; insights) (R8, R9)
-- [ ] T008 [P] [US1] `tests/Feature/Workflow/TransitionMatrixTest.php`: every (from, to) pair: allowed pairs pass when guards hold, all others refused
-- [ ] T009 [P] [US1] `tests/Feature/Workflow/StatusWriteGuardTest.php`: Eloquent / forceFill / saveQuietly / builder / raw SQL bypasses refused; stale concurrent transition refused; DocumentIssuer called only from the wrapper (grep)
+- [x] T007 [US1] `CaseOpening` (draft → open: facts, case number, jurisdiction, law_version_id via laws.category; prior links; conflicts; insights) (R8, R9)
+- [x] T008 [P] [US1] `tests/Feature/Workflow/TransitionMatrixTest.php`: every (from, to) pair: allowed pairs pass when guards hold, all others refused
+- [x] T009 [P] [US1] `tests/Feature/Workflow/StatusWriteGuardTest.php`: Eloquent / forceFill / saveQuietly / builder / raw SQL bypasses refused; stale concurrent transition refused; DocumentIssuer called only from the wrapper (grep)
 
 ## Phase 4: US2 deadlines & alerts (P1) (run F)
-- [ ] T010 [US2] `Deadlines` service (R2, R10 boundaries)
-- [ ] T011 [US2] `case_alerts` outbox + `cases:send-deadline-alerts` + `CaseDeadlineAlert` (mail + database, Arabic) + `cases:archive-expired-appeals`; scheduled hourly in routes/console.php
-- [ ] T012 [P] [US2] `DeadlinesTest.php`: ≥ 20-row date table (month ends, leap day, year end, 23:30 Baghdad, 18 Jun → 21 Jun / 3 Jul, 10 Aug → 9 Sep), status boundaries
-- [ ] T013 [P] [US2] `AlertsTest.php`: send once on repeat runs; concurrent claim; failed delivery retried then sent once; recipients; Arabic subject; auto-archive only after the end date
+- [x] T010 [US2] `Deadlines` service (R2, R10 boundaries)
+- [x] T011 [US2] `case_alerts` outbox + `cases:send-deadline-alerts` + `CaseDeadlineAlert` (mail + database, Arabic) + `cases:archive-expired-appeals`; scheduled hourly in routes/console.php
+- [x] T012 [P] [US2] `DeadlinesTest.php`: ≥ 20-row date table (month ends, leap day, year end, 23:30 Baghdad, 18 Jun → 21 Jun / 3 Jul, 10 Aug → 9 Sep), status boundaries
+- [x] T013 [P] [US2] `AlertsTest.php`: send once on repeat runs; concurrent claim; failed delivery retried then sent once; recipients; Arabic subject; auto-archive only after the end date
 
 ## Phase 5: US5 intake checks (P2) (run F)
-- [ ] T014 [US5] `CaseInsights` (duplicate candidates, prior-cases banner, responsible-person pattern), `ConflictClearance`
-- [ ] T015 [P] [US5] `IntakeChecksTest.php`
+- [x] T014 [US5] `CaseInsights` (duplicate candidates, prior-cases banner, responsible-person pattern), `ConflictClearance`
+- [x] T015 [P] [US5] `IntakeChecksTest.php`
 
 **Checkpoint run F**: gates green → review → commit.
 
