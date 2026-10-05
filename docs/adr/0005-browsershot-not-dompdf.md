@@ -12,3 +12,7 @@ Use Browsershot (Spatie's Laravel package), which drives a real headless Chromiu
 **Gained:** correct RTL/bidi/shaping rendering "for free," because it's the same rendering engine as an actual browser — no custom text-shaping workarounds needed.
 **Lost:** Browsershot requires a working Chromium/Node runtime on the server (heavier dependency than a pure-PHP library); PDF generation is slightly slower per document than DomPDF (acceptable at this scale — case volume is low).
 **Must verify before building more templates:** Kurdish Sorani glyph coverage in the chosen font, tested in the first week of development (per CLAUDE.md tech stack notes) — if gaps are found, swap the font, not the rendering approach.
+
+## Verification note — 2026-10-05
+
+The Kurdish Sorani glyph check passed with Noto Naskh Arabic. The Docker runtime uses Chrome for Testing headless shell because the Ubuntu Chromium package is delivered through snap and cannot run in this container. The choice of Browsershot and the private, frozen HTML conversion pipeline remains in force.

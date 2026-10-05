@@ -99,6 +99,7 @@ test('platform admin tenant switch changes Livewire table and direct URL scope',
         'department' => 'الموارد البشرية',
         'position' => 'موظف',
         'hire_date' => '2026-10-01',
+        'gender' => 'male',
     ]);
     actingInAdminTenant($this, $this->platformAdmin, $this->secondCompany);
     $form->call('create')->assertHasNoFormErrors();

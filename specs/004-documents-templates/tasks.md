@@ -25,11 +25,11 @@ Gates: `docker compose exec -T laravel.test php artisan test` · `… ./vendor/b
 - [x] T012 Draft preview with provisional reference + watermark (covered by T010/T011)
 
 ## Phase 5: US2 customisation UI (P1) (run I)
-- [ ] T013 TemplateService / LetterheadService (validate, new version, audit)
-- [ ] T014 Filament admin: DocumentTemplates page (type + language, block textareas RTL/LTR, placeholder help, live preview, history); CompanySettings letterhead per language + logo/header image upload (png/jpg ≤ 2 MB, private disk); EmployeeResource gender
-- [ ] T015 [P] TemplateEditingTest: save → new version, previous kept, issued docs unchanged, unknown placeholder refused, hr_staff preview-only, audit entries
+- [x] T013 TemplateService / LetterheadService (validate, new version, audit)
+- [x] T014 Filament admin: DocumentTemplates page (type + language, block textareas RTL/LTR, placeholder help, live preview, history); CompanySettings letterhead per language + logo/header image upload (png/jpg ≤ 2 MB, private disk); EmployeeResource gender
+- [x] T015 [P] TemplateEditingTest: save → new version, previous kept, issued docs unchanged, unknown placeholder refused, hr_staff preview-only, audit entries
 
 ## Phase 6: Seeds & docs (run I + orchestrator)
-- [ ] T016 Seeds: pilot letterhead ar/en (anonymised contacts), generated placeholder logo, employee genders, two anonymised demo cases (warning path, training-only path) issued through the services
-- [ ] T017 [P] docs: ERD (new tables / columns), ADR 0005 note (Kurdish check passed 2026-10-05 with Noto Naskh Arabic; Chrome headless shell, not snap Chromium), WEIRDNESS (templates hold wording only, never facts; Kurdish templates must come from the company)
-- [ ] T018 Orchestrator: gates; render the demo cases' PDFs and compare them visually with the samples; PR
+- [x] T016 Seeds: pilot letterhead ar/en (anonymised contacts), generated placeholder logo, employee genders, two anonymised demo cases (warning path, training-only path) issued through the services
+- [x] T017 [P] docs: ERD (new tables / columns), ADR 0005 note (Kurdish check passed 2026-10-05 with Noto Naskh Arabic; Chrome headless shell, not snap Chromium), WEIRDNESS (templates hold wording only, never facts; Kurdish templates must come from the company)
+- [x] T018 Orchestrator: gates; render the demo cases' PDFs and compare them visually with the samples; PR

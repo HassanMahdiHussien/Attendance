@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
                     LocalUsersSeeder::class,
                 ]);
             });
+            $this->call(DocumentDemoSeeder::class);
         });
     }
 }

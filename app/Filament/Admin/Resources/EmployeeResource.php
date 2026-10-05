@@ -31,9 +31,13 @@ class EmployeeResource extends Resource
         return $schema->components([
             TextInput::make('employee_code')->label('رقم الموظف')->helperText('يُنشأ تلقائياً إذا تُرك فارغاً')->scopedUnique(ignoreRecord: true),
             TextInput::make('name')->label('الاسم')->required(),
+            TextInput::make('name_en')->label('الاسم بالإنجليزية'),
+            Select::make('gender')->label('الجنس')->options(['male' => 'ذكر', 'female' => 'أنثى'])->required(),
             Select::make('branch_id')->label('الفرع')->options(fn (): array => Branch::query()->where('is_active', true)->pluck('name', 'id')->all())->required()->searchable(),
             TextInput::make('department')->label('القسم')->required(),
+            TextInput::make('department_en')->label('القسم بالإنجليزية'),
             TextInput::make('position')->label('المنصب')->required(),
+            TextInput::make('position_en')->label('المنصب بالإنجليزية'),
             DatePicker::make('hire_date')->label('تاريخ التعيين')->required(),
             TextInput::make('email')->label('البريد الإلكتروني')->email(),
             Checkbox::make('is_general_manager')->label('المدير العام')

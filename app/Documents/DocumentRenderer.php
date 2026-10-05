@@ -51,14 +51,14 @@ class DocumentRenderer
             }
             $logo = $this->dataUri($letterhead->logo_path, $letterhead->logo_sha256);
             $headerImage = $this->dataUri($letterhead->header_image_path, $letterhead->header_image_sha256);
-            if (($template['options']['header_mode'] ?? 'logo_text') === 'image' && ! $headerImage) {
+            if ($letterhead->header_mode === 'image' && ! $headerImage) {
                 throw new MissingDocumentFact("letterhead.{$language}.header_image");
             }
             $body = $this->formatter->format($this->citations->replace($document, $content->body, $language));
             $secondary = $content->secondary_body === null ? null
                 : $this->formatter->format($this->citations->replace($document, $content->secondary_body, $language));
             $pages[] = compact('language', 'letterhead', 'blocks', 'facts', 'extra', 'body', 'secondary', 'logo', 'headerImage')
-                + ['options' => $template['options'], 'type' => $document->document_type->value];
+                + ['options' => array_replace($template['options'], ['header_mode' => $letterhead->header_mode]), 'type' => $document->document_type->value];
             $this->snapshot['template_versions'][$language] = $template['version'];
             $this->snapshot['template_ids'][$language] = $template['id'];
             $this->snapshot['letterhead_versions'][$language] = $letterhead->version;

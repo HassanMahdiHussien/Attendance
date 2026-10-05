@@ -44,3 +44,7 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 - **A name-only committee conflict requires HR clearance with a reason.** Employee-linked conflicts remain hard exclusions; a clearance records the identity check without rewriting the original party or member name. (2026-10)
 - **Deadline alerts use a retryable outbox.** `case_alerts` can move from pending or failed to sent, while the corresponding `case_events` entry remains the append-only delivery record. (2026-10)
 - **A committee-pool login may be a committee member, HR staff or company admin, never a reporter or department manager.** HR and Legal alternates are usually staff who already have an account; forcing a second committee-only account would split their audit trail. Pool members see a case only at the approval stage (or as attendees), not as a standing grant. (2026-10)
+- **Templates hold wording only, never facts or decisions.** Employee, case, committee and outcome values are resolved from the records when the document is issued. (2026-10-05)
+- **Kurdish templates must be supplied by the company.** There is no system default, even when Kurdish is enabled. (2026-10-05)
+- **Issued PDFs render from frozen HTML.** A later template or fact edit cannot change the issued output. (2026-10-05)
+- **English name fields are optional renderings; Arabic remains the source.** Missing English values fall back to the Arabic fields. (2026-10-05)

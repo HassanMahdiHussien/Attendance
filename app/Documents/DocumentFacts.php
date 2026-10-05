@@ -28,13 +28,13 @@ class DocumentFacts
         if (blank($reference)) {
             throw new MissingDocumentFact('reference_number');
         }
-        $name = trim((string) $this->required($employee->name, 'employee.name'));
+        $name = trim((string) $this->required($this->localized($employee, 'name', $language), 'employee.name'));
         $facts = [
             'employee_name' => $name,
             'employee_first_name' => explode(' ', $name)[0],
             'employee_code' => $employee->employee_code,
-            'position' => $this->required($employee->position, 'employee.position'),
-            'department' => $employee->department,
+            'position' => $this->required($this->localized($employee, 'position', $language), 'employee.position'),
+            'department' => $this->localized($employee, 'department', $language),
             'branch' => $case->branch?->name,
             'hire_date' => IraqiDate::format($this->date($employee->hire_date, 'employee.hire_date'), $language),
             'issue_date' => IraqiDate::format($issueDate, $language),
@@ -63,7 +63,9 @@ class DocumentFacts
                 ->with('committeePoolMember.employee')->get();
             foreach ($attendees as $attendance) {
                 $member = $attendance->committeePoolMember;
-                $extra['attendees'][] = ['name' => $this->required($member?->employee?->name ?? $member?->person_name, 'attendee.name'),
+                $extra['attendees'][] = ['name' => $this->required($member?->employee
+                    ? $this->localized($member->employee, 'name', $language)
+                    : ($language === 'en' && filled($member?->person_name_en) ? $member->person_name_en : $member?->person_name), 'attendee.name'),
                     'role' => $member?->role_type?->value, 'is_chair' => $attendance->is_chair];
             }
             foreach (PoolRole::cases() as $role) {
@@ -80,7 +82,7 @@ class DocumentFacts
                 throw new MissingDocumentFact('matching_penalty_outcome');
             }
             $gm = Employee::query()->where('company_id', $case->company_id)->where('is_general_manager', true)->where('is_active', true)->first();
-            $facts['gm_name'] = $this->required($gm?->name, 'general_manager');
+            $facts['gm_name'] = $this->required($gm ? $this->localized($gm, 'name', $language) : null, 'general_manager');
             $union = collect($extra['attendees'])->firstWhere('role', PoolRole::LaborUnion->value);
             $facts['union_rep_name'] = $this->required($union['name'] ?? null, 'union_representative');
             $extra['defense_acceptance'] = $this->required($case->defense_acceptance?->value, 'defense_acceptance');
@@ -98,6 +100,13 @@ class DocumentFacts
         }
 
         return [$facts, $extra, $employee->gender];
+    }
+
+    private function localized(Employee $employee, string $field, string $language): ?string
+    {
+        $english = $field.'_en';
+
+        return $language === 'en' && filled($employee->{$english}) ? $employee->{$english} : $employee->{$field};
     }
 
     private function required(mixed $value, string $name): mixed
