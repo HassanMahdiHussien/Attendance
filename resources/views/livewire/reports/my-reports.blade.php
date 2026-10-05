@@ -1,0 +1,4 @@
+<div>
+    <div class="flex justify-between items-center mb-6"><h1 class="text-2xl font-black">بلاغاتي</h1><a href="/reports/new" class="bg-primary text-white text-sm font-bold px-5 py-3 rounded-2xl shadow-lg shadow-indigo-200">+ بلاغ جديد</a></div>
+    <div class="space-y-3">@forelse($reports as $report)<div class="bg-white rounded-2xl p-5 flex justify-between"><span>بلاغ {{ \App\Support\Format\ArabicDigits::convert($report->id) }}</span><span class="text-sm text-gray-500">{{ match($report->status) { \App\Enums\ReportStatus::Received => 'مستلم', \App\Enums\ReportStatus::UnderReview => 'قيد المراجعة', \App\Enums\ReportStatus::ConvertedToCase => 'حُوّل إلى حالة', \App\Enums\ReportStatus::Dismissed => 'مستبعد' } }}</span></div>@empty<p class="bg-white rounded-2xl p-8 text-center text-gray-500">لم تقدم أي بلاغ بعد.</p>@endforelse</div>
+</div>

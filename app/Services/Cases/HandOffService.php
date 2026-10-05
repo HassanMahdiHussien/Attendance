@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Services\CaseEventLogger;
 use App\Support\Access\CaseVisibility;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 
 class HandOffService
 {
@@ -22,6 +23,7 @@ class HandOffService
     {
         return DB::transaction(function () use ($case, $purpose, $status, $data, $actor): Signature {
             $case = DisciplinaryCase::query()->lockForUpdate()->findOrFail($case->id);
+            Gate::forUser($actor)->authorize('recordHandOff', $case);
             if (! in_array($purpose, [SignaturePurpose::DefenseLetterReceipt, SignaturePurpose::ResponseSubmission, SignaturePurpose::DecisionLetterReceipt], true)
                 || ! in_array($actor->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)
                 || ! CaseVisibility::for($actor)->whereKey($case->id)->exists()) {

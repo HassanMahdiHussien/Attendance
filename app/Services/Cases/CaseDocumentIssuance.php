@@ -12,6 +12,7 @@ use App\Services\CaseEventLogger;
 use App\Services\Documents\DocumentIssuer;
 use App\Support\Access\CaseVisibility;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 
 class CaseDocumentIssuance
 {
@@ -21,6 +22,7 @@ class CaseDocumentIssuance
     {
         return DB::transaction(function () use ($draft, $actor, $manualRef): Document {
             $case = DisciplinaryCase::query()->lockForUpdate()->findOrFail($draft->case_id);
+            Gate::forUser($actor)->authorize('issue', $case);
             $document = Document::query()->lockForUpdate()->findOrFail($draft->id);
             if (! CaseVisibility::for($actor)->whereKey($case->id)->exists()) {
                 throw new IssuanceBlocked('Actor cannot access this case.');

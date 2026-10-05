@@ -22,7 +22,7 @@ function documentFixture(array $companyAttributes = [], string $type = 'defense_
 {
     $company = Company::factory()->create($companyAttributes);
     app(TenantContext::class)->setCompany($company);
-    $actor = User::factory()->create(['company_id' => $company->id, 'primary_role' => 'hr_staff']);
+    $actor = User::factory()->create(['company_id' => $company->id, 'primary_role' => 'company_admin']);
     $document = Document::factory()->create(['document_type' => $type, 'created_by' => $actor->id]);
     if ($type !== 'defense_letter') {
         $case = $document->disciplinaryCase;

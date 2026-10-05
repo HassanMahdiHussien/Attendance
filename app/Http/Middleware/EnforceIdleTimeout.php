@@ -27,7 +27,7 @@ class EnforceIdleTimeout
                     throw new HttpResponseException(response()->json(['message' => 'Unauthenticated.'], 401));
                 }
 
-                return redirect(Filament::getCurrentPanel()?->getLoginUrl() ?? '/admin/login');
+                return redirect(Filament::getCurrentPanel()?->getLoginUrl() ?? '/login');
             }
             $request->session()->put('last_activity_at', now()->timestamp);
         }

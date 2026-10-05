@@ -71,7 +71,7 @@ beforeEach(function (): void {
 dataset('session request paths', [
     'platform GET' => ['/platform', '/platform/login'],
     'admin GET' => ['/admin/login', '/admin/login'],
-    'ordinary web GET' => ['/session-probe', '/admin/login'],
+    'ordinary web GET' => ['/session-probe', '/login'],
 ]);
 
 test('inactive user is logged out before every page response', function (string $path, string $login): void {
@@ -126,7 +126,7 @@ test('company users expire after 60 minutes of inactivity', function (): void {
     $this->travel(60)->minutes();
     $this->actingAs($user)->withSession(['last_activity_at' => $last])->get('/session-probe')->assertOk();
     $this->travel(1)->minutes();
-    $this->withSession(['last_activity_at' => $last])->get('/session-probe')->assertRedirect('/admin/login');
+    $this->withSession(['last_activity_at' => $last])->get('/session-probe')->assertRedirect('/login');
     $this->assertGuest();
 });
 
