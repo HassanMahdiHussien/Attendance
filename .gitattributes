@@ -5,3 +5,7 @@
 *.ttf binary
 *.woff2 binary
 *.ps1 text eol=crlf
+*.blade.php diff=html
+*.css diff=css
+*.php diff=php
+*.md diff=markdown

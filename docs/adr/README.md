@@ -10,5 +10,6 @@
 | 0006 | File storage on a private VPS, not third-party cloud (AWS/GCP) | Accepted |
 | 0007 | Discipline ships first, as module 1 of an employee-lifecycle platform | Accepted |
 | 0008 | Stay on Laravel + MySQL, not Supabase | Accepted |
+| 0009 | Filament v5 with Livewire 4 | Accepted |
 
 Never delete an ADR. If a decision is reversed, write a new ADR that says "supersedes NNNN" and explains why.

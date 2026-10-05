@@ -1,0 +1,72 @@
+<?php
+
+namespace App\Models;
+
+use App\Enums\ReportSource;
+use App\Enums\ReportStatus;
+use App\Models\Concerns\BelongsToCompany;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class ViolationReport extends Model
+{
+    use BelongsToCompany, HasFactory;
+
+    protected $table = 'violation_reports';
+
+    protected $guarded = [];
+
+    protected array $companyUserKeys = ['reporter_user_id'];
+
+    protected array $companyParents = ['branch'];
+
+    protected function casts(): array
+    {
+        return [
+            'source' => ReportSource::class,
+            'status' => ReportStatus::class,
+        ];
+    }
+
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class, 'company_id');
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class, 'branch_id');
+    }
+
+    public function reporter(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reporter_user_id');
+    }
+
+    public function employee(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class, 'employee_id');
+    }
+
+    public function location(): BelongsTo
+    {
+        return $this->belongsTo(Location::class, 'location_id');
+    }
+
+    public function allegedResponsibleEmployee(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class, 'alleged_responsible_employee_id');
+    }
+
+    public function disciplinaryCase(): BelongsTo
+    {
+        return $this->belongsTo(DisciplinaryCase::class, 'case_id');
+    }
+
+    public function witnesses(): HasMany
+    {
+        return $this->hasMany(ReportWitness::class);
+    }
+}
