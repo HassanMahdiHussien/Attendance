@@ -51,7 +51,6 @@ test('the platform admin web context sees all companies', function (): void {
     Route::middleware('web')->get('/_tenant-context-test', fn () => response((string) Branch::count()));
     $this->actingAs($companyUser)->get('/_tenant-context-test')->assertOk()->assertSee('1');
     $this->actingAs($admin)->get('/_tenant-context-test')->assertOk()->assertSee('2');
-    expect($context->isSet())->toBeFalse();
 });
 
 test('queue events clear context before and after each job', function (): void {

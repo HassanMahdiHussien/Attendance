@@ -17,13 +17,17 @@ class UserAccountService
 
         return DB::transaction(function () use ($data, $actor): User {
             $addons = $data['addons'] ?? [];
-            unset($data['addons']);
+            $branchIds = $data['branch_ids'] ?? [];
+            unset($data['addons'], $data['branch_ids']);
             $user = new User;
             $user->fill(Arr::only($data, ['name', 'email', 'password']));
             $user->forceFill(Arr::only($data, ['company_id', 'employee_id', 'primary_role', 'law_firm_partner_id', 'hr_partner_id', 'is_active']));
             $user->save();
             if ($actor->primary_role !== UserRole::HrStaff) {
                 $this->setAddons($user, $addons, $actor);
+            }
+            if ($branchIds !== []) {
+                $this->setBranchScope($user, $branchIds, $actor);
             }
 
             return $user;
@@ -37,9 +41,11 @@ class UserAccountService
         $this->authorizeAddons($actor, $data);
 
         return DB::transaction(function () use ($user, $data, $actor): User {
+            $wasActive = $user->is_active;
             $explicitAddons = array_key_exists('addons', $data);
             $addons = $data['addons'] ?? $user->getPermissionNames()->all();
-            unset($data['addons']);
+            $branchIds = $data['branch_ids'] ?? null;
+            unset($data['addons'], $data['branch_ids']);
             $newRole = $data['primary_role'] ?? $user->primary_role;
             $newRole = $newRole instanceof UserRole ? $newRole : UserRole::from($newRole);
             if ($newRole !== $user->primary_role && ! $explicitAddons) {
@@ -55,10 +61,13 @@ class UserAccountService
                 && DB::table('branch_user')->where('user_id', $user->id)->exists()) {
                 $this->setBranchScope($user, [], $actor);
             }
+            if ($branchIds !== null) {
+                $this->setBranchScope($user, $branchIds, $actor);
+            }
             if ($actor->primary_role !== UserRole::HrStaff) {
                 $this->setAddons($user, $addons, $actor);
             }
-            if (! $user->is_active) {
+            if ($wasActive && ! $user->is_active) {
                 $this->purgeSessions($user, $actor);
             }
 
@@ -94,7 +103,13 @@ class UserAccountService
             }
         }
         DB::transaction(function () use ($user, $branchIds, $actor): void {
-            $before = DB::table('branch_user')->where('user_id', $user->id)->pluck('branch_id')->all();
+            $before = array_map('intval', DB::table('branch_user')->where('user_id', $user->id)->pluck('branch_id')->all());
+            $branchIds = array_map('intval', $branchIds);
+            sort($before);
+            sort($branchIds);
+            if ($before === $branchIds) {
+                return;
+            }
             DB::table('branch_user')->where('user_id', $user->id)->delete();
             foreach ($branchIds as $id) {
                 DB::table('branch_user')->insert(['company_id' => $user->company_id, 'branch_id' => $id, 'user_id' => $user->id, 'created_at' => now(), 'updated_at' => now()]);
@@ -114,7 +129,11 @@ class UserAccountService
     private function purgeSessions(User $user, User $actor): void
     {
         $count = DB::table('sessions')->where('user_id', $user->id)->delete();
-        app(AuditLogger::class)->log('user.deactivated', $user, ['sessions_purged' => $count], $actor);
+        app(AuditLogger::class)->log('user.deactivated', $user, [
+            'before' => ['is_active' => true],
+            'after' => ['is_active' => false],
+            'sessions_purged' => $count,
+        ], $actor);
     }
 
     private function allowedAddons(UserRole $role): array

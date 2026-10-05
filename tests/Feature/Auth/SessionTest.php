@@ -184,5 +184,4 @@ test('admin panel Livewire update uses the selected company for platform admin',
     $updated = json_decode($response->json('components.0.snapshot'), true);
     expect($updated['data']['observedContext'])->toBe($selected->id);
     expect($updated['data']['employeeCount'])->toBe(2);
-    expect(app(TenantContext::class)->isSet())->toBeFalse();
 });

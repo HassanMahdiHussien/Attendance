@@ -44,21 +44,21 @@ fix briefs.
 
 ## Phase 5: US2 platform area (P1) (run E)
 
-- [ ] T020 [US2] Platform resources: Companies (create with first admin via onboarding service; languages ar+en locked, ku optional; activate/deactivate; subscription status; no delete), LawFirmPartners + HrPartners (partnerships via PartnershipService, full_case_access), PlatformUsers
-- [ ] T021 [P] [US2] `tests/Feature/Platform/*Test.php`: matrix cells via Livewire/HTTP incl. direct URLs; deactivation effects; audit entries
+- [x] T020 [US2] Platform resources: Companies (create with first admin via onboarding service; languages ar+en locked, ku optional; activate/deactivate; subscription status; no delete), LawFirmPartners + HrPartners (partnerships via PartnershipService, full_case_access), PlatformUsers
+- [x] T021 [P] [US2] `tests/Feature/Platform/*Test.php`: matrix cells via Livewire/HTTP incl. direct URLs; deactivation effects; audit entries
 
 ## Phase 6: US3 company setup (P1) (run E)
 
-- [ ] T022 [US3] Admin resources: Branches, Locations, Employees, Users (scoped query R4b, role options by actor, add-ons, branch scope, activate/deactivate), CommitteeMandates (+ pool relation manager, register via service), CompanySettings page; Filament theme with §18 tokens
-- [ ] T023 [P] [US3] `tests/Feature/Admin/*Test.php`: matrix cells for company_admin / hr_staff / platform_admin-in-tenant; other-company ids → 404/403; select options scoped; GM rule; EMP code; mandate date rules; last-admin guard
-- [ ] T024 [P] [US3] `tests/Feature/Admin/TenantContextInPanelTest.php`: Livewire actions, tenant switch, relation manager, direct URLs (R1)
-- [ ] T025 [P] `tests/Feature/Audit/AuditInventoryTest.php`: one entry per action in the matrix, before/after, no secrets (SC-004)
+- [x] T022 [US3] Admin resources: Branches, Locations, Employees, Users (scoped query R4b, role options by actor, add-ons, branch scope, activate/deactivate), CommitteeMandates (+ pool relation manager, register via service), CompanySettings page; Filament theme with §18 tokens
+- [x] T023 [P] [US3] `tests/Feature/Admin/*Test.php`: matrix cells for company_admin / hr_staff / platform_admin-in-tenant; other-company ids → 404/403; select options scoped; GM rule; EMP code; mandate date rules; last-admin guard
+- [x] T024 [P] [US3] `tests/Feature/Admin/TenantContextInPanelTest.php`: Livewire actions, tenant switch, relation manager, direct URLs (R1)
+- [x] T025 [P] `tests/Feature/Audit/AuditInventoryTest.php`: one entry per action in the matrix, before/after, no secrets (SC-004)
 
 ## Phase 7: Polish (run E + orchestrator)
 
-- [ ] T026 [P] CLAUDE.md §3 bullet + WEIRDNESS line: termination requires HR "not on leave / sick absence" confirmation (who/when); WEIRDNESS: consultation visibility is firm-wide; legacy company_legal_reviewer → deactivated reporter
-- [ ] T027 [P] docs/ERD.md: UserRole list, permissions note
-- [ ] T028 Orchestrator: quickstart V2–V10 in the browser, full gates, PR
+- [x] T026 [P] CLAUDE.md §3 bullet + WEIRDNESS line: termination requires HR "not on leave / sick absence" confirmation (who/when); WEIRDNESS: consultation visibility is firm-wide; legacy company_legal_reviewer → deactivated reporter
+- [x] T027 [P] docs/ERD.md: UserRole list, permissions note
+- [x] T028 Orchestrator: quickstart V2–V10 in the browser, full gates, PR
 
 ## Dependencies
 Phase 1 → 2 → (US1, US4) → US2/US3 screens → polish.

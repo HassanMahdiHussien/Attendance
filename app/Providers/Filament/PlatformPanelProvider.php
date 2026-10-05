@@ -48,7 +48,12 @@ class PlatformPanelProvider extends PanelProvider
             ->discoverResources(in: app_path('Filament/Platform/Resources'), for: 'App\\Filament\\Platform\\Resources')
             ->discoverPages(in: app_path('Filament/Platform/Pages'), for: 'App\\Filament\\Platform\\Pages')
             ->pages([Dashboard::class])
-            ->colors(['primary' => Color::hex('#4F46E5')])->font('Tajawal')
+            ->colors([
+                'primary' => Color::hex('#4F46E5'),
+                'warning' => Color::hex('#F59E0B'),
+                'danger' => Color::hex('#EF4444'),
+                'success' => Color::hex('#10B981'),
+            ])->font('Tajawal')->viteTheme('resources/css/filament/theme.css')
             ->authMiddleware([Authenticate::class]);
     }
 }

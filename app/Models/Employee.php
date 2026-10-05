@@ -16,6 +16,8 @@ class Employee extends Model
 {
     use BelongsToCompany, Concerns\Audited, HasFactory;
 
+    protected $attributes = ['is_active' => true, 'is_general_manager' => false];
+
     protected $table = 'employees';
 
     protected $guarded = [];

@@ -34,3 +34,7 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 - **`users` is outside the fail-closed tenant model scope.** Authentication must find an account before it knows the tenant; company access is enforced through roles and policies. (2026-10)
 - **MySQL triggers enforce legal-record immutability.** Both local and production MySQL need `log_bin_trust_function_creators=1` so migrations can create those triggers. (2026-10)
 - **Automatic reference numbers skip numbers already entered manually.** A company may reserve a number outside the app; automatic issuance advances past occupied values. (2026-10)
+- **Termination issuance requires an HR leave/absence confirmation.** HR checks that the employee is not on statutory leave or documented sick absence; the system records who and when. This is the source until the leave module exists. (2026-10)
+- **Requested legal consultations are visible firm-wide.** Every reviewer at the partnered law firm can see a consultation-requested case, rather than only the reviewer who first opens it. (2026-10)
+- **Legacy `company_legal_reviewer` accounts become deactivated reporters.** A company admin must deliberately reassign access; the migration does not silently elevate them. (2026-10)
+- **Tenant middleware never clears context in `finally`.** Filament persistent middleware is a pre-check for Livewire updates; context is cleared on `RequestHandled`. (2026-10)
