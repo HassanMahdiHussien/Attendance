@@ -66,3 +66,72 @@
   state and case event). HTTP tests for role landing and direct-URL refusal per role (404 for
   invisible cases). The board sort and pill mapping are unit-tested. Browser walkthrough by the
   orchestrator.
+
+## R8. Review resolutions (Codex plan review, 2026-10-05). These win over R1–R7
+
+- **Reports inbox (A1)**: company_admin and hr_staff see every `received` / `under_review` report of
+  their company (intake is HR's daily job; not limited by "opened / assigned").
+  `ViolationReportVisibility::inbox(User)` is tested with an HR user without the add-on. Converted and
+  dismissed reports follow the existing rule.
+- **Explicit transitions per action (A2)**:
+  - Confirm and issue: `DefenseLetterFlow::confirmAndIssue(document, actor, ?manualRef)` runs, in one
+    transaction, `CaseWorkflow` ready_for_review → confirmed and then `CaseDocumentIssuance::issue`.
+    "Send back" is ready_for_review → open.
+  - Submit for review: open → defense_letter_citation_check → defense_letter_ready_for_review (the
+    second edge runs the CitationGate guard). A gate failure leaves the case in citation_check with the
+    reason shown, and "back to edit" returns it to open.
+  - Response scan: `ResponseService::attachScan(case, file, actor)` stores the attachment
+    (`employee_response_scan`) and transitions to `response_scanned_uploaded` atomically. A failure
+    rolls back both.
+  - Response hand-off: `ResponseService::recordHandOff(...)` = `HandOffService` (purpose
+    response_submission) + the matching response transition.
+  - No response: `ResponseService::markNoResponse(case, actor)` is allowed only after the response due
+    date. It writes a `response_not_received` case event and does **not** transition. Feature 006's
+    session recording is already allowed from awaiting_employee_response after the deadline. No fake
+    session.
+- **Abilities enforced in services (A3)**: `DisciplinaryCasePolicy` gains `update`, `manageDocuments`,
+  `confirm`, `secondReview`, `issue`, `correct`, `assign`, `recordHandOff`, `uploadAttachment`. All are
+  true only for company_admin / hr_staff who can see the case via `CaseVisibility`; `viewAny` is no
+  longer unconditional. New services and the existing `CaseDocumentIssuance`, `DocumentCorrector`,
+  `HandOffService` and `CaseDrafts` call `Gate::forUser($actor)->authorize(...)`, and Livewire actions
+  authorise too. Tests call the services directly with a committee member / reporter / other-company
+  HR and expect refusal.
+- **Second review freshness (A4)**: any content change through `DocumentDrafts` (or a correction)
+  clears `second_reviewed_by/_at`. The second reviewer must differ from the user issuing and from the
+  last content editor (`documents.last_edited_by`, new nullable column set by DocumentDrafts). Test:
+  edit after review → issuance refused until reviewed again.
+- **Shared sign-in (B1)**: `LoginAttempts` covers both buckets, per-email and per-IP (5/min each, the
+  same keys used by the panel page), so attempts across `/login` and the panel logins share limits. A
+  forced logout outside a panel redirects to `/login`; inside a panel it still goes to the panel login.
+  Test: panel sign-in, then workspace navigation in the same session; mixed-page throttling.
+- **Nested binding and downloads (B2)**: components resolve `{case}` via CaseVisibility, then
+  `{document}` must belong to that case; otherwise 404. Attachment download
+  `/attachments/{attachment}`: case attachments → CaseVisibility of the case; report attachments → HR
+  inbox users of that company, or the case's viewers once converted; reporters cannot download (they
+  see status only). Wrong-parent or invisible → 404.
+- **Uploads (B3)**: `AttachmentService::store(parent, kind, file, actor)` authorises the parent, checks
+  the kind is allowed for the parent type (report: report_evidence; case: employee_response_scan,
+  delivery_proof, signed_document_scan), sniffs the real MIME (finfo) to be pdf / jpeg / png, enforces
+  ≤ 10 MB, and writes content-addressed under the private disk. The row is created only after the file
+  is stored; a failure deletes the file. Tests: spoofed extension, oversize, wrong tenant / parent, kind
+  not allowed.
+- **Duplicate path (B4, orchestrator decision)**: when HR converts a report and picks "link to existing
+  case", the report becomes `converted_to_case` with `case_id` = the existing case. No new case number
+  is created. Case event `duplicate_report_linked` and an audit entry are written. For case-to-case
+  duplicates, `CaseInsights::linkDuplicate` is used.
+- **Assignment (B5)**: `CaseAssignment::assign(case, hrUser|null, actor)`. Only company_admin, or the
+  currently assigned / opening HR user, may reassign. The assignee must be active hr_staff /
+  company_admin of the same company. It writes the case event and audit. Tests: old assignee loses
+  visibility (without the add-on), new gains it, and alerts go to the new one.
+- **Provisional reference (B6)**: the confirmation component keeps the prefilled value and a dirty
+  flag. Unchanged → `manualRef = null` (generated at issuance); edited → manual. After issuance the
+  screen shows the actual number with a note when it differs from the preview. Test: two HR users
+  issue concurrently from previews showing the same number → distinct numbers, and the second sees
+  the note.
+- **Livewire boundary tests (B7)**: action tests go through the real Livewire update endpoint (pattern
+  in tests/Feature/Auth/SessionTest.php) for: reauthorisation after reassignment, a deactivated user,
+  and a stale stage (the second HR action after the first changed the stage → "تغيرت الحالة، أعد
+  التحميل" message, no 500).
+- **Nits**: phones show a compact stage label instead of the 5 dots; documents keep Western digits (the
+  real pilot letters are the authority for documents; the mockup's digits apply to UI chrome only);
+  MyCases / Home have clear empty states and no action buttons in 005.
