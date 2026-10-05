@@ -90,7 +90,7 @@ never reach a printed legal document.
 
 ### User Story 3 - Drafts can be previewed before confirmation (Priority: P2)
 
-Before issuing, HR sees exactly what will print. The draft preview uses the same renderer with the
+Before issuing, HR sees what will print, except the provisional reference number and the watermark. The draft preview uses the same renderer with the
 reference number shown as provisional, plus a clear "draft" watermark that never appears on the issued
 PDF.
 
@@ -112,7 +112,7 @@ PDF.
 - A citation marker `[[cite:id]]` renders as the official article reference from the legal library; an
   unknown or unverified id blocks rendering.
 - Very long bodies flow onto further pages; letterhead and footer repeat on each page.
-- Logo upload: only PNG / JPG / SVG under 2 MB; SVG is sanitised or rasterised.
+- Logo upload: only PNG / JPG under 2 MB (no SVG).
 - An extra language enabled with no template in that language: issuance blocked with a reason
   (no automatic translation of fixed wording).
 
@@ -127,8 +127,10 @@ PDF.
   footer text (default "CONFIDENTIAL"), optional header image; one shared logo.
 - **FR-003**: Document templates MUST be stored per company, document type and language as immutable
   versions of named text blocks and options; when none exists the system default applies.
-- **FR-004**: Each issued document MUST record which template version (per language) and letterhead
-  version it was rendered with, and keep its PDF permanently.
+- **FR-004**: Each issued document MUST record which template and letterhead versions (per language)
+  and logo hash it was rendered with, keep its frozen HTML, and keep its PDF permanently.
+- **FR-004b**: Reference number and issue date MUST always print; prior-record paragraphs come only
+  from the database; recommendations carry findings and recommendations as two body sections.
 
 **Rendering**
 - **FR-005**: One renderer MUST build the document HTML from: letterhead + template blocks with resolved
@@ -145,9 +147,14 @@ PDF.
   do.
 
 **PDF**
-- **FR-010**: On issuance, a queued job MUST render the PDF (Browsershot), store it on the private local
-  disk, and set `pdf_file_path` once; failures are retried and visible, and never block the issuance
-  record itself.
+- **FR-010**: At issuance the document HTML MUST be rendered and frozen inside the issuance transaction;
+  a queued job converts only that frozen HTML to PDF (Browsershot), stores it once on the private local
+  disk (temp file, verify, no-replace promotion, sha256), and sets path / sha / status once. Failures
+  are retried, become a visible failed status with an HR alert and a retry command, and never undo
+  the issuance.
+- **FR-010b**: Issuance MUST pass the citation gate (research R8): every marker backed by an
+  applicable, verified, relevance-checked (or overridden) citation record; no article number in prose
+  outside a marker.
 - **FR-011**: The issued PDF MUST be downloadable only by users who can view the case (CaseVisibility).
 
 **Customisation UI**

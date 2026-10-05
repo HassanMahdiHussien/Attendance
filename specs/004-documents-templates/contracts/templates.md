@@ -36,8 +36,17 @@ attendee line), reference_label.
 defense letter, salutation✱, opening✱, defense_outcome_rejected✱, defense_outcome_partial✱,
 defense_outcome_accepted✱, decision_sentence✱, gm_title✱, union_title✱, acknowledgment (lines).
 
-Options: `show_reference_number` (bool, default true), `show_footer` (bool, default true),
-`header_mode` (`logo_text` | `image`).
+Options: `show_footer` (bool, default true), `header_mode` (`logo_text` | `image`). The reference
+number and issue date are always printed (fixed layout, not an option).
+
+Required placeholders inside blocks: salutation ⊇ `{employee_first_name}`; opening ⊇ `{hire_date}`,
+`{position}`; deadline_sentence ⊇ `{response_deadline}`; mandate_sentence ⊇ `{mandate_number}`,
+`{mandate_date}`, `{session_date}`; decision_sentence ⊇ `{penalty}`.
+
+Additional blocks: `prior_record` (defense letter: printed only when `include_prior_record`;
+recommendations: printed when prior cases exist). The list lines come from the DB.
+
+Recommendations body: `body` = findings, `secondary_body` = recommendations (both required).
 
 The body (case-specific text) is not a block. It comes from `document_contents.body` per language,
 placed between the opening and the closing blocks.
