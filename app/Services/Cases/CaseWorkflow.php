@@ -2,9 +2,11 @@
 
 namespace App\Services\Cases;
 
+use App\Documents\CitationGate;
 use App\Enums\CaseStatus as S;
 use App\Enums\DocumentType;
 use App\Exceptions\IllegalTransition;
+use App\Exceptions\IssuanceBlocked;
 use App\Exceptions\TransitionBlocked;
 use App\Models\DisciplinaryCase;
 use App\Models\User;
@@ -79,9 +81,22 @@ class CaseWorkflow
             && ! $case->documents()->where('document_type', DocumentType::DefenseLetter->value)->where('drafted_by', 'human')->exists()) {
             throw new TransitionBlocked('A human defense-letter draft is required.');
         }
-        if (in_array($to, [S::DefenseLetterReadyForReview, S::RecommendationsAwaitingApprovals, S::DecisionLetterReadyForReview], true)
-            && ! ($payload['citation_check_passed'] ?? false)) {
-            throw new TransitionBlocked('Citation check must pass or be overridden with a recorded reason.');
+        if (in_array($to, [S::DefenseLetterReadyForReview, S::RecommendationsAwaitingApprovals, S::DecisionLetterReadyForReview], true)) {
+            $type = match ($to) {
+                S::DefenseLetterReadyForReview => DocumentType::DefenseLetter,
+                S::RecommendationsAwaitingApprovals => DocumentType::Recommendations,
+                default => DocumentType::DecisionLetter,
+            };
+            $draft = $case->documents()->where('document_type', $type->value)
+                ->whereIn('status', ['draft', 'ready_for_review'])->orderByDesc('version')->first();
+            if (! $draft) {
+                throw new TransitionBlocked('A current document draft is required for citation review.');
+            }
+            try {
+                app(CitationGate::class)->assertIssuable($draft);
+            } catch (IssuanceBlocked $error) {
+                throw new TransitionBlocked($error->getMessage(), previous: $error);
+            }
         }
         if (in_array($to, [S::AiDraftingRecommendations, S::RecommendationsCitationCheck], true)
             && $case->status === S::CommitteeSessionHeld && ! $case->session_majority_reached) {

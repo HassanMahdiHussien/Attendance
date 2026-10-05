@@ -46,7 +46,7 @@ test('three distinct pool categories confirm recommendations and snapshot the la
     $case = $f['case'];
     // The initial HR edit returns the document to citation check.
     app(CaseWorkflow::class)->transition($case, CaseStatus::RecommendationsAwaitingApprovals,
-        $f['hr'], 'Citation checked', ['citation_check_passed' => true]);
+        $f['hr'], 'Citation checked');
     $service = app(DocumentApprovalService::class);
     foreach (['legal', 'hr', 'labor_union'] as $role) {
         $approval = $service->approve($f['document'], $f['users'][$role]);
@@ -63,7 +63,7 @@ test('a non-pool approver and an outside-editor content write are refused', func
     $f = approvalFixture();
     $outsider = User::factory()->create(['company_id' => $f['company']->id, 'primary_role' => 'committee_member']);
     app(CaseWorkflow::class)->transition($f['case'], CaseStatus::RecommendationsAwaitingApprovals,
-        $f['hr'], 'Citation checked', ['citation_check_passed' => true]);
+        $f['hr'], 'Citation checked');
     expect(fn () => app(DocumentApprovalService::class)->approve($f['document'], $outsider))->toThrow(TransitionBlocked::class);
     expect(fn () => $f['document']->contents()->first()->update(['body' => 'Bypass']))->toThrow(ImmutableRecordException::class);
 });
@@ -71,7 +71,7 @@ test('a non-pool approver and an outside-editor content write are refused', func
 test('the first approval in a category wins and rejection needs a comment', function (): void {
     $f = approvalFixture();
     app(CaseWorkflow::class)->transition($f['case'], CaseStatus::RecommendationsAwaitingApprovals,
-        $f['hr'], 'Citation checked', ['citation_check_passed' => true]);
+        $f['hr'], 'Citation checked');
     $service = app(DocumentApprovalService::class);
     $service->approve($f['document'], $f['users']['legal']);
     $second = User::factory()->create(['company_id' => $f['company']->id, 'primary_role' => 'committee_member']);
@@ -86,7 +86,7 @@ test('the first approval in a category wins and rejection needs a comment', func
 test('a user linked to two categories must choose and cannot fill both', function (): void {
     $f = approvalFixture();
     app(CaseWorkflow::class)->transition($f['case'], CaseStatus::RecommendationsAwaitingApprovals,
-        $f['hr'], 'Citation checked', ['citation_check_passed' => true]);
+        $f['hr'], 'Citation checked');
     CommitteePoolMember::factory()->create(['mandate_id' => $f['mandate']->id,
         'user_id' => $f['users']['legal']->id, 'role_type' => PoolRole::Hr]);
     $service = app(DocumentApprovalService::class);
@@ -98,7 +98,7 @@ test('a user linked to two categories must choose and cannot fill both', functio
 test('an hr staff account in the HR pool can see and approve a case it did not open', function (): void {
     $f = approvalFixture();
     app(CaseWorkflow::class)->transition($f['case'], CaseStatus::RecommendationsAwaitingApprovals,
-        $f['hr'], 'Citation checked', ['citation_check_passed' => true]);
+        $f['hr'], 'Citation checked');
     $hrStaff = User::factory()->create(['company_id' => $f['company']->id, 'primary_role' => 'hr_staff']);
     CommitteePoolMember::factory()->create(['mandate_id' => $f['mandate']->id, 'user_id' => $hrStaff->id, 'role_type' => PoolRole::Hr]);
 

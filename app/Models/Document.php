@@ -41,7 +41,7 @@ class Document extends Model
 
             $dirty = array_keys($document->getDirty());
             foreach ($dirty as $column) {
-                if (! in_array($column, ['status', 'superseded_by_id', 'pdf_file_path'], true)) {
+                if (! in_array($column, ['status', 'superseded_by_id', 'pdf_file_path', 'pdf_sha256', 'pdf_status', 'pdf_error'], true)) {
                     throw new ImmutableRecordException('Locked documents cannot be changed.');
                 }
             }
@@ -49,10 +49,21 @@ class Document extends Model
             if ($document->isDirty('status') && ! ($document->getRawOriginal('status') === 'issued' && $document->status === DocumentStatus::Superseded)) {
                 throw new ImmutableRecordException('Invalid document status change.');
             }
-            foreach (['superseded_by_id', 'pdf_file_path'] as $column) {
+            foreach (['superseded_by_id', 'pdf_file_path', 'pdf_sha256'] as $column) {
                 if ($document->isDirty($column) && ($document->getRawOriginal($column) !== null || $document->{$column} === null)) {
                     throw new ImmutableRecordException('Invalid locked document change.');
                 }
+            }
+            if ($document->isDirty('pdf_status')) {
+                $old = $document->getRawOriginal('pdf_status');
+                $next = $document->pdf_status;
+                $allowed = [null => ['pending'], 'pending' => ['failed', 'ready'], 'failed' => ['pending', 'ready']];
+                if (! in_array($next, $allowed[$old] ?? [], true)) {
+                    throw new ImmutableRecordException('Invalid PDF status change.');
+                }
+            }
+            if ($document->isDirty('pdf_error') && ! in_array($document->pdf_status, ['pending', 'failed', 'ready'], true)) {
+                throw new ImmutableRecordException('Invalid PDF error change.');
             }
         });
         static::deleting(fn () => throw new ImmutableRecordException('Documents cannot be deleted.'));
@@ -76,6 +87,7 @@ class Document extends Model
             'penalty_type' => PenaltyType::class,
             'is_locked' => 'boolean',
             'reference_is_manual' => 'boolean',
+            'render_snapshot' => 'array',
         ];
     }
 

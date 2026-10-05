@@ -46,7 +46,7 @@ class ConsultationService
             if ($case->status === CaseStatus::AwaitingExternalLegalConsultation) {
                 // The reviewer is authorized through the firm-wide visibility query.
                 $case = $this->workflow->transition($case, CaseStatus::DecisionLetterReadyForReview, $reviewer,
-                    'Consultation completed', ['citation_check_passed' => true]);
+                    'Consultation completed');
             }
 
             return $case;

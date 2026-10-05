@@ -8,7 +8,11 @@ use App\Models\LawJurisdiction;
 use App\Models\LegalUnit;
 use App\Models\User;
 use App\Support\Tenancy\TenantContext;
+use Illuminate\Contracts\Queue\Job;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Queue\Events\JobFailed;
+use Illuminate\Queue\Events\JobProcessed;
+use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Route;
 
@@ -53,17 +57,33 @@ test('the platform admin web context sees all companies', function (): void {
     $this->actingAs($admin)->get('/_tenant-context-test')->assertOk()->assertSee('2');
 });
 
-test('queue events clear context before and after each job', function (): void {
+test('worker queue events clear context before and after each job', function (): void {
+    $company = Company::factory()->create();
+    $context = app(TenantContext::class);
+    $job = Mockery::mock(Job::class);
+    $job->shouldReceive('payload')->andReturn([]);
+    $job->shouldIgnoreMissing();
+
+    foreach ([
+        new JobProcessing('database', $job),
+        new JobProcessed('database', $job),
+        new JobFailed('database', $job, new RuntimeException('x')),
+    ] as $event) {
+        $context->setCompany($company);
+        event($event);
+        expect($context->isSet())->toBeFalse();
+    }
+});
+
+test('sync jobs keep the caller tenant context', function (): void {
     $company = Company::factory()->create();
     $context = app(TenantContext::class);
     $context->setCompany($company);
     ContextProbeJob::$observations = [];
 
     Queue::connection('sync')->push(new ContextProbeJob($company->id));
-    Queue::connection('sync')->push(new ContextProbeJob(null));
 
-    expect(ContextProbeJob::$observations)->toBe([null, null]);
-    expect($context->isSet())->toBeFalse();
+    expect($context->companyId())->toBe($company->id);
 });
 
 test('legal library exposes statutes and only the current company regulation', function (): void {

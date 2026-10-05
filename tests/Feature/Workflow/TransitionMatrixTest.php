@@ -5,6 +5,7 @@ use App\Enums\DocumentType;
 use App\Exceptions\IllegalTransition;
 use App\Models\Company;
 use App\Models\DisciplinaryCase;
+use App\Models\Document;
 use App\Models\Law;
 use App\Models\User;
 use App\Services\Cases\CaseWorkflow;
@@ -53,6 +54,14 @@ test('each mapped edge can be exercised with its prerequisites while an illegal 
                         'role_category' => $role, 'decision' => 'approved', 'languages_present' => ['ar', 'en'], 'decided_at' => now()]);
                 }
             }
+            $citationTypes = [
+                CaseStatus::DefenseLetterReadyForReview->value => DocumentType::DefenseLetter,
+                CaseStatus::RecommendationsAwaitingApprovals->value => DocumentType::Recommendations,
+                CaseStatus::DecisionLetterReadyForReview->value => DocumentType::DecisionLetter,
+            ];
+            if (isset($citationTypes[$to->value])) {
+                Document::factory()->create(['case_id' => $case->id, 'document_type' => $citationTypes[$to->value]]);
+            }
             $issuedTypes = [
                 CaseStatus::DefenseLetterIssued->value => DocumentType::DefenseLetter,
                 CaseStatus::RecommendationsPrinted->value => DocumentType::Recommendations,
@@ -62,8 +71,7 @@ test('each mapped edge can be exercised with its prerequisites while an illegal 
                 $case->documents()->create(['company_id' => $company->id, 'document_type' => $issuedTypes[$to->value],
                     'version' => 1, 'drafted_by' => 'human', 'status' => 'issued', 'is_locked' => true]);
             }
-            $payload = ['citation_check_passed' => true];
-            $changed = $workflow->transition($case, $to, $actor, 'Matrix edge', $payload);
+            $changed = $workflow->transition($case, $to, $actor, 'Matrix edge');
             expect($changed->status)->toBe($to);
             expect($case->events()->where('event_type', 'status_changed')->count())->toBe(1);
         }

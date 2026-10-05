@@ -10,19 +10,19 @@ Gates: `docker compose exec -T laravel.test php artisan test` · `… ./vendor/b
 - [x] T003 Smoke test: Arabic + Sorani PDF renders with Noto Naskh Arabic (ADR 0005 Kurdish check)
 
 ## Phase 2: Data (run H)
-- [ ] T004 Migrations per data-model.md (gender, company_letterheads, document_templates, documents.render_snapshot); trigger migration update (render_snapshot protected; letterheads/templates append-only); backfill letterhead `ar` v1 from old company columns
-- [ ] T005 Models CompanyLetterhead, DocumentTemplate (BelongsToCompany, append-only, factories); Employee gender enum + cast; register both models in the isolation and composite-FK tests
+- [x] T004 Migrations per data-model.md (gender, company_letterheads, document_templates, documents.render_snapshot); trigger migration update (render_snapshot protected; letterheads/templates append-only); backfill letterhead `ar` v1 from old company columns
+- [x] T005 Models CompanyLetterhead, DocumentTemplate (BelongsToCompany, append-only, factories); Employee gender enum + cast; register both models in the isolation and composite-FK tests
 
 ## Phase 3: US1 rendering + PDF (P1) (run H)
-- [ ] T006 IraqiDate, PlaceholderResolver (incl. gender groups), TemplateValidator, TemplateResolver (company version or code default), BodyFormatter (escaped markdown subset), CitationRenderer (fail closed)
-- [ ] T007 Default templates ar + en for the three types (wording per docs/document-templates.md, committee name "اللجنة الانضباطية" / "Disciplinary Committee")
-- [ ] T008 DocumentFacts (MissingDocumentFact) + DocumentRenderer + Blade views (letterhead left logo / right text as in samples, red CONFIDENTIAL footer, A4, embedded fonts, page per language, draft watermark)
-- [ ] T009 Issuance freezes `rendered_html` + `render_snapshot` (R8 A1); CitationGate at issuance and in the citation-check transition guards (replacing the `citation_check_passed` flag); PdfGenerator (JS off, network blocked) + idempotent GenerateDocumentPdf (temp, verify, no-replace promote, sha, pdf_status) after commit; `documents:retry-pdf`; failure alert; issuance refuses unspecified gender or missing facts
-- [ ] T010 DocumentPolicy + routes: draft preview (HTML) and issued PDF download (private disk, CaseVisibility)
-- [ ] T011 [P] Tests: IraqiDateTest, TemplateValidatorTest, RendererTest (every default template resolves for male/female; each missing fact blocks; body escaping; citations fail closed; watermark only in drafts), FontCoverageTest (cmap reader; Arabic + Sorani codepoints), PdfGenerationTest (one PDF per type; language order / dir / letterhead + footer per page / page breaks; long body spans pages; fonts embedded; frozen HTML ignores later data edits; once-only file protocol and sha; failure → failed status → retry → ready; 409 while pending; download authorisation), CitationGateTest (applicable / inapplicable jurisdiction, unapproved regulation, unverified or superseded unit, does_not_support with and without override, bare article number in prose)
+- [x] T006 IraqiDate, PlaceholderResolver (incl. gender groups), TemplateValidator, TemplateResolver (company version or code default), BodyFormatter (escaped markdown subset), CitationRenderer (fail closed)
+- [x] T007 Default templates ar + en for the three types (wording per docs/document-templates.md, committee name "اللجنة الانضباطية" / "Disciplinary Committee")
+- [x] T008 DocumentFacts (MissingDocumentFact) + DocumentRenderer + Blade views (letterhead left logo / right text as in samples, red CONFIDENTIAL footer, A4, embedded fonts, page per language, draft watermark)
+- [x] T009 Issuance freezes `rendered_html` + `render_snapshot` (R8 A1); CitationGate at issuance and in the citation-check transition guards (replacing the `citation_check_passed` flag); PdfGenerator (JS off, network blocked) + idempotent GenerateDocumentPdf (temp, verify, no-replace promote, sha, pdf_status) after commit; `documents:retry-pdf`; failure alert; issuance refuses unspecified gender or missing facts
+- [x] T010 DocumentPolicy + routes: draft preview (HTML) and issued PDF download (private disk, CaseVisibility)
+- [x] T011 [P] Tests: IraqiDateTest, TemplateValidatorTest, RendererTest (every default template resolves for male/female; each missing fact blocks; body escaping; citations fail closed; watermark only in drafts), FontCoverageTest (cmap reader; Arabic + Sorani codepoints), PdfGenerationTest (one PDF per type; language order / dir / letterhead + footer per page / page breaks; long body spans pages; fonts embedded; frozen HTML ignores later data edits; once-only file protocol and sha; failure → failed status → retry → ready; 409 while pending; download authorisation), CitationGateTest (applicable / inapplicable jurisdiction, unapproved regulation, unverified or superseded unit, does_not_support with and without override, bare article number in prose)
 
 ## Phase 4: US3 preview (P2) (run H)
-- [ ] T012 Draft preview with provisional reference + watermark (covered by T010/T011)
+- [x] T012 Draft preview with provisional reference + watermark (covered by T010/T011)
 
 ## Phase 5: US2 customisation UI (P1) (run I)
 - [ ] T013 TemplateService / LetterheadService (validate, new version, audit)

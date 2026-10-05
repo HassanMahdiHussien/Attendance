@@ -15,11 +15,13 @@ use App\Models\CommitteeMandate;
 use App\Models\CommitteePoolMember;
 use App\Models\CommitteeSessionAttendance;
 use App\Models\Company;
+use App\Models\CompanyLetterhead;
 use App\Models\CompanySequence;
 use App\Models\DisciplinaryCase;
 use App\Models\Document;
 use App\Models\DocumentApproval;
 use App\Models\DocumentContent;
+use App\Models\DocumentTemplate;
 use App\Models\Employee;
 use App\Models\Location;
 use App\Models\ReportWitness;
@@ -35,6 +37,7 @@ dataset('tenant models', [
     AppealTracking::class, Attachment::class, Document::class,
     DocumentContent::class, DocumentApproval::class, Signature::class,
     Citation::class, CompanySequence::class, CaseAlert::class, CaseConflictClearance::class,
+    CompanyLetterhead::class, DocumentTemplate::class,
 ]);
 
 test('every tenant model isolates reads and builder writes and stamps creation', function (string $model): void {
@@ -46,9 +49,13 @@ test('every tenant model isolates reads and builder writes and stamps creation',
     $other = $context->runForCompany($b, fn () => $model::factory()->create());
 
     $context->setCompany($a);
-    expect($model::query()->pluck('id')->all())->toBe([$own->getKey()]);
+    $query = $model::query();
+    if ($model === CompanyLetterhead::class) {
+        $query->where('language_code', 'ku');
+    }
+    expect($query->pluck('id')->all())->toBe([$own->getKey()]);
     expect($model::find($other->getKey()))->toBeNull();
-    expect($model::count())->toBe(1);
+    expect($model === CompanyLetterhead::class ? $model::query()->where('language_code', 'ku')->count() : $model::count())->toBe(1);
     expect($model::query()->whereKey($other->getKey())->update(['company_id' => $a->id]))->toBe(0);
     expect($model::query()->whereKey($other->getKey())->delete())->toBe(0);
 

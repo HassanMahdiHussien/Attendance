@@ -35,17 +35,23 @@ class RecommendationsEditor
                 throw new TransitionBlocked('HR access to a recommendations draft is required.');
             }
             if (array_is_list($contents)) {
-                $contents = collect($contents)->pluck('body', 'language_code')->all();
+                $contents = collect($contents)->mapWithKeys(fn (array $item) => [$item['language_code'] => $item])->all();
             }
             if (count($contents) !== count(array_unique(array_keys($contents))) || in_array('', $contents, true)) {
                 throw new TransitionBlocked('Content must have unique languages and nonempty text.');
             }
             self::$writing = true;
             try {
-                foreach ($contents as $language => $body) {
+                foreach ($contents as $language => $value) {
+                    $body = is_array($value) ? ($value['body'] ?? null) : $value;
+                    $secondary = is_array($value) ? ($value['secondary_body'] ?? null) : null;
+                    if (blank($body)) {
+                        throw new TransitionBlocked("Findings are required for {$language}.");
+                    }
                     DocumentContent::updateOrCreate(
                         ['document_id' => $document->id, 'language_code' => $language],
-                        ['company_id' => $document->company_id, 'body' => $body, 'is_authoritative' => $language === 'ar'],
+                        ['company_id' => $document->company_id, 'body' => $body, 'secondary_body' => $secondary,
+                            'is_authoritative' => $language === 'ar'],
                     );
                 }
                 $document->contents()->whereNotIn('language_code', array_keys($contents))->get()->each->delete();

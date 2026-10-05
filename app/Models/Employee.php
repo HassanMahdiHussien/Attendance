@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\EmployeeGender;
 use App\Enums\SequenceKey;
 use App\Models\Concerns\BelongsToCompany;
 use App\Services\SequenceService;
@@ -16,7 +17,7 @@ class Employee extends Model
 {
     use BelongsToCompany, Concerns\Audited, HasFactory;
 
-    protected $attributes = ['is_active' => true, 'is_general_manager' => false];
+    protected $attributes = ['is_active' => true, 'is_general_manager' => false, 'gender' => 'unspecified'];
 
     protected $table = 'employees';
 
@@ -27,6 +28,9 @@ class Employee extends Model
     protected static function booted(): void
     {
         static::saving(function (self $employee): void {
+            if (! EmployeeGender::tryFrom((string) ($employee->getAttributes()['gender'] ?? 'unspecified'))) {
+                throw ValidationException::withMessages(['gender' => 'Gender must be male, female or unspecified.']);
+            }
             if ($employee->is_general_manager && $employee->is_active && self::query()
                 ->where('company_id', $employee->company_id)
                 ->where('is_general_manager', true)->where('is_active', true)
@@ -47,6 +51,7 @@ class Employee extends Model
     {
         return [
             'hire_date' => 'date',
+            'gender' => EmployeeGender::class,
             'is_general_manager' => 'boolean',
             'is_active' => 'boolean',
         ];

@@ -40,8 +40,15 @@ class AppServiceProvider extends ServiceProvider
             'case' => DisciplinaryCase::class,
             'document' => Document::class,
         ]);
-        Queue::before(fn () => app(TenantContext::class)->clear());
-        Queue::after(fn () => app(TenantContext::class)->clear());
-        Queue::failing(fn () => app(TenantContext::class)->clear());
+        // Worker jobs must never inherit another job's tenant. Sync jobs run inside the caller's
+        // request, so clearing there would wipe the caller's own context; jobs scope themselves.
+        $clearForWorkerJobs = function ($event): void {
+            if ($event->connectionName !== 'sync') {
+                app(TenantContext::class)->clear();
+            }
+        };
+        Queue::before($clearForWorkerJobs);
+        Queue::after($clearForWorkerJobs);
+        Queue::failing($clearForWorkerJobs);
     }
 }

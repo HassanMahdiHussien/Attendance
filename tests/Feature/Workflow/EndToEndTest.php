@@ -11,6 +11,7 @@ use App\Models\CommitteePoolMember;
 use App\Models\Company;
 use App\Models\DisciplinaryCase;
 use App\Models\Document;
+use App\Models\Employee;
 use App\Models\Law;
 use App\Models\User;
 use App\Services\Cases\CaseDocumentIssuance;
@@ -42,7 +43,7 @@ function driveCaseToSignedRecommendations(Outcome $outcome): array
             'body' => 'Human-written defense request', 'is_authoritative' => $language === 'ar']);
     }
     $case = $workflow->transition($case, S::DefenseLetterCitationCheck, $hr, 'Manual defense draft');
-    $case = $workflow->transition($case, S::DefenseLetterReadyForReview, $hr, 'Citations checked', ['citation_check_passed' => true]);
+    $case = $workflow->transition($case, S::DefenseLetterReadyForReview, $hr, 'Citations checked');
     $case = $workflow->transition($case, S::DefenseLetterConfirmed, $hr, 'HR confirmed');
     app(CaseDocumentIssuance::class)->issue($defense, $hr);
     $case = $case->fresh();
@@ -61,9 +62,12 @@ function driveCaseToSignedRecommendations(Outcome $outcome): array
     $case = app(CommitteeSessionService::class)->recordSession($case, $attendees, null, 'Human committee minutes',
         $outcome, DefenseAcceptance::Rejected, $hr);
     $recommendations = Document::factory()->create(['case_id' => $case->id, 'document_type' => 'recommendations', 'created_by' => $hr->id]);
-    app(RecommendationsEditor::class)->update($recommendations, ['ar' => 'Human recommendations', 'en' => 'Human recommendations'], $hr);
+    app(RecommendationsEditor::class)->update($recommendations, [
+        'ar' => ['body' => 'Human findings', 'secondary_body' => 'Human recommendations'],
+        'en' => ['body' => 'Human findings', 'secondary_body' => 'Human recommendations'],
+    ], $hr);
     $case = $workflow->transition($case, S::RecommendationsCitationCheck, $hr, 'Manual recommendations draft');
-    $case = $workflow->transition($case, S::RecommendationsAwaitingApprovals, $hr, 'Citations checked', ['citation_check_passed' => true]);
+    $case = $workflow->transition($case, S::RecommendationsAwaitingApprovals, $hr, 'Citations checked');
     foreach ($approvers as $approver) {
         app(DocumentApprovalService::class)->approve($recommendations, $approver);
     }
@@ -87,7 +91,8 @@ test('manual warning path archives after the appeal window and records every sta
             $decision->contents()->create(['company_id' => $f['company']->id, 'language_code' => $language,
                 'body' => 'Human decision', 'is_authoritative' => $language === 'ar']);
         }
-        $case = $workflow->transition($case, S::DecisionLetterReadyForReview, $hr, 'Citations checked', ['citation_check_passed' => true]);
+        $case = $workflow->transition($case, S::DecisionLetterReadyForReview, $hr, 'Citations checked');
+        Employee::factory()->create(['is_general_manager' => true]);
         app(CaseDocumentIssuance::class)->issue($decision, $hr);
         expect(app(Deadlines::class)->responseDue($case->fresh())->toDateString())->toBe('2026-06-21');
         expect(app(Deadlines::class)->procedureDue($case->fresh())->toDateString())->toBe('2026-07-03');

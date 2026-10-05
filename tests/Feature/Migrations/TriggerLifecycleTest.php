@@ -13,6 +13,7 @@ test('trigger migrations drop and recreate every trigger with identical definiti
     $migrations = array_map(fn (string $file) => require database_path("migrations/{$file}"), [
         '2026_10_04_203000_create_immutability_triggers.php',
         '2026_10_05_011000_add_workflow_triggers.php',
+        '2026_10_05_020000_add_document_templates.php',
     ]);
     $triggers = fn () => DB::table('information_schema.TRIGGERS')
         ->where('TRIGGER_SCHEMA', DB::getDatabaseName())

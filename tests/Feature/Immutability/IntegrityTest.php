@@ -76,7 +76,9 @@ test('locked document permits supersession link and PDF path', function (): void
     $document = Document::factory()->create(['is_locked' => true, 'status' => 'issued']);
     $successor = Document::factory()->create(['case_id' => $document->case_id, 'document_type' => $document->document_type,
         'version' => 2]);
-    $document->update(['status' => 'superseded', 'superseded_by_id' => $successor->id, 'pdf_file_path' => 'signed.pdf']);
+    $document->update(['status' => 'superseded', 'superseded_by_id' => $successor->id]);
+    $document->update(['pdf_status' => 'pending']);
+    $document->update(['pdf_file_path' => 'signed.pdf', 'pdf_sha256' => str_repeat('a', 64), 'pdf_status' => 'ready']);
     expect($document->fresh()->superseded_by_id)->toBe($successor->id);
     expect($document->fresh()->pdf_file_path)->toBe('signed.pdf');
 });

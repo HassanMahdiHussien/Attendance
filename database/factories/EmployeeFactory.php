@@ -23,6 +23,7 @@ class EmployeeFactory extends Factory
             'department' => $this->faker->words(3, true),
             'position' => $this->faker->words(3, true),
             'hire_date' => now(),
+            'gender' => 'male',
         ];
     }
 

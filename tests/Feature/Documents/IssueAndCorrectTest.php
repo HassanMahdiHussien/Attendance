@@ -3,8 +3,12 @@
 use App\Enums\DocumentStatus;
 use App\Enums\DocumentType;
 use App\Exceptions\IssuanceBlocked;
+use App\Models\CommitteeMandate;
+use App\Models\CommitteePoolMember;
+use App\Models\CommitteeSessionAttendance;
 use App\Models\Company;
 use App\Models\Document;
+use App\Models\Employee;
 use App\Models\User;
 use App\Services\AuditLogger;
 use App\Services\CaseEventLogger;
@@ -20,6 +24,22 @@ function documentFixture(array $companyAttributes = [], string $type = 'defense_
     app(TenantContext::class)->setCompany($company);
     $actor = User::factory()->create(['company_id' => $company->id, 'primary_role' => 'hr_staff']);
     $document = Document::factory()->create(['document_type' => $type, 'created_by' => $actor->id]);
+    if ($type !== 'defense_letter') {
+        $case = $document->disciplinaryCase;
+        $case->forceFill(['defense_letter_issued_at' => now()->subDays(3),
+            'committee_session_held_at' => now(), 'defense_acceptance' => 'rejected',
+            'outcome' => $type === 'decision_letter' ? 'warning' : null])->save();
+        $mandate = CommitteeMandate::factory()->create(['effective_from' => now()->subDays(10)]);
+        foreach (['legal', 'hr', 'labor_union'] as $role) {
+            $member = CommitteePoolMember::factory()->create(['mandate_id' => $mandate->id, 'role_type' => $role]);
+            CommitteeSessionAttendance::factory()->create(['case_id' => $case->id,
+                'committee_pool_member_id' => $member->id, 'is_chair' => $role === 'legal']);
+        }
+        if ($type === 'decision_letter') {
+            $document->update(['penalty_type' => 'warning']);
+            Employee::factory()->create(['is_general_manager' => true]);
+        }
+    }
 
     return [$company, $actor, $document];
 }
@@ -32,7 +52,7 @@ function addContents(Document $document, array $languages = ['ar', 'en']): void
         $editor = User::factory()->create(['company_id' => $document->company_id, 'primary_role' => 'company_admin']);
         $current = $document->contents()->pluck('body', 'language_code')->all();
         foreach ($languages as $language) {
-            $current[$language] = 'Text in '.$language;
+            $current[$language] = ['body' => 'Findings in '.$language, 'secondary_body' => 'Recommendations in '.$language];
         }
         app(RecommendationsEditor::class)->update($document, $current, $editor);
 
@@ -53,7 +73,7 @@ test('all enabled languages must have content and preview reserves nothing', fun
     expect(fn () => $issuer->issue($document, $actor))->toThrow(IssuanceBlocked::class, 'ku');
     addContents($document, ['ku']);
     expect($issuer->previewReference($document))->toBe('1');
-    expect($issuer->issue($document, $actor)->status)->toBe(DocumentStatus::Issued);
+    expect(fn () => $issuer->issue($document, $actor))->toThrow(IssuanceBlocked::class, 'letterhead.ku');
 });
 
 test('second review needs a time and another user', function (): void {
