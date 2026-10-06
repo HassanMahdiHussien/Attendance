@@ -24,8 +24,13 @@ reviewer views. Same custom Livewire workspace as 005."
   نتائج التحقيق، قررت اللجنة الأخذ بالدفوع المقدمة من قبلك" (with English equivalents).
 - Q: Feminine role labels? → A: Yes. "رئيسةً / عضوةً" for female attendees (from the linked employee
   record); name-only pool members without a known gender stay masculine.
-- Q: Who types the session minutes? → A: CLAUDE.md §3b: a committee member's typed notes. The session
-  can be recorded by HR / company admin or by an attending pool member who has a login.
+- Q: Who types the session minutes? → A: CLAUDE.md §3b: a committee member's typed notes. HR / company
+  admin records the session, and the minutes record which attending pool member typed them (revised
+  after plan review, research R1 A1).
+- Q: Consultation requested but no penalty? → A: archive is blocked until the firm completes it or a
+  company admin cancels it with a recorded reason (research R1 A5).
+- Q: Approver names on Doc A? → A: attendee signature lines as in the samples, plus one line naming
+  the three in-system approvers (research R1).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -143,7 +148,7 @@ appeal, the case archives itself after the window (existing scheduler). Archived
 ## Success Criteria *(mandatory)*
 - **SC-001**: A case can be driven in the browser from "response recorded" to "archived final" on both
   paths (warning with appeal window; recommendation only) by HR plus three pool member accounts.
-- **SC-002**: Role × action matrix fully tested (HR, admin, each pool category, non-pool committee
+- **SC-002**: Role × action matrix (actions: record session, draft/submit Doc A, approve/reject, issue, upload signed scan, override empty box, close without penalty, draft/submit Doc B, leave confirmation, request/complete/cancel consultation, record receipt, log appeal/outcome) fully tested (HR, admin, each pool category, non-pool committee
   member, reviewer partnered / not, reporter): 0 unauthorised actions succeed.
 - **SC-003**: No UI string claims signature verification (automated text check on the views).
 - **SC-004**: Notifications for pending approvals reach exactly the eligible pool members with logins.
