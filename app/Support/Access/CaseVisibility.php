@@ -30,6 +30,7 @@ class CaseVisibility
                     ->orWhereExists(fn ($sub) => self::pendingApprovalForPoolMember($sub, $user))),
             UserRole::ExternalLegalReviewer => $query->withoutGlobalScope(CompanyScope::class)
                 ->whereNotNull('legal_review_requested_at')
+                ->whereNull('legal_review_cancelled_at')
                 ->whereIn('status', array_map(fn (CaseStatus $status) => $status->value, array_slice(CaseStatus::cases(),
                     array_search(CaseStatus::SignedRecommendationsUploaded, CaseStatus::cases(), true))))
                 ->whereIn('company_id', fn ($q) => $q->select('company_id')->from('company_law_firm_partner')->where('law_firm_partner_id', $user->law_firm_partner_id)),
@@ -47,7 +48,10 @@ class CaseVisibility
     private static function pendingApprovalForPoolMember($sub, User $user)
     {
         return $sub->selectRaw('1')->from('committee_pool_members as p')
-            ->where('cases.status', CaseStatus::RecommendationsAwaitingApprovals->value)
+            ->where(fn ($stage) => $stage->where('cases.status', CaseStatus::RecommendationsAwaitingApprovals->value)
+                ->orWhereExists(fn ($correction) => $correction->selectRaw('1')->from('documents as d')
+                    ->whereColumn('d.case_id', 'cases.id')->where('d.document_type', 'recommendations')
+                    ->where('d.version', '>', 1)->where('d.status', 'ready_for_review')->where('d.is_locked', false)))
             ->whereColumn('p.company_id', 'cases.company_id')->where('p.user_id', $user->id)
             ->where(fn ($branch) => $branch->whereNull('p.branch_id')->orWhereColumn('p.branch_id', 'cases.branch_id'))
             ->whereExists(fn ($mandate) => $mandate->selectRaw('1')->from('committee_mandates as m')

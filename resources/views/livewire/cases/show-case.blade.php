@@ -9,6 +9,17 @@
     <a href="/cases" class="text-primary text-sm">← لوحة الحالات</a>
     @if($success)<p role="status" class="bg-green-light text-green rounded-2xl p-4">{{ $success }}</p>@endif
     @if($notice)<p role="status" class="bg-amber-light text-amber rounded-2xl p-4">{{ $notice }}</p>@endif
+    @if($record->minutes_typed_by_pool_member_id)<p class="bg-white rounded-2xl p-4 text-sm">محضر الجلسة كتبه: {{ \App\Models\CommitteePoolMember::query()->find($record->minutes_typed_by_pool_member_id)?->person_name }}</p>@endif
+    @if($record->status === \App\Enums\CaseStatus::AwaitingCommitteeSignatures)
+        @foreach($signatureChecks->where('presence_check', \App\Enums\PresenceCheck::BoxAppearsEmpty) as $check)
+            <p role="alert" class="bg-red-light text-red rounded-2xl p-4">{{ $check->signer_name }} — خانة التوقيع تبدو فارغة. يلزم رفع مسح جديد أو تسجيل سبب التجاوز.</p>
+        @endforeach
+    @endif
+    @foreach($record->documents->where('document_type', \App\Enums\DocumentType::Recommendations) as $recommendationsDocument)
+        @foreach($recommendationsDocument->approvals()->where('decision', 'rejected')->whereNull('invalidated_at')->get() as $rejection)
+            <p role="alert" class="bg-red-light text-red rounded-2xl p-4">أعيدت التوصيات من اللجنة: {{ $rejection->comment }}</p>
+        @endforeach
+    @endforeach
     @error('notice')<p role="alert" class="bg-red-light text-red rounded-2xl p-4">{{ $message }}</p>@enderror
     <header class="bg-white rounded-3xl p-6 shadow-sm"><div class="flex flex-wrap justify-between gap-4"><div><p class="font-mono text-gray-400 text-sm">الحالة {{ \App\Support\Format\ArabicDigits::convert(str_pad($record->case_number, 4, '0', STR_PAD_LEFT)) }}</p><h1 class="text-2xl font-black mt-2">{{ $record->employee?->name }}</h1><p class="text-gray-500">{{ $record->violation_type }} — {{ $record->employee?->position }} / {{ $record->employee?->department }}</p></div><span class="bg-primary-light text-primary rounded-full px-4 py-2 text-sm font-bold self-start">{{ \App\Support\Format\StageIndicator::label($record->status) }}</span></div><div class="hidden sm:flex gap-2 mt-5" aria-label="المرحلة {{ $step }} من ٥">@for($i=1;$i<=5;$i++)<span class="w-3 h-3 rounded-full {{ $i <= $step ? 'bg-primary' : 'bg-gray-200' }}"></span>@endfor</div><p class="sm:hidden text-sm text-gray-500 mt-4">{{ \App\Support\Format\StageIndicator::label($record->status) }}</p></header>
     @if($priors['count'])<section class="bg-amber-light rounded-2xl p-5"><h2 class="font-bold">السوابق — {{ \App\Support\Format\ArabicDigits::convert($priors['count']) }}</h2>@foreach($priors['cases'] as $prior)<p class="text-sm mt-2 {{ $prior['same_type_repeat'] ? 'text-red font-bold' : '' }}"><a href="/cases/{{ $prior['case_id'] }}" class="underline">{{ \App\Support\Format\ArabicDigits::convert(\App\Documents\IraqiDate::format(\Carbon\CarbonImmutable::parse($prior['date']), 'ar')) }} — {{ $prior['violation_type'] }} — {{ $prior['outcome'] ?? 'دون نتيجة بعد' }}</a>@if($prior['same_type_repeat']) · تكرار النوع خلال ١٢ شهراً@endif</p>@endforeach</section>@endif
@@ -17,6 +28,10 @@
     @if(in_array($deadlines->procedureStatus($record), ['approaching','overdue'], true))<div role="alert" class="bg-red-light text-red rounded-2xl p-5 font-bold">تنبيه: مهلة الإجراء خلال ١٥ يوماً {{ $deadlines->procedureStatus($record) === 'overdue' ? 'انتهت' : 'تقترب' }}.</div>@endif
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-5"><section class="bg-white rounded-3xl p-6 lg:col-span-2"><h2 class="text-lg font-black mb-4">الإجراءات</h2>
         @if($canManage)
+            @if(in_array($record->status, [\App\Enums\CaseStatus::AwaitingEmployeeResponse, \App\Enums\CaseStatus::ResponseReceived, \App\Enums\CaseStatus::ResponseRefusedToSign, \App\Enums\CaseStatus::ResponseDeliveryRefused, \App\Enums\CaseStatus::ResponseScannedUploaded, \App\Enums\CaseStatus::AiIngestedResponse, \App\Enums\CaseStatus::CommitteeSessionHeld], true))<a href="/cases/{{ $record->id }}/session" class="text-primary underline ml-4">تسجيل جلسة اللجنة</a>@endif
+            @if(in_array($record->status, [\App\Enums\CaseStatus::CommitteeSessionHeld, \App\Enums\CaseStatus::RecommendationsCitationCheck, \App\Enums\CaseStatus::RecommendationsAwaitingApprovals, \App\Enums\CaseStatus::RecommendationsConfirmed], true) && $record->session_majority_reached)<a href="/cases/{{ $record->id }}/recommendations" class="text-primary underline ml-4">كتابة التوصيات</a>@endif
+            @if(in_array($record->status, [\App\Enums\CaseStatus::RecommendationsAwaitingApprovals, \App\Enums\CaseStatus::RecommendationsConfirmed], true))<a href="/cases/{{ $record->id }}/documents/{{ $record->documents->where('document_type', \App\Enums\DocumentType::Recommendations)->last()?->id }}/confirm" class="bg-primary text-white rounded-2xl px-5 py-3 inline-block">مراجعة موافقات التوصيات</a>@endif
+            @if(in_array($record->status, [\App\Enums\CaseStatus::AwaitingCommitteeSignatures, \App\Enums\CaseStatus::SignedRecommendationsUploaded], true))<a href="/cases/{{ $record->id }}/signed-scan" class="text-primary underline ml-4">مسح التوصيات والتواقيع</a>@endif
             @if($record->status === \App\Enums\CaseStatus::Draft)<a href="/cases/new?draft={{ $record->id }}" class="text-primary underline ml-4">تعديل الوقائع</a><button wire:click="open" class="bg-primary text-white rounded-2xl px-5 py-2">فتح الحالة</button>@endif
             @if($record->status === \App\Enums\CaseStatus::Open)<a href="/cases/{{ $record->id }}/documents/{{ $record->documents->where('document_type', \App\Enums\DocumentType::DefenseLetter)->where('status', \App\Enums\DocumentStatus::Draft)->last()?->id ?? 'new' }}/edit" class="bg-primary text-white rounded-2xl px-5 py-3 inline-block">كتابة كتاب طلب الدفاع</a>@endif
             @if($record->status === \App\Enums\CaseStatus::DefenseLetterCitationCheck)<a href="/cases/{{ $record->id }}/documents/{{ $record->documents->where('document_type', \App\Enums\DocumentType::DefenseLetter)->last()?->id }}/edit" class="text-primary underline">العودة إلى التحرير والتحقق من الاستشهادات</a>@endif
@@ -43,6 +58,7 @@
                     $context = [
                         'assignee_name' => $assigneeNames[$payload['user_id'] ?? 0] ?? null,
                         'witnesses' => $signature ? [$signature->witness_1_name, $signature->witness_2_name] : [],
+                        'minutes_typed_by' => !empty($payload['minutes_typed_by_pool_member_id']) ? \App\Models\CommitteePoolMember::query()->find($payload['minutes_typed_by_pool_member_id'])?->person_name : null,
                     ];
                 @endphp
                 <li class="border-r-2 border-primary pr-4">

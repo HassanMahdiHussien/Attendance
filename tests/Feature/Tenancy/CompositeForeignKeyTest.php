@@ -47,6 +47,7 @@ test('every tenant foreign key rejects a row from another company through models
         'signatures' => Signature::class, 'citations' => Citation::class,
         'case_alerts' => CaseAlert::class, 'case_conflict_clearances' => CaseConflictClearance::class,
         'company_letterheads' => CompanyLetterhead::class, 'document_templates' => DocumentTemplate::class,
+        'users' => User::class,
     ];
     $keys = DB::select("SELECT TABLE_NAME AS source_table, CONSTRAINT_NAME AS constraint_name, REFERENCED_TABLE_NAME AS target_table, MAX(CASE WHEN COLUMN_NAME <> 'company_id' THEN COLUMN_NAME END) AS foreign_column FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = DATABASE() AND REFERENCED_TABLE_NAME IS NOT NULL GROUP BY TABLE_NAME, CONSTRAINT_NAME, REFERENCED_TABLE_NAME HAVING COUNT(*) = 2 AND SUM(COLUMN_NAME = 'company_id') = 1");
     expect(count($keys))->toBeGreaterThan(25);
@@ -58,7 +59,9 @@ test('every tenant foreign key rejects a row from another company through models
         $sourceClass = $models[$key->source_table];
         $targetClass = $models[$key->target_table];
         $source = $context->runForCompany($a, fn () => $sourceClass::factory()->create());
-        $target = $context->runForCompany($b, fn () => $targetClass::factory()->create());
+        $target = $key->target_table === 'users'
+            ? User::factory()->create(['company_id' => $b->id, 'primary_role' => 'hr_staff'])
+            : $context->runForCompany($b, fn () => $targetClass::factory()->create());
         $attributes = $source->getAttributes();
         unset($attributes['id']);
         $attributes[$key->foreign_column] = $target->id;

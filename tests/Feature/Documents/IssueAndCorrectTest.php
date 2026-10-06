@@ -50,6 +50,7 @@ function addContents(Document $document, array $languages = ['ar', 'en']): void
     // invalidates approvals), so route them through it like production code does.
     if ($document->document_type === DocumentType::Recommendations) {
         $editor = User::factory()->create(['company_id' => $document->company_id, 'primary_role' => 'company_admin']);
+        moveCaseToCommitteeStage($document->disciplinaryCase);
         $current = $document->contents()->pluck('body', 'language_code')->all();
         foreach ($languages as $language) {
             $current[$language] = ['body' => 'Findings in '.$language, 'secondary_body' => 'Recommendations in '.$language];

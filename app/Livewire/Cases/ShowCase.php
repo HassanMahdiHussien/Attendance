@@ -3,6 +3,7 @@
 namespace App\Livewire\Cases;
 
 use App\Enums\CaseStatus;
+use App\Enums\DocumentType;
 use App\Enums\SignaturePurpose;
 use App\Enums\SignatureStatus;
 use App\Enums\UserRole;
@@ -19,6 +20,7 @@ use App\Services\Cases\ConflictClearance;
 use App\Services\Cases\Deadlines;
 use App\Services\Cases\HandOffService;
 use App\Services\Cases\ResponseService;
+use App\Services\Cases\SignaturePresence;
 use App\Services\Documents\DocumentCorrector;
 use App\Support\Access\CaseVisibility;
 use Illuminate\Contracts\View\View;
@@ -160,7 +162,10 @@ class ShowCase extends Component
         $this->validate(['correctionReason' => ['required', 'string', 'max:1000']]);
         $document = $case->documents()->findOrFail($documentId);
         $draft = $corrector->startCorrection($document, $this->correctionReason, auth()->user());
-        $this->redirect('/cases/'.$case->id.'/documents/'.$draft->id.'/edit', navigate: true);
+        $url = $draft->document_type === DocumentType::Recommendations
+            ? '/cases/'.$case->id.'/recommendations/'.$draft->id
+            : '/cases/'.$case->id.'/documents/'.$draft->id.'/edit';
+        $this->redirect($url, navigate: true);
     }
 
     public function render(): View
@@ -176,17 +181,25 @@ class ShowCase extends Component
             ->pluck('payload')->map(fn (array $payload) => $payload['user_id'] ?? null)->filter()->unique();
         $signatureIds = $record->events->whereIn('event_type', ['hand_off_recorded', 'response_handoff_recorded'])
             ->pluck('payload')->map(fn (array $payload) => $payload['signature_id'] ?? null)->filter()->unique();
+        $recommendationsDocument = $record->documents->where('document_type', DocumentType::Recommendations)
+            ->where('is_locked', true)->last();
 
         return view('livewire.cases.show-case', [
             'record' => $record,
             'success' => session()->pull('case_success_'.$record->id),
             'assigneeNames' => User::query()->where('company_id', $record->company_id)->whereIn('id', $assigneeIds)->pluck('name', 'id')->all(),
             'signatures' => Signature::query()->where('case_id', $record->id)->whereIn('id', $signatureIds)->get()->keyBy('id'),
+            'signatureChecks' => $recommendationsDocument
+                ? app(SignaturePresence::class)->latestChecks($recommendationsDocument) : collect(),
             'priors' => $insights->priorBanner($record),
             'pattern' => $insights->responsiblePersonPattern($record),
             'conflicts' => app(ConflictClearance::class)->conflicts($record),
             'deadlines' => $deadlines,
-            'attachments' => Attachment::query()->where('attachable_type', $record->getMorphClass())->where('attachable_id', $record->id)->orderByDesc('created_at')->get(),
+            'attachments' => Attachment::query()->where(function ($query) use ($record): void {
+                $query->where(fn ($caseAttachments) => $caseAttachments->where('attachable_type', $record->getMorphClass())->where('attachable_id', $record->id))
+                    ->orWhere(fn ($documentAttachments) => $documentAttachments->where('attachable_type', 'document')
+                        ->whereIn('attachable_id', $record->documents->pluck('id')));
+            })->orderByDesc('created_at')->get(),
             'hrUsers' => User::query()->where('company_id', $record->company_id)->where('is_active', true)
                 ->whereIn('primary_role', [UserRole::HrStaff->value, UserRole::CompanyAdmin->value])->get(),
         ])->layout('layouts.workspace');

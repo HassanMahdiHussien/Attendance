@@ -2,16 +2,22 @@
 
 namespace App\Services\Cases;
 
+use App\Documents\CitationGate;
 use App\Enums\CaseStatus;
+use App\Enums\DocumentStatus;
 use App\Enums\DocumentType;
+use App\Enums\DraftedBy;
 use App\Enums\UserRole;
 use App\Exceptions\TransitionBlocked;
+use App\Models\DisciplinaryCase;
 use App\Models\Document;
 use App\Models\DocumentContent;
 use App\Models\User;
+use App\Notifications\ApprovalNeeded;
 use App\Services\CaseEventLogger;
 use App\Support\Access\CaseVisibility;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 
 class RecommendationsEditor
 {
@@ -24,12 +30,83 @@ class RecommendationsEditor
         return self::$writing;
     }
 
+    public function create(DisciplinaryCase $case, array $contents, User $hrUser): Document
+    {
+        return DB::transaction(function () use ($case, $contents, $hrUser): Document {
+            $case = DisciplinaryCase::query()->lockForUpdate()->findOrFail($case->id);
+            if ($case->status !== CaseStatus::CommitteeSessionHeld || ! $case->session_majority_reached
+                || ! $hrUser->is_active || ! $case->company->is_active
+                || ! in_array($hrUser->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)
+                || ! CaseVisibility::for($hrUser)->whereKey($case->id)->exists()
+                || $case->documents()->where('document_type', DocumentType::Recommendations->value)->exists()) {
+                throw new TransitionBlocked('An eligible HR user and committee majority are required.');
+            }
+            $document = Document::create(['company_id' => $case->company_id, 'case_id' => $case->id,
+                'document_type' => DocumentType::Recommendations, 'drafted_by' => DraftedBy::Human,
+                'status' => DocumentStatus::Draft, 'version' => 1, 'created_by' => $hrUser->id]);
+            $this->update($document, $contents, $hrUser);
+            $this->events->log($case, 'recommendations_draft_created', ['document_id' => $document->id], actor: $hrUser);
+
+            return $document->refresh();
+        });
+    }
+
+    public function submitForApproval(Document $draft, User $hrUser): Document
+    {
+        return DB::transaction(function () use ($draft, $hrUser): Document {
+            $document = Document::query()->lockForUpdate()->findOrFail($draft->id);
+            $case = $document->disciplinaryCase;
+            if ($document->document_type !== DocumentType::Recommendations || $document->is_locked
+                || ($document->version === 1 && ! in_array($case->status, [CaseStatus::CommitteeSessionHeld, CaseStatus::RecommendationsCitationCheck], true))
+                || ($document->version > 1 && $case->status === CaseStatus::Draft)
+                || ! $hrUser->is_active || ! $case->company->is_active
+                || ! in_array($hrUser->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)
+                || ! CaseVisibility::for($hrUser)->whereKey($case->id)->exists()) {
+                throw new TransitionBlocked('This recommendations draft cannot be submitted.');
+            }
+            if ($document->approvals()->whereNull('invalidated_at')->where('decision', 'rejected')->exists()) {
+                throw new TransitionBlocked('Edit the recommendations after rejection before resubmitting.');
+            }
+            foreach (array_unique(array_merge(['ar', 'en'], $case->company->enabled_languages)) as $language) {
+                $content = $document->contents()->where('language_code', $language)->first();
+                if (blank($content?->body) || blank($content?->secondary_body)) {
+                    throw new TransitionBlocked("Findings and recommendations are required for {$language}.");
+                }
+            }
+            if ($document->version > 1) {
+                app(CitationGate::class)->assertIssuable($document);
+                $document->forceFill(['status' => DocumentStatus::ReadyForReview])->save();
+                $this->events->log($case, 'recommendations_approval_requested', ['document_id' => $document->id], actor: $hrUser);
+                Notification::send(app(PoolEligibility::class)->forDocument($document)->pluck('user')->unique('id'),
+                    new ApprovalNeeded($document->id));
+
+                return $document->refresh();
+            }
+            if ($case->status === CaseStatus::CommitteeSessionHeld) {
+                $case = $this->workflow->transition($case, CaseStatus::RecommendationsCitationCheck, $hrUser, 'Recommendations submitted');
+            }
+            app(CitationGate::class)->assertIssuable($document);
+            $document->forceFill(['status' => DocumentStatus::ReadyForReview])->save();
+            $this->workflow->transition($case, CaseStatus::RecommendationsAwaitingApprovals, $hrUser, 'Recommendations citation check passed');
+            $this->events->log($case, 'recommendations_approval_requested', ['document_id' => $document->id], actor: $hrUser);
+            $document->unsetRelation('disciplinaryCase');
+            $recipients = app(PoolEligibility::class)->forDocument($document)->pluck('user')->unique('id');
+            Notification::send($recipients, new ApprovalNeeded($document->id));
+
+            return $document->refresh();
+        });
+    }
+
     public function update(Document $draft, array $contents, User $hrUser): Document
     {
         return DB::transaction(function () use ($draft, $contents, $hrUser): Document {
             $document = Document::query()->lockForUpdate()->findOrFail($draft->id);
             $case = $document->disciplinaryCase;
             if ($document->document_type !== DocumentType::Recommendations || $document->is_locked
+                || ($document->version === 1 && ! in_array($case->status, [CaseStatus::CommitteeSessionHeld, CaseStatus::RecommendationsCitationCheck,
+                    CaseStatus::RecommendationsAwaitingApprovals, CaseStatus::RecommendationsConfirmed], true))
+                || ($document->version > 1 && $case->status === CaseStatus::Draft)
+                || ! $hrUser->is_active || ! $case->company->is_active
                 || ! in_array($hrUser->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)
                 || ! CaseVisibility::for($hrUser)->whereKey($case->id)->exists()) {
                 throw new TransitionBlocked('HR access to a recommendations draft is required.');
@@ -62,6 +139,8 @@ class RecommendationsEditor
                 $approval->invalidated_at = now();
                 $approval->save();
             });
+            $document->forceFill(['last_edited_by' => $hrUser->id, 'second_reviewed_by' => null,
+                'second_reviewed_at' => null, 'status' => DocumentStatus::Draft])->save();
             $this->events->log($case, 'approvals_invalidated', ['document_id' => $document->id], actor: $hrUser);
             if (in_array($case->status, [CaseStatus::RecommendationsAwaitingApprovals, CaseStatus::RecommendationsConfirmed], true)) {
                 $this->workflow->transition($case, CaseStatus::RecommendationsCitationCheck, $hrUser, 'Recommendations content edited');

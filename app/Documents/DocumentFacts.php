@@ -68,13 +68,17 @@ class DocumentFacts
                     : ($language === 'en' && filled($member?->person_name_en) ? $member->person_name_en : $member?->person_name), 'attendee.name'),
                     'role' => $member?->role_type?->value, 'is_chair' => $attendance->is_chair];
             }
-            foreach (PoolRole::cases() as $role) {
-                if (! collect($extra['attendees'])->contains('role', $role->value)) {
-                    throw new MissingDocumentFact("attendee.{$role->value}");
-                }
+            if (count($extra['attendees']) < 3 || ! collect($extra['attendees'])->contains('role', PoolRole::LaborUnion->value)
+                || ! collect($extra['attendees'])->contains('is_chair', true)) {
+                throw new MissingDocumentFact('committee_attendance');
             }
-            if (! collect($extra['attendees'])->contains(fn ($attendee) => $attendee['role'] === PoolRole::Legal->value && $attendee['is_chair'])) {
-                throw new MissingDocumentFact('legal_chair');
+            if ($document->document_type === DocumentType::Recommendations && ! $draft) {
+                $approvals = $document->approvals()->whereNull('invalidated_at')->where('decision', 'approved')
+                    ->with('approver')->get()->keyBy(fn ($approval) => $approval->role_category->value);
+                foreach (PoolRole::cases() as $role) {
+                    $extra['approvers'][$role->value] = $this->required($approvals->get($role->value)?->approver?->name,
+                        "approver.{$role->value}");
+                }
             }
         }
         if ($document->document_type === DocumentType::DecisionLetter) {

@@ -4,12 +4,12 @@
 `docker compose exec -T -u sail laravel.test php artisan test` · `… ./vendor/bin/pint --test`.
 
 ## Run L
-- [ ] T001 RecordSession screen (eligible pool by mandate in effect + branch, conflicts excluded / clearance, chair default, votes, minutes, outcome, defense acceptance, Arabic quorum errors, re-vote); authorised for HR / admin; minutes_typed_by (attending pool member) per research R1
-- [ ] T002 RecommendationsEditor::create/submitForApproval + EditRecommendations (findings + recommendations per enabled language, preview, submit, resubmit after rejection); DocumentFacts attendee/chair fix (R1 A3) + approvers line
-- [ ] T003 "اللجنة" PendingApprovals list + ReviewApproval (all languages side by side, approve / reject with comment, read-only text); PoolEligibility (R1 B2) used by service, list and ApprovalNeeded notification; rejection alert to HR (R1 B3)
-- [ ] T004 ConfirmDocument generalised to recommendations and decision letters (missing-approval categories shown; consultation / leave blockers shown)
-- [ ] T005 SignaturePresence::recordSignedScan atomic + overrideEmpty (R1 A4) + SignedScan screen; CaseClosure::closeWithoutPenalty with consultation guard; ConsultationService::cancel (R1 A5)
-- [ ] T006 Tests for T001–T005 incl. Livewire update-endpoint authorisation per role and stale stage
+- [x] T001 RecordSession screen (eligible pool by mandate in effect + branch, conflicts excluded / clearance, chair default, votes, minutes, outcome, defense acceptance, Arabic quorum errors, re-vote); authorised for HR / admin; minutes_typed_by (attending pool member) per research R1
+- [x] T002 RecommendationsEditor::create/submitForApproval + EditRecommendations (findings + recommendations per enabled language, preview, submit, resubmit after rejection); DocumentFacts attendee/chair fix (R1 A3) + approvers line
+- [x] T003 "اللجنة" PendingApprovals list + ReviewApproval (all languages side by side, approve / reject with comment, read-only text); PoolEligibility (R1 B2) used by service, list and ApprovalNeeded notification; rejection alert to HR (R1 B3)
+- [x] T004 ConfirmDocument generalised to recommendations and decision letters (missing-approval categories shown; consultation / leave blockers shown)
+- [x] T005 SignaturePresence::recordSignedScan atomic + overrideEmpty (R1 A4) + SignedScan screen; CaseClosure::closeWithoutPenalty with consultation guard; ConsultationService::cancel (R1 A5)
+- [x] T006 Tests for T001–T005 incl. Livewire update-endpoint authorisation per role and stale stage
 
 ## Run M
 - [ ] T007 DocumentDrafts decision letters + submitDecision (R1 A2) + EditDecisionLetter + leave confirmation (termination) + receipt hand-off + optional GM/union signature presence record

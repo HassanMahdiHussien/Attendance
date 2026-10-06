@@ -50,11 +50,11 @@ test('committee quorum requires three distinct eligible attendees including labo
     ])->all();
     if ($passes) {
         app(CommitteeSessionService::class)->recordSession($f['case'], $attendees, null, 'Typed minutes', Outcome::Warning,
-            DefenseAcceptance::Rejected, $f['hr']);
+            DefenseAcceptance::Rejected, $f['hr'], $attendees[0]['pool_member_id']);
         expect($f['case']->fresh()->status)->toBe(CaseStatus::CommitteeSessionHeld);
     } else {
         expect(fn () => app(CommitteeSessionService::class)->recordSession($f['case'], $attendees, null, 'Typed minutes',
-            Outcome::Warning, DefenseAcceptance::Rejected, $f['hr']))->toThrow(TransitionBlocked::class);
+            Outcome::Warning, DefenseAcceptance::Rejected, $f['hr'], $attendees[0]['pool_member_id']))->toThrow(TransitionBlocked::class);
     }
 })->with([
     'two' => [['approve', 'approve'], false, [0, 1]],
@@ -67,10 +67,10 @@ test('strict majority can change on a re-vote while the session is held', functi
     $f = committeeFixture();
     $service = app(CommitteeSessionService::class);
     $case = $service->recordSession($f['case'], sessionVotes($f['members'], ['approve', 'reject', 'abstain']),
-        null, 'Initial vote', Outcome::Warning, DefenseAcceptance::Rejected, $f['hr']);
+        null, 'Initial vote', Outcome::Warning, DefenseAcceptance::Rejected, $f['hr'], $f['members'][0]->id);
     expect($case->session_majority_reached)->toBeFalse();
     $case = $service->recordSession($case, sessionVotes($f['members'], ['approve', 'approve', 'reject']),
-        null, 'Re-vote', Outcome::Warning, DefenseAcceptance::Rejected, $f['hr']);
+        null, 'Re-vote', Outcome::Warning, DefenseAcceptance::Rejected, $f['hr'], $f['members'][0]->id);
     expect($case->session_majority_reached)->toBeTrue();
     expect($case->committee_session_notes)->toBe('Re-vote');
 });
@@ -78,7 +78,7 @@ test('strict majority can change on a re-vote while the session is held', functi
 test('only more than half of those present sets the majority flag', function (array $votes, bool $majority): void {
     $f = committeeFixture();
     $case = app(CommitteeSessionService::class)->recordSession($f['case'], sessionVotes($f['members'], $votes),
-        null, 'Vote count', Outcome::Warning, DefenseAcceptance::Rejected, $f['hr']);
+        null, 'Vote count', Outcome::Warning, DefenseAcceptance::Rejected, $f['hr'], $f['members'][0]->id);
     expect($case->session_majority_reached)->toBe($majority);
 })->with([
     'two to one' => [['approve', 'approve', 'reject'], true],
@@ -94,7 +94,7 @@ test('the mandate is selected on the issue date boundary', function (string $iss
     $f['case']->update(['defense_letter_issued_at' => $issueDate]);
     $chosen = $usesNew ? $newMembers : $f['members'];
     $case = app(CommitteeSessionService::class)->recordSession($f['case'], sessionVotes($chosen, ['approve', 'approve', 'reject']),
-        null, 'Boundary session', Outcome::Warning, DefenseAcceptance::Rejected, $f['hr']);
+        null, 'Boundary session', Outcome::Warning, DefenseAcceptance::Rejected, $f['hr'], $chosen[0]->id);
     expect($case->committee_mandate_id)->toBe($usesNew ? $new->id : $f['mandate']->id);
 })->with([
     'day before' => ['2026-06-18 10:00:00', false],
@@ -108,15 +108,15 @@ test('an employee-linked party is excluded and a name-only match requires HR cle
     $linked->update(['employee_id' => $f['case']->employee_id]);
     expect(fn () => app(CommitteeSessionService::class)->recordSession($f['case'],
         sessionVotes($f['members'], ['approve', 'approve', 'approve']), null, 'Minutes',
-        Outcome::Warning, DefenseAcceptance::Rejected, $f['hr']))->toThrow(TransitionBlocked::class);
+        Outcome::Warning, DefenseAcceptance::Rejected, $f['hr'], $f['members'][0]->id))->toThrow(TransitionBlocked::class);
     $linked->update(['employee_id' => null, 'person_name' => $f['case']->employee->name]);
     expect(fn () => app(CommitteeSessionService::class)->recordSession($f['case'],
         sessionVotes($f['members'], ['approve', 'approve', 'approve']), null, 'Minutes',
-        Outcome::Warning, DefenseAcceptance::Rejected, $f['hr']))->toThrow(TransitionBlocked::class);
+        Outcome::Warning, DefenseAcceptance::Rejected, $f['hr'], $f['members'][0]->id))->toThrow(TransitionBlocked::class);
     app(ConflictClearance::class)->clear($f['case'], $linked, 'Different person, identity checked', $f['hr']);
     $case = app(CommitteeSessionService::class)->recordSession($f['case'],
         sessionVotes($f['members'], ['approve', 'approve', 'approve']), null, 'Minutes',
-        Outcome::Warning, DefenseAcceptance::Rejected, $f['hr']);
+        Outcome::Warning, DefenseAcceptance::Rejected, $f['hr'], $f['members'][0]->id);
     expect($case->session_majority_reached)->toBeTrue();
 });
 
@@ -132,7 +132,7 @@ test('employee-linked responsible and witness parties are hard exclusions', func
     }
     expect(fn () => app(CommitteeSessionService::class)->recordSession($f['case'],
         sessionVotes($f['members'], ['approve', 'approve', 'approve']), null, 'Minutes',
-        Outcome::Warning, DefenseAcceptance::Rejected, $f['hr']))->toThrow(TransitionBlocked::class);
+        Outcome::Warning, DefenseAcceptance::Rejected, $f['hr'], $f['members'][0]->id))->toThrow(TransitionBlocked::class);
 })->with(['responsible', 'witness']);
 
 test('a pool member assigned to another branch cannot attend', function (): void {
@@ -141,5 +141,5 @@ test('a pool member assigned to another branch cannot attend', function (): void
     $f['members'][0]->update(['branch_id' => $otherBranch->id]);
     expect(fn () => app(CommitteeSessionService::class)->recordSession($f['case'],
         sessionVotes($f['members'], ['approve', 'approve', 'approve']), null, 'Minutes',
-        Outcome::Warning, DefenseAcceptance::Rejected, $f['hr']))->toThrow(TransitionBlocked::class);
+        Outcome::Warning, DefenseAcceptance::Rejected, $f['hr'], $f['members'][0]->id))->toThrow(TransitionBlocked::class);
 });

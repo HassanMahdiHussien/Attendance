@@ -31,14 +31,21 @@ test('trigger migrations drop and recreate every trigger with identical definiti
             ->and($before)->toHaveKey('immutable_documents_update')
             ->and($before['immutable_documents_update'])->toContain('leave_confirmed_by');
 
+        // A failing down() must be reported as itself: re-applying after a partial rollback would
+        // otherwise fail with an unrelated "trigger already exists" and hide the real cause.
+        $rolledBack = [];
         try {
-            foreach (array_reverse($migrations) as $migration) {
-                $migration->down();
+            foreach (array_reverse($files) as $index => $file) {
+                $migrations[array_search($file, $files, true)]->down();
+                $rolledBack[] = $file;
             }
             expect($triggers())->toBe([]);
+        } catch (Throwable $error) {
+            throw new RuntimeException('Rolling back '.(array_reverse($files)[count($rolledBack)] ?? '?')
+                .' failed: '.$error->getMessage(), previous: $error);
         } finally {
-            foreach ($migrations as $migration) {
-                $migration->up();
+            foreach (array_reverse($rolledBack) as $file) {
+                $migrations[array_search($file, $files, true)]->up();
             }
         }
 

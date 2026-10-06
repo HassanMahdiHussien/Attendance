@@ -5,9 +5,12 @@ namespace App\Livewire\Cases;
 use App\Enums\CaseStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\DocumentType;
+use App\Enums\PenaltyType;
+use App\Enums\PoolRole;
 use App\Exceptions\IssuanceBlocked;
 use App\Exceptions\TransitionBlocked;
 use App\Models\Document;
+use App\Services\Cases\CaseDocumentIssuance;
 use App\Services\Cases\DefenseLetterFlow;
 use App\Services\Documents\DocumentDrafts;
 use App\Services\Documents\DocumentIssuer;
@@ -37,9 +40,10 @@ class ConfirmDocument extends Component
         $record = CaseVisibility::for(auth()->user())->findOrFail($case);
         Gate::authorize('confirm', $record);
         $draft = $record->documents()->findOrFail($document);
-        abort_unless($draft->document_type === DocumentType::DefenseLetter, 404);
         abort_unless($draft->is_locked || ($draft->status === DocumentStatus::ReadyForReview
-            && ($draft->version > 1 || $record->status === CaseStatus::DefenseLetterReadyForReview)), 404);
+            && ($draft->version > 1 || in_array($record->status, [CaseStatus::DefenseLetterReadyForReview,
+                CaseStatus::RecommendationsAwaitingApprovals, CaseStatus::RecommendationsConfirmed,
+                CaseStatus::AwaitingExternalLegalConsultation, CaseStatus::DecisionLetterReadyForReview], true))), 404);
         $this->caseId = $record->id;
         $this->documentId = $draft->id;
         $this->expectedStatus = $record->status->value;
@@ -63,7 +67,7 @@ class ConfirmDocument extends Component
         }
     }
 
-    public function issue(DefenseLetterFlow $flow): void
+    public function issue(DefenseLetterFlow $flow, CaseDocumentIssuance $issuance): void
     {
         $draft = $this->currentDocument(allowIssued: true);
         Gate::authorize('issue', $draft->disciplinaryCase);
@@ -74,7 +78,9 @@ class ConfirmDocument extends Component
         }
         $this->validate(['reference' => ['nullable', 'string', 'max:100']]);
         try {
-            $issued = $flow->confirmAndIssue($draft, auth()->user(), $this->referenceDirty ? $this->reference : null);
+            $issued = $draft->document_type === DocumentType::DefenseLetter
+                ? $flow->confirmAndIssue($draft, auth()->user(), $this->referenceDirty ? $this->reference : null)
+                : $issuance->issue($draft, auth()->user(), $this->referenceDirty ? $this->reference : null);
         } catch (IssuanceBlocked|TransitionBlocked $error) {
             $this->notice = $error->getMessage();
 
@@ -86,8 +92,14 @@ class ConfirmDocument extends Component
     public function sendBack(DocumentDrafts $drafts): void
     {
         $draft = $this->currentDocument();
-        $drafts->backToEdit($draft, auth()->user());
-        $this->redirect('/cases/'.$this->caseId.'/documents/'.$this->documentId.'/edit', navigate: true);
+        if ($draft->document_type === DocumentType::DefenseLetter) {
+            $drafts->backToEdit($draft, auth()->user());
+            $this->redirect('/cases/'.$this->caseId.'/documents/'.$this->documentId.'/edit', navigate: true);
+        } elseif ($draft->document_type === DocumentType::Recommendations) {
+            $this->redirect('/cases/'.$this->caseId.'/recommendations'.($draft->version > 1 ? '/'.$draft->id : ''), navigate: true);
+        } else {
+            $this->redirect('/cases/'.$this->caseId, navigate: true);
+        }
     }
 
     public function render(): View
@@ -96,7 +108,24 @@ class ConfirmDocument extends Component
         Gate::authorize('confirm', $case);
         $document = $case->documents()->findOrFail($this->documentId);
 
-        return view('livewire.cases.confirm-document', ['record' => $case, 'document' => $document])->layout('layouts.workspace');
+        $blockers = [];
+        if ($document->document_type === DocumentType::Recommendations) {
+            foreach (PoolRole::cases() as $category) {
+                if (! $document->approvals()->where('role_category', $category->value)->where('decision', 'approved')->whereNull('invalidated_at')->exists()) {
+                    $blockers[] = 'موافقة '.(['legal' => 'القانونية', 'hr' => 'الموارد البشرية', 'labor_union' => 'نقابة العمال'][$category->value]);
+                }
+            }
+        }
+        if ($document->document_type === DocumentType::DecisionLetter) {
+            if ($case->legal_review_requested_at && ! $case->legal_review_completed_at) {
+                $blockers[] = 'بانتظار الاستشارة القانونية';
+            }
+            if ($document->penalty_type === PenaltyType::Termination && ! $document->leave_confirmed_at) {
+                $blockers[] = 'يلزم تأكيد عدم وجود إجازة قانونية أو غياب مرضي موثق';
+            }
+        }
+
+        return view('livewire.cases.confirm-document', ['record' => $case, 'document' => $document, 'blockers' => $blockers])->layout('layouts.workspace');
     }
 
     private function currentDocument(bool $allowIssued = false): Document

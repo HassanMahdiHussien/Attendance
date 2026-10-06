@@ -112,7 +112,8 @@ class DocumentDemoSeeder extends Seeder
             ['signed_at' => now()], $admin);
         $attendees = array_map(fn (array $pair): array => ['pool_member_id' => $pair[0]->id, 'vote' => 'approve'], $members);
         $case = app(CommitteeSessionService::class)->recordSession($case->fresh(), $attendees, null,
-            'The committee reviewed the employee statement and the work record.', $outcome, DefenseAcceptance::AcceptedPartially, $admin);
+            'The committee reviewed the employee statement and the work record.', $outcome, DefenseAcceptance::AcceptedPartially, $admin,
+            $members[0][0]->id);
         $recommendations = Document::create([
             'company_id' => $company->id, 'case_id' => $case->id, 'document_type' => 'recommendations',
             'version' => 1, 'drafted_by' => 'human', 'created_by' => $admin->id,

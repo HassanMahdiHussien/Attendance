@@ -6,18 +6,20 @@ use App\Enums\ApprovalDecision;
 use App\Enums\CaseStatus;
 use App\Enums\DocumentType;
 use App\Enums\PoolRole;
+use App\Enums\UserRole;
 use App\Exceptions\TransitionBlocked;
-use App\Models\CommitteeMandate;
 use App\Models\Document;
 use App\Models\DocumentApproval;
 use App\Models\User;
+use App\Notifications\ApprovalRejected;
 use App\Services\CaseEventLogger;
 use App\Support\Access\CaseVisibility;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 
 class DocumentApprovalService
 {
-    public function __construct(private CaseWorkflow $workflow, private CaseEventLogger $events, private ConflictClearance $conflicts) {}
+    public function __construct(private CaseWorkflow $workflow, private CaseEventLogger $events, private PoolEligibility $eligibility) {}
 
     public function approve(Document $document, User $user, ?PoolRole $category = null): DocumentApproval
     {
@@ -43,23 +45,17 @@ class DocumentApprovalService
             if ($decision === ApprovalDecision::Rejected && blank($comment)) {
                 throw new TransitionBlocked('A rejection comment is required.');
             }
-            $mandate = CommitteeMandate::query()->where('company_id', $case->company_id)
-                ->inEffectOn($case->defense_letter_issued_at)->orderByDesc('effective_from')->first();
-            $members = $mandate?->poolMembers()->where('user_id', $user->id)
-                ->where(fn ($q) => $q->whereNull('branch_id')->orWhere('branch_id', $case->branch_id))->get();
-            if ($members === null || $members->isEmpty()) {
+            $eligible = $this->eligibility->forDocument($document)->filter(fn (array $row) => $row['user']->id === $user->id);
+            if ($eligible->isEmpty()) {
                 throw new TransitionBlocked('The user is not in the eligible committee pool.');
             }
-            if ($category === null && $members->pluck('role_type')->unique()->count() !== 1) {
+            if ($category === null && $eligible->pluck('category')->unique()->count() !== 1) {
                 throw new TransitionBlocked('Choose a role category for this approval.');
             }
-            $category ??= $members->first()->role_type;
-            $member = $members->first(fn ($row) => $row->role_type === $category);
+            $category ??= $eligible->first()['category'];
+            $member = $eligible->first(fn (array $row) => $row['category'] === $category)['member'] ?? null;
             if ($member === null) {
                 throw new TransitionBlocked('The user is not eligible for this category.');
-            }
-            if (collect($this->conflicts->conflicts($case))->contains(fn (array $row) => $row['member']->id === $member->id && $row['excluded'])) {
-                throw new TransitionBlocked('A conflicted pool member cannot approve.');
             }
             $valid = $document->approvals()->whereNull('invalidated_at');
             if ($valid->where('approver_user_id', $user->id)->exists()) {
@@ -80,6 +76,12 @@ class DocumentApprovalService
                 ['document_id' => $document->id, 'category' => $category->value, 'comment' => $comment], actor: $user);
             if ($decision === ApprovalDecision::Rejected && $document->version === 1) {
                 $this->workflow->transition($case, CaseStatus::RecommendationsCitationCheck, $user, 'Recommendations rejected');
+                $recipients = User::query()->where('company_id', $case->company_id)->where('is_active', true)
+                    ->where(function ($query) use ($case): void {
+                        $query->whereIn('id', array_filter([$case->opened_by_user_id, $case->assigned_hr_user_id]))
+                            ->orWhere('primary_role', UserRole::CompanyAdmin->value);
+                    })->get();
+                Notification::send($recipients, new ApprovalRejected($case->id, $document->id));
             } elseif ($document->approvals()->whereNull('invalidated_at')->where('decision', ApprovalDecision::Approved->value)
                 ->distinct()->count('role_category') === 3 && $document->version === 1) {
                 $this->workflow->transition($case, CaseStatus::RecommendationsConfirmed, $user, 'Three categories approved');

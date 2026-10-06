@@ -31,6 +31,7 @@ test('recommendations and decision render mandate, two body sections, attendees 
     }
     $recommendations = Document::factory()->create(['case_id' => $case->id,
         'document_type' => 'recommendations', 'created_by' => $actor->id]);
+    moveCaseToCommitteeStage($case);
     app(RecommendationsEditor::class)->update($recommendations, [
         'ar' => ['body' => 'النتائج', 'secondary_body' => 'التوصيات'],
         'en' => ['body' => 'Findings', 'secondary_body' => 'Recommendations'],
