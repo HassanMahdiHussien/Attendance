@@ -23,7 +23,7 @@ class EnsureAccountIsActive
                 throw new HttpResponseException(response()->json(['message' => 'Unauthenticated.'], 401));
             }
 
-            return redirect(Filament::getCurrentPanel()?->getLoginUrl() ?? '/admin/login');
+            return redirect(Filament::getCurrentPanel()?->getLoginUrl() ?? '/login');
         }
 
         return $next($request);

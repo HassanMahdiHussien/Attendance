@@ -12,6 +12,7 @@ use Livewire\Livewire;
 
 beforeEach(function (): void {
     RateLimiter::clear('livewire-rate-limiter:'.sha1(Login::class.'|authenticate|'.request()->ip()));
+    RateLimiter::clear('login-ip:'.hash('sha256', (string) request()->ip()));
 });
 
 function signInUser(UserRole $role, ?Company $company = null): User

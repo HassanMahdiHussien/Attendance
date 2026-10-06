@@ -2,33 +2,29 @@
 
 namespace App\Filament\Auth;
 
-use App\Services\AuditLogger;
+use App\Services\Auth\LoginAttempts;
 use Filament\Auth\Http\Responses\Contracts\LoginResponse;
 use Filament\Auth\Pages\Login as BaseLogin;
-use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
 
 class Login extends BaseLogin
 {
     public function authenticate(): ?LoginResponse
     {
-        $email = mb_strtolower(trim((string) ($this->data['email'] ?? '')));
+        $attempts = app(LoginAttempts::class);
+        $email = $attempts->normalize((string) ($this->data['email'] ?? ''));
         $this->data['email'] = $email;
-        $key = 'login-email:'.hash('sha256', $email);
-        if (RateLimiter::tooManyAttempts($key, 5)) {
-            app(AuditLogger::class)->log('auth.throttled', metadata: ['email' => $email, 'ip' => request()->ip()]);
-            $this->throwFailureValidationException();
-        }
+        $attempts->check($email, 'data.email');
 
         try {
             $response = parent::authenticate();
             if ($response !== null) {
-                RateLimiter::clear($key);
+                $attempts->clear($email);
             }
 
             return $response;
         } catch (ValidationException $exception) {
-            RateLimiter::hit($key, 60);
+            $attempts->hit($email);
             throw $exception;
         }
     }

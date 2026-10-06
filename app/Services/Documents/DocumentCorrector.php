@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Services\CaseEventLogger;
 use App\Services\Cases\RecommendationsEditor;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 class DocumentCorrector
@@ -22,6 +23,7 @@ class DocumentCorrector
     {
         return DB::transaction(function () use ($issued, $reason, $actor): Document {
             $case = DisciplinaryCase::query()->lockForUpdate()->findOrFail($issued->case_id);
+            Gate::forUser($actor)->authorize('correct', $case);
             $source = Document::query()->lockForUpdate()->findOrFail($issued->id);
             if ($source->status !== DocumentStatus::Issued || ! $source->is_locked) {
                 throw new IssuanceBlocked('Only a currently issued document can be corrected.');
@@ -48,6 +50,7 @@ class DocumentCorrector
                 'previous_version_id' => $source->id,
                 'correction_reason' => $reason,
                 'created_by' => $actor->id,
+                'last_edited_by' => $actor->id,
             ]);
             if ($source->document_type === DocumentType::Recommendations) {
                 app(RecommendationsEditor::class)->update($correction, $source->contents->mapWithKeys(

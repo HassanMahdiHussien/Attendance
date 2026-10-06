@@ -48,3 +48,7 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 - **Kurdish templates must be supplied by the company.** There is no system default, even when Kurdish is enabled. (2026-10-05)
 - **Issued PDFs render from frozen HTML.** A later template or fact edit cannot change the issued output. (2026-10-05)
 - **English name fields are optional renderings; Arabic remains the source.** Missing English values fall back to the Arabic fields. (2026-10-05)
+- **The shared `/login` admits every active role to its own landing, while Filament panels remain role-limited.** A workspace login does not grant panel access. (2026-10-05)
+- **An invisible case returns 404.** The URL does not reveal whether another tenant's or another assignee's case exists. (2026-10-05)
+- **No response is a case event, not a committee session.** HR may record that the response deadline passed without inventing a session or changing the case stage. (2026-10-05)
+- **A second reviewer differs from both the issuer and the last content editor.** Editing after review clears the review, so issuance covers the current text. (2026-10-05)

@@ -3,6 +3,7 @@
 use App\Http\Middleware\EnforceIdleTimeout;
 use App\Http\Middleware\EnsureAccountIsActive;
 use App\Http\Middleware\SetTenantContext;
+use App\Support\Access\Landing;
 use Filament\Http\Middleware\IdentifyTenant;
 use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Foundation\Application;
@@ -17,6 +18,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->redirectGuestsTo('/login');
+        $middleware->redirectUsersTo(fn (Request $request) => Landing::for($request->user()));
         $middleware->web(append: [EnsureAccountIsActive::class, EnforceIdleTimeout::class, SetTenantContext::class]);
         $middleware->prependToPriorityList(before: AuthenticatesRequests::class, prepend: SetTenantContext::class);
         $middleware->prependToPriorityList(before: AuthenticatesRequests::class, prepend: EnsureAccountIsActive::class);

@@ -22,7 +22,7 @@ class Document extends Model
 
     protected $guarded = [];
 
-    protected array $companyUserKeys = ['issued_by', 'second_reviewed_by', 'created_by'];
+    protected array $companyUserKeys = ['issued_by', 'second_reviewed_by', 'created_by', 'last_edited_by'];
 
     protected array $companyParents = ['disciplinaryCase'];
 

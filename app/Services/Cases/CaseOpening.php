@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Services\CaseEventLogger;
 use App\Support\Access\CaseVisibility;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 
 class CaseOpening
 {
@@ -21,6 +22,7 @@ class CaseOpening
     {
         return DB::transaction(function () use ($draft, $actor): DisciplinaryCase {
             $case = DisciplinaryCase::query()->lockForUpdate()->findOrFail($draft->id);
+            Gate::forUser($actor)->authorize('update', $case);
             if ($case->status !== CaseStatus::Draft || ! in_array($actor->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)
                 || ! CaseVisibility::for($actor)->whereKey($case->id)->exists()) {
                 throw new TransitionBlocked('HR access to a draft case is required.');
