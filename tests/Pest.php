@@ -2,6 +2,7 @@
 
 use App\Enums\CaseStatus;
 use App\Jobs\GenerateDocumentPdf;
+use App\LegalLibrary\PageReader;
 use App\Models\Company;
 use App\Models\DisciplinaryCase;
 use App\Models\User;
@@ -11,6 +12,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Tests\Fakes\FakePageReader;
 use Tests\TestCase;
 
 pest()->extend(TestCase::class)
@@ -18,6 +20,7 @@ pest()->extend(TestCase::class)
     ->beforeEach(function (): void {
         Storage::fake('local');
         Bus::fake([GenerateDocumentPdf::class]);
+        app()->bind(PageReader::class, FakePageReader::class);
     })
     ->in('Feature');
 

@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\Filament\Auth\LoginResponse;
+use App\LegalLibrary\ClaudePageReader;
+use App\LegalLibrary\PageReader;
 use App\Listeners\AuditAuthEvents;
 use App\Models\DisciplinaryCase;
 use App\Models\Document;
@@ -24,6 +26,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->scoped(TenantContext::class, fn () => new TenantContext);
+        $this->app->bind(PageReader::class, ClaudePageReader::class);
     }
 
     /**

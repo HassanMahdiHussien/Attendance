@@ -8,4 +8,6 @@ enum LegalUnitStatus: string
     case Mismatch = 'mismatch';
     case VerifiedAuto = 'verified_auto';
     case VerifiedHuman = 'verified_human';
+    case VerifiedText = 'verified_text';
+    case Excluded = 'excluded';
 }

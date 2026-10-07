@@ -54,3 +54,7 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 - **A second reviewer differs from both the issuer and the last content editor.** Editing after review clears the review, so issuance covers the current text. (2026-10-05)
 - **HR or a company admin records the committee session, while the minutes name the attending pool member who typed them.** This preserves committee authorship without giving an unrecorded attendee a case transition. (2026-10-06)
 - **Signature presence is recorded manually by HR from the scan until the AI presence check is built.** A filled box is a visual observation, never proof of signer identity. (2026-10-06)
+- **The legal-library AI transcribes page images only; our splitter identifies articles and clauses.** AI output is an independent reading, never the source of unit boundaries or legal decisions. (2026-10-07)
+- **Text and Word regulations are verified from their exact source text but still need company lawyer approval.** Source fidelity and company authorization are separate gates. (2026-10-07)
+- **A `verified_auto` unit stores the AI reading's clean spacing as its official text.** The normalized comparison establishes equivalence while the published text remains readable. (2026-10-07)
+- **PDF text layers with spaces inside words fall back to OCR.** Such layers can appear selectable while corrupting Arabic word boundaries. (2026-10-07)

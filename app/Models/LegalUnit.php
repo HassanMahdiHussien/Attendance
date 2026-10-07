@@ -7,6 +7,7 @@ use App\Exceptions\ImmutableRecordException;
 use App\Exceptions\TenantMismatch;
 use App\Support\Tenancy\LegalLibraryScope;
 use App\Support\Tenancy\TenantContext;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -25,7 +26,7 @@ class LegalUnit extends Model
     {
         static::addGlobalScope(new LegalLibraryScope);
         static::saving(function (self $unit): void {
-            if ($unit->exists && in_array($unit->getRawOriginal('status'), ['verified_auto', 'verified_human'], true)) {
+            if ($unit->exists && in_array($unit->getRawOriginal('status'), ['verified_auto', 'verified_human', 'verified_text'], true)) {
                 $dirty = array_keys($unit->getDirty());
                 if ($dirty !== ['superseded_by_id'] || $unit->getRawOriginal('superseded_by_id') !== null || $unit->superseded_by_id === null) {
                     throw new ImmutableRecordException('Verified legal units are immutable.');
@@ -43,6 +44,12 @@ class LegalUnit extends Model
                     throw new TenantMismatch('Legal unit belongs to another company.');
                 }
                 $unit->company_id = $law->company_id;
+                if ($unit->import_run_id !== null) {
+                    $run = LegalImportRun::withoutGlobalScopes()->findOrFail($unit->import_run_id);
+                    if ((int) $run->law_id !== (int) $law->id) {
+                        throw new TenantMismatch('Import run belongs to another law.');
+                    }
+                }
             }
             if ($unit->company_id !== null && $unit->verified_by !== null) {
                 $verifier = User::find($unit->verified_by);
@@ -52,7 +59,7 @@ class LegalUnit extends Model
             }
         });
         static::deleting(function (self $unit): void {
-            if (in_array($unit->status, [LegalUnitStatus::VerifiedAuto, LegalUnitStatus::VerifiedHuman], true)) {
+            if (in_array($unit->status, [LegalUnitStatus::VerifiedAuto, LegalUnitStatus::VerifiedHuman, LegalUnitStatus::VerifiedText], true)) {
                 throw new ImmutableRecordException('Verified legal units cannot be deleted.');
             }
         });
@@ -89,5 +96,48 @@ class LegalUnit extends Model
     public function verifier(): BelongsTo
     {
         return $this->belongsTo(User::class, 'verified_by');
+    }
+
+    public function importRun(): BelongsTo
+    {
+        return $this->belongsTo(LegalImportRun::class, 'import_run_id');
+    }
+
+    public function scopeCitableFor(Builder $query, DisciplinaryCase $case): Builder
+    {
+        $on = $case->created_at?->copy()->timezone('Asia/Baghdad')->toDateString() ?? now('Asia/Baghdad')->toDateString();
+        $jurisdiction = $case->jurisdiction_at_opening->value;
+
+        return $query->whereIn('legal_units.status', ['verified_auto', 'verified_human', 'verified_text'])
+            ->whereNull('legal_units.superseded_by_id')
+            ->whereHas('law', function (Builder $law) use ($case, $on, $jurisdiction): void {
+                $law->where(function (Builder $choice) use ($case, $on, $jurisdiction): void {
+                    $choice->where(function (Builder $regulation) use ($case): void {
+                        $regulation->where('kind', 'internal_regulation')->where('company_id', $case->company_id)
+                            ->whereExists(function ($approval): void {
+                                $approval->selectRaw('1')->from('legal_unit_approvals')
+                                    ->whereColumn('legal_unit_approvals.legal_unit_id', 'legal_units.id');
+                            });
+                    })->orWhere(function (Builder $statute) use ($case, $on, $jurisdiction): void {
+                        $statute->where('kind', 'statute')->where('approval_status', 'approved')
+                            ->whereExists(function ($jurisdictions) use ($jurisdiction): void {
+                                $jurisdictions->selectRaw('1')->from('law_jurisdictions')
+                                    ->whereColumn('law_jurisdictions.law_id', 'laws.id')
+                                    ->where('jurisdiction', $jurisdiction);
+                            })->where(function (Builder $category) use ($case, $on): void {
+                                $category->where(function (Builder $labor) use ($case): void {
+                                    $labor->where('category', 'labor')->whereKey($case->law_version_id);
+                                })->orWhere(function (Builder $other) use ($on): void {
+                                    $other->where('category', '!=', 'labor')
+                                        ->where(function (Builder $dated) use ($on): void {
+                                            $dated->whereNull('effective_from')->orWhereDate('effective_from', '<=', $on);
+                                        })->where(function (Builder $dated) use ($on): void {
+                                            $dated->whereNull('repealed_at')->orWhereDate('repealed_at', '>', $on);
+                                        });
+                                });
+                            });
+                    });
+                });
+            });
     }
 }

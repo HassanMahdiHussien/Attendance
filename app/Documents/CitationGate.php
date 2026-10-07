@@ -2,14 +2,12 @@
 
 namespace App\Documents;
 
-use App\Enums\LawApprovalStatus;
-use App\Enums\LawKind;
-use App\Enums\LegalUnitStatus;
 use App\Enums\RelevanceCheck;
 use App\Exceptions\IssuanceBlocked;
 use App\Models\Citation;
+use App\Models\DisciplinaryCase;
 use App\Models\Document;
-use Illuminate\Support\Facades\DB;
+use App\Models\LegalUnit;
 
 class CitationGate
 {
@@ -32,28 +30,20 @@ class CitationGate
                 preg_match_all('/\[\[cite:(\d+)\]\]/', $body, $matches);
                 foreach ($matches[1] as $id) {
                     $citation = $citations->get((int) $id)?->first();
-                    if (! $citation || ! $this->valid($citation, $case->company_id, $case->jurisdiction_at_opening->value)) {
-                        throw new IssuanceBlocked("Citation {$id} is not issuable.");
+                    if (! $citation || ! $this->valid($citation, $case)) {
+                        $message = $citation?->legalUnit?->superseded_by_id !== null
+                            ? 'النص القانوني صُحح — حدّث الاستشهاد'
+                            : "Citation {$id} is not issuable.";
+                        throw new IssuanceBlocked($message);
                     }
                 }
             }
         }
     }
 
-    private function valid(Citation $citation, int $companyId, string $jurisdiction): bool
+    private function valid(Citation $citation, DisciplinaryCase $case): bool
     {
-        $unit = $citation->legalUnit;
-        $law = $unit?->law;
-        if (! $unit || ! $law || ! in_array($unit->status, [LegalUnitStatus::VerifiedAuto, LegalUnitStatus::VerifiedHuman], true)
-            || $unit->superseded_by_id !== null) {
-            return false;
-        }
-        if ($law->kind === LawKind::Statute) {
-            if (! DB::table('law_jurisdictions')->where('law_id', $law->id)->where('jurisdiction', $jurisdiction)->exists()) {
-                return false;
-            }
-        } elseif ($law->kind !== LawKind::InternalRegulation || (int) $law->company_id !== $companyId
-            || $law->approval_status !== LawApprovalStatus::Approved) {
+        if (! LegalUnit::query()->citableFor($case)->whereKey($citation->legal_unit_id)->exists()) {
             return false;
         }
         if ($citation->relevance_check === RelevanceCheck::Supports) {

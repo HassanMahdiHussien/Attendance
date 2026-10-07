@@ -56,6 +56,7 @@ class Law extends Model
         return [
             'kind' => LawKind::class,
             'approval_status' => LawApprovalStatus::class,
+            'requires_page_range' => 'boolean',
         ];
     }
 
@@ -72,6 +73,11 @@ class Law extends Model
     public function units(): HasMany
     {
         return $this->hasMany(LegalUnit::class);
+    }
+
+    public function importRuns(): HasMany
+    {
+        return $this->hasMany(LegalImportRun::class);
     }
 
     public function jurisdictions(): HasMany
