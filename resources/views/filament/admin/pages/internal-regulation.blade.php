@@ -19,10 +19,13 @@
             <h2 class="font-bold">الأنظمة الداخلية</h2>
             @foreach ($this->laws() as $law)
                 <button type="button" wire:click="selectLaw({{ $law->id }})" class="block w-full border-b p-3 text-right">
-                    {{ $law->name }} — {{ $law->importRuns()->latest('id')->value('state') ?? 'لم يبدأ' }}
-                    @if ($counts = $law->importRuns()->latest('id')->value('counts'))
-                        <span class="text-sm">{{ is_string($counts) ? $counts : json_encode($counts, JSON_UNESCAPED_UNICODE) }}</span>
+                    {{ $law->name }} —
+                    @if ($state = $law->importRuns()->latest('id')->value('state'))
+                        <x-filament::badge :color="\App\Support\Format\LegalLibraryLabels::statusColor($state)">{{ \App\Support\Format\LegalLibraryLabels::runState($state) }}</x-filament::badge>
+                    @else
+                        لم يبدأ
                     @endif
+                    <span class="text-sm">{{ $this->lawSummary($law) }}</span>
                 </button>
             @endforeach
         </section>
@@ -33,21 +36,28 @@
                     <h2 class="font-bold">المواد والفقرات</h2>
                     @if ($law = $this->laws()->firstWhere('id', $selectedLawId))
                         @can('review', $law)
-                            <x-filament::button wire:click="approveAll">اعتماد كل الوحدات الموثقة</x-filament::button>
+                            @if ($this->hasPendingApprovals($law))
+                                <x-filament::button wire:click="approveAll">اعتماد كل الوحدات الموثقة</x-filament::button>
+                            @endif
                         @endcan
                     @endif
                 </div>
                 @foreach ($this->units() as $unit)
+                    @php($approval = \App\Models\LegalUnitApproval::query()->where('legal_unit_id', $unit->id)->first())
                     <div class="border-b p-3">
                         <div class="flex flex-wrap gap-3">
                             <strong>المادة {{ $unit->article_number }} {{ $unit->clause_path }}</strong>
-                            <span>{{ $unit->status->value }}</span>
-                            <span>{{ \App\Models\LegalUnitApproval::query()->where('legal_unit_id', $unit->id)->exists() ? 'معتمدة' : 'بانتظار الموافقة' }}</span>
+                            <x-filament::badge :color="\App\Support\Format\LegalLibraryLabels::statusColor($unit->status->value)">{{ \App\Support\Format\LegalLibraryLabels::unitStatus($unit->status->value) }}</x-filament::badge>
+                            @if ($approval)
+                                <span>معتمدة — {{ \App\Models\User::find($approval->approved_by)?->name }}، {{ \App\Support\Format\LegalLibraryLabels::dateTime(\Carbon\Carbon::parse($approval->created_at)) }}</span>
+                            @else
+                                <span>بانتظار الموافقة</span>
+                            @endif
                             @if ($unit->source_page !== null && $unit->import_run_id !== null)
                                 <a target="_blank" class="underline" href="{{ route('legal-library.pages.show', ['run' => $unit->import_run_id, 'page' => $unit->source_page]) }}">صورة الصفحة</a>
                             @endif
                             @can('review', $unit->law)
-                                @if (in_array($unit->status->value, ['verified_auto', 'verified_human', 'verified_text'], true) && $unit->superseded_by_id === null)
+                                @if (! $approval && in_array($unit->status->value, ['verified_auto', 'verified_human', 'verified_text'], true) && $unit->superseded_by_id === null)
                                     <x-filament::button size="sm" wire:click="approveUnit({{ $unit->id }})">اعتماد</x-filament::button>
                                 @endif
                             @endcan

@@ -90,7 +90,7 @@ class EditLaw extends EditRecord
         $html = '<div dir="rtl" style="display:flex;gap:1rem;overflow:auto">';
         foreach ($paths as $number => $path) {
             $bytes = Storage::disk('local')->get($path);
-            $html .= '<figure><figcaption>صفحة '.e((string) $number).'</figcaption><img style="max-width:18rem" src="data:image/png;base64,'.base64_encode($bytes).'" alt="صفحة '.e((string) $number).'"></figure>';
+            $html .= '<figure><figcaption>صفحة '.e((string) $number).'</figcaption><img style="max-width:18rem" src="data:image/jpeg;base64,'.base64_encode($bytes).'" alt="صفحة '.e((string) $number).'"></figure>';
         }
 
         return new HtmlString($html.'</div>');

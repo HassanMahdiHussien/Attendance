@@ -8,7 +8,10 @@ use App\LegalLibrary\RegulationApprovals;
 use App\LegalLibrary\RegulationUpload;
 use App\Models\Law;
 use App\Models\LegalUnit;
+use App\Models\LegalUnitApproval;
+use App\Support\Format\LegalLibraryLabels;
 use Filament\Facades\Filament;
+use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\WithFileUploads;
@@ -76,6 +79,22 @@ class InternalRegulation extends Page
             ->orderBy('id')->get();
     }
 
+    public function lawSummary(Law $law): string
+    {
+        $counts = $law->units()->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status')->all();
+        $counts['units'] = array_sum($counts);
+        $counts['mismatch'] ??= 0;
+
+        return LegalLibraryLabels::counts($counts);
+    }
+
+    public function hasPendingApprovals(Law $law): bool
+    {
+        return $law->units()->whereIn('status', ['verified_auto', 'verified_human', 'verified_text'])
+            ->whereNull('superseded_by_id')
+            ->whereNotIn('id', LegalUnitApproval::query()->select('legal_unit_id'))->exists();
+    }
+
     public function upload(): void
     {
         $company = Filament::getTenant();
@@ -101,6 +120,7 @@ class InternalRegulation extends Page
         $unit = $this->units()->firstWhere('id', $id);
         abort_unless($unit && auth()->user()->can('review', $unit->law), 403);
         app(RegulationApprovals::class)->approve($unit, auth()->user());
+        Notification::make()->title('تم اعتماد الوحدة')->success()->send();
     }
 
     public function approveAll(): void
@@ -108,6 +128,7 @@ class InternalRegulation extends Page
         $law = $this->laws()->firstWhere('id', $this->selectedLawId);
         abort_unless($law && auth()->user()->can('review', $law), 403);
         app(RegulationApprovals::class)->approveAllVerified($law, auth()->user());
+        Notification::make()->title('تم اعتماد الوحدات الموثقة')->success()->send();
     }
 
     protected function mismatchQuery(): Builder

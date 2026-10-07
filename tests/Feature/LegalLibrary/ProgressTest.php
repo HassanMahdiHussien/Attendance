@@ -1,17 +1,24 @@
 <?php
 
+use App\Enums\ImportMode;
 use App\Jobs\BuildLegalUnits;
 use App\Jobs\ReadLegalPageText;
 use App\Jobs\ReadLegalPageWithAi;
+use App\Jobs\RenderLegalPages;
+use App\LegalLibrary\ArticleSplitter;
+use App\LegalLibrary\DocxText;
 use App\LegalLibrary\ImportProgress;
 use App\LegalLibrary\LawImportService;
+use App\LegalLibrary\PdfPages;
 use App\Models\Law;
 use App\Models\LegalImportPage;
 use App\Models\LegalImportRun;
 use App\Models\User;
+use App\Services\AuditLogger;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Storage;
 
 test('unavailable AI holds the run and terminal readings dispatch one build', function (): void {
     Bus::fake([BuildLegalUnits::class]);
@@ -77,16 +84,16 @@ test('a leftover page image from an unrelated run is re-rendered, not reused', f
         $this->markTestSkipped('Run tests/fixtures/legal/generate.php inside the app container first.');
     }
     Bus::fake();
-    \Illuminate\Support\Facades\Storage::fake('local');
+    Storage::fake('local');
     app(TenantContext::class)->runAcrossAllCompanies(function () use ($path): void {
         $actor = User::factory()->create(['primary_role' => 'platform_admin', 'company_id' => null]);
         $law = Law::factory()->create(['kind' => 'statute']);
-        $run = app(LawImportService::class)->start($law, $actor, $path, 1, 1, \App\Enums\ImportMode::Auto);
-        \Illuminate\Support\Facades\Storage::disk('local')->put("legal-library/runs/{$run->id}/pages/1.png", 'stale bytes');
-        (new \App\Jobs\RenderLegalPages($run->id, 'pdf'))->handle(app(\App\LegalLibrary\PdfPages::class),
-            app(\App\LegalLibrary\DocxText::class), app(\App\LegalLibrary\ArticleSplitter::class), app(\App\Services\AuditLogger::class));
+        $run = app(LawImportService::class)->start($law, $actor, $path, 1, 1, ImportMode::Auto);
+        Storage::disk('local')->put("legal-library/runs/{$run->id}/pages/1.png", 'stale bytes');
+        (new RenderLegalPages($run->id, 'pdf'))->handle(app(PdfPages::class),
+            app(DocxText::class), app(ArticleSplitter::class), app(AuditLogger::class));
         $page = $run->pages()->firstOrFail();
-        expect(\Illuminate\Support\Facades\Storage::disk('local')->get($page->image_path))->not->toBe('stale bytes');
-        expect($page->image_sha256)->toBe(hash('sha256', \Illuminate\Support\Facades\Storage::disk('local')->get($page->image_path)));
+        expect(Storage::disk('local')->get($page->image_path))->not->toBe('stale bytes');
+        expect($page->image_sha256)->toBe(hash('sha256', Storage::disk('local')->get($page->image_path)));
     });
 });

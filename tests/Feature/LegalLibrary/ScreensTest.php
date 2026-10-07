@@ -1,6 +1,8 @@
 <?php
 
 use App\Enums\ImportMode;
+use App\Enums\Jurisdiction;
+use App\Enums\LegalUnitStatus;
 use App\Enums\UserRole;
 use App\Filament\Admin\Pages\InternalRegulation;
 use App\Filament\Platform\Pages\MismatchQueue;
@@ -8,12 +10,15 @@ use App\Filament\Platform\Resources\LawResource;
 use App\Filament\Platform\Resources\LawResource\Pages\EditLaw;
 use App\Jobs\RenderLegalPages;
 use App\LegalLibrary\LawImportService;
+use App\LegalLibrary\MismatchResolver;
 use App\Models\Company;
 use App\Models\Law;
 use App\Models\LegalImportPage;
 use App\Models\LegalImportRun;
 use App\Models\LegalUnit;
+use App\Models\LegalUnitApproval;
 use App\Models\User;
+use App\Support\Format\LegalLibraryLabels;
 use App\Support\Tenancy\TenantContext;
 use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Bus;
@@ -21,6 +26,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Permission;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 afterEach(function (): void {
     Filament::setTenant(null);
@@ -153,12 +159,12 @@ test('mismatch actions enforce review policy on Livewire calls', function (): vo
         'extraction_a' => 'نص أ', 'extraction_b' => 'نص ب']);
     $wrong = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::CompanyAdmin]);
     // A company user can neither open the statute queue nor resolve a statute unit through the service.
-    expect(\App\Filament\Platform\Pages\MismatchQueue::canAccess())->toBeTrue();
+    expect(MismatchQueue::canAccess())->toBeTrue();
     $this->actingAs($wrong);
     expect(MismatchQueue::canAccess())->toBeFalse();
     $this->get('/platform/mismatch-queue')->assertForbidden();
-    expect(fn () => app(\App\LegalLibrary\MismatchResolver::class)->resolve($other, $wrong, 'a', null))
-        ->toThrow(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+    expect(fn () => app(MismatchResolver::class)->resolve($other, $wrong, 'a', null))
+        ->toThrow(HttpException::class);
     expect($other->fresh()->status->value)->toBe('mismatch');
 });
 
@@ -186,4 +192,89 @@ test('regulation approval is reviewer-only and tenant-scoped', function (): void
     expect($mismatch->fresh()->status->value)->toBe('verified_human');
     actingInAdminTenant($this, $reviewer, $b);
     Livewire::test(InternalRegulation::class)->assertForbidden();
+});
+
+test('legal library labels cover every displayed code', function (): void {
+    foreach (['labor', 'social_security', 'regulation', 'other'] as $value) {
+        expect(LegalLibraryLabels::category($value))->not->toBe($value);
+    }
+    foreach (Jurisdiction::cases() as $value) {
+        expect(LegalLibraryLabels::jurisdiction($value->value))->not->toBe($value->value);
+    }
+    foreach (LegalUnitStatus::cases() as $value) {
+        expect(LegalLibraryLabels::unitStatus($value->value))->not->toBe($value->value);
+    }
+    foreach (['queued', 'reading', 'ai_pending', 'splitting', 'completed', 'failed', 'cancelled'] as $value) {
+        expect(LegalLibraryLabels::runState($value))->not->toBe($value);
+    }
+    foreach (['pending', 'done', 'failed', 'unavailable'] as $value) {
+        expect(LegalLibraryLabels::pageStatus($value))->not->toBe($value);
+    }
+    foreach (['text', 'ocr'] as $value) {
+        expect(LegalLibraryLabels::textMethod($value))->not->toBe($value);
+    }
+    foreach (['text_differs', 'structure_differs', 'one_reading_only', 'duplicate_heading', 'page_failed', 'illegible'] as $value) {
+        expect(LegalLibraryLabels::mismatchReason($value))->not->toBe($value);
+    }
+});
+
+test('regulation shows an Arabic summary and approved units without approval controls', function (): void {
+    $company = Company::factory()->create();
+    $reviewer = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::HrStaff]);
+    Permission::findOrCreate('review_internal_regulation', 'web');
+    $reviewer->givePermissionTo('review_internal_regulation');
+    actingInAdminTenant($this, $reviewer, $company);
+    $law = Law::factory()->create(['company_id' => $company->id, 'kind' => 'internal_regulation']);
+    LegalImportRun::create(['law_id' => $law->id, 'company_id' => $company->id,
+        'source_path' => 'fixture.txt', 'source_sha256' => str_repeat('a', 64), 'mode' => 'text',
+        'state' => 'completed', 'started_by' => $reviewer->id, 'started_at' => now(),
+        'counts' => ['pages' => 0, 'units' => 1, 'verified_text' => 1]]);
+    $unit = LegalUnit::factory()->create(['law_id' => $law->id, 'status' => 'verified_text']);
+    LegalUnitApproval::create(['legal_unit_id' => $unit->id, 'company_id' => $company->id,
+        'approved_by' => $reviewer->id, 'created_at' => now()]);
+    Livewire::test(InternalRegulation::class)->call('selectLaw', $law->id)
+        ->assertSee('١ وحدات — ١ من نص المصدر')
+        ->assertSee('معتمدة')
+        ->assertSee($reviewer->name)
+        ->assertDontSee('verified_text')
+        ->assertDontSee('{"pages"')
+        ->assertDontSee('اعتماد كل الوحدات الموثقة')
+        ->assertDontSee('wire:click="approveUnit');
+});
+
+test('page range preview uses compact JPEGs', function (): void {
+    $actor = User::factory()->create(['primary_role' => UserRole::PlatformAdmin]);
+    $this->actingAs($actor);
+    app(TenantContext::class)->setAllCompanies();
+    $law = Law::factory()->create();
+    $paths = app(LawImportService::class)->previewPages($law, base_path('tests/fixtures/legal/text-law.pdf'), 1, 1);
+    $path = Storage::disk('local')->path($paths[1]);
+    expect(file_get_contents($path, false, null, 0, 3))->toBe("\xFF\xD8\xFF");
+    expect(filesize($path))->toBeLessThan(200 * 1024);
+    expect(max(getimagesize($path)[0], getimagesize($path)[1]))->toBeLessThanOrEqual(900);
+});
+
+test('workspace navigation exposes regulation only to admins and permitted reviewers', function (): void {
+    $company = Company::factory()->create();
+    Permission::findOrCreate('review_internal_regulation', 'web');
+    foreach ([UserRole::CompanyAdmin, UserRole::HrStaff, UserRole::Reporter, UserRole::CommitteeMember] as $role) {
+        $user = User::factory()->create(['company_id' => $company->id, 'primary_role' => $role]);
+        if ($role === UserRole::HrStaff) {
+            $unpermitted = $this->actingAs($user)->get('/cases');
+            $unpermitted->assertDontSee('/admin/'.$company->id.'/internal-regulation');
+            $user->givePermissionTo('review_internal_regulation');
+        }
+        if (in_array($role, [UserRole::Reporter, UserRole::CommitteeMember], true)) {
+            $user->givePermissionTo('review_internal_regulation');
+        }
+        $path = match ($role) {
+            UserRole::Reporter => '/reports', UserRole::CommitteeMember => '/my-cases', default => '/cases',
+        };
+        $response = $this->actingAs($user)->get($path)->assertOk();
+        if (in_array($role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)) {
+            $response->assertSee('/admin/'.$company->id.'/internal-regulation');
+        } else {
+            $response->assertDontSee('/admin/'.$company->id.'/internal-regulation');
+        }
+    }
 });

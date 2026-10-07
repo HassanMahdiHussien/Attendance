@@ -152,8 +152,19 @@ class LawImportService
         Storage::disk('local')->makeDirectory($directory);
         $result = [];
         foreach (array_unique([$from, $to]) as $page) {
-            $result[$page] = $directory.'/page-'.$page.'.png';
-            $this->pdf->render($path, $page, Storage::disk('local')->path($directory.'/page-'.$page));
+            $prefix = Storage::disk('local')->path($directory.'/page-'.$page);
+            $png = $this->pdf->render($path, $page, $prefix);
+            $sourceImage = imagecreatefrompng($png);
+            $width = imagesx($sourceImage);
+            $height = imagesy($sourceImage);
+            $scale = min(1, 900 / max($width, $height));
+            $preview = imagescale($sourceImage, max(1, (int) round($width * $scale)), max(1, (int) round($height * $scale)));
+            $jpeg = $prefix.'.jpg';
+            imagejpeg($preview, $jpeg, 80);
+            imagedestroy($sourceImage);
+            imagedestroy($preview);
+            unlink($png);
+            $result[$page] = $directory.'/page-'.$page.'.jpg';
         }
 
         return $result;

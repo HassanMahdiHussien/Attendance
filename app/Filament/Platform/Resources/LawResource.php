@@ -7,6 +7,8 @@ use App\Enums\UserRole;
 use App\Filament\Platform\Resources\LawResource\Pages;
 use App\Filament\Platform\Resources\LawResource\RelationManagers;
 use App\Models\Law;
+use App\Support\Format\ArabicDigits;
+use App\Support\Format\LegalLibraryLabels;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
@@ -74,8 +76,9 @@ class LawResource extends Resource
             TextColumn::make('name')->label('القانون')->searchable(),
             TextColumn::make('number')->label('الرقم'),
             TextColumn::make('year')->label('السنة'),
-            TextColumn::make('category')->label('التصنيف'),
-            TextColumn::make('jurisdictions.jurisdiction')->label('نطاق التطبيق')->badge(),
+            TextColumn::make('category')->label('التصنيف')->formatStateUsing(fn ($state): string => LegalLibraryLabels::category($state instanceof \BackedEnum ? $state->value : (string) $state)),
+            TextColumn::make('jurisdictions.jurisdiction')->label('نطاق التطبيق')->badge()
+                ->formatStateUsing(fn ($state): string => LegalLibraryLabels::jurisdiction($state instanceof \BackedEnum ? $state->value : (string) $state)),
             TextColumn::make('effective_from')->label('النفاذ')->date(),
             TextColumn::make('repealed_at')->label('الإلغاء')->date(),
             TextColumn::make('units_count')->label('الوحدات')->counts('units'),
@@ -83,8 +86,8 @@ class LawResource extends Resource
             TextColumn::make('mismatch_count')->label('اختلاف')->state(fn (Law $record): int => $record->units()->where('status', 'mismatch')->count()),
             TextColumn::make('status_counts')->label('الحالات')->state(fn (Law $record): string => $record->units()
                 ->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status')
-                ->map(fn ($count, $status): string => $status.': '.$count)->implode('، ')),
-            TextColumn::make('latest_run')->label('آخر استيراد')->state(fn (Law $record): string => $record->importRuns()->latest('id')->value('state') ?? '—'),
+                ->map(fn ($count, $status): string => LegalLibraryLabels::unitStatus($status).': '.ArabicDigits::convert((int) $count))->implode('، ')),
+            TextColumn::make('latest_run')->label('آخر استيراد')->state(fn (Law $record): string => ($state = $record->importRuns()->latest('id')->value('state')) ? LegalLibraryLabels::runState($state) : '—'),
         ])->recordActions([EditAction::make()]);
     }
 

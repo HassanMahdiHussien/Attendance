@@ -4,7 +4,7 @@
         @forelse ($this->mismatches() as $unit)
             <button type="button" wire:click="selectUnit({{ $unit->id }})" class="block w-full border-b p-3 text-right hover:bg-gray-50 dark:hover:bg-gray-800">
                 {{ $unit->law->name }} — المادة {{ $unit->article_number }} {{ $unit->clause_path }}
-                <span class="text-sm text-amber-700">{{ $unit->tags['mismatch_reason'] ?? 'اختلاف القراءتين' }}</span>
+                <span class="text-sm text-amber-700">{{ \App\Support\Format\LegalLibraryLabels::mismatchReason($unit->tags['mismatch_reason'] ?? '') }}</span>
             </button>
         @empty
             <p class="p-3">لا توجد اختلافات.</p>
@@ -17,7 +17,7 @@
         @endphp
         <div class="grid gap-4 lg:grid-cols-3">
             <section class="rounded-xl border p-4 dark:border-gray-700">
-                <h3 class="font-bold">القراءة أ — {{ $page?->text_method === 'ocr' ? 'OCR' : 'طبقة النص' }}</h3>
+                <h3 class="font-bold">القراءة أ — {{ \App\Support\Format\LegalLibraryLabels::textMethod($page?->text_method ?? 'text') }}</h3>
                 <p class="mt-3 whitespace-pre-wrap text-xl leading-9" style="font-family:Amiri,serif">{{ $unit->extraction_a }}</p>
             </section>
             <section class="rounded-xl border p-4 dark:border-gray-700">

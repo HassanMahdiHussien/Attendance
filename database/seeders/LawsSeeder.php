@@ -14,9 +14,9 @@ class LawsSeeder extends Seeder
     public function run(): void
     {
         $laws = [
-            ['Labor Law No. 37 of 2015', '37', 2015, 'labor', 'docs/laws/labor-law-37-2015-gazette-4386.pdf', [Jurisdiction::FederalIraq]],
-            ['Labor Law No. 71 of 1987', '71', 1987, 'labor', 'docs/laws/labor-law-71-1987.pdf', [Jurisdiction::KurdistanRegion]],
-            ['Retirement & Social Security Law No. 18 of 2023', '18', 2023, 'social_security', 'docs/laws/gazette-4734-incl-social-security-law-18-2023.pdf', [Jurisdiction::FederalIraq, Jurisdiction::KurdistanRegion]],
+            ['قانون العمل رقم (37) لسنة 2015', '37', 2015, 'labor', 'docs/laws/labor-law-37-2015-gazette-4386.pdf', [Jurisdiction::FederalIraq]],
+            ['قانون العمل رقم (71) لسنة 1987', '71', 1987, 'labor', 'docs/laws/labor-law-71-1987.pdf', [Jurisdiction::KurdistanRegion]],
+            ['قانون التقاعد والضمان الاجتماعي للعمال رقم (18) لسنة 2023', '18', 2023, 'social_security', 'docs/laws/gazette-4734-incl-social-security-law-18-2023.pdf', [Jurisdiction::FederalIraq, Jurisdiction::KurdistanRegion]],
         ];
 
         foreach ($laws as [$name, $number, $year, $category, $source, $jurisdictions]) {

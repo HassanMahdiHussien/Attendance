@@ -5,6 +5,7 @@ namespace App\Filament\Concerns;
 use App\LegalLibrary\MismatchResolver;
 use App\LegalLibrary\WordDiff;
 use App\Models\LegalUnit;
+use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Builder;
 
 trait ReviewsLegalMismatch
@@ -50,6 +51,7 @@ trait ReviewsLegalMismatch
         abort_unless($unit && auth()->user()->can('review', $unit->law), 403);
         app(MismatchResolver::class)->resolve($unit, auth()->user(), $choice, $choice === 'edit' ? $this->editedText : null);
         $this->selectedUnitId = null;
+        Notification::make()->title($choice === 'edit' ? 'تم اعتماد النص المصحح' : 'تم اعتماد القراءة')->success()->send();
     }
 
     public function excludeUnit(): void
@@ -58,5 +60,6 @@ trait ReviewsLegalMismatch
         abort_unless($unit && auth()->user()->can('review', $unit->law), 403);
         app(MismatchResolver::class)->exclude($unit, auth()->user(), $this->excludeReason);
         $this->selectedUnitId = null;
+        Notification::make()->title('تم استبعاد الوحدة')->success()->send();
     }
 }

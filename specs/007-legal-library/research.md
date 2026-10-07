@@ -190,3 +190,8 @@
   also articles 65, 69, 73, 118, 119). The splitter flags these as `duplicate_heading`; the reviewer
   must keep the text in force and exclude the superseded wording. This is a legal decision for the
   person clearing the queue (ideally a lawyer), not something the code can infer.
+
+## R15 Law names (2026-10-07)
+- Seeded law names are Arabic (the citation sentence "المادة (X) من قانون …" is rendered from them).
+- Open for feature 008: the English page of a bilingual document needs an English law name; add a
+  per-language name (e.g. `laws.name_en` or a names JSON) when the citation renderer is built.

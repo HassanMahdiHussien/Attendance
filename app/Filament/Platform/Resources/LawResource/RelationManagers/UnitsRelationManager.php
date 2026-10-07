@@ -5,8 +5,10 @@ namespace App\Filament\Platform\Resources\LawResource\RelationManagers;
 use App\LegalLibrary\MismatchResolver;
 use App\LegalLibrary\UnitCorrection;
 use App\Models\LegalUnit;
+use App\Support\Format\LegalLibraryLabels;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Textarea;
+use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -26,7 +28,9 @@ class UnitsRelationManager extends RelationManager
         return $table->columns([
             TextColumn::make('article_number')->label('المادة')->sortable(),
             TextColumn::make('clause_path')->label('الفقرة'),
-            TextColumn::make('status')->label('الحالة')->badge(),
+            TextColumn::make('status')->label('الحالة')->badge()
+                ->formatStateUsing(fn ($state): string => LegalLibraryLabels::unitStatus($state instanceof \BackedEnum ? $state->value : (string) $state))
+                ->color(fn ($state): string => LegalLibraryLabels::statusColor($state instanceof \BackedEnum ? $state->value : (string) $state)),
             TextColumn::make('version')->label('الإصدار'),
             TextColumn::make('source_page')->label('صورة الصفحة')
                 ->url(fn (LegalUnit $record): ?string => $record->source_page !== null && $record->import_run_id !== null
@@ -38,10 +42,16 @@ class UnitsRelationManager extends RelationManager
                 ->schema([
                     Textarea::make('text')->label('النص الرسمي')->required()->default(fn (LegalUnit $record): string => $record->official_text),
                     Textarea::make('reason')->label('سبب التصحيح')->required(),
-                ])->action(fn (LegalUnit $record, array $data) => app(UnitCorrection::class)->correct($record, auth()->user(), $data['text'], $data['reason'])),
+                ])->action(function (LegalUnit $record, array $data): void {
+                    app(UnitCorrection::class)->correct($record, auth()->user(), $data['text'], $data['reason']);
+                    Notification::make()->title('تم تصحيح الوحدة')->success()->send();
+                }),
             Action::make('exclude')->label('استبعاد')->color('danger')->visible(fn (LegalUnit $record): bool => in_array($record->status->value, ['mismatch', 'unverified'], true))
                 ->schema([Textarea::make('reason')->label('سبب الاستبعاد')->required()])
-                ->action(fn (LegalUnit $record, array $data) => app(MismatchResolver::class)->exclude($record, auth()->user(), $data['reason'])),
+                ->action(function (LegalUnit $record, array $data): void {
+                    app(MismatchResolver::class)->exclude($record, auth()->user(), $data['reason']);
+                    Notification::make()->title('تم استبعاد الوحدة')->success()->send();
+                }),
         ]);
     }
 

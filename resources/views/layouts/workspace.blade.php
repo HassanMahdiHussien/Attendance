@@ -22,6 +22,9 @@
                     <a href="/my-cases" class="px-3 py-2 rounded-lg bg-primary-light text-primary font-bold">حالاتي</a>
                 @endif
                 @if(\App\Support\Access\CommitteeNav::hasPending(auth()->user()))<a href="/committee" class="px-3 py-2 rounded-lg {{ request()->is('committee*') ? 'bg-primary-light text-primary font-bold' : 'hover:bg-gray-50' }}">اللجنة</a>@endif
+                @if($regulationUrl = \App\Support\Access\InternalRegulationNav::url(auth()->user()))
+                    <a href="{{ $regulationUrl }}" class="px-3 py-2 rounded-lg {{ request()->is('admin/*/internal-regulation') ? 'bg-primary-light text-primary font-bold' : 'hover:bg-gray-50' }}">النظام الداخلي</a>
+                @endif
                 @if($role === \App\Enums\UserRole::CompanyAdmin)
                     <a href="/admin/{{ auth()->user()->company_id }}" class="px-3 py-2 rounded-lg hover:bg-gray-50">الإعدادات</a>
                 @endif
