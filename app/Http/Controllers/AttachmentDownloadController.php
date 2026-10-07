@@ -38,6 +38,12 @@ class AttachmentDownloadController extends Controller
         abort_unless($visible && $parent !== null && (int) $attachment->company_id === (int) $parent->company_id, 404);
         abort_unless(Storage::disk($attachment->disk)->exists($attachment->path), 404);
 
+        if ($request->boolean('preview') && in_array($attachment->mime_type, ['image/png', 'image/jpeg', 'application/pdf'], true)) {
+            return response()->file(Storage::disk($attachment->disk)->path($attachment->path),
+                ['Content-Type' => $attachment->mime_type, 'X-Content-Type-Options' => 'nosniff',
+                    'Content-Security-Policy' => "default-src 'none'; style-src 'unsafe-inline'", 'Cache-Control' => 'private, no-store']);
+        }
+
         return response()->download(Storage::disk($attachment->disk)->path($attachment->path), $attachment->original_name,
             ['Content-Type' => $attachment->mime_type, 'X-Content-Type-Options' => 'nosniff']);
     }

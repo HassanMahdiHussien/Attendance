@@ -31,7 +31,7 @@ class DraftPrompt
             .'Do not state the operative decision, outcome, or penalty in prose; template wording supplies it. '
             .'Return short internal notes for missing or unclear information, never in the document body.';
         if ($type === DocumentType::Recommendations) {
-            $instruction .= ' body is findings; secondary_body is reasons and additional recommendations without a penalty sentence.';
+            $instruction .= ' The employee_response is the employee’s own account. Summarize it in findings only when relevant; never quote numbers absent from the input. body is findings; secondary_body is reasons and additional recommendations without a penalty sentence.';
         }
         if ($type === DocumentType::DecisionLetter) {
             $instruction .= ' Draft only the reasons paragraph from the issued recommendations.';

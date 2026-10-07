@@ -7,6 +7,7 @@ use App\Enums\DocumentType;
 use App\Exceptions\TransitionBlocked;
 use App\Models\CommitteeSessionAttendance;
 use App\Models\DisciplinaryCase;
+use App\Models\SignaturePresenceSuggestion;
 use App\Services\Cases\CaseClosure;
 use App\Services\Cases\ConsultationService;
 use App\Services\Cases\SignaturePresence;
@@ -32,6 +33,10 @@ class SignedScan extends Component
     public string $reason = '';
 
     public string $notice = '';
+
+    public ?int $suggestionId = null;
+
+    public ?int $shownScanId = null;
 
     public function mount(string $case): void
     {
@@ -62,9 +67,60 @@ class SignedScan extends Component
         $case = $this->currentCase();
         $this->validate(['reason' => ['required', 'string', 'max:2000']]);
         $document = $case->documents()->where('document_type', DocumentType::Recommendations->value)->where('is_locked', true)->latest('id')->firstOrFail();
-        $signatures->overrideEmpty($document, $this->reason, auth()->user());
+        try {
+            $signatures->overrideEmpty($document, $this->reason, auth()->user());
+        } catch (TransitionBlocked $error) {
+            $this->notice = $error->getMessage();
+
+            return;
+        }
         $this->expectedStatus = CaseStatus::SignedRecommendationsUploaded->value;
         $this->notice = 'سُجل سبب تجاوز الخانة الفارغة.';
+    }
+
+    public function uploadForReading(SignaturePresence $signatures): void
+    {
+        $case = $this->currentCase();
+        $this->validate(['scan' => ['required', 'file', 'max:10240']]);
+        $document = $case->documents()->where('document_type', DocumentType::Recommendations->value)->where('is_locked', true)->latest('id')->firstOrFail();
+        try {
+            $signatures->uploadSignedScan($document, $this->scan, auth()->user());
+        } catch (TransitionBlocked $error) {
+            $this->notice = $error->getMessage();
+
+            return;
+        }
+        $this->scan = null;
+        $this->suggestionId = null;
+        $this->notice = 'رُفع المسح. ستظهر اقتراحات الخانات عند اكتمال القراءة.';
+    }
+
+    public function recordReadPresence(SignaturePresence $signatures): void
+    {
+        // Errors raised by hand persist between Livewire requests until reset; a corrected submission must not
+        // keep showing the previous refusal.
+        $this->resetErrorBag();
+        $case = $this->currentCase();
+        $document = $case->documents()->where('document_type', DocumentType::Recommendations->value)->where('is_locked', true)->latest('id')->firstOrFail();
+        $scan = $signatures->latestScan($document);
+        if (! $scan) {
+            throw ValidationException::withMessages(['scan' => 'ارفع المسح أولاً.']);
+        }
+        // Unclear suggestions leave a row unselected: HR must decide every box before recording.
+        if (collect($this->presence)->contains(fn ($value) => ! in_array($value, ['filled', 'empty'], true))
+            || count(array_filter($this->presence)) < CommitteeSessionAttendance::query()->where('case_id', $case->id)->count()) {
+            throw ValidationException::withMessages(['notice' => 'اختر حالة كل خانة توقيع بعد مراجعة المسح، بما فيها الخانات غير الواضحة.']);
+        }
+        try {
+            $signatures->recordPresence($document, $scan, $this->presence, auth()->user(), $this->suggestionId);
+        } catch (TransitionBlocked $error) {
+            $this->notice = $error->getMessage();
+
+            return;
+        }
+        $this->expectedStatus = $case->fresh()->status->value;
+        $this->notice = $this->expectedStatus === CaseStatus::SignedRecommendationsUploaded->value
+            ? 'سُجلت حالة خانات التوقيع بعد مراجعة المسح.' : 'سُجلت الخانات. توجد خانة توقيع تبدو فارغة.';
     }
 
     public function close(CaseClosure $closure): void
@@ -90,7 +146,28 @@ class SignedScan extends Component
         $attendees = CommitteeSessionAttendance::query()->where('case_id', $case->id)->with('committeePoolMember')->get();
         $checks = app(SignaturePresence::class)->latestChecks($document)->keyBy('committee_pool_member_id');
 
-        return view('livewire.cases.signed-scan', compact('case', 'document', 'attendees', 'checks'))->layout('layouts.workspace');
+        $scan = app(SignaturePresence::class)->latestScan($document);
+        if ($scan && $this->shownScanId !== $scan->id) {
+            $this->shownScanId = $scan->id;
+            $this->suggestionId = null;
+            $this->presence = [];
+        }
+        $suggestion = $scan ? SignaturePresenceSuggestion::query()->where('document_id', $document->id)
+            ->where('attachment_id', $scan->id)->orderByDesc('id')->first() : null;
+        if ($suggestion && $this->suggestionId !== $suggestion->id) {
+            $this->suggestionId = $suggestion->id;
+            foreach ($suggestion->results as $attendanceId => $result) {
+                if (! isset($this->presence[$attendanceId]) || $this->presence[$attendanceId] === '') {
+                    $this->presence[$attendanceId] = match ($result['result']) {
+                        'appears_filled' => 'filled', 'appears_empty' => 'empty', default => '',
+                    };
+                }
+            }
+        }
+
+        return view('livewire.cases.signed-scan', [...compact('case', 'document', 'attendees', 'checks', 'suggestion'),
+            // Named apart from the public $scan upload property, which Livewire would otherwise expose in its place.
+            'latestScan' => $scan])->layout('layouts.workspace');
     }
 
     private function currentCase(): DisciplinaryCase

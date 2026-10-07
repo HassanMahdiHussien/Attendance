@@ -48,6 +48,16 @@ class CaseTimeline
     public static function format(string $type, array $payload = [], array $context = []): string
     {
         return match ($type) {
+            'response_reading_requested' => 'طُلبت قراءة مسح الرد بالذكاء الاصطناعي',
+            'response_reading_ready' => 'أُعدت محاولة نقل نص الرد للمراجعة',
+            'response_reading_failed' => 'تعذرت قراءة الرد بالذكاء الاصطناعي',
+            'response_transcription_confirmed' => 'أكدت الموارد البشرية نص الرد المنقول',
+            'response_transcription_correction' => 'بدأ تصحيح نص الرد'.self::detail($payload['reason'] ?? null),
+            'signed_recommendations_scan_uploaded' => 'رُفع مسح التوصيات الموقعة',
+            'signature_presence_ready' => 'أُعدت اقتراحات حضور خانات التوقيع',
+            'signature_presence_failed' => 'تعذرت قراءة خانات التوقيع بالذكاء الاصطناعي',
+            'ai_request_superseded' => 'أُلغي طلب القراءة بعد تسجيل الموارد البشرية',
+            'ai_request_expired' => 'انتهت مهلة طلب القراءة بالذكاء الاصطناعي',
             'ai_draft_requested' => 'طُلبت صياغة بالذكاء الاصطناعي',
             'ai_draft_saved' => 'حُفظت مسودة الذكاء الاصطناعي',
             'ai_draft_failed' => 'تعذرت الصياغة بالذكاء الاصطناعي',

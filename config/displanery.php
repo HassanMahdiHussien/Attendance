@@ -2,6 +2,7 @@
 
 return [
     'ai' => ['legal_reading_model' => env('LEGAL_READING_MODEL', 'claude-opus-5-5'),
+        'reading_model' => env('SCAN_READING_MODEL', 'claude-opus-5-5'),
         'drafting_model' => env('DRAFTING_MODEL', 'claude-opus-5-5'),
         'relevance_model' => env('RELEVANCE_MODEL', 'claude-opus-5-5'),
         'max_candidates' => 30],

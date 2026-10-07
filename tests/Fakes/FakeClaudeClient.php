@@ -3,6 +3,7 @@
 namespace Tests\Fakes;
 
 use App\Ai\ClaudeClient;
+use App\Ai\SdkClaudeClient;
 use App\Models\AiGenerationLog;
 use Throwable;
 
@@ -27,7 +28,7 @@ class FakeClaudeClient implements ClaudeClient
             'document_id' => $logContext['document_id'] ?? null,
             'actor_user_id' => $logContext['actor_user_id'] ?? null,
             'touchpoint' => $touchpoint, 'model' => $model,
-            'input' => json_encode($messages, JSON_UNESCAPED_UNICODE),
+            'input' => json_encode((new SdkClaudeClient)->safeMessages($messages, $logContext['attachment_id'] ?? null), JSON_UNESCAPED_UNICODE),
             'output' => is_array($response) ? json_encode($response, JSON_UNESCAPED_UNICODE) : null,
             'status' => $response instanceof Throwable ? 'failed' : 'succeeded',
             'error' => $response instanceof Throwable ? $response->getMessage() : null,
