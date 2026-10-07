@@ -30,7 +30,7 @@ class ReadLegalPageText implements ShouldQueue
     {
         $this->withinImportContext($this->companyId, function () use ($pdf, $probe, $progress): void {
             $page = LegalImportPage::findOrFail($this->pageId);
-            if ($page->text_status !== 'pending') {
+            if ($page->text_status !== 'pending' || $page->run->state === 'cancelled') {
                 return;
             }
             $run = $page->run;

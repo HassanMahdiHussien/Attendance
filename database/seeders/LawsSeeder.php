@@ -30,6 +30,7 @@ class LawsSeeder extends Seeder
                 'source_file_path' => $source,
                 // Law 37's text layer is garbage and Law 71's maps ك to آ; OCR reads both correctly (research R14).
                 'import_mode' => in_array($number, ['37', '71'], true) ? 'ocr' : 'auto',
+                'requires_page_range' => $number === '18' && $year === 2023,
                 'approval_status' => LawApprovalStatus::Approved,
             ]);
 

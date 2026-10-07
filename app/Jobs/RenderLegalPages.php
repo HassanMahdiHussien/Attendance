@@ -71,18 +71,36 @@ class RenderLegalPages implements ShouldQueue
                     return;
                 }
                 for ($page = $run->page_from; $page <= $run->page_to; $page++) {
+                    if ($run->fresh()->state === 'cancelled') {
+                        return;
+                    }
                     $relative = "legal-library/runs/{$run->id}/pages/{$page}.png";
                     $prefix = substr(Storage::disk('local')->path($relative), 0, -4);
                     if (! is_dir(dirname($prefix))) {
                         mkdir(dirname($prefix), 0700, true);
                     }
-                    if (! is_file($prefix.'.png')) {
-                        $pdf->render($source, $page, $prefix);
-                    }
                     $image = $prefix.'.png';
-                    $row = $run->pages()->firstOrCreate(['page_number' => $page],
-                        ['image_path' => $relative, 'image_sha256' => hash_file('sha256', $image), 'company_id' => $run->company_id]);
+                    $existing = $run->pages()->where('page_number', $page)->first();
+                    // Reuse an image only for a page this run already recorded, and only if it is the same
+                    // file; a leftover file (e.g. after a database restore reused the run id) is re-rendered.
+                    if ($existing !== null && is_file($image)) {
+                        if (! hash_equals($existing->image_sha256, hash_file('sha256', $image))) {
+                            throw new \RuntimeException("Stored image of page {$page} no longer matches its record.");
+                        }
+                        $rows[] = $existing;
+
+                        continue;
+                    }
+                    $pdf->render($source, $page, $prefix);
+                    $row = $existing ?? $run->pages()->create(['page_number' => $page, 'image_path' => $relative,
+                        'image_sha256' => hash_file('sha256', $image), 'company_id' => $run->company_id]);
+                    if ($existing !== null && ! hash_equals($existing->image_sha256, hash_file('sha256', $image))) {
+                        throw new \RuntimeException("Re-rendered page {$page} differs from its recorded image.");
+                    }
                     $rows[] = $row;
+                }
+                if ($run->fresh()->state === 'cancelled') {
+                    return;
                 }
                 $run->update(['state' => 'reading']);
                 foreach ($rows as $row) {
@@ -90,6 +108,9 @@ class RenderLegalPages implements ShouldQueue
                     ReadLegalPageWithAi::dispatch($row->id, $run->company_id);
                 }
             } catch (Throwable $exception) {
+                if ($run->fresh()->state === 'cancelled') {
+                    return;
+                }
                 $run->update(['state' => 'failed', 'error' => mb_substr($exception->getMessage(), 0, 1900), 'finished_at' => now()]);
                 $audit->log('legal_import.failed', $run, ['error' => $run->error]);
             }

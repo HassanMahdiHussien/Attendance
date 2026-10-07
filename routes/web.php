@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\AttachmentDownloadController;
 use App\Http\Controllers\DocumentOutputController;
+use App\Http\Controllers\LegalPageImageController;
+use App\Http\Middleware\SetTenantContext;
 use App\Livewire\Auth\Login;
 use App\Livewire\Cases\Board;
 use App\Livewire\Cases\ConfirmDocument;
@@ -33,6 +35,8 @@ Route::get('/', function () {
 Route::middleware('guest')->get('/login', Login::class)->name('login');
 
 Route::middleware('auth')->group(function (): void {
+    Route::get('/legal-library/runs/{run}/pages/{page}', LegalPageImageController::class)
+        ->middleware(SetTenantContext::class)->name('legal-library.pages.show');
     Route::post('/logout', function (Request $request): RedirectResponse {
         Auth::logout();
         $request->session()->invalidate();

@@ -60,6 +60,7 @@ test('PDF imports keep both readings and split only after all pages finish', fun
         (new RenderLegalPages($run->id, 'pdf'))->handle(app(PdfPages::class),
             app(DocxText::class), app(ArticleSplitter::class), app(AuditLogger::class));
         $run->refresh();
+        expect($run->error)->toBeNull();
         expect($run->pages()->count())->toBe(2);
         foreach ($run->pages as $page) {
             (new ReadLegalPageText($page->id, null))->handle(app(PdfPages::class),

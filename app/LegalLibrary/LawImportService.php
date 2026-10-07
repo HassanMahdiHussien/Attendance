@@ -12,6 +12,7 @@ use App\Services\AuditLogger;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
@@ -22,6 +23,9 @@ class LawImportService
     public function start(Law $law, User $actor, UploadedFile|string|null $source, ?int $pageFrom, ?int $pageTo, ImportMode $mode): LegalImportRun
     {
         abort_unless($actor->can('import', $law), 403);
+        if ($law->requires_page_range && ($pageFrom === null || $pageTo === null)) {
+            throw ValidationException::withMessages(['page_from' => 'This law requires a page range.']);
+        }
         if ($source === null) {
             $source = is_file(base_path($law->source_file_path))
                 ? base_path($law->source_file_path) : Storage::disk('local')->path($law->source_file_path);
@@ -60,7 +64,7 @@ class LawImportService
                 return $run;
             });
         }
-        if ($count !== null && ! ($law->kind->value === 'statute' && $law->number === '18')) {
+        if ($count !== null && ! $law->requires_page_range) {
             $pageFrom ??= 1;
             $pageTo ??= $count;
         }
@@ -109,5 +113,49 @@ class LawImportService
             }
             $this->audit->log('legal_import.ai_retry', $locked, ['pages' => $pages->pluck('page_number')->all()], $actor);
         });
+    }
+
+    public function cancel(LegalImportRun $run, User $actor, string $reason): void
+    {
+        abort_unless($actor->can('import', $run->law), 403);
+        if (blank($reason)) {
+            throw ValidationException::withMessages(['reason' => 'A cancellation reason is required.']);
+        }
+        DB::transaction(function () use ($run, $actor, $reason): void {
+            $locked = LegalImportRun::query()->lockForUpdate()->findOrFail($run->id);
+            if (in_array($locked->state, ['completed', 'failed', 'cancelled'], true)) {
+                throw ValidationException::withMessages(['run' => 'This import is already terminal.']);
+            }
+            $locked->update(['state' => 'cancelled', 'finished_at' => now()]);
+            $this->audit->log('legal_import.cancelled', $locked, ['reason' => $reason], $actor);
+        });
+    }
+
+    public function previewPages(Law $law, UploadedFile|string|null $source, int $from, int $to): array
+    {
+        abort_unless(auth()->user()?->can('import', $law), 403);
+        if ($source === null) {
+            $source = is_file(base_path($law->source_file_path))
+                ? base_path($law->source_file_path) : Storage::disk('local')->path($law->source_file_path);
+        }
+        $path = $source instanceof UploadedFile ? $source->getRealPath() : $source;
+        $extension = $source instanceof UploadedFile ? $source->getClientOriginalExtension() : pathinfo($path, PATHINFO_EXTENSION);
+        if (! is_file($path) || strtolower($extension) !== 'pdf'
+            || filesize($path) > (int) config('displanery.legal_library.max_file_mb', 50) * 1024 * 1024) {
+            throw ValidationException::withMessages(['source' => 'Choose a PDF within the size limit.']);
+        }
+        $count = $this->pdf->count($path);
+        if ($from < 1 || $to < $from || $to > $count || $to - $from + 1 > (int) config('displanery.legal_library.max_pages', 300)) {
+            throw ValidationException::withMessages(['page_from' => 'Choose a valid page range.']);
+        }
+        $directory = 'legal-library/previews/'.Str::uuid();
+        Storage::disk('local')->makeDirectory($directory);
+        $result = [];
+        foreach (array_unique([$from, $to]) as $page) {
+            $result[$page] = $directory.'/page-'.$page.'.png';
+            $this->pdf->render($path, $page, Storage::disk('local')->path($directory.'/page-'.$page));
+        }
+
+        return $result;
     }
 }

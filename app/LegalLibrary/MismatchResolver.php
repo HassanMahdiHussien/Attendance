@@ -45,8 +45,8 @@ class MismatchResolver
     public function exclude(LegalUnit $unit, User $actor, string $reason): void
     {
         abort_unless($actor->can('review', $unit->law), 403);
-        if ($unit->status->value !== 'mismatch' || blank($reason)) {
-            throw ValidationException::withMessages(['reason' => 'A mismatch and reason are required.']);
+        if (! in_array($unit->status->value, ['mismatch', 'unverified'], true) || blank($reason)) {
+            throw ValidationException::withMessages(['reason' => 'An unverified unit and reason are required.']);
         }
         DB::transaction(function () use ($unit, $actor, $reason): void {
             $unit->update(['status' => 'excluded', 'tags' => [...($unit->tags ?? []), 'excluded_reason' => $reason]]);

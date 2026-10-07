@@ -1,0 +1,60 @@
+<?php
+
+namespace App\Filament\Platform\Resources\LawResource\RelationManagers;
+
+use App\LegalLibrary\MismatchResolver;
+use App\LegalLibrary\UnitCorrection;
+use App\Models\LegalUnit;
+use Filament\Actions\Action;
+use Filament\Forms\Components\Textarea;
+use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
+use Illuminate\Support\HtmlString;
+
+class UnitsRelationManager extends RelationManager
+{
+    protected static string $relationship = 'units';
+
+    // Small lists; load with the page instead of on scroll.
+    protected static bool $isLazy = false;
+
+    protected static ?string $title = 'المواد والفقرات';
+
+    public function table(Table $table): Table
+    {
+        return $table->columns([
+            TextColumn::make('article_number')->label('المادة')->sortable(),
+            TextColumn::make('clause_path')->label('الفقرة'),
+            TextColumn::make('status')->label('الحالة')->badge(),
+            TextColumn::make('version')->label('الإصدار'),
+            TextColumn::make('source_page')->label('صورة الصفحة')
+                ->url(fn (LegalUnit $record): ?string => $record->source_page !== null && $record->import_run_id !== null
+                    ? route('legal-library.pages.show', ['run' => $record->import_run_id, 'page' => $record->source_page]) : null)
+                ->openUrlInNewTab(),
+        ])->recordActions([
+            Action::make('viewText')->label('النص والتاريخ')->modalContent(fn (LegalUnit $record): HtmlString => $this->historyHtml($record)),
+            Action::make('correct')->label('تصحيح')->visible(fn (LegalUnit $record): bool => in_array($record->status->value, ['verified_auto', 'verified_human', 'verified_text'], true) && $record->superseded_by_id === null)
+                ->schema([
+                    Textarea::make('text')->label('النص الرسمي')->required()->default(fn (LegalUnit $record): string => $record->official_text),
+                    Textarea::make('reason')->label('سبب التصحيح')->required(),
+                ])->action(fn (LegalUnit $record, array $data) => app(UnitCorrection::class)->correct($record, auth()->user(), $data['text'], $data['reason'])),
+            Action::make('exclude')->label('استبعاد')->color('danger')->visible(fn (LegalUnit $record): bool => in_array($record->status->value, ['mismatch', 'unverified'], true))
+                ->schema([Textarea::make('reason')->label('سبب الاستبعاد')->required()])
+                ->action(fn (LegalUnit $record, array $data) => app(MismatchResolver::class)->exclude($record, auth()->user(), $data['reason'])),
+        ]);
+    }
+
+    private function historyHtml(LegalUnit $record): HtmlString
+    {
+        $versions = LegalUnit::query()->where('law_id', $record->law_id)
+            ->where('article_number', $record->article_number)
+            ->where('clause_path', $record->clause_path)->orderBy('version')->get();
+        $html = '<div dir="rtl" style="font-family:Amiri,serif">';
+        foreach ($versions as $version) {
+            $html .= '<section><strong>الإصدار '.e((string) $version->version).'</strong><p style="white-space:pre-wrap">'.e($version->official_text).'</p></section>';
+        }
+
+        return new HtmlString($html.'</div>');
+    }
+}

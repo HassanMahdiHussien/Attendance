@@ -15,6 +15,7 @@ use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schedule;
+use Illuminate\Support\Facades\Storage;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -34,6 +35,11 @@ Schedule::command('cases:send-deadline-alerts')->hourly();
 Schedule::command('cases:archive-expired-appeals')->hourly();
 
 Artisan::command('legal-library:reconcile', function (): void {
+    foreach (Storage::disk('local')->directories('legal-library/previews') as $directory) {
+        if (Storage::disk('local')->lastModified($directory) < now()->subDay()->timestamp) {
+            Storage::disk('local')->deleteDirectory($directory);
+        }
+    }
     LegalImportRun::withoutGlobalScopes()->whereIn('state', ['reading', 'splitting'])
         ->where('updated_at', '<=', now()->subMinutes(30))->chunkById(100, function ($runs): void {
             foreach ($runs as $run) {

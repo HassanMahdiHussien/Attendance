@@ -36,7 +36,7 @@ class ReadLegalPageWithAi implements ShouldQueue
     {
         $this->withinImportContext($this->companyId, function () use ($reader, $progress): void {
             $page = LegalImportPage::findOrFail($this->pageId);
-            if ($page->ai_status !== 'pending') {
+            if ($page->ai_status !== 'pending' || $page->run->state === 'cancelled') {
                 return;
             }
             $run = $page->run;

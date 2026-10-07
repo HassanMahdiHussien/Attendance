@@ -42,6 +42,10 @@ erDiagram
     LEGAL_UNITS ||--o{ CITATIONS : supports
     LAWS ||--o{ LAW_JURISDICTIONS : applies_in
     LAWS ||--o{ LEGAL_UNITS : contains
+    LAWS ||--o{ LEGAL_IMPORT_RUNS : imports
+    LEGAL_IMPORT_RUNS ||--o{ LEGAL_IMPORT_PAGES : renders
+    LEGAL_IMPORT_RUNS ||--o{ LEGAL_UNITS : builds
+    LEGAL_UNITS ||--o| LEGAL_UNIT_APPROVALS : approved_by_reviewer
     CASES |o--o{ AI_GENERATION_LOGS : records
     USERS |o--o{ AUDIT_LOGS : acts
 
@@ -305,6 +309,10 @@ erDiagram
         smallint year
         string source_file_path
         string approval_status
+        string import_mode
+        boolean requires_page_range
+        bigint supersedes_law_id FK
+        string source_sha256
     }
     LAW_JURISDICTIONS {
         bigint law_id PK,FK
@@ -321,6 +329,53 @@ erDiagram
         string clause_path
         text official_text
         string status
+        bigint import_run_id FK
+        int source_page
+        text extraction_a
+        text extraction_b
+        bigint verified_by FK
+        timestamp verified_at
+        json tags
+    }
+    LEGAL_IMPORT_RUNS {
+        bigint id PK
+        bigint law_id FK
+        bigint company_id FK
+        string source_path
+        string source_sha256
+        int page_from
+        int page_to
+        string mode
+        string state
+        json counts
+        bigint started_by FK
+        text error
+        timestamp started_at
+        timestamp finished_at
+    }
+    LEGAL_IMPORT_PAGES {
+        bigint id PK
+        bigint run_id FK
+        bigint company_id FK
+        int page_number
+        string image_path
+        string image_sha256
+        string text_status
+        string text_method
+        longtext text
+        string ai_status
+        longtext ai_text
+        boolean ai_illegible
+        int attempts_text
+        int attempts_ai
+        text last_error
+    }
+    LEGAL_UNIT_APPROVALS {
+        bigint id PK
+        bigint company_id FK
+        bigint legal_unit_id FK
+        bigint approved_by FK
+        timestamp created_at
     }
     AUDIT_LOGS {
         bigint id PK
@@ -428,6 +483,7 @@ The existing `companies.letterhead_logo_path`, `letterhead_address`, `letterhead
 - `users.primary_role` is one of `platform_admin`, `company_admin`, `hr_staff`, `dept_manager`, `reporter`, `committee_member`, `external_legal_reviewer`, or `hr_partner_staff`. The legacy `company_legal_reviewer` value migrates to an inactive `reporter`.
 - Spatie permissions add abilities, not primary roles: `review_internal_regulation` and `view_all_company_cases` live in `permissions` and `model_has_permissions` with the `web` guard. Teams mode is off.
 - `laws.company_id` is null for platform statutes. `law_jurisdictions` is a many-to-many applicability setting. No legal units are seeded until verified extraction; only verified units may be cited.
+- Legal imports keep immutable content-addressed source files in `legal_import_runs`, private page images and independent readings in `legal_import_pages`, and the producing `import_run_id` on each unit. `legal_unit_approvals` records one company lawyer approval per regulation unit. `laws.requires_page_range` marks gazettes that contain multiple laws; `supersedes_law_id`, `import_mode`, and `source_sha256` record applicability and source provenance.
 - `documents` and `legal_units` version through previous/superseded row IDs. `document_contents` stores language variants; issued `documents.rendered_html` and `render_snapshot` freeze the print input and its template/letterhead provenance. Official document reference numbers are assigned at issuance. `company_sequences` also tracks case and employee numbers.
 - MySQL triggers protect append-only events, audit and AI logs, attachments, locked documents and their contents/citations, approvals, and verified legal units. Production MySQL needs `log_bin_trust_function_creators=1` to create the triggers.
 - `attachments` is polymorphic (`attachable_type`, `attachable_id`), so its target has no database foreign key. The Laravel cache, queue, session, and Spatie permission tables are included because their migrations create them.

@@ -70,3 +70,23 @@ test('reconcile queues missing page work for a stale reading run', function (): 
         Bus::assertDispatched(ReadLegalPageWithAi::class);
     });
 });
+
+test('a leftover page image from an unrelated run is re-rendered, not reused', function (): void {
+    $path = base_path('tests/fixtures/legal/text-law.pdf');
+    if (! is_file($path)) {
+        $this->markTestSkipped('Run tests/fixtures/legal/generate.php inside the app container first.');
+    }
+    Bus::fake();
+    \Illuminate\Support\Facades\Storage::fake('local');
+    app(TenantContext::class)->runAcrossAllCompanies(function () use ($path): void {
+        $actor = User::factory()->create(['primary_role' => 'platform_admin', 'company_id' => null]);
+        $law = Law::factory()->create(['kind' => 'statute']);
+        $run = app(LawImportService::class)->start($law, $actor, $path, 1, 1, \App\Enums\ImportMode::Auto);
+        \Illuminate\Support\Facades\Storage::disk('local')->put("legal-library/runs/{$run->id}/pages/1.png", 'stale bytes');
+        (new \App\Jobs\RenderLegalPages($run->id, 'pdf'))->handle(app(\App\LegalLibrary\PdfPages::class),
+            app(\App\LegalLibrary\DocxText::class), app(\App\LegalLibrary\ArticleSplitter::class), app(\App\Services\AuditLogger::class));
+        $page = $run->pages()->firstOrFail();
+        expect(\Illuminate\Support\Facades\Storage::disk('local')->get($page->image_path))->not->toBe('stale bytes');
+        expect($page->image_sha256)->toBe(hash('sha256', \Illuminate\Support\Facades\Storage::disk('local')->get($page->image_path)));
+    });
+});
