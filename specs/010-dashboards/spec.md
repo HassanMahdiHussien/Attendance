@@ -19,6 +19,10 @@ PDF/Excel exports are feature 011."
 - Q: Split? → A: Product owner: 010 dashboards, 011 reports + exports (Excel via OpenSpout, installed in 011).
 - Q: Charts? → A: No chart library: ranked lists with simple proportional bars and a trend arrow (CLAUDE.md §13
   simple code; nothing in the design calls for charts).
+- Q: Stats-only HR partner — labels? → A: Category labels with counts (violation type, department, branch, location),
+  never people or case numbers (product owner, 2026-10-07).
+- Q: "% within 15 days"? → A: Measured to the decision issue date, or the no-penalty closure; not the final archive
+  (product owner, 2026-10-07).
 - Q: Who sees what? → A: Every number respects the viewer's case visibility (CLAUDE.md §8): HR staff without the
   "see all company cases" add-on see only their own cases; company admins see the company; the Platform Admin sees
   everything; HR partners see counts for their partner companies only.
@@ -33,8 +37,8 @@ case. Below: counters (open, closed this month, by outcome, average days to clos
 selected branch (or all branches) and period.
 
 **Acceptance Scenarios**:
-1. **Given** a case 13 days after its defense letter without a decision, **Then** it appears under the 15-day alert in
-   red with the days left.
+1. **Given** a case whose 15-day due day ends within 48 hours and no decision yet, **Then** it appears under the
+   15-day alert in red with the time left (same rule as the case page).
 2. **Given** an HR staff user without the "see all" add-on, **Then** every alert and counter counts only their cases.
 3. **Given** a branch filter, **Then** every number changes to that branch.
 
