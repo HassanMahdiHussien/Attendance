@@ -19,6 +19,8 @@ confirms and records it. Never identity verification. Manual paths stay."
 - Q: Scope? → A: Product owner split the AI work: 008 drafting (done), 009 scan reading (this). Email intake is later.
 - Q: Does the AI decide anything? → A: No. Both readings are suggestions a person checks and records (CLAUDE.md §3,
   §20). The transcription is never used until HR confirms it against the scan.
+- Q: What if the response scan contains a national ID, salary or phone number? → A: Before an AI reading HR ticks
+  that the scan contains none of these; otherwise HR transcribes manually (product owner, 2026-10-07).
 - Q: Signature wording? → A: Presence only: "خانة التوقيع تبدو ممتلئة / تبدو فارغة / غير واضحة". Never "verified",
   "authentic" or a signer identity claim (CLAUDE.md §3, §16 item 7).
 
@@ -84,7 +86,9 @@ the case waiting; override with reason).
 - **FR-009**: Presence wording MUST never claim verification or identity (automated wording test over views and
   responses).
 - **FR-010**: Only the scan image/PDF and the list of attendee printed names and roles are sent to the AI; every call is
-  logged; failures leave the manual path.
+  logged without the scan bytes (attachment id + hash only); failures leave the manual path.
+- **FR-011**: Before an AI transcription HR MUST confirm the scan contains no national ID, salary or phone number;
+  otherwise only the manual path is offered.
 
 ### Key Entities
 

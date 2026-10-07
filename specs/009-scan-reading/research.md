@@ -58,3 +58,45 @@
   concurrency; manual path; payload of 008 includes the response only after confirmation; presence pre-fill,
   unclear requires a choice, signature rows record ai_suggestion; wording scan; authorisation per role; PDF/image
   block construction (no network).
+
+## R7 Plan review resolutions (Codex review, 2026-10-07) — override R1–R6 where they differ
+- **A1 Read boundary**: the only response text any consumer may read is the confirmed one, exposed through one
+  accessor `DisciplinaryCase::confirmedResponseText(): ?string` (returns `employee_response_text` only when
+  `employee_response_checked_at` is set and no correction is pending). PayloadBuilder, RecordSession,
+  ReviewApproval, ReviewConsultation and the case page's committee-facing panels use it; AI attempts are shown only
+  inside the HR transcription review panel (HR roles), never elsewhere. Tests at `response_scanned_uploaded` with a
+  pending job and with an unconfirmed attempt assert nothing leaks to committee/consultation screens or payloads.
+- **A2 Correction**: "تصحيح النص" (reason required) is one transaction: clears `employee_response_text`,
+  `employee_response_checked_by/at`, `employee_response_origin`, writes a case event with the reason and the previous
+  text's transcription id, and transitions `ai_ingested_response → response_scanned_uploaded`; the next confirm
+  writes a new transcription row. The intermediate state therefore has no confirmed text.
+- **A3 Signed scan binding**: signature rows of committee presence gain `attachment_id` (the scan they were recorded
+  against). "Latest completed scan" = the newest SignedDocumentScan attachment of the document that has presence rows
+  for every attendee. `latestChecks()` reads rows of that scan only; `overrideEmpty()` rejects when a newer scan
+  exists without presence rows ("سُجّل مسح أحدث لم تُسجّل خاناته بعد"). `recordPresence` requires the attachment to be
+  the newest signed scan of the document. `recordSignedScan` stays the atomic one-submit wrapper (006 behaviour and
+  tests unchanged).
+- **A4 Logs never store scans**: the 008 client gains a log-safe input: content blocks of type image/document are
+  replaced in the logged JSON by `{type, media_type, attachment_id, sha256, bytes}`; prompts and attendee lists stay.
+  A test asserts no base64 of the scan appears in `ai_generation_logs.input`. 007's page reader already logs only the
+  image hash.
+- **Product owner decision (2026-10-07)**: before an AI transcription HR must tick "تحققتُ أن الصورة لا تتضمن رقم هوية
+  أو راتباً أو رقم هاتف"; if the scan contains such data, HR uses the manual path. The tick is stored with the request
+  (case event + audit). The signed recommendations scan is our own document (no IDs/salaries/phones by template
+  design), so it needs no tick.
+- **B1 Tokens**: both jobs check, under the case lock, token + operation type + stage + attachment id before saving;
+  manual confirm / manual presence recording clears a pending request's token (case event `ai_request_superseded`);
+  `failed()` only clears its own token. Races tested: manual confirm before job, session recorded during job, new
+  upload during job, reconcile (reuse `ai:reconcile-drafting` for the two new types without status changes).
+- **B2 Manual path**: the SignedScan screen keeps today's one-submit form (upload + presence) as the default when the
+  AI is unavailable or HR chooses "تسجيل يدوي"; "رفع وقراءة بالذكاء الاصطناعي" is the optional two-step path.
+- **B3 Provenance**: signature rows gain `presence_suggestion_id` (FK to the suggestion row, same tenant/document/
+  scan, validated) and `ai_suggestion`; "accepted / changed" is derived by comparing HR's recorded value with the
+  suggestion (unclear always counts as changed). The Signature model guard already blocks updates/deletes; the new
+  columns are set only on insert (no trigger exists to extend; add an update-guard test).
+- **B4 Signed scan scope**: whole Doc A scan is sent (it is our own document: letterhead, recommendations text,
+  printed names/roles, signatures); no cropping in this feature.
+- **B5 SDK shapes**: use the PHP SDK array keys (`mediaType`, as 007's reader) for image and PDF sources; a test builds
+  the blocks through the real adapter's request-building path (no network) and asserts the shapes.
+- **Nits**: wording test checks rendered presence UI and JSON for identity *claims* (positive statements), allowing
+  explanatory copy such as "لا يتحقق النظام من هوية الموقّع".

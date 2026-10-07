@@ -4,6 +4,8 @@
 `docker compose exec -T -u sail laravel.test php artisan test` · `… ./vendor/bin/pint --test`.
 Never run two test processes at once.
 
+Research R7 (plan review resolutions + product owner decision) overrides earlier sections.
+
 ## Run R
 - [ ] T001 Migrations per data-model.md (append-only triggers with working down(); composite FKs; register in tenancy test registries); models
 - [ ] T002 ClaudeClient content blocks + ScanBlocks (image/PDF base64 blocks per SDK keys, downscale 2000 px, ≤ 20 PDF pages via PdfPages::count, 10 MB) + config `displanery.ai.reading_model`
