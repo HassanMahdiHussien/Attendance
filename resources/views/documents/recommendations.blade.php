@@ -12,6 +12,7 @@
     <ul>@foreach($extra['prior_cases'] as $prior)<li>{{ $prior }}</li>@endforeach</ul>
 @endif
 <p class="block"><strong>{{ $b['recommendations_intro'] }}</strong></p>
+<p class="block">{{ $b['outcome_sentence'] }}</p>
 <div class="body">{!! $page['secondary'] !!}</div>
 <div class="block">
 @foreach($extra['attendees'] as $attendee)

@@ -22,6 +22,12 @@ class TemplateResolver
             $blocks = require $file;
             $options = ['show_footer' => true, 'header_mode' => 'logo_text'];
         }
+        if ($type === 'recommendations' && blank($blocks['outcome_sentence'] ?? null)) {
+            $defaults = app_path("Documents/Defaults/recommendations.{$language}.php");
+            if (is_file($defaults)) {
+                $blocks['outcome_sentence'] = (require $defaults)['outcome_sentence'];
+            }
+        }
         app(TemplateValidator::class)->validate($type, $blocks);
         app(TemplateValidator::class)->validateOptions($options);
 

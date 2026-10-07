@@ -1,6 +1,7 @@
 <?php
 
 use App\Exceptions\TenantMismatch;
+use App\Models\AiDraftNote;
 use App\Models\AppealTracking;
 use App\Models\Attachment;
 use App\Models\Branch;
@@ -37,6 +38,7 @@ dataset('tenant models', [
     DocumentContent::class, DocumentApproval::class, Signature::class,
     CompanySequence::class, CaseAlert::class, CaseConflictClearance::class,
     CompanyLetterhead::class, DocumentTemplate::class,
+    AiDraftNote::class,
 ]);
 
 test('every tenant model isolates reads and builder writes and stamps creation', function (string $model): void {

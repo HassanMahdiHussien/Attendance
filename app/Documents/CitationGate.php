@@ -8,6 +8,7 @@ use App\Models\Citation;
 use App\Models\DisciplinaryCase;
 use App\Models\Document;
 use App\Models\LegalUnit;
+use App\Services\Documents\CitationSync;
 
 class CitationGate
 {
@@ -27,9 +28,10 @@ class CitationGate
                 if (str_contains($prose, '[[cite:')) {
                     throw new IssuanceBlocked('Malformed citation marker.');
                 }
-                preg_match_all('/\[\[cite:(\d+)\]\]/', $body, $matches);
-                foreach ($matches[1] as $id) {
-                    $citation = $citations->get((int) $id)?->first();
+                foreach (CitationSync::claims($body) as $claim) {
+                    $id = $claim['legal_unit_id'];
+                    $citation = $citations->get($id)?->first(fn (Citation $row) => $content->language_code !== 'ar'
+                        || $row->claim_hash === $claim['claim_hash'] || ($document->is_locked && $row->claim_hash === null));
                     if (! $citation || ! $this->valid($citation, $case)) {
                         $message = $citation?->legalUnit?->superseded_by_id !== null
                             ? 'النص القانوني صُحح — حدّث الاستشهاد'
@@ -50,7 +52,7 @@ class CitationGate
             return true;
         }
 
-        return in_array($citation->relevance_check, [RelevanceCheck::Partial, RelevanceCheck::DoesNotSupport], true)
-            && $citation->overridden && $citation->overridden_by !== null && $citation->overridden_at !== null;
+        return $citation->overridden && $citation->overridden_by !== null && $citation->overridden_at !== null
+            && filled($citation->override_reason);
     }
 }

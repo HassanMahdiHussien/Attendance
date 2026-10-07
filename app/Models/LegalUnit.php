@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class LegalUnit extends Model
 {
@@ -76,6 +77,11 @@ class LegalUnit extends Model
     public function law(): BelongsTo
     {
         return $this->belongsTo(Law::class, 'law_id');
+    }
+
+    public function topics(): HasMany
+    {
+        return $this->hasMany(LegalUnitTopic::class);
     }
 
     public function company(): BelongsTo

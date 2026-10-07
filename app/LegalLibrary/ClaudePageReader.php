@@ -12,6 +12,7 @@ use Anthropic\Core\Exceptions\NotFoundException;
 use Anthropic\Core\Exceptions\PermissionDeniedException;
 use Anthropic\Core\Exceptions\RateLimitException;
 use Anthropic\Core\Exceptions\UnprocessableEntityException;
+use Anthropic\Messages\TextBlock;
 use App\Models\AiGenerationLog;
 use Throwable;
 
@@ -70,7 +71,8 @@ class ClaudePageReader implements PageReader
             );
             $inputTokens = $response->usage->inputTokens;
             $outputTokens = $response->usage->outputTokens;
-            $block = $response->content[0] ?? null;
+            // The model always thinks, so the first content block may be a thinking block; read the text block.
+            $block = collect($response->content)->first(fn ($item) => $item instanceof TextBlock);
             $data = json_decode($block?->text ?? '', true);
             if (! is_array($data) || ! is_string($data['text'] ?? null) || ! is_bool($data['illegible'] ?? null)) {
                 throw new PermanentPageFailure('AI reading format is invalid.');

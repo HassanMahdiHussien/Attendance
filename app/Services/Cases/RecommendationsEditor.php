@@ -3,6 +3,7 @@
 namespace App\Services\Cases;
 
 use App\Documents\CitationGate;
+use App\Documents\DraftLanguages;
 use App\Enums\CaseStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\DocumentType;
@@ -15,6 +16,7 @@ use App\Models\DocumentContent;
 use App\Models\User;
 use App\Notifications\ApprovalNeeded;
 use App\Services\CaseEventLogger;
+use App\Services\Documents\CitationSync;
 use App\Support\Access\CaseVisibility;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
@@ -30,9 +32,9 @@ class RecommendationsEditor
         return self::$writing;
     }
 
-    public function create(DisciplinaryCase $case, array $contents, User $hrUser): Document
+    public function create(DisciplinaryCase $case, array $contents, User $hrUser, DraftedBy $origin = DraftedBy::Human): Document
     {
-        return DB::transaction(function () use ($case, $contents, $hrUser): Document {
+        return DB::transaction(function () use ($case, $contents, $hrUser, $origin): Document {
             $case = DisciplinaryCase::query()->lockForUpdate()->findOrFail($case->id);
             if ($case->status !== CaseStatus::CommitteeSessionHeld || ! $case->session_majority_reached
                 || ! $hrUser->is_active || ! $case->company->is_active
@@ -42,9 +44,9 @@ class RecommendationsEditor
                 throw new TransitionBlocked('An eligible HR user and committee majority are required.');
             }
             $document = Document::create(['company_id' => $case->company_id, 'case_id' => $case->id,
-                'document_type' => DocumentType::Recommendations, 'drafted_by' => DraftedBy::Human,
+                'document_type' => DocumentType::Recommendations, 'drafted_by' => $origin,
                 'status' => DocumentStatus::Draft, 'version' => 1, 'created_by' => $hrUser->id]);
-            $this->update($document, $contents, $hrUser);
+            $this->update($document, $contents, $hrUser, $origin);
             $this->events->log($case, 'recommendations_draft_created', ['document_id' => $document->id], actor: $hrUser);
 
             return $document->refresh();
@@ -67,7 +69,7 @@ class RecommendationsEditor
             if ($document->approvals()->whereNull('invalidated_at')->where('decision', 'rejected')->exists()) {
                 throw new TransitionBlocked('Edit the recommendations after rejection before resubmitting.');
             }
-            foreach (array_unique(array_merge(['ar', 'en'], $case->company->enabled_languages)) as $language) {
+            foreach (app(DraftLanguages::class)->for($case->company, DocumentType::Recommendations) as $language) {
                 $content = $document->contents()->where('language_code', $language)->first();
                 if (blank($content?->body) || blank($content?->secondary_body)) {
                     throw new TransitionBlocked("Findings and recommendations are required for {$language}.");
@@ -97,9 +99,9 @@ class RecommendationsEditor
         });
     }
 
-    public function update(Document $draft, array $contents, User $hrUser): Document
+    public function update(Document $draft, array $contents, User $hrUser, DraftedBy $origin = DraftedBy::Human, bool $syncCitations = true): Document
     {
-        return DB::transaction(function () use ($draft, $contents, $hrUser): Document {
+        return DB::transaction(function () use ($draft, $contents, $hrUser, $origin, $syncCitations): Document {
             $document = Document::query()->lockForUpdate()->findOrFail($draft->id);
             $case = $document->disciplinaryCase;
             if ($document->document_type !== DocumentType::Recommendations || $document->is_locked
@@ -139,8 +141,11 @@ class RecommendationsEditor
                 $approval->invalidated_at = now();
                 $approval->save();
             });
-            $document->forceFill(['last_edited_by' => $hrUser->id, 'second_reviewed_by' => null,
+            $document->forceFill(['drafted_by' => $origin, 'last_edited_by' => $hrUser->id, 'second_reviewed_by' => null,
                 'second_reviewed_at' => null, 'status' => DocumentStatus::Draft])->save();
+            if ($syncCitations) {
+                app(CitationSync::class)->sync($document);
+            }
             $this->events->log($case, 'approvals_invalidated', ['document_id' => $document->id], actor: $hrUser);
             if (in_array($case->status, [CaseStatus::RecommendationsAwaitingApprovals, CaseStatus::RecommendationsConfirmed], true)) {
                 $this->workflow->transition($case, CaseStatus::RecommendationsCitationCheck, $hrUser, 'Recommendations content edited');

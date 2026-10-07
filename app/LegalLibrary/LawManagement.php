@@ -6,9 +6,11 @@ use App\Enums\Jurisdiction;
 use App\Enums\LawKind;
 use App\Enums\UserRole;
 use App\Models\Law;
+use App\Models\LegalUnit;
 use App\Models\User;
 use App\Services\AuditLogger;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class LawManagement
 {
@@ -60,6 +62,24 @@ class LawManagement
         DB::transaction(function () use ($law, $actor, $date): void {
             $law->update(['repealed_at' => $date]);
             $this->audit->log('law.repealed', $law, ['repealed_at' => $date], $actor);
+        });
+    }
+
+    public function setUnitTopics(LegalUnit $unit, User $actor, array $topics): void
+    {
+        $this->authorize($actor);
+        abort_unless($unit->law->kind === LawKind::Statute && $unit->company_id === null && $unit->superseded_by_id === null, 403);
+        $topics = array_values(array_unique(array_map('trim', $topics)));
+        if (collect($topics)->contains(fn ($topic) => $topic === '' || mb_strlen($topic) > 80)) {
+            throw ValidationException::withMessages(['topics' => 'Topics must be nonempty and at most 80 characters.']);
+        }
+        DB::transaction(function () use ($unit, $actor, $topics): void {
+            $before = $unit->topics()->pluck('topic')->all();
+            $unit->topics()->whereNotIn('topic', $topics)->delete();
+            foreach ($topics as $topic) {
+                $unit->topics()->firstOrCreate(['topic' => $topic], ['created_by' => $actor->id, 'created_at' => now()]);
+            }
+            $this->audit->log('legal_unit.topics_changed', $unit, ['before' => $before, 'after' => $topics], $actor);
         });
     }
 

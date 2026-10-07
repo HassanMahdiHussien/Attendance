@@ -19,12 +19,15 @@ class LawsSeeder extends Seeder
             ['قانون التقاعد والضمان الاجتماعي للعمال رقم (18) لسنة 2023', '18', 2023, 'social_security', 'docs/laws/gazette-4734-incl-social-security-law-18-2023.pdf', [Jurisdiction::FederalIraq, Jurisdiction::KurdistanRegion]],
         ];
 
+        $englishNames = ['37' => 'Labour Law No. 37 of 2015', '71' => 'Labour Law No. 71 of 1987',
+            '18' => 'Retirement and Social Security Law for Workers No. 18 of 2023'];
         foreach ($laws as [$name, $number, $year, $category, $source, $jurisdictions]) {
             $law = Law::create([
                 'company_id' => null,
                 'kind' => LawKind::Statute,
                 'category' => $category,
                 'name' => $name,
+                'name_en' => $englishNames[$number],
                 'number' => $number,
                 'year' => $year,
                 'source_file_path' => $source,

@@ -29,6 +29,10 @@ class UnitCorrection
                 'status' => 'verified_human', 'verified_by' => $actor->id, 'verified_at' => now(),
                 'tags' => [...($unit->tags ?? []), 'correction_reason' => $reason]]);
             $unit->update(['superseded_by_id' => $replacement->id]);
+            foreach ($unit->topics as $topic) {
+                $replacement->topics()->create(['topic' => $topic->topic,
+                    'created_by' => $actor->id, 'created_at' => now()]);
+            }
             $this->audit->log('legal_unit.corrected', $replacement, ['previous_id' => $unit->id,
                 'old_text' => $unit->official_text, 'new_text' => $text, 'reason' => $reason], $actor);
 

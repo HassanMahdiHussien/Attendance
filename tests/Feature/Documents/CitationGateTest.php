@@ -23,7 +23,7 @@ function citationFixture(): array
     $unit = LegalUnit::factory()->create(['law_id' => $law->id, 'article_number' => '43']);
     $content->update(['body' => "[[cite:{$unit->id}]]"]);
     $citation = Citation::factory()->create(['document_id' => $document->id, 'legal_unit_id' => $unit->id,
-        'relevance_check' => 'supports']);
+        'claim_hash' => hash('sha256', "[[cite:{$unit->id}]]"), 'relevance_check' => 'supports']);
 
     return compact('company', 'document', 'content', 'law', 'unit', 'citation');
 }
@@ -44,7 +44,7 @@ test('jurisdiction, verification, supersession and relevance are checked at issu
     $f['citation']->update(['relevance_check' => 'does_not_support']);
     expect(fn () => $gate->assertIssuable($f['document']))->toThrow(IssuanceBlocked::class);
     $f['citation']->update(['overridden' => true, 'overridden_by' => $f['document']->disciplinaryCase->opened_by_user_id,
-        'overridden_at' => now()]);
+        'overridden_at' => now(), 'override_reason' => 'Reviewed against the official article']);
     $gate->assertIssuable($f['document']);
     $new = LegalUnit::factory()->create(['law_id' => $f['law']->id, 'previous_version_id' => $f['unit']->id,
         'version' => 2, 'article_number' => '43']);

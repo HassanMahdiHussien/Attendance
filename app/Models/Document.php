@@ -140,4 +140,9 @@ class Document extends Model
     {
         return $this->hasMany(Citation::class);
     }
+
+    public function aiDraftNotes(): HasMany
+    {
+        return $this->hasMany(AiDraftNote::class);
+    }
 }

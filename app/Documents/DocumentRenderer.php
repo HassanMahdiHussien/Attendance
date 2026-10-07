@@ -28,6 +28,8 @@ class DocumentRenderer
         $pages = [];
         $this->snapshot = ['renderer' => 'v1', 'template_versions' => [], 'template_ids' => [],
             'letterhead_versions' => [], 'letterhead_ids' => [], 'logo_sha256' => []];
+        // Every enabled language is printed; a missing Kurdish template or letterhead blocks issuance rather than
+        // silently dropping the language (DraftLanguages narrows only what the AI is asked to draft).
         $languages = array_values(array_unique(array_merge(['ar', 'en'], $document->company->enabled_languages)));
         foreach ($languages as $language) {
             $content = $document->contents->firstWhere('language_code', $language);

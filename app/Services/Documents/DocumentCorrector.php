@@ -8,6 +8,7 @@ use App\Enums\DraftedBy;
 use App\Exceptions\IssuanceBlocked;
 use App\Models\DisciplinaryCase;
 use App\Models\Document;
+use App\Models\LegalUnit;
 use App\Models\User;
 use App\Services\CaseEventLogger;
 use App\Services\Cases\RecommendationsEditor;
@@ -52,10 +53,13 @@ class DocumentCorrector
                 'created_by' => $actor->id,
                 'last_edited_by' => $actor->id,
             ]);
+            $markerIds = $source->contents->flatMap(fn ($content) => collect(CitationSync::claims(
+                $content->body."\n".($content->secondary_body ?? '')))->pluck('legal_unit_id'))->unique()->all();
+            $canSync = ! $markerIds || LegalUnit::query()->citableFor($case)->whereKey($markerIds)->count() === count($markerIds);
             if ($source->document_type === DocumentType::Recommendations) {
                 app(RecommendationsEditor::class)->update($correction, $source->contents->mapWithKeys(
                     fn ($content) => [$content->language_code => ['body' => $content->body,
-                        'secondary_body' => $content->secondary_body]])->all(), $actor);
+                        'secondary_body' => $content->secondary_body]])->all(), $actor, DraftedBy::Human, $canSync);
             } else {
                 foreach ($source->contents as $content) {
                     $correction->contents()->create([
@@ -65,6 +69,9 @@ class DocumentCorrector
                         'secondary_body' => $content->secondary_body,
                         'is_authoritative' => $content->is_authoritative,
                     ]);
+                }
+                if ($canSync) {
+                    app(CitationSync::class)->sync($correction);
                 }
             }
             $this->events->log($case, 'document_correction_started', [

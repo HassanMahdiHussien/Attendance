@@ -7,13 +7,13 @@ Never run two test processes at once (shared testing DB and fake disk).
 Research R12 (plan review resolutions) overrides earlier research sections.
 
 ## Run P — services
-- [ ] T001 Migrations per data-model.md (laws.name_en + seed values, citations.override_reason + citations trigger update with working down(), ai_draft_notes append-only, legal_unit_topics); models; tenancy test registries
-- [ ] T002 ClaudeClient (structured calls, logging, exception mapping, refusal/max_tokens handling, AiUnavailable without key) + FakeClaudeClient for tests; config keys
-- [ ] T003 PayloadBuilder per document type (allow-list, R2) + CandidateUnits (R3) + DraftPrompt (Arabic authoritative, markers only, facts not to be invented, notes) + DraftValidator + OutcomeConsistency (R4, R5)
-- [ ] T004 AiDrafting::request + DraftDocumentWithAi job (save through existing services, drafted_by ai, notes, citations sync, previous-state return, stale-job guard, retries) + ai:reconcile-drafting command + schedule
-- [ ] T005 CitationSync (markers ↔ rows, citable check, claim sentences) wired into DocumentDrafts / RecommendationsEditor saves; RelevanceCheck job on submit + clear on edit; CitationOverride; CitationRefresh; CitationGate uses override_reason (override requires a reason)
-- [ ] T006 CitationRenderer English rendering (name_en, clause numbers/letters, R9); LawManagement::setUnitTopics + topics copied on UnitCorrection
-- [ ] T007 Tests: payload allow-list (forbidden fields absent), candidates ranking + cap + empty set note, validator (bare article, foreign marker, missing language, placeholders), outcome consistency, success path per document type, unavailable → previous state, stale job saves nothing, reconcile, relevance supports/partial/does_not_support/unavailable, override reason + audit, gate, citations sync add/remove, superseded refresh, English rendering, tenant isolation of notes and topics
+- [x] T001 Migrations per data-model.md (laws.name_en + seed values, citations.override_reason + citations trigger update with working down(), ai_draft_notes append-only, legal_unit_topics); models; tenancy test registries
+- [x] T002 ClaudeClient (structured calls, logging, exception mapping, refusal/max_tokens handling, AiUnavailable without key) + FakeClaudeClient for tests; config keys
+- [x] T003 PayloadBuilder per document type (allow-list, R2) + CandidateUnits (R3) + DraftPrompt (Arabic authoritative, markers only, facts not to be invented, notes) + DraftValidator + OutcomeConsistency (R4, R5)
+- [x] T004 AiDrafting::request + DraftDocumentWithAi job (save through existing services, drafted_by ai, notes, citations sync, previous-state return, stale-job guard, retries) + ai:reconcile-drafting command + schedule
+- [x] T005 CitationSync (markers ↔ rows, citable check, claim sentences) wired into DocumentDrafts / RecommendationsEditor saves; RelevanceCheck job on submit + clear on edit; CitationOverride; CitationRefresh; CitationGate uses override_reason (override requires a reason)
+- [x] T006 CitationRenderer English rendering (name_en, clause numbers/letters, R9); LawManagement::setUnitTopics + topics copied on UnitCorrection
+- [x] T007 Tests: payload allow-list (forbidden fields absent), candidates ranking + cap + empty set note, validator (bare article, foreign marker, missing language, placeholders), outcome consistency, success path per document type, unavailable → previous state, stale job saves nothing, reconcile, relevance supports/partial/does_not_support/unavailable, override reason + audit, gate, citations sync add/remove, superseded refresh, English rendering, tenant isolation of notes and topics
 
 ## Run Q — screens
 - [ ] T008 Editors: AI button (policy + preconditions), polling while drafting, unavailable banner, notes panel, citation picker modal inserting markers at the cursor
