@@ -68,3 +68,6 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 - **A stats-only HR partner uses an aggregate-only visibility path.** Category counts may include linked companies without case access, while case lists and links still use normal case visibility. (2026-10)
 - **Dashboard department hotspots use the employee's current department.** Historic cases may move between groups when the employee record changes; this is the product's chosen grouping. (2026-10)
 - **Dashboard and notification deadline alerts share the global approaching-hours setting.** There is no company override, so the same case reaches both surfaces at the same time. (2026-10)
+- **Report downloads re-check the current owner's role and company access.** A previously generated file is revoked and deleted when the owner's access is withdrawn. (2026-10)
+- **A historical report's open count means open at the period end.** Dashboard open counts remain live; past reports describe their selected period. (2026-10)
+- **Every Excel text cell is an explicit string.** A name beginning with a formula character remains text to prevent spreadsheet formula injection. (2026-10)

@@ -18,7 +18,7 @@ class DashboardFilters
         public readonly ?string $to = null,
     ) {}
 
-    public static function fromInput(User $viewer, array $input): self
+    public static function fromInput(User $viewer, array $input, ?int $companyId = null): self
     {
         $data = validator($input, [
             'branch' => ['nullable', 'integer', 'min:1'],
@@ -27,7 +27,7 @@ class DashboardFilters
             'to' => ['required_if:period,custom', 'nullable', 'date_format:Y-m-d', 'after_or_equal:from'],
         ])->validate();
         $branch = isset($data['branch']) ? (int) $data['branch'] : null;
-        if ($branch && ! Branch::query()->where('company_id', $viewer->company_id)->whereKey($branch)->exists()) {
+        if ($branch && ! Branch::withoutGlobalScopes()->where('company_id', $companyId ?? $viewer->company_id)->whereKey($branch)->exists()) {
             throw ValidationException::withMessages(['branch' => 'الفرع غير متاح.']);
         }
         $today = CarbonImmutable::now('Asia/Baghdad')->startOfDay();

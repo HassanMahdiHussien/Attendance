@@ -7,7 +7,7 @@ use Spatie\Browsershot\Browsershot;
 
 class PdfGenerator
 {
-    public function generate(string $frozenHtml): string
+    public function generate(string $frozenHtml, string $orientation = 'portrait'): string
     {
         $chrome = config('displanery.pdf.chrome_path');
         if (! is_file($chrome)) {
@@ -15,8 +15,13 @@ class PdfGenerator
         }
         $html = $this->htmlWithFonts($frozenHtml);
 
-        return Browsershot::html($html)->setChromePath($chrome)->noSandbox()->disableJavascript()
-            ->blockUrls(['http://', 'https://'])->format('A4')->showBackground()->pdf();
+        $browser = Browsershot::html($html)->setChromePath($chrome)->noSandbox()->disableJavascript()
+            ->blockUrls(['http://', 'https://'])->format('A4')->showBackground();
+        if ($orientation === 'landscape') {
+            $browser->landscape();
+        }
+
+        return $browser->pdf();
     }
 
     public function htmlWithFonts(string $frozenHtml): string

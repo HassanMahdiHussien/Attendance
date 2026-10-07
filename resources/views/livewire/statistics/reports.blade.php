@@ -1,0 +1,33 @@
+<div class="space-y-6">
+    <h1 class="text-2xl font-black">التقارير الإحصائية</h1>
+    <div class="bg-white rounded-2xl p-5 space-y-5">
+        <div class="flex flex-wrap gap-2" role="tablist" aria-label="نوع التقرير">
+            @foreach(['periodic' => 'الملخص الدوري', 'employee' => 'تقرير الموظف', 'compliance' => 'الالتزام بالمواعيد', 'hotspots' => 'بؤر التكرار'] as $key => $label)
+                @if(in_array($key, ['periodic', 'hotspots'], true) || $personReportsAvailable || auth()->user()->primary_role !== \App\Enums\UserRole::HrPartnerStaff)
+                    <button type="button" wire:click="$set('type', '{{ $key }}')" class="rounded-xl px-4 py-2 {{ $type === $key ? 'bg-primary text-white' : 'bg-gray-100' }}" role="tab" aria-selected="{{ $type === $key ? 'true' : 'false' }}">{{ $label }}</button>
+                @endif
+            @endforeach
+        </div>
+        <div class="grid sm:grid-cols-3 gap-3">
+            @if(in_array(auth()->user()->primary_role, [\App\Enums\UserRole::PlatformAdmin, \App\Enums\UserRole::HrPartnerStaff], true))
+                <label class="text-sm">الشركة<select wire:model.live="companyId" class="block w-full rounded-xl border p-2 mt-1"><option value="">{{ auth()->user()->primary_role === \App\Enums\UserRole::PlatformAdmin && in_array($type, ['periodic', 'hotspots'], true) ? 'كل الشركات' : 'اختر الشركة' }}</option>@foreach($companies as $company)<option value="{{ $company->id }}">{{ $company->name }}</option>@endforeach</select></label>
+            @endif
+            <label class="text-sm">الفترة<select wire:model.live="period" class="block w-full rounded-xl border p-2 mt-1"><option value="month">شهري</option><option value="quarter">ربع سنوي</option><option value="custom">مخصص</option></select></label>
+            @if($period !== 'custom')<label class="text-sm">السنة<input wire:model.live="year" type="number" min="2000" max="2100" class="block w-full rounded-xl border p-2 mt-1"></label>@endif
+            @if($period === 'month')<label class="text-sm">الشهر<select wire:model.live="month" class="block w-full rounded-xl border p-2 mt-1">@for($m=1;$m<=12;$m++)<option value="{{ $m }}">{{ \App\Support\Format\ArabicDigits::convert($m) }}</option>@endfor</select></label>@endif
+            @if($period === 'quarter')<label class="text-sm">الربع<select wire:model.live="quarter" class="block w-full rounded-xl border p-2 mt-1">@for($q=1;$q<=4;$q++)<option value="{{ $q }}">{{ \App\Support\Format\ArabicDigits::convert($q) }}</option>@endfor</select></label>@endif
+            @if($period === 'custom')<label class="text-sm">من<input wire:model.live="from" type="date" class="block w-full rounded-xl border p-2 mt-1"></label><label class="text-sm">إلى<input wire:model.live="to" type="date" class="block w-full rounded-xl border p-2 mt-1"></label>@endif
+            @if($branches->isNotEmpty())<label class="text-sm">الفرع<select wire:model.live="branch" class="block w-full rounded-xl border p-2 mt-1"><option value="">كل الفروع</option>@foreach($branches as $item)<option value="{{ $item->id }}">{{ $item->name }}</option>@endforeach</select></label>@endif
+            @if($type === 'employee')<label class="text-sm">الموظف<select wire:model.live="employeeId" class="block w-full rounded-xl border p-2 mt-1"><option value="">اختر الموظف</option>@foreach($employees as $item)<option value="{{ $item->id }}">{{ $item->name }} · {{ $item->employee_code }}</option>@endforeach</select></label>@endif
+        </div>
+        @foreach($errors->all() as $error)<p class="text-red text-sm">{{ $error }}</p>@endforeach
+        <div class="flex flex-wrap gap-2"><button wire:click="preview" class="bg-primary text-white rounded-xl px-5 py-2">عرض التقرير</button><button wire:click="export('pdf')" class="border border-primary text-primary rounded-xl px-5 py-2">تصدير PDF</button><button wire:click="export('xlsx')" class="border border-primary text-primary rounded-xl px-5 py-2">تصدير Excel</button></div>
+    </div>
+    @if($preview)<section class="bg-white rounded-2xl p-5 space-y-4"><h2 class="text-xl font-black">{{ $preview['title'] }}</h2><p class="text-gray-500">حتى نهاية الفترة · {{ \App\Support\Format\ArabicDigits::convert(\App\Documents\IraqiDate::format(\Carbon\CarbonImmutable::parse($preview['parameters']['from']), 'ar')) }} — {{ \App\Support\Format\ArabicDigits::convert(\App\Documents\IraqiDate::format(\Carbon\CarbonImmutable::parse($preview['parameters']['to']), 'ar')) }}</p>
+        @if($preview['partial'])<p class="bg-amber-50 p-3 rounded-xl">قد توجد حالات أخرى لا تظهر لك</p>@endif
+        @if($preview['truncated'])<p class="bg-amber-50 p-3 rounded-xl">يُعرض أول ١٬٠٠٠ صف — استخدم Excel للقائمة الكاملة</p>@endif
+        <div class="grid sm:grid-cols-3 gap-3">@foreach($preview['summary'] as $label => $value)<div class="rounded-xl bg-gray-50 p-3"><p class="text-gray-500 text-sm">{{ $label }}</p><strong>{{ is_numeric($value) ? \App\Support\Format\ArabicDigits::convert((string) $value) : ($value ?? '—') }}</strong></div>@endforeach</div>
+        @foreach($preview['sections'] as $section)<h3 class="font-bold">{{ $section['title'] }}</h3><div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr>@foreach($section['headers'] as $header)<th class="text-right p-2 bg-gray-100">{{ $header }}</th>@endforeach</tr></thead><tbody>@forelse($section['rows'] as $row)<tr>@foreach($row as $cell)<td class="p-2 border-b">{{ is_numeric($cell) ? \App\Support\Format\ArabicDigits::convert((string) $cell) : ($cell ?? '—') }}</td>@endforeach</tr>@empty<tr><td colspan="{{ count($section['headers']) }}" class="p-3">لا توجد بيانات لهذه الفترة.</td></tr>@endforelse</tbody></table></div>@endforeach
+    </section>@endif
+    <section class="bg-white rounded-2xl p-5" wire:poll.5s><h2 class="text-xl font-black mb-3">صادراتي</h2><div class="space-y-2">@forelse($exports as $export)<div class="flex justify-between gap-3 border-b p-2"><span>{{ ['periodic' => 'الملخص الدوري', 'employee' => 'تقرير الموظف', 'compliance' => 'الالتزام بالمواعيد', 'hotspots' => 'بؤر التكرار'][$export->report_type] ?? $export->report_type }} · {{ strtoupper($export->format) }} · {{ \App\Support\Format\ArabicDigits::convert($export->created_at->timezone('Asia/Baghdad')->format('Y/m/d H:i')) }}</span><span>@if($export->status === 'ready')<a class="text-primary font-bold" href="{{ route('statistics.exports.download', $export) }}">تنزيل</a>@elseif($export->status === 'queued')جارٍ الإعداد@elseif($export->status === 'expired')انتهت صلاحية الملف@elseif($export->status === 'revoked')أُلغي الوصول@elseتعذر التصدير@endif</span></div>@empty<p class="text-gray-500">لا توجد صادرات.</p>@endforelse</div></section>
+</div>

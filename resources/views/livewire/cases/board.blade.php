@@ -26,13 +26,13 @@
                 $pill = $archived ? 'مغلقة' : ($urgent ? ($days < 0 ? 'متأخرة' : \App\Support\Format\StageIndicator::remaining($days)) : ($waiting ? ($case->status === \App\Enums\CaseStatus::AwaitingEmployeeResponse ? 'بانتظار الرد' : 'بانتظار توقيع') : \App\Support\Format\StageIndicator::label($case->status)));
                 $tone = $archived ? 'bg-green-light text-green' : ($urgent ? 'bg-red-light text-red' : ($waiting ? 'bg-amber-light text-amber' : 'bg-primary-light text-primary'));
             @endphp
-            <a href="/cases/{{ $case->id }}" wire:key="case-{{ $case->id }}" class="bg-white rounded-2xl p-4 flex items-center gap-4 shadow-sm {{ $archived ? 'opacity-60' : '' }} hover:shadow-md">
+            <div wire:key="case-{{ $case->id }}" class="bg-white rounded-2xl p-4 {{ $archived ? 'opacity-60' : '' }} hover:shadow-md"><a href="/cases/{{ $case->id }}" class="flex items-center gap-4">
                 <div class="w-11 h-11 rounded-full {{ $archived ? 'bg-gray-100 text-gray-400' : 'bg-primary-light text-primary' }} font-bold flex items-center justify-center shrink-0">{{ \App\Support\Format\Initials::for($case->employee?->name ?? '') }}</div>
                 <div class="flex-1 min-w-0"><div class="flex items-center gap-2"><span class="font-bold truncate">{{ $case->employee?->name }}</span><span class="text-xs font-mono text-gray-300">{{ \App\Support\Format\ArabicDigits::convert(str_pad($case->case_number, 4, '0', STR_PAD_LEFT)) }}</span></div><div class="text-xs text-gray-400 mt-0.5">{{ $case->employee?->position }} — {{ $case->employee?->department }}</div></div>
                 <div class="hidden sm:flex items-center gap-1.5 shrink-0" aria-label="{{ \App\Support\Format\StageIndicator::label($case->status) }}">@for($i=1;$i<=5;$i++)<span class="w-2 h-2 rounded-full {{ $i <= $step ? ($archived ? 'bg-green' : 'bg-primary') : 'bg-gray-200' }}"></span>@endfor</div>
                 <span class="sm:hidden text-xs text-gray-500">{{ \App\Support\Format\StageIndicator::label($case->status) }}</span>
                 <span class="text-xs font-bold px-3 py-1.5 rounded-full shrink-0 {{ $tone }}">{{ $pill }}</span>
-            </a>
+            </a>@if($case->employee)<a class="text-primary text-sm font-bold mr-14" href="{{ route('employees.show', $case->employee) }}">صفحة الموظف</a>@endif</div>
         @empty
             <p class="bg-white rounded-2xl p-8 text-center text-gray-500">لا توجد حالات مطابقة.</p>
         @endforelse

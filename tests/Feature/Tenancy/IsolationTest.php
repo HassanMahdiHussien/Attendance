@@ -24,6 +24,7 @@ use App\Models\DocumentContent;
 use App\Models\DocumentTemplate;
 use App\Models\Employee;
 use App\Models\Location;
+use App\Models\ReportExport;
 use App\Models\ReportWitness;
 use App\Models\ResponseTranscription;
 use App\Models\Signature;
@@ -41,6 +42,7 @@ dataset('tenant models', [
     CompanySequence::class, CaseAlert::class, CaseConflictClearance::class,
     CompanyLetterhead::class, DocumentTemplate::class,
     AiDraftNote::class, ResponseTranscription::class, SignaturePresenceSuggestion::class,
+    ReportExport::class,
 ]);
 
 test('every tenant model isolates reads and builder writes and stamps creation', function (string $model): void {

@@ -23,6 +23,12 @@
                     <a href="/my-cases" class="px-3 py-2 rounded-lg bg-primary-light text-primary font-bold">حالاتي</a>
                 @endif
                 @if(\App\Support\Access\CommitteeNav::hasPending(auth()->user()))<a href="/committee" class="px-3 py-2 rounded-lg {{ request()->is('committee*') ? 'bg-primary-light text-primary font-bold' : 'hover:bg-gray-50' }}">اللجنة</a>@endif
+                @if(in_array($role, [\App\Enums\UserRole::CompanyAdmin, \App\Enums\UserRole::HrStaff, \App\Enums\UserRole::PlatformAdmin, \App\Enums\UserRole::HrPartnerStaff], true))
+                    <a href="/statistics" class="px-3 py-2 rounded-lg {{ request()->is('statistics*') ? 'bg-primary-light text-primary font-bold' : 'hover:bg-gray-50' }}">التقارير الإحصائية</a>
+                @endif
+                @if(in_array($role, [\App\Enums\UserRole::CompanyAdmin, \App\Enums\UserRole::HrStaff, \App\Enums\UserRole::PlatformAdmin, \App\Enums\UserRole::HrPartnerStaff], true))
+                    <a href="/employees" class="px-3 py-2 rounded-lg {{ request()->is('employees*') ? 'bg-primary-light text-primary font-bold' : 'hover:bg-gray-50' }}">الموظفون</a>
+                @endif
                 @if($regulationUrl = \App\Support\Access\InternalRegulationNav::url(auth()->user()))
                     <a href="{{ $regulationUrl }}" class="px-3 py-2 rounded-lg {{ request()->is('admin/*/internal-regulation') ? 'bg-primary-light text-primary font-bold' : 'hover:bg-gray-50' }}">النظام الداخلي</a>
                 @endif
