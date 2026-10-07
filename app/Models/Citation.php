@@ -2,9 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\LawApprovalStatus;
-use App\Enums\LawKind;
-use App\Enums\LegalUnitStatus;
 use App\Enums\RelevanceCheck;
 use App\Exceptions\ImmutableRecordException;
 use App\Exceptions\TenantMismatch;
@@ -34,18 +31,13 @@ class Citation extends Model
                 throw new ImmutableRecordException('Locked document citations cannot be changed.');
             }
             $unit = LegalUnit::withoutGlobalScopes()->find($citation->legal_unit_id);
-            if ($unit === null) {
-                return;
-            }
-            if (! in_array($unit->status, [LegalUnitStatus::VerifiedAuto, LegalUnitStatus::VerifiedHuman], true)) {
-                throw ValidationException::withMessages(['legal_unit_id' => 'Only verified legal units can be cited.']);
-            }
-            $law = Law::withoutGlobalScopes()->find($unit->law_id);
-            if ($law?->kind !== LawKind::Statute && (int) $unit->company_id !== (int) $document?->company_id) {
+            if ($unit?->company_id !== null && $document !== null
+                && (int) $unit->company_id !== (int) $document->company_id) {
                 throw new TenantMismatch('Regulation belongs to another company.');
             }
-            if ($law?->kind === LawKind::InternalRegulation && $law->approval_status !== LawApprovalStatus::Approved) {
-                throw ValidationException::withMessages(['legal_unit_id' => 'The regulation must be approved before citation.']);
+            if (! $citation->exists && $document !== null && ! LegalUnit::query()->citableFor($document->disciplinaryCase)
+                ->whereKey($citation->legal_unit_id)->exists()) {
+                throw ValidationException::withMessages(['legal_unit_id' => 'This legal unit is not citable for the case.']);
             }
         });
         static::deleting(function (self $citation): void {

@@ -1,6 +1,14 @@
 <?php
 
 return [
+    'ai' => ['legal_reading_model' => env('LEGAL_READING_MODEL', 'claude-opus-5-5')],
+    'legal_library' => [
+        'max_pages' => 300, 'max_file_mb' => 50, 'dpi' => 250,
+        'max_long_edge' => 4000, 'ai_long_edge' => 1568,
+        'docx_max_uncompressed_mb' => 20, 'process_timeout' => 120,
+        'binaries' => ['pdfinfo' => '/usr/bin/pdfinfo', 'pdftotext' => '/usr/bin/pdftotext',
+            'pdftoppm' => '/usr/bin/pdftoppm', 'tesseract' => '/usr/bin/tesseract'],
+    ],
     'pdf' => ['chrome_path' => env('DISPLANERY_CHROME_PATH', '/usr/local/bin/chrome-headless-shell')],
     'idle_timeout_minutes' => ['default' => 60, 'platform' => 30],
     'permissions' => ['review_internal_regulation', 'view_all_company_cases'],

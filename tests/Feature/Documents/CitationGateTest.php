@@ -17,8 +17,9 @@ function citationFixture(): array
     $document = Document::factory()->create();
     $content = $document->contents()->create(['company_id' => $company->id, 'language_code' => 'ar',
         'body' => '[[cite:1]]', 'is_authoritative' => true]);
-    $law = Law::factory()->create(['kind' => 'statute']);
+    $law = Law::factory()->create(['kind' => 'statute', 'approval_status' => 'approved']);
     $law->jurisdictions()->create(['jurisdiction' => 'federal_iraq']);
+    $document->disciplinaryCase->update(['law_version_id' => $law->id]);
     $unit = LegalUnit::factory()->create(['law_id' => $law->id, 'article_number' => '43']);
     $content->update(['body' => "[[cite:{$unit->id}]]"]);
     $citation = Citation::factory()->create(['document_id' => $document->id, 'legal_unit_id' => $unit->id,
@@ -48,6 +49,7 @@ test('jurisdiction, verification, supersession and relevance are checked at issu
     $new = LegalUnit::factory()->create(['law_id' => $f['law']->id, 'previous_version_id' => $f['unit']->id,
         'version' => 2, 'article_number' => '43']);
     $f['unit']->update(['superseded_by_id' => $new->id]);
+    expect($f['citation']->fresh()->legal_unit_id)->toBe($f['unit']->id);
     expect(fn () => $gate->assertIssuable($f['document']))->toThrow(IssuanceBlocked::class);
 });
 
@@ -57,9 +59,8 @@ test('an unapproved internal regulation is not issuable', function (): void {
         'approval_status' => 'approved']);
     $unit = LegalUnit::factory()->create(['law_id' => $regulation->id, 'article_number' => '7']);
     $f['content']->update(['body' => "[[cite:{$unit->id}]]"]);
-    Citation::factory()->create(['document_id' => $f['document']->id, 'legal_unit_id' => $unit->id,
-        'relevance_check' => 'supports']);
-    $regulation->update(['approval_status' => 'pending']);
+    DB::table('citations')->insert(['company_id' => $f['company']->id, 'document_id' => $f['document']->id,
+        'legal_unit_id' => $unit->id, 'claim_sentence' => 'Legacy regulation citation', 'relevance_check' => 'supports']);
     expect(fn () => app(CitationGate::class)->assertIssuable($f['document']))->toThrow(IssuanceBlocked::class);
 });
 

@@ -177,3 +177,16 @@
 - Running header/footer noise (gazette title, issue number, page number) appears as short lines at the
   top/bottom: lines in the first/last 3 lines of a page with fewer than 4 Arabic letters, or matching the
   gazette title (`الوقائع العراقية`), are dropped before splitting, in both readings.
+
+## R14 Findings from the real Law 71/1987 import (2026-10-07, no AI key)
+- All 37 pages read; run ended `ai_pending`, zero units — as designed.
+- The Law 71 text layer passes the usability probe but systematically renders ك as آ ("آل من" for
+  "كل من", "اماآن" for "اماكن"). Tesseract reads the same page correctly. Every article containing ك
+  would land in the mismatch queue, so Law 71 is seeded with `import_mode = ocr` (like Law 37). The text
+  layer path stays for clean PDFs (e.g. company regulations exported from Word).
+- Gazette 4734 (Law 18/2023) text layer has spaces inside words → the probe rejects it → OCR.
+- The Law 71 source is a consolidated text that prints both the original and the amended wording of
+  several articles (e.g. article 24's penalties appear twice: "خمسين دينارا" and "1000 الف دينار";
+  also articles 65, 69, 73, 118, 119). The splitter flags these as `duplicate_heading`; the reviewer
+  must keep the text in force and exclude the superseded wording. This is a legal decision for the
+  person clearing the queue (ideally a lawyer), not something the code can infer.

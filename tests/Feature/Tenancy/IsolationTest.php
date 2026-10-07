@@ -10,7 +10,6 @@ use App\Models\CaseConflictClearance;
 use App\Models\CaseEvent;
 use App\Models\CaseLink;
 use App\Models\CaseWitness;
-use App\Models\Citation;
 use App\Models\CommitteeMandate;
 use App\Models\CommitteePoolMember;
 use App\Models\CommitteeSessionAttendance;
@@ -36,7 +35,7 @@ dataset('tenant models', [
     CaseEvent::class, CaseLink::class, CommitteeSessionAttendance::class,
     AppealTracking::class, Attachment::class, Document::class,
     DocumentContent::class, DocumentApproval::class, Signature::class,
-    Citation::class, CompanySequence::class, CaseAlert::class, CaseConflictClearance::class,
+    CompanySequence::class, CaseAlert::class, CaseConflictClearance::class,
     CompanyLetterhead::class, DocumentTemplate::class,
 ]);
 

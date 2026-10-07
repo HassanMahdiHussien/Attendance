@@ -1,8 +1,13 @@
 <?php
 
+use App\Jobs\BuildLegalUnits;
 use App\Jobs\GenerateDocumentPdf;
+use App\Jobs\ReadLegalPageText;
+use App\Jobs\ReadLegalPageWithAi;
+use App\LegalLibrary\ImportProgress;
 use App\Models\Company;
 use App\Models\Document;
+use App\Models\LegalImportRun;
 use App\Services\Cases\CaseAlertDispatcher;
 use App\Services\Cases\ExpiredAppealArchiver;
 use App\Support\Tenancy\TenantContext;
@@ -27,6 +32,35 @@ Artisan::command('cases:archive-expired-appeals', function (): void {
 
 Schedule::command('cases:send-deadline-alerts')->hourly();
 Schedule::command('cases:archive-expired-appeals')->hourly();
+
+Artisan::command('legal-library:reconcile', function (): void {
+    LegalImportRun::withoutGlobalScopes()->whereIn('state', ['reading', 'splitting'])
+        ->where('updated_at', '<=', now()->subMinutes(30))->chunkById(100, function ($runs): void {
+            foreach ($runs as $run) {
+                $context = app(TenantContext::class);
+                $callback = function () use ($run): void {
+                    if ($run->state === 'splitting') {
+                        BuildLegalUnits::dispatch($run->id);
+
+                        return;
+                    }
+                    foreach ($run->pages as $page) {
+                        if ($page->text_status === 'pending') {
+                            ReadLegalPageText::dispatch($page->id, $run->company_id);
+                        }
+                        if ($page->ai_status === 'pending') {
+                            ReadLegalPageWithAi::dispatch($page->id, $run->company_id);
+                        }
+                    }
+                    app(ImportProgress::class)->evaluate($run);
+                };
+                $run->company_id === null ? $context->runAcrossAllCompanies($callback)
+                    : $context->runForCompany($run->company_id, $callback);
+            }
+        });
+})->purpose('Recover stalled legal library imports');
+
+Schedule::command('legal-library:reconcile')->everyTenMinutes();
 
 Artisan::command('documents:retry-pdf {id}', function (int $id): void {
     $row = DB::table('documents')->where('id', $id)->first();
