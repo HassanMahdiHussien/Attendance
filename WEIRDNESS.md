@@ -65,3 +65,6 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 - **An AI transcription is an attempt until HR checks it against the response scan.** Committee readers and drafting receive only the confirmed case text; starting a correction clears that text until HR confirms a replacement. (2026-10-09)
 - **Signature presence suggestions describe boxes, never signer identity.** HR records the final observation against the exact signed scan; a newer unchecked scan cannot use an older check for override. (2026-10-09)
 - **Scan reading sends the full uploaded scan.** The response requires its handwriting and the recommendations require printed names, roles, and boxes in context. Logs record hashes and attachment IDs instead of scan bytes. (2026-10-09)
+- **A stats-only HR partner uses an aggregate-only visibility path.** Category counts may include linked companies without case access, while case lists and links still use normal case visibility. (2026-10)
+- **Dashboard department hotspots use the employee's current department.** Historic cases may move between groups when the employee record changes; this is the product's chosen grouping. (2026-10)
+- **Dashboard and notification deadline alerts share the global approaching-hours setting.** There is no company override, so the same case reaches both surfaces at the same time. (2026-10)

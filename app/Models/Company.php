@@ -18,7 +18,8 @@ class Company extends Model
 
     protected $guarded = [];
 
-    protected $attributes = ['enabled_languages' => '["ar","en"]', 'is_active' => true];
+    protected $attributes = ['enabled_languages' => '["ar","en"]', 'is_active' => true,
+        'hotspot_min_cases' => 3, 'hotspot_window_days' => 90];
 
     protected static function booted(): void
     {
@@ -62,6 +63,8 @@ class Company extends Model
             'requires_second_review' => 'boolean',
             'is_active' => 'boolean',
             'subscription_status' => SubscriptionStatus::class,
+            'hotspot_min_cases' => 'integer',
+            'hotspot_window_days' => 'integer',
         ];
     }
 

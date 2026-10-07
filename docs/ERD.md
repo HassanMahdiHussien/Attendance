@@ -491,6 +491,10 @@ erDiagram
 
 The existing `companies.letterhead_logo_path`, `letterhead_address`, `letterhead_phone`, and `letterhead_email` columns are deprecated. Current settings are versioned in `company_letterheads`; the old columns are retained for migration compatibility.
 
+Dashboard settings on `companies`: `hotspot_min_cases` (unsigned tiny integer, default 3; validated 2–50) and `hotspot_window_days` (unsigned small integer, default 90; validated 7–365). Dashboard and notification deadline hours both use the global `displanery.deadlines.approaching_hours` setting.
+
+Dashboard indexes on `cases`: `(company_id, status)`, `(company_id, violation_time)`, `(company_id, branch_id, violation_time)`, and `(company_id, defense_letter_issued_at)`. Incident periods use `violation_time`; procedure metrics use the defense and completion dates.
+
 - Tenant children carry `company_id` directly. Their tenant parent references use composite foreign keys such as `(company_id, branch_id) -> branches(company_id, id)`. Users remain outside the fail-closed model scope so authentication can locate them; authorization must check role and company.
 - `users.primary_role` is one of `platform_admin`, `company_admin`, `hr_staff`, `dept_manager`, `reporter`, `committee_member`, `external_legal_reviewer`, or `hr_partner_staff`. The legacy `company_legal_reviewer` value migrates to an inactive `reporter`.
 - Spatie permissions add abilities, not primary roles: `review_internal_regulation` and `view_all_company_cases` live in `permissions` and `model_has_permissions` with the `web` guard. Teams mode is off.

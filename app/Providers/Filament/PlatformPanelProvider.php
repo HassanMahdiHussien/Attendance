@@ -3,6 +3,7 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Auth\Login;
+use App\Filament\Platform\Widgets\CompaniesOverview;
 use App\Http\Middleware\EnforceIdleTimeout;
 use App\Http\Middleware\EnsureAccountIsActive;
 use App\Http\Middleware\SetTenantContext;
@@ -48,6 +49,7 @@ class PlatformPanelProvider extends PanelProvider
             ->discoverResources(in: app_path('Filament/Platform/Resources'), for: 'App\\Filament\\Platform\\Resources')
             ->discoverPages(in: app_path('Filament/Platform/Pages'), for: 'App\\Filament\\Platform\\Pages')
             ->pages([Dashboard::class])
+            ->widgets([CompaniesOverview::class])
             ->colors([
                 'primary' => Color::hex('#4F46E5'),
                 'warning' => Color::hex('#F59E0B'),

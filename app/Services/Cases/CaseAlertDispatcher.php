@@ -45,7 +45,7 @@ class CaseAlertDispatcher
         if ($this->deadlines->responseStatus($case, $now) === 'missed') {
             $alerts[] = ['response_overdue', $this->deadlines->responseDue($case)->toDateString()];
         }
-        if ($case->legal_review_requested_at !== null && $case->legal_review_completed_at === null) {
+        if ($case->legal_review_requested_at !== null && $case->legal_review_completed_at === null && $case->legal_review_cancelled_at === null) {
             $alerts[] = ['consultation_pending', $now->toDateString()];
         }
         $appealEnd = $this->deadlines->appealEnd($case);
