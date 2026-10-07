@@ -15,7 +15,7 @@
 <div class="body">{!! $page['secondary'] !!}</div>
 <div class="block">
 @foreach($extra['attendees'] as $attendee)
-    <p>– {{ $attendee['name'] }} – {{ $b['role_'.$attendee['role']] }}: {{ $attendee['is_chair'] ? $b['chair_label'] : $b['member_label'] }} &nbsp; {{ $b['signature_line'] ?? '' }}</p>
+    <p>– {{ $attendee['name'] }} – {{ $b['role_'.$attendee['role']] }}: {{ $attendee['is_chair'] ? ($attendee['is_female'] ? $b['chair_label_female'] : $b['chair_label']) : ($attendee['is_female'] ? $b['member_label_female'] : $b['member_label']) }} &nbsp; {{ $b['signature_line'] ?? '' }}</p>
 @endforeach
 </div>
 @if(!empty($extra['approvers']))

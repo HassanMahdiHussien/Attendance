@@ -13,6 +13,7 @@ use App\Services\Cases\CaseBoard;
 use App\Services\Cases\CaseOpening;
 use App\Services\Cases\DefenseLetterFlow;
 use App\Services\Documents\DocumentDrafts;
+use App\Support\Format\ArabicDigits;
 use App\Support\Format\CaseTimeline;
 use App\Support\Format\StageIndicator;
 use App\Support\Tenancy\TenantContext;
@@ -72,9 +73,9 @@ test('successful issuance redirects with a flash shown once on the case page', f
     Livewire::test(ConfirmDocument::class, ['case' => (string) $case->id, 'document' => (string) $document->id])
         ->call('issue')->assertRedirect('/cases/'.$case->id);
     $reference = $document->fresh()->reference_number;
-    expect(session('case_success_'.$case->id))->toBe('صدر الكتاب بالعدد '.$reference);
-    $this->get('/cases/'.$case->id)->assertOk()->assertSee('صدر الكتاب بالعدد '.$reference);
-    $this->get('/cases/'.$case->id)->assertOk()->assertDontSee('صدر الكتاب بالعدد '.$reference);
+    expect(session('case_success_'.$case->id))->toBe('صدر الكتاب بالعدد '.ArabicDigits::convert($reference));
+    $this->get('/cases/'.$case->id)->assertOk()->assertSee('صدر الكتاب بالعدد '.ArabicDigits::convert($reference));
+    $this->get('/cases/'.$case->id)->assertOk()->assertDontSee('صدر الكتاب بالعدد '.ArabicDigits::convert($reference));
 });
 
 test('a changed provisional number is explained after issuance', function (): void {
@@ -88,7 +89,7 @@ test('a changed provisional number is explained after issuance', function (): vo
     app(DefenseLetterFlow::class)->confirmAndIssue($firstDocument, $hr);
     $secondScreen->call('issue')->assertRedirect('/cases/'.$secondCase->id);
     expect($secondDocument->fresh()->reference_number)->not->toBe($preview);
-    expect(session('case_success_'.$secondCase->id))->toContain('صدر الكتاب بالعدد '.$secondDocument->fresh()->reference_number);
+    expect(session('case_success_'.$secondCase->id))->toContain('صدر الكتاب بالعدد '.ArabicDigits::convert($secondDocument->fresh()->reference_number));
     expect(session('case_success_'.$secondCase->id))->toContain('تغير الرقم المقترح أثناء العمل');
 });
 
@@ -102,7 +103,7 @@ test('a repeated confirm action reports the existing issuance without issuing ag
     $count = $case->events()->where('event_type', 'document_issued')->count();
     $screen->call('issue')->assertRedirect('/cases/'.$case->id);
     expect($case->events()->where('event_type', 'document_issued')->count())->toBe($count);
-    expect(session('case_success_'.$case->id))->toContain('صدر الكتاب بالعدد '.$document->fresh()->reference_number);
+    expect(session('case_success_'.$case->id))->toContain('صدر الكتاب بالعدد '.ArabicDigits::convert($document->fresh()->reference_number));
 });
 
 test('every recorded case event type has a specific Arabic timeline label', function (string $type): void {
@@ -127,7 +128,7 @@ test('every case status has an Arabic label and the timeline names its target', 
     expect(CaseTimeline::format('status_changed', ['to' => CaseStatus::ResponseReceived->value]))
         ->toBe('انتقلت الحالة إلى: استلام رد الموظف');
     expect(CaseTimeline::format('document_issued', ['reference_number' => '1097']))
-        ->toBe('صدر المستند بالعدد 1097');
+        ->toBe('صدر المستند بالعدد ١٠٩٧');
     expect(CaseTimeline::format('hand_off_recorded', ['purpose' => 'defense_letter_receipt',
         'status' => 'refused_to_sign'], ['witnesses' => ['أحمد', 'علي']]))
         ->toContain('كتاب طلب الدفاع');

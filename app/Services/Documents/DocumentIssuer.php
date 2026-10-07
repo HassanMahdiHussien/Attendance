@@ -5,6 +5,7 @@ namespace App\Services\Documents;
 use App\Documents\CitationGate;
 use App\Documents\DocumentRenderer;
 use App\Enums\ApprovalDecision;
+use App\Enums\CaseStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\DocumentType;
 use App\Enums\PenaltyType;
@@ -28,6 +29,9 @@ class DocumentIssuer
     {
         return DB::transaction(function () use ($draft, $actor, $manualReference): Document {
             $document = Document::query()->lockForUpdate()->findOrFail($draft->id);
+            if ($document->disciplinaryCase->status === CaseStatus::ArchivedFinal) {
+                throw new IssuanceBlocked('Archived cases are read-only.');
+            }
             if ($document->is_locked || ! in_array($document->status, [DocumentStatus::Draft, DocumentStatus::ReadyForReview], true)) {
                 throw new IssuanceBlocked('Only a draft or ready document can be issued.');
             }

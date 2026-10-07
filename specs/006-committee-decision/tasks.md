@@ -12,9 +12,9 @@
 - [x] T006 Tests for T001–T005 incl. Livewire update-endpoint authorisation per role and stale stage
 
 ## Run M
-- [ ] T007 DocumentDrafts decision letters + submitDecision (R1 A2) + EditDecisionLetter + leave confirmation (termination) + receipt hand-off + optional GM/union signature presence record
-- [ ] T008 Consultation request button (any open stage; prominent pending banner with clock) + Reviewer consultation screen (read case, documents, minutes, scans; complete with note) gated by CaseVisibility
-- [ ] T009 Appeal screen (log filed + date, outcome → archive); archived cases read-only everywhere
-- [ ] T010 Default templates: approved outcome wording (ar / en) and female role labels; DocumentFacts attendee gender; renderer picks labels
-- [ ] T011 Tests (incl. service-level end-to-end both paths per R1 B6): role × action matrix (HR, admin, each pool category, non-pool committee member, partnered / unpartnered reviewer, reporter); termination leave gate; consultation gate; appeal flow; "no verification wording" view scan; wording / label rendering
-- [ ] T012 docs: WEIRDNESS (session can be recorded by HR or an attending pool member; presence record is manual until the AI touchpoint); orchestrator walkthrough of both paths; PR
+- [x] T007 DocumentDrafts decision letters + submitDecision (R1 A2) + EditDecisionLetter + leave confirmation (termination) + receipt hand-off + optional GM/union signature presence record
+- [x] T008 Consultation request button (any open stage; prominent pending banner with clock) + Reviewer consultation screen (read case, documents, minutes, scans; complete with note) gated by CaseVisibility
+- [x] T009 Appeal screen (log filed + date, outcome → archive); archived cases read-only everywhere
+- [x] T010 Default templates: approved outcome wording (ar / en) and female role labels; DocumentFacts attendee gender; renderer picks labels
+- [x] T011 Tests (incl. service-level end-to-end both paths per R1 B6): role × action matrix (HR, admin, each pool category, non-pool committee member, partnered / unpartnered reviewer, reporter); termination leave gate; consultation gate; appeal flow; "no verification wording" view scan; wording / label rendering
+- [x] T012 docs: WEIRDNESS (session can be recorded by HR or an attending pool member; presence record is manual until the AI touchpoint); orchestrator walkthrough of both paths; PR

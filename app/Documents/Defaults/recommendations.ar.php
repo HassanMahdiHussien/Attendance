@@ -11,7 +11,9 @@ return [
     'role_hr' => 'الموارد البشرية',
     'role_labor_union' => 'ممثل نقابة العمال',
     'chair_label' => 'رئيساً',
+    'chair_label_female' => 'رئيسةً',
     'member_label' => 'عضواً',
+    'member_label_female' => 'عضوةً',
     'signature_line' => 'التوقيع:',
     'reference_label' => 'العدد:',
 ];

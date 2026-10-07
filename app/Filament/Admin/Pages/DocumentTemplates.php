@@ -48,7 +48,9 @@ class DocumentTemplates extends Page
         'role_hr' => 'تسمية دور الموارد البشرية',
         'role_labor_union' => 'تسمية دور ممثل النقابة',
         'chair_label' => 'تسمية رئيس اللجنة',
+        'chair_label_female' => 'تسمية رئيسة اللجنة',
         'member_label' => 'تسمية عضو اللجنة',
+        'member_label_female' => 'تسمية عضوة اللجنة',
         'signature_line' => 'سطر التوقيع',
         'defense_outcome_rejected' => 'نتيجة الدفاع (مرفوض)',
         'defense_outcome_partial' => 'نتيجة الدفاع (مقبول جزئياً)',
@@ -189,9 +191,9 @@ class DocumentTemplates extends Page
                 'address_lines' => null, 'phone' => null, 'email' => null, 'footer_text' => 'CONFIDENTIAL'],
             'blocks' => $blocks, 'facts' => $facts,
             'extra' => ['prior_cases' => [], 'defense_acceptance' => 'rejected', 'attendees' => [
-                ['name' => 'Sample Legal', 'role' => 'legal', 'is_chair' => true],
-                ['name' => 'Sample HR', 'role' => 'hr', 'is_chair' => false],
-                ['name' => 'Sample Union', 'role' => 'labor_union', 'is_chair' => false],
+                ['name' => 'Sample Legal', 'role' => 'legal', 'is_chair' => true, 'is_female' => true],
+                ['name' => 'Sample HR', 'role' => 'hr', 'is_chair' => false, 'is_female' => false],
+                ['name' => 'Sample Union', 'role' => 'labor_union', 'is_chair' => false, 'is_female' => false],
             ]],
             'body' => '<p>Sample case facts supplied by HR.</p>',
             'secondary' => '<p>Sample committee recommendation.</p>',
@@ -223,7 +225,18 @@ class DocumentTemplates extends Page
             && in_array($this->language, $company->enabled_languages, true), 404);
 
         try {
-            return app(TemplateResolver::class)->resolve($company->id, $this->documentType, $this->language);
+            $template = app(TemplateResolver::class)->resolve($company->id, $this->documentType, $this->language);
+            if ($this->documentType === 'recommendations') {
+                $path = app_path("Documents/Defaults/recommendations.{$this->language}.php");
+                $defaults = is_file($path) ? require $path : [];
+                foreach (['chair_label_female', 'member_label_female'] as $key) {
+                    if (blank($template['blocks'][$key] ?? null)) {
+                        $template['blocks'][$key] = $defaults[$key] ?? $template['blocks'][str_replace('_female', '', $key)];
+                    }
+                }
+            }
+
+            return $template;
         } catch (IssuanceBlocked $exception) {
             if (is_file(app_path("Documents/Defaults/{$this->documentType}.{$this->language}.php"))) {
                 throw $exception;

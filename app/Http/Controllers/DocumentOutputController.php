@@ -6,15 +6,19 @@ use App\Documents\DocumentRenderer;
 use App\Documents\PdfGenerator;
 use App\Exceptions\IssuanceBlocked;
 use App\Models\Document;
+use App\Support\Tenancy\TenantContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class DocumentOutputController extends Controller
 {
-    public function preview(Request $request, Document $document, DocumentRenderer $renderer, PdfGenerator $pdf)
+    public function preview(Request $request, string $document, DocumentRenderer $renderer, PdfGenerator $pdf)
     {
-        abort_unless($request->user()->can('view', $document), 403);
+        $document = Document::withoutGlobalScopes()->findOrFail($document);
+        abort_unless($request->user()->can('view', $document),
+            (int) $request->user()->company_id === (int) $document->company_id ? 403 : 404);
         abort_if($document->is_locked, 409, 'Issued documents use the stored PDF.');
+        app(TenantContext::class)->setCompany($document->company);
 
         try {
             $html = $pdf->htmlWithFonts($renderer->render($document, true));
@@ -28,9 +32,11 @@ class DocumentOutputController extends Controller
             ->header('Content-Security-Policy', "default-src 'none'; img-src data:; style-src 'unsafe-inline'; font-src data:; sandbox");
     }
 
-    public function pdf(Request $request, Document $document)
+    public function pdf(Request $request, string $document)
     {
-        abort_unless($request->user()->can('view', $document), 403);
+        $document = Document::withoutGlobalScopes()->findOrFail($document);
+        abort_unless($request->user()->can('view', $document),
+            (int) $request->user()->company_id === (int) $document->company_id ? 403 : 404);
         abort_unless($document->pdf_status === 'ready', 409, 'ملف PDF قيد الإنشاء أو تعذر إنشاؤه.');
         $path = $document->pdf_file_path;
         $disk = Storage::disk('local');

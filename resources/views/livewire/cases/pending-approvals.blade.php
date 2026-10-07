@@ -1,5 +1,6 @@
 <div class="max-w-5xl mx-auto space-y-5">
     <h1 class="text-2xl font-black">اللجنة</h1>
+    @if(session('committee_notice'))<p role="status" class="bg-green-light text-green rounded-2xl p-4">{{ session('committee_notice') }}</p>@endif
     <p class="text-gray-500">توصيات بانتظار مراجعتك. تعرض المراجعة كل اللغات المفعلة.</p>
     <section class="bg-white rounded-3xl p-6 shadow-sm">
         @forelse($documents as $document)

@@ -58,7 +58,7 @@ class RecommendationsEditor
             $case = $document->disciplinaryCase;
             if ($document->document_type !== DocumentType::Recommendations || $document->is_locked
                 || ($document->version === 1 && ! in_array($case->status, [CaseStatus::CommitteeSessionHeld, CaseStatus::RecommendationsCitationCheck], true))
-                || ($document->version > 1 && $case->status === CaseStatus::Draft)
+                || ($document->version > 1 && in_array($case->status, [CaseStatus::Draft, CaseStatus::ArchivedFinal], true))
                 || ! $hrUser->is_active || ! $case->company->is_active
                 || ! in_array($hrUser->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)
                 || ! CaseVisibility::for($hrUser)->whereKey($case->id)->exists()) {
@@ -105,7 +105,7 @@ class RecommendationsEditor
             if ($document->document_type !== DocumentType::Recommendations || $document->is_locked
                 || ($document->version === 1 && ! in_array($case->status, [CaseStatus::CommitteeSessionHeld, CaseStatus::RecommendationsCitationCheck,
                     CaseStatus::RecommendationsAwaitingApprovals, CaseStatus::RecommendationsConfirmed], true))
-                || ($document->version > 1 && $case->status === CaseStatus::Draft)
+                || ($document->version > 1 && in_array($case->status, [CaseStatus::Draft, CaseStatus::ArchivedFinal], true))
                 || ! $hrUser->is_active || ! $case->company->is_active
                 || ! in_array($hrUser->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)
                 || ! CaseVisibility::for($hrUser)->whereKey($case->id)->exists()) {

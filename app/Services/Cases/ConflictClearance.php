@@ -2,6 +2,7 @@
 
 namespace App\Services\Cases;
 
+use App\Enums\CaseStatus;
 use App\Enums\UserRole;
 use App\Models\CaseConflictClearance;
 use App\Models\CommitteeMandate;
@@ -49,7 +50,8 @@ class ConflictClearance
 
     public function clear(DisciplinaryCase $case, CommitteePoolMember $member, string $reason, User $hrUser): void
     {
-        if (blank($reason) || ! in_array($hrUser->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)
+        if ($case->status === CaseStatus::ArchivedFinal || blank($reason)
+            || ! in_array($hrUser->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)
             || ! CaseVisibility::for($hrUser)->whereKey($case->id)->exists()) {
             throw ValidationException::withMessages(['reason' => 'HR access and an identity-check reason are required.']);
         }

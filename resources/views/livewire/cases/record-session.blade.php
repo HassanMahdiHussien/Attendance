@@ -3,12 +3,12 @@
     <section class="bg-white rounded-3xl p-6 md:p-8 shadow-sm space-y-5">
         <h1 class="text-2xl font-black">جلسة اللجنة</h1>
         <p class="text-gray-500">اختر الحاضرين وصوت كل عضو. يلزم ثلاثة أعضاء على الأقل، بينهم ممثل نقابة العمال. عند عدم بلوغ أغلبية يلزم إعادة التصويت.</p>
-        @if($notice)<p role="status" class="bg-amber-light text-amber rounded-2xl p-4">{{ $notice }}</p>@endif
+        @if($notice)<p role="status" class="bg-amber-light text-amber rounded-2xl p-4">{{ $notice }} @if($case->session_majority_reached && $case->status === \App\Enums\CaseStatus::CommitteeSessionHeld)<a href="/cases/{{ $case->id }}" class="underline">كتابة التوصيات</a>@endif</p>@endif
         @error('notice')<p role="alert" class="bg-red-light text-red rounded-2xl p-4">{{ $message }}</p>@enderror
         <div class="space-y-2">
             @foreach($members as $member)
                 <div class="flex flex-wrap items-center gap-4 rounded-2xl bg-gray-50 p-3" wire:key="member-{{ $member->id }}">
-                    <label class="flex-1 flex gap-2 items-center"><input type="checkbox" wire:model.live="selected.{{ $member->id }}"><span>{{ $member->person_name }}</span><small class="text-gray-500">{{ ['legal'=>'القانونية','hr'=>'الموارد البشرية','labor_union'=>'نقابة العمال'][$member->role_type->value] }}</small></label>
+                    <label class="flex-1 flex gap-2 items-center"><input type="checkbox" wire:model.live="selected.{{ $member->id }}" aria-label="{{ $member->person_name }}"><span>{{ $member->person_name }}</span><small class="text-gray-500">{{ ['legal'=>'القانونية','hr'=>'الموارد البشرية','labor_union'=>'نقابة العمال'][$member->role_type->value] }}</small></label>
                     @if($selected[$member->id] ?? false)<select wire:model="votes.{{ $member->id }}" class="rounded-xl border p-2"><option value="">الصوت</option><option value="approve">موافق</option><option value="reject">رافض</option><option value="abstain">ممتنع</option></select>@endif
                 </div>
             @endforeach

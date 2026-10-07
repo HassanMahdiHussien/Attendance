@@ -12,6 +12,7 @@ use App\Notifications\ConsultationReady;
 use App\Services\AuditLogger;
 use App\Services\CaseEventLogger;
 use App\Support\Access\CaseVisibility;
+use App\Support\Tenancy\TenantContext;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 
@@ -46,7 +47,11 @@ class ConsultationService
 
     public function complete(DisciplinaryCase $case, User $reviewer, string $note): DisciplinaryCase
     {
-        return DB::transaction(function () use ($case, $reviewer, $note): DisciplinaryCase {
+        if (! CaseVisibility::for($reviewer)->whereKey($case->id)->exists()) {
+            throw new TransitionBlocked('A partnered external reviewer and pending visible consultation are required.');
+        }
+
+        return app(TenantContext::class)->runForCompany($case->company, fn (): DisciplinaryCase => DB::transaction(function () use ($case, $reviewer, $note): DisciplinaryCase {
             $case = DisciplinaryCase::query()->lockForUpdate()->findOrFail($case->id);
             if (! $reviewer->is_active || ! $case->company->is_active
                 || $reviewer->primary_role !== UserRole::ExternalLegalReviewer || blank($note)
@@ -64,7 +69,7 @@ class ConsultationService
             }
 
             return $case;
-        });
+        }));
     }
 
     public function cancel(DisciplinaryCase $case, string $reason, User $admin): DisciplinaryCase

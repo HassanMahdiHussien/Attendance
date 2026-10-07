@@ -49,6 +49,15 @@ class DocumentRenderer
             foreach ($template['blocks'] as $key => $value) {
                 $blocks[$key] = $this->placeholders->resolve($value, $facts, $gender);
             }
+            if ($document->document_type === DocumentType::Recommendations) {
+                $defaultPath = app_path("Documents/Defaults/recommendations.{$language}.php");
+                $defaults = is_file($defaultPath) ? require $defaultPath : [];
+                foreach (['chair_label_female', 'member_label_female'] as $key) {
+                    if (blank($blocks[$key] ?? null)) {
+                        $blocks[$key] = $defaults[$key] ?? $blocks[str_replace('_female', '', $key)];
+                    }
+                }
+            }
             $logo = $this->dataUri($letterhead->logo_path, $letterhead->logo_sha256);
             $headerImage = $this->dataUri($letterhead->header_image_path, $letterhead->header_image_sha256);
             if ($letterhead->header_mode === 'image' && ! $headerImage) {

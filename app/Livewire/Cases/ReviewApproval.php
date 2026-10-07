@@ -4,6 +4,7 @@ namespace App\Livewire\Cases;
 
 use App\Enums\PoolRole;
 use App\Exceptions\TransitionBlocked;
+use App\Models\CommitteeMandate;
 use App\Models\Document;
 use App\Services\Cases\DocumentApprovalService;
 use App\Services\Cases\PoolEligibility;
@@ -28,7 +29,7 @@ class ReviewApproval extends Component
     {
         $draft = Document::query()->findOrFail($document);
         $eligible = app(PoolEligibility::class)->forDocument($draft)->filter(fn (array $row) => $row['user']->id === auth()->id());
-        abort_unless($eligible->isNotEmpty() && CaseVisibility::for(auth()->user())->whereKey($draft->case_id)->exists(), 404);
+        abort_unless($this->canView($draft), 404);
         $this->documentId = $draft->id;
         $this->expectedStatus = $draft->disciplinaryCase->status->value;
         if ($eligible->pluck('category')->unique()->count() === 1) {
@@ -42,6 +43,7 @@ class ReviewApproval extends Component
         $this->validate(['category' => ['required', 'in:legal,hr,labor_union']]);
         try {
             $approvals->approve($draft, auth()->user(), PoolRole::from($this->category));
+            session()->flash('committee_notice', 'سُجلت موافقتك');
             $this->redirect('/committee', navigate: true);
         } catch (TransitionBlocked $error) {
             $this->notice = $error->getMessage();
@@ -55,6 +57,7 @@ class ReviewApproval extends Component
             'comment' => ['required', 'string', 'max:2000']]);
         try {
             $approvals->reject($draft, auth()->user(), $this->comment, PoolRole::from($this->category));
+            session()->flash('committee_notice', 'سُجل رفضك');
             $this->redirect('/committee', navigate: true);
         } catch (TransitionBlocked $error) {
             $this->notice = $error->getMessage();
@@ -63,7 +66,7 @@ class ReviewApproval extends Component
 
     public function render(): View
     {
-        $draft = $this->currentDocument();
+        $draft = $this->currentDocument(false);
         $eligible = app(PoolEligibility::class)->forDocument($draft)
             ->filter(fn (array $row) => $row['user']->id === auth()->id());
 
@@ -71,11 +74,11 @@ class ReviewApproval extends Component
             'categories' => $eligible->pluck('category')->unique()])->layout('layouts.workspace');
     }
 
-    private function currentDocument(): Document
+    private function currentDocument(bool $action = true): Document
     {
         $draft = Document::query()->findOrFail($this->documentId);
-        if (! CaseVisibility::for(auth()->user())->whereKey($draft->case_id)->exists()
-            || ! app(PoolEligibility::class)->forDocument($draft)->contains(fn (array $row) => $row['user']->id === auth()->id())) {
+        if (! $this->canView($draft) || ($action && ! app(PoolEligibility::class)->forDocument($draft)
+            ->contains(fn (array $row) => $row['user']->id === auth()->id()))) {
             abort(404);
         }
         if ($draft->disciplinaryCase->status->value !== $this->expectedStatus) {
@@ -83,5 +86,21 @@ class ReviewApproval extends Component
         }
 
         return $draft;
+    }
+
+    private function canView(Document $draft): bool
+    {
+        $case = $draft->disciplinaryCase;
+        $decided = $draft->approvals()->where('approver_user_id', auth()->id())->whereNull('invalidated_at')->exists();
+        if ((! CaseVisibility::for(auth()->user())->whereKey($case->id)->exists() && ! $decided)
+            || auth()->user()->company_id !== $case->company_id || ! auth()->user()->is_active
+            || ! $case->defense_letter_issued_at) {
+            return false;
+        }
+        $mandate = CommitteeMandate::query()->where('company_id', $case->company_id)
+            ->inEffectOn($case->defense_letter_issued_at)->orderByDesc('effective_from')->first();
+
+        return $mandate?->poolMembers()->where('user_id', auth()->id())
+            ->where(fn ($query) => $query->whereNull('branch_id')->orWhere('branch_id', $case->branch_id))->exists() ?? false;
     }
 }

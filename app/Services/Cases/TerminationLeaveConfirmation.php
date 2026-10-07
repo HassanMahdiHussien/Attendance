@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Services\CaseEventLogger;
 use App\Support\Access\CaseVisibility;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 
 class TerminationLeaveConfirmation
 {
@@ -20,6 +21,7 @@ class TerminationLeaveConfirmation
     {
         return DB::transaction(function () use ($draft, $hrUser): Document {
             $document = Document::query()->lockForUpdate()->findOrFail($draft->id);
+            Gate::forUser($hrUser)->authorize('update', $document->disciplinaryCase);
             if ($document->document_type !== DocumentType::DecisionLetter || $document->penalty_type !== PenaltyType::Termination
                 || $document->is_locked || $document->leave_confirmed_at !== null
                 || ! in_array($hrUser->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)

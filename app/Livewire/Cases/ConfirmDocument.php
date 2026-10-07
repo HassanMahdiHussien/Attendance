@@ -12,10 +12,12 @@ use App\Exceptions\TransitionBlocked;
 use App\Models\Document;
 use App\Services\Cases\CaseDocumentIssuance;
 use App\Services\Cases\DefenseLetterFlow;
+use App\Services\Cases\TerminationLeaveConfirmation;
 use App\Services\Documents\DocumentDrafts;
 use App\Services\Documents\DocumentIssuer;
 use App\Services\Documents\SecondReview;
 use App\Support\Access\CaseVisibility;
+use App\Support\Format\ArabicDigits;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
@@ -34,6 +36,8 @@ class ConfirmDocument extends Component
     public string $expectedStatus = '';
 
     public string $notice = '';
+
+    public bool $leaveChecked = false;
 
     public function mount(string $case, string $document): void
     {
@@ -67,6 +71,17 @@ class ConfirmDocument extends Component
         }
     }
 
+    public function confirmLeave(TerminationLeaveConfirmation $confirmations): void
+    {
+        $draft = $this->currentDocument();
+        if ($draft->document_type !== DocumentType::DecisionLetter || $draft->penalty_type !== PenaltyType::Termination) {
+            abort(404);
+        }
+        $this->validate(['leaveChecked' => ['accepted']]);
+        $confirmations->confirm($draft, auth()->user());
+        $this->notice = 'سُجل تأكيد عدم وجود إجازة قانونية أو غياب مرضي موثق.';
+    }
+
     public function issue(DefenseLetterFlow $flow, CaseDocumentIssuance $issuance): void
     {
         $draft = $this->currentDocument(allowIssued: true);
@@ -98,7 +113,8 @@ class ConfirmDocument extends Component
         } elseif ($draft->document_type === DocumentType::Recommendations) {
             $this->redirect('/cases/'.$this->caseId.'/recommendations'.($draft->version > 1 ? '/'.$draft->id : ''), navigate: true);
         } else {
-            $this->redirect('/cases/'.$this->caseId, navigate: true);
+            $drafts->backToEditDecision($draft, auth()->user());
+            $this->redirect('/cases/'.$this->caseId.'/decision', navigate: true);
         }
     }
 
@@ -145,7 +161,7 @@ class ConfirmDocument extends Component
 
     private function finish(Document $document): void
     {
-        $message = 'صدر الكتاب بالعدد '.$document->reference_number;
+        $message = 'صدر الكتاب بالعدد '.ArabicDigits::convert((string) $document->reference_number);
         if (! $this->referenceDirty && $this->reference !== $document->reference_number) {
             $message .= ' — تغير الرقم المقترح أثناء العمل؛ الرقم المعتمد هو '.$document->reference_number;
         }

@@ -5,6 +5,7 @@ namespace App\Services\Cases;
 use App\Enums\AttachmentKind;
 use App\Enums\CaseStatus;
 use App\Enums\DocumentType;
+use App\Enums\PoolRole;
 use App\Enums\PresenceCheck;
 use App\Enums\SignaturePurpose;
 use App\Enums\SignatureStatus;
@@ -13,12 +14,14 @@ use App\Exceptions\TransitionBlocked;
 use App\Models\CommitteeSessionAttendance;
 use App\Models\DisciplinaryCase;
 use App\Models\Document;
+use App\Models\Employee;
 use App\Models\Signature;
 use App\Models\User;
 use App\Notifications\ConsultationReady;
 use App\Services\Attachments\AttachmentService;
 use App\Services\AuditLogger;
 use App\Services\CaseEventLogger;
+use App\Support\Access\CaseVisibility;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -101,6 +104,46 @@ class SignaturePresence
         return Signature::query()->where('document_id', $document->id)
             ->where('purpose', SignaturePurpose::CommitteeSignature->value)->orderByDesc('id')->get()
             ->unique('committee_pool_member_id')->values();
+    }
+
+    public function recordDecisionSignatures(Document $draft, array $presence, User $hr): void
+    {
+        DB::transaction(function () use ($draft, $presence, $hr): void {
+            $document = Document::query()->lockForUpdate()->findOrFail($draft->id);
+            $case = DisciplinaryCase::query()->lockForUpdate()->findOrFail($document->case_id);
+            Gate::forUser($hr)->authorize('update', $case);
+            if ($document->document_type !== DocumentType::DecisionLetter || ! $document->is_locked
+                || ! in_array($case->status, [CaseStatus::AwaitingAppealWindow, CaseStatus::AppealPending], true)
+                || ! CaseVisibility::for($hr)->whereKey($case->id)->exists()
+                || array_diff(array_keys($presence), ['general_manager', 'union'])
+                || array_diff(['general_manager', 'union'], array_keys($presence))) {
+                throw new TransitionBlocked('An issued decision and both paper signer boxes are required.');
+            }
+            foreach ($presence as $value) {
+                if (! in_array($value, ['filled', 'empty'], true)) {
+                    throw new TransitionBlocked('Each signature box must be filled or empty.');
+                }
+            }
+            $gm = Employee::query()->where('company_id', $case->company_id)->where('is_general_manager', true)->where('is_active', true)->first();
+            $union = CommitteeSessionAttendance::query()->where('case_id', $case->id)
+                ->whereHas('committeePoolMember', fn ($query) => $query->where('role_type', PoolRole::LaborUnion->value))
+                ->with('committeePoolMember')->first();
+            if (! $gm || ! $union) {
+                throw new TransitionBlocked('The decision paper signers are missing.');
+            }
+            foreach (['general_manager', 'union'] as $signer) {
+                $isGm = $signer === 'general_manager';
+                Signature::create(['company_id' => $case->company_id, 'case_id' => $case->id,
+                    'document_id' => $document->id, 'purpose' => $isGm ? SignaturePurpose::GeneralManagerSignature : SignaturePurpose::UnionSignature,
+                    'status' => SignatureStatus::Pending, 'signer_name' => $isGm ? $gm->name : $union->committeePoolMember->person_name,
+                    'signer_role' => $signer, 'employee_id' => $isGm ? $gm->id : null,
+                    'committee_pool_member_id' => $isGm ? null : $union->committee_pool_member_id,
+                    'presence_check' => $presence[$signer] === 'filled' ? PresenceCheck::BoxFilled : PresenceCheck::BoxAppearsEmpty,
+                    'presence_checked_at' => now(), 'checked_by' => $hr->id]);
+            }
+            $this->events->log($case, 'decision_signature_boxes_recorded', ['document_id' => $document->id,
+                'empty_signers' => array_keys(array_filter($presence, fn ($value) => $value === 'empty'))], actor: $hr);
+        });
     }
 
     private function notifyReviewers(DisciplinaryCase $case): void
