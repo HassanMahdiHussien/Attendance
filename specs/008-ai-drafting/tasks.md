@@ -16,9 +16,9 @@ Research R12 (plan review resolutions) overrides earlier research sections.
 - [x] T007 Tests: payload allow-list (forbidden fields absent), candidates ranking + cap + empty set note, validator (bare article, foreign marker, missing language, placeholders), outcome consistency, success path per document type, unavailable → previous state, stale job saves nothing, reconcile, relevance supports/partial/does_not_support/unavailable, override reason + audit, gate, citations sync add/remove, superseded refresh, English rendering, tenant isolation of notes and topics
 
 ## Run Q — screens
-- [ ] T008 Editors: AI button (policy + preconditions), polling while drafting, unavailable banner, notes panel, citation picker modal inserting markers at the cursor
-- [ ] T009 ConfirmDocument: relevance badges + reasons, re-check, override form, superseded replacement; Arabic timeline labels for the new events
-- [ ] T010 Platform library: law name_en field; unit topic tags (discipline + free text)
-- [ ] T011 Local-only `ai:demo-fake` toggle for walkthroughs (refused outside local)
-- [ ] T012 Tests: screens per role (HR, admin, hr_staff unassigned, pool member, reviewer, reporter), Livewire update-endpoint authorisation, polling end states, picker only offers citable units, override requires reason
-- [ ] T013 docs: ERD, WEIRDNESS (AI never sees names/IDs; outcome keyword check is conservative; topics outside the immutable unit row), ADR 0003 note (AI boundary implemented); orchestrator walkthrough; PR
+- [x] T008 Editors: AI button (policy + preconditions), polling while drafting, unavailable banner, notes panel, citation picker modal inserting markers at the cursor
+- [x] T009 ConfirmDocument: relevance badges + reasons, re-check, override form, superseded replacement; Arabic timeline labels for the new events
+- [x] T010 Platform library: law name_en field; unit topic tags (discipline + free text)
+- [x] T011 Local-only `ai:demo-fake` toggle for walkthroughs (refused outside local)
+- [x] T012 Tests: screens per role (HR, admin, hr_staff unassigned, pool member, reviewer, reporter), Livewire update-endpoint authorisation, polling end states, picker only offers citable units, override requires reason
+- [x] T013 docs: ERD, WEIRDNESS (AI never sees names/IDs; outcome keyword check is conservative; topics outside the immutable unit row), ADR 0003 note (AI boundary implemented); orchestrator walkthrough; PR

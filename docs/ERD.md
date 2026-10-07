@@ -466,6 +466,18 @@ erDiagram
 
 ## Integrity notes
 
+### AI drafting and citation review (2026-10-08)
+
+| Table | Added fields or relationship | Rule |
+|---|---|---|
+| `laws` | Nullable `name_en` | English citation rendering falls back to the Arabic name. |
+| `cases` | `ai_request_id`, `ai_request_document_type`, `ai_request_from_status`, `ai_request_started_at` | A request token ties a queued job to its case state; stale workers cannot save. |
+| `citations` | `claim_hash`, `override_reason` | One row per Arabic claim and unit. An override requires a recorded reason. |
+| `ai_draft_notes` | `company_id`, `case_id`, `document_id`, `ai_generation_log_id`, JSON `notes`, `created_at` | Append-only notes stay outside the issued document. |
+| `legal_unit_topics` | `legal_unit_id`, `topic`, `created_by`, `created_at` | Topics can change without editing verified legal text. Current versions only. |
+
+`documents.drafted_by` distinguishes AI drafts from manual drafts. `ai_generation_logs` and `case_events` retain the append-only history of requests, saves, failures, checks, and overrides.
+
 ### Document template and rendering additions (2026-10-05)
 
 | Table | Added fields and relationships | Rule |

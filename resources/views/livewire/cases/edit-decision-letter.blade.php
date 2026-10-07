@@ -5,6 +5,8 @@
         <p class="text-gray-500">اكتب أسباب القرار الذي اتخذته اللجنة. تُطبع النتيجة ونوع العقوبة من سجل الحالة.</p>
         @if($notice)<p role="status" class="bg-amber-light text-amber rounded-2xl p-4">{{ $notice }}</p>@endif
         @error('notice')<p role="alert" class="text-red">{{ $message }}</p>@enderror
+        @include('livewire.cases.partials.ai-editor-controls')
+        @include('livewire.cases.partials.citation-review')
         @foreach($languages as $language)
             <label class="block font-bold" dir="{{ $language === 'en' ? 'ltr' : 'rtl' }}">{{ ['ar'=>'العربية','en'=>'English','ku'=>'کوردی'][$language] ?? $language }}
                 <textarea wire:model="reasons.{{ $language }}" rows="8" class="block w-full rounded-xl border p-3 mt-2"></textarea>

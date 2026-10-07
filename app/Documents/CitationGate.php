@@ -23,10 +23,10 @@ class CitationGate
                 }
                 $prose = preg_replace('/\[\[cite:\d+\]\]/', '', $body);
                 if (preg_match('/(?:المادة|مادة|Article)\s*[(（]?\s*[0-9٠-٩]+/iu', $prose)) {
-                    throw new IssuanceBlocked('Article numbers must use citation markers.');
+                    throw new IssuanceBlocked('يجب إدراج أرقام المواد عبر علامة الاستشهاد.');
                 }
                 if (str_contains($prose, '[[cite:')) {
-                    throw new IssuanceBlocked('Malformed citation marker.');
+                    throw new IssuanceBlocked('علامة الاستشهاد غير صحيحة.');
                 }
                 foreach (CitationSync::claims($body) as $claim) {
                     $id = $claim['legal_unit_id'];
@@ -35,7 +35,8 @@ class CitationGate
                     if (! $citation || ! $this->valid($citation, $case)) {
                         $message = $citation?->legalUnit?->superseded_by_id !== null
                             ? 'النص القانوني صُحح — حدّث الاستشهاد'
-                            : "Citation {$id} is not issuable.";
+                            : 'الاستشهاد بالمادة ('.(LegalUnit::withoutGlobalScopes()->find($id)?->article_number ?? $id)
+                                .') يحتاج إلى فحص داعم أو تجاوز مسبب.';
                         throw new IssuanceBlocked($message);
                     }
                 }

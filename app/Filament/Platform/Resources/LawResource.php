@@ -54,6 +54,7 @@ class LawResource extends Resource
     {
         return $schema->components([
             TextInput::make('name')->label('اسم القانون')->required()->maxLength(255),
+            TextInput::make('name_en')->label('اسم القانون بالإنجليزية')->maxLength(255),
             TextInput::make('number')->label('الرقم')->required(),
             TextInput::make('year')->label('السنة')->numeric()->required(),
             Select::make('category')->label('التصنيف')->options(['labor' => 'عمل', 'social_security' => 'ضمان اجتماعي', 'other' => 'أخرى'])->required(),
@@ -74,6 +75,7 @@ class LawResource extends Resource
     {
         return $table->columns([
             TextColumn::make('name')->label('القانون')->searchable(),
+            TextColumn::make('name_en')->label('الاسم بالإنجليزية')->toggleable(),
             TextColumn::make('number')->label('الرقم'),
             TextColumn::make('year')->label('السنة'),
             TextColumn::make('category')->label('التصنيف')->formatStateUsing(fn ($state): string => LegalLibraryLabels::category($state instanceof \BackedEnum ? $state->value : (string) $state)),

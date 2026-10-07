@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Cases;
 
+use App\Documents\CitationGate;
 use App\Enums\CaseStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\DocumentType;
@@ -9,6 +10,7 @@ use App\Enums\PenaltyType;
 use App\Enums\PoolRole;
 use App\Exceptions\IssuanceBlocked;
 use App\Exceptions\TransitionBlocked;
+use App\Livewire\Cases\Concerns\ReviewsCitations;
 use App\Models\Document;
 use App\Services\Cases\CaseDocumentIssuance;
 use App\Services\Cases\DefenseLetterFlow;
@@ -25,6 +27,8 @@ use Livewire\Component;
 
 class ConfirmDocument extends Component
 {
+    use ReviewsCitations;
+
     public int $caseId;
 
     public int $documentId;
@@ -138,6 +142,14 @@ class ConfirmDocument extends Component
             }
             if ($document->penalty_type === PenaltyType::Termination && ! $document->leave_confirmed_at) {
                 $blockers[] = 'يلزم تأكيد عدم وجود إجازة قانونية أو غياب مرضي موثق';
+            }
+        }
+
+        if (! $document->is_locked) {
+            try {
+                app(CitationGate::class)->assertIssuable($document);
+            } catch (IssuanceBlocked $error) {
+                $blockers[] = $error->getMessage();
             }
         }
 
