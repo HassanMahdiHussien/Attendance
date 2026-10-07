@@ -7,6 +7,13 @@
         @if(!$document->is_locked && $document->document_type === \App\Enums\DocumentType::DecisionLetter && $document->penalty_type === \App\Enums\PenaltyType::Termination && !$document->leave_confirmed_at)<label class="flex gap-2 items-center mb-3"><input type="checkbox" wire:model="leaveChecked">الموظف ليس في إجازة قانونية أو غياب مرضي موثق</label><button wire:click="confirmLeave" class="border border-primary text-primary rounded-2xl px-5 py-3 mb-5">تسجيل التأكيد</button>@error('leaveChecked')<p class="text-red">{{ $message }}</p>@enderror@endif
         @if($notice)<p role="status" class="bg-primary-light text-primary rounded-2xl p-4 mb-5">{{ $notice }}</p>@endif
         @error('notice')<p role="alert" class="bg-red-light text-red rounded-2xl p-4 mb-5">{{ $message }}</p>@enderror
+        @include('livewire.cases.partials.citation-review')
+        @if($document->drafted_by === \App\Enums\DraftedBy::Ai)
+            <p class="rounded-2xl bg-amber-light text-amber p-4 mb-5">تحقق من صياغة الذكاء الاصطناعي والمراجع قبل الإصدار. فحص كلمات النتيجة تنبيه للمراجعة وليس ضماناً لصحة القرار.</p>
+            @if($notes = $document->aiDraftNotes()->latest('id')->first())
+                <aside class="rounded-2xl bg-gray-50 p-4 mb-5"><h2 class="font-bold">ملاحظات الصياغة</h2><ul class="list-disc pr-5">@foreach($notes->notes ?? [] as $note)<li>{{ $note }}</li>@endforeach</ul></aside>
+            @endif
+        @endif
         <div class="bg-gray-50 rounded-2xl p-4 md:p-6 mb-5" style="font-family: Amiri, serif">
             @if($document->is_locked)
                 <p class="mb-3">العدد: {{ $document->reference_number }}</p>

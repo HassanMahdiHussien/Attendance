@@ -1,7 +1,10 @@
 <?php
 
 return [
-    'ai' => ['legal_reading_model' => env('LEGAL_READING_MODEL', 'claude-opus-5-5')],
+    'ai' => ['legal_reading_model' => env('LEGAL_READING_MODEL', 'claude-opus-5-5'),
+        'drafting_model' => env('DRAFTING_MODEL', 'claude-opus-5-5'),
+        'relevance_model' => env('RELEVANCE_MODEL', 'claude-opus-5-5'),
+        'max_candidates' => 30],
     'legal_library' => [
         'max_pages' => 300, 'max_file_mb' => 50, 'dpi' => 250,
         'max_long_edge' => 4000, 'ai_long_edge' => 1568,

@@ -1,14 +1,18 @@
 <?php
 
+use App\Enums\CaseStatus;
 use App\Jobs\BuildLegalUnits;
 use App\Jobs\GenerateDocumentPdf;
 use App\Jobs\ReadLegalPageText;
 use App\Jobs\ReadLegalPageWithAi;
 use App\LegalLibrary\ImportProgress;
 use App\Models\Company;
+use App\Models\DisciplinaryCase;
 use App\Models\Document;
 use App\Models\LegalImportRun;
+use App\Services\CaseEventLogger;
 use App\Services\Cases\CaseAlertDispatcher;
+use App\Services\Cases\CaseWorkflow;
 use App\Services\Cases\ExpiredAppealArchiver;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Foundation\Inspiring;
@@ -67,6 +71,32 @@ Artisan::command('legal-library:reconcile', function (): void {
 })->purpose('Recover stalled legal library imports');
 
 Schedule::command('legal-library:reconcile')->everyTenMinutes();
+
+Artisan::command('ai:reconcile-drafting', function (): void {
+    DisciplinaryCase::withoutGlobalScopes()->whereNotNull('ai_request_id')
+        ->where('ai_request_started_at', '<=', now()->subMinutes(20))->chunkById(100, function ($cases): void {
+            foreach ($cases as $stale) {
+                app(TenantContext::class)->runForCompany($stale->company_id, function () use ($stale): void {
+                    DB::transaction(function () use ($stale): void {
+                        $case = DisciplinaryCase::query()->lockForUpdate()->find($stale->id);
+                        if (! $case || ! $case->ai_request_id || $case->ai_request_started_at?->gt(now()->subMinutes(20))) {
+                            return;
+                        }
+                        $from = CaseStatus::tryFrom((string) $case->ai_request_from_status);
+                        if ($from && in_array($case->status, [CaseStatus::AiDraftingDefenseLetter,
+                            CaseStatus::AiDraftingRecommendations, CaseStatus::AiVerifyAndClose], true)) {
+                            app(CaseWorkflow::class)->transition($case, $from, null, 'AI drafting timed out');
+                        }
+                        $case->forceFill(['ai_request_id' => null, 'ai_request_document_type' => null,
+                            'ai_request_from_status' => null, 'ai_request_started_at' => null])->save();
+                        app(CaseEventLogger::class)->log($case, 'ai_draft_failed', ['reason' => 'AI unavailable — write it manually or try again']);
+                    });
+                });
+            }
+        });
+})->purpose('Return stalled AI drafting cases to their previous state');
+
+Schedule::command('ai:reconcile-drafting')->everyTenMinutes();
 
 Artisan::command('documents:retry-pdf {id}', function (int $id): void {
     $row = DB::table('documents')->where('id', $id)->first();

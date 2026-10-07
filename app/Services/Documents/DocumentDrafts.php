@@ -3,6 +3,7 @@
 namespace App\Services\Documents;
 
 use App\Documents\CitationGate;
+use App\Documents\DraftLanguages;
 use App\Enums\CaseStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\DocumentType;
@@ -24,9 +25,9 @@ class DocumentDrafts
 {
     public function __construct(private CaseWorkflow $workflow, private CaseEventLogger $events) {}
 
-    public function createOrUpdate(DisciplinaryCase $case, DocumentType $type, array $bodies, User $actor, ?Document $draft = null): Document
+    public function createOrUpdate(DisciplinaryCase $case, DocumentType $type, array $bodies, User $actor, ?Document $draft = null, DraftedBy $origin = DraftedBy::Human): Document
     {
-        return DB::transaction(function () use ($case, $type, $bodies, $actor, $draft): Document {
+        return DB::transaction(function () use ($case, $type, $bodies, $actor, $draft, $origin): Document {
             $case = DisciplinaryCase::query()->lockForUpdate()->findOrFail($case->id);
             Gate::forUser($actor)->authorize('manageDocuments', $case);
             if ($type !== DocumentType::DefenseLetter || ($draft?->version === 1
@@ -41,7 +42,7 @@ class DocumentDrafts
             if ($draft?->is_locked || ($draft !== null && $draft->document_type !== $type)) {
                 throw new TransitionBlocked('Issued documents cannot be edited.');
             }
-            $languages = array_values(array_unique(array_merge(['ar', 'en'], $case->company->enabled_languages)));
+            $languages = app(DraftLanguages::class)->for($case->company, $type);
             if (array_diff($languages, array_keys($bodies)) || array_diff(array_keys($bodies), $languages)) {
                 throw ValidationException::withMessages(['bodies' => 'يجب كتابة النص بكل اللغات المفعلة.']);
             }
@@ -56,7 +57,7 @@ class DocumentDrafts
                 }
                 $draft = Document::create([
                     'company_id' => $case->company_id, 'case_id' => $case->id, 'document_type' => $type,
-                    'drafted_by' => DraftedBy::Human, 'status' => DocumentStatus::Draft,
+                    'drafted_by' => $origin, 'status' => DocumentStatus::Draft,
                     'version' => 1, 'created_by' => $actor->id,
                 ]);
             }
@@ -70,29 +71,32 @@ class DocumentDrafts
                 }
             }
             if ($changed) {
+                $draft->drafted_by = $origin;
                 $draft->forceFill(['last_edited_by' => $actor->id, 'second_reviewed_by' => null,
                     'second_reviewed_at' => null, 'status' => DocumentStatus::Draft])->save();
                 if ($draft->version === 1 && in_array($case->status, [CaseStatus::DefenseLetterCitationCheck, CaseStatus::DefenseLetterReadyForReview], true)) {
                     $this->workflow->transition($case, CaseStatus::Open, $actor, 'Defense letter text changed');
                 }
             }
+            app(CitationSync::class)->sync($draft);
             $this->events->log($case, 'document_draft_saved', ['document_id' => $draft->id, 'content_changed' => $changed], actor: $actor);
 
             return $draft->refresh();
         });
     }
 
-    public function createOrUpdateDecision(DisciplinaryCase $case, array $bodies, User $actor, ?Document $draft = null): Document
+    public function createOrUpdateDecision(DisciplinaryCase $case, array $bodies, User $actor, ?Document $draft = null, DraftedBy $origin = DraftedBy::Human): Document
     {
-        return DB::transaction(function () use ($case, $bodies, $actor, $draft): Document {
+        return DB::transaction(function () use ($case, $bodies, $actor, $draft, $origin): Document {
             $case = DisciplinaryCase::query()->lockForUpdate()->findOrFail($case->id);
             Gate::forUser($actor)->authorize('manageDocuments', $case);
-            if (! in_array($case->status, [CaseStatus::SignedRecommendationsUploaded, CaseStatus::DecisionLetterCitationCheck], true)
+            if (($draft === null || $draft->version === 1)
+                && ! in_array($case->status, [CaseStatus::SignedRecommendationsUploaded, CaseStatus::DecisionLetterCitationCheck], true)
                 || ! in_array($case->outcome, [Outcome::Warning, Outcome::Termination], true)
                 || ! CaseVisibility::for($actor)->whereKey($case->id)->exists()) {
                 throw new TransitionBlocked('A signed recommendation with a penalty is required.');
             }
-            $languages = array_values(array_unique(array_merge(['ar', 'en'], $case->company->enabled_languages)));
+            $languages = app(DraftLanguages::class)->for($case->company, DocumentType::DecisionLetter);
             if (array_diff($languages, array_keys($bodies)) || array_diff(array_keys($bodies), $languages)) {
                 throw ValidationException::withMessages(['bodies' => 'يجب كتابة أسباب القرار بكل اللغات المفعلة.']);
             }
@@ -103,21 +107,22 @@ class DocumentDrafts
             }
             $document = $draft ? $case->documents()->lockForUpdate()->findOrFail($draft->id)
                 : $case->documents()->where('document_type', DocumentType::DecisionLetter->value)->where('is_locked', false)->lockForUpdate()->first();
-            if ($document && ($document->is_locked || $document->document_type !== DocumentType::DecisionLetter || $document->version !== 1)) {
+            if ($document && ($document->is_locked || $document->document_type !== DocumentType::DecisionLetter)) {
                 throw new TransitionBlocked('Issued documents cannot be edited.');
             }
             if (! $document) {
                 $document = Document::create(['company_id' => $case->company_id, 'case_id' => $case->id,
                     'document_type' => DocumentType::DecisionLetter, 'penalty_type' => PenaltyType::from($case->outcome->value),
-                    'drafted_by' => DraftedBy::Human, 'status' => DocumentStatus::Draft,
+                    'drafted_by' => $origin, 'status' => DocumentStatus::Draft,
                     'version' => 1, 'created_by' => $actor->id]);
             }
             foreach ($bodies as $language => $body) {
                 $document->contents()->updateOrCreate(['language_code' => $language],
                     ['company_id' => $case->company_id, 'body' => $body, 'is_authoritative' => $language === 'ar']);
             }
-            $document->forceFill(['last_edited_by' => $actor->id, 'second_reviewed_by' => null,
+            $document->forceFill(['drafted_by' => $origin, 'last_edited_by' => $actor->id, 'second_reviewed_by' => null,
                 'second_reviewed_at' => null, 'status' => DocumentStatus::Draft])->save();
+            app(CitationSync::class)->sync($document);
             $this->events->log($case, 'decision_draft_saved', ['document_id' => $document->id], actor: $actor);
 
             return $document->refresh();

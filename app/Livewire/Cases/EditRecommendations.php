@@ -6,6 +6,7 @@ use App\Enums\CaseStatus;
 use App\Enums\DocumentType;
 use App\Exceptions\IssuanceBlocked;
 use App\Exceptions\TransitionBlocked;
+use App\Livewire\Cases\Concerns\DraftsWithAi;
 use App\Models\DisciplinaryCase;
 use App\Models\Document;
 use App\Services\Cases\RecommendationsEditor;
@@ -17,6 +18,8 @@ use Livewire\Component;
 
 class EditRecommendations extends Component
 {
+    use DraftsWithAi;
+
     public int $caseId;
 
     public ?int $documentId = null;
@@ -33,7 +36,7 @@ class EditRecommendations extends Component
     {
         $record = CaseVisibility::for(auth()->user())->findOrFail($case);
         Gate::authorize('manageDocuments', $record);
-        abort_unless($document !== null || in_array($record->status, [CaseStatus::CommitteeSessionHeld, CaseStatus::RecommendationsCitationCheck,
+        abort_unless($document !== null || in_array($record->status, [CaseStatus::CommitteeSessionHeld, CaseStatus::AiDraftingRecommendations, CaseStatus::RecommendationsCitationCheck,
             CaseStatus::RecommendationsAwaitingApprovals, CaseStatus::RecommendationsConfirmed], true), 404);
         $this->caseId = $record->id;
         $this->expectedStatus = $record->status->value;
@@ -83,9 +86,22 @@ class EditRecommendations extends Component
         $case = CaseVisibility::for(auth()->user())->findOrFail($this->caseId);
         Gate::authorize('manageDocuments', $case);
 
-        return view('livewire.cases.edit-recommendations', ['case' => $case,
+        return view('livewire.cases.edit-recommendations', ['case' => $case, 'units' => $this->citableUnits($case),
+            'aiAvailable' => $this->canRequestAi($case), 'aiBusy' => $case->status === $this->aiBusyStage() && $case->ai_request_id !== null,
+            'aiFailed' => $this->aiFailed($case),
             'languages' => array_unique(array_merge(['ar', 'en'], $case->company->enabled_languages)),
             'document' => $this->documentId ? $case->documents()->findOrFail($this->documentId) : null])->layout('layouts.workspace');
+    }
+
+    protected function aiDocumentType(): DocumentType
+    {
+        return DocumentType::Recommendations;
+    }
+
+    protected function loadAiBodies(Document $document): void
+    {
+        $this->findings = $document->contents->pluck('body', 'language_code')->all();
+        $this->recommendations = $document->contents->pluck('secondary_body', 'language_code')->all();
     }
 
     private function editable(): DisciplinaryCase

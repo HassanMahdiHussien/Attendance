@@ -58,3 +58,7 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 - **Text and Word regulations are verified from their exact source text but still need company lawyer approval.** Source fidelity and company authorization are separate gates. (2026-10-07)
 - **A `verified_auto` unit stores the AI reading's clean spacing as its official text.** The normalized comparison establishes equivalence while the published text remains readable. (2026-10-07)
 - **PDF text layers with spaces inside words fall back to OCR.** Such layers can appear selectable while corrupting Arabic word boundaries. (2026-10-07)
+- **The drafting AI never receives names or personal IDs.** Known names in free text are masked as whole words and restored after drafting; long numbers, phones, and emails remain masked. (2026-10-08)
+- **The outcome keyword check is a review flag.** The operative recommendation sentence comes from the recorded outcome through the template, while the keyword check only calls attention to potentially conflicting prose. (2026-10-08)
+- **Legal topics live outside immutable unit rows.** Platform editors can retag a current verified unit without changing its official text or version. (2026-10-08)
+- **Claude responses use the first text block.** A thinking block can precede the model's text, so the first content block is not necessarily the answer. (2026-10-08)

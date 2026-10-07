@@ -2,6 +2,8 @@
 
 **Status:** Accepted
 
+**Implementation note (008):** Drafting, citation markers, per-claim relevance review, human overrides with reasons, and the confirmation gate were implemented in feature 008. The AI request masks known names as whole words and does not receive personal IDs; the recorded outcome supplies the operative recommendation sentence through the template. A keyword check flags prose for human review.
+
 ## Context
 The product's legal credibility depends entirely on AI never being seen as the decision-maker in a disciplinary process governed by Iraqi Labor Law. Early design treated the AI as alert-only (citing law articles, never drafting). Later requirements clarified the AI should also do the actual legal drafting (defense letters, recommendations, decision letters) to save HR the repetitive writing work — but the facts and the decision must still always originate from a human.
 

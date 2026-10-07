@@ -47,6 +47,14 @@ class DocumentFacts
                 'termination' => $language === 'en' ? 'termination' : 'إنهاء خدمة',
                 default => null,
             },
+            'outcome' => $language === 'en' ? match ($case->outcome?->value) {
+                'warning' => 'a written warning', 'termination' => 'termination of employment',
+                'recommendation_only' => 'a recommendation without a penalty', default => null,
+            } : match ($case->outcome?->value) {
+                // Phrases completing "توصي اللجنة بـ…"; the short labels (OutcomeLabel) read badly there.
+                'warning' => 'توجيه إنذار خطي', 'termination' => 'إنهاء خدمة الموظف',
+                'recommendation_only' => 'الاكتفاء بالتوصية دون فرض عقوبة', default => null,
+            },
         ];
         $extra = ['attendees' => [], 'prior_cases' => []];
         if ($document->document_type !== DocumentType::DefenseLetter) {

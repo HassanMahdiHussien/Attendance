@@ -93,6 +93,8 @@ test('second review needs a time and another user', function (): void {
 
 test('recommendations require three valid approvals', function (): void {
     [, $actor, $document] = documentFixture(type: 'recommendations');
+    // The recommendations print the recorded outcome (outcome_sentence block).
+    $document->disciplinaryCase->update(['outcome' => 'warning']);
     addContents($document);
     $issuer = app(DocumentIssuer::class);
     foreach (['legal', 'hr', 'labor_union'] as $role) {

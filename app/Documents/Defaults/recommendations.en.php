@@ -6,6 +6,7 @@ return [
     'lead_in' => 'The following proceedings and decisions were recorded:',
     'findings_intro' => 'After reviewing the defense request, the committee found:',
     'recommendations_intro' => 'On that basis, the committee recommends:',
+    'outcome_sentence' => 'The committee recommends {outcome}',
     'prior_record' => 'Prior record',
     'role_legal' => 'Legal',
     'role_hr' => 'Human Resources',

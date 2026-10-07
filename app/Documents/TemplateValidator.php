@@ -6,11 +6,11 @@ use Illuminate\Validation\ValidationException;
 
 class TemplateValidator
 {
-    public const PLACEHOLDERS = ['company_name', 'employee_name', 'employee_first_name', 'employee_code', 'position', 'department', 'branch', 'hire_date', 'issue_date', 'reference_number', 'response_deadline', 'complaint_date', 'mandate_number', 'mandate_date', 'session_date', 'penalty', 'gm_name', 'union_rep_name'];
+    public const PLACEHOLDERS = ['outcome', 'company_name', 'employee_name', 'employee_first_name', 'employee_code', 'position', 'department', 'branch', 'hire_date', 'issue_date', 'reference_number', 'response_deadline', 'complaint_date', 'mandate_number', 'mandate_date', 'session_date', 'penalty', 'gm_name', 'union_rep_name'];
 
     private const REQUIRED = [
         'defense_letter' => ['title', 'from_label', 'from_value', 'to_label', 'subject_label', 'subject_value', 'date_label', 'salutation', 'opening', 'deadline_sentence'],
-        'recommendations' => ['title', 'mandate_sentence', 'findings_intro', 'recommendations_intro', 'role_legal', 'role_hr', 'role_labor_union', 'chair_label', 'member_label'],
+        'recommendations' => ['title', 'mandate_sentence', 'findings_intro', 'recommendations_intro', 'outcome_sentence', 'role_legal', 'role_hr', 'role_labor_union', 'chair_label', 'member_label'],
         'decision_letter' => ['title_warning', 'title_termination', 'salutation', 'opening', 'defense_outcome_rejected', 'defense_outcome_partial', 'defense_outcome_accepted', 'decision_sentence', 'gm_title', 'union_title'],
     ];
 
@@ -23,7 +23,7 @@ class TemplateValidator
         }
         $requiredTokens = ['salutation' => ['employee_first_name'], 'opening' => ['hire_date', 'position'],
             'deadline_sentence' => ['response_deadline'], 'mandate_sentence' => ['mandate_number', 'mandate_date', 'session_date'],
-            'decision_sentence' => ['penalty'], 'gm_title' => ['gm_name'], 'union_title' => ['union_rep_name']];
+            'decision_sentence' => ['penalty'], 'outcome_sentence' => ['outcome'], 'gm_title' => ['gm_name'], 'union_title' => ['union_rep_name']];
         foreach ($blocks as $key => $block) {
             if (! is_string($block)) {
                 throw ValidationException::withMessages([$key => 'Template block must be text.']);

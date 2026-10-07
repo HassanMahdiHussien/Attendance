@@ -2,6 +2,8 @@
     <div><a href="/cases/{{ $record->id }}" class="text-primary text-sm">← الحالة</a><h1 class="text-2xl font-black mt-3">تحرير كتاب طلب الدفاع</h1></div>
     @if($notice)<p role="status" class="rounded-2xl bg-amber-light text-amber p-4">{{ $notice }}</p>@endif
     @error('notice')<p role="alert" class="rounded-2xl bg-red-light text-red p-4">{{ $message }}</p>@enderror
+    @include('livewire.cases.partials.ai-editor-controls', ['case' => $record])
+    @include('livewire.cases.partials.citation-review')
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <section class="bg-white rounded-3xl p-6 space-y-5">
             @foreach($languages as $language)

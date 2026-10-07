@@ -5,7 +5,9 @@ namespace App\Livewire\Cases;
 use App\Enums\DocumentType;
 use App\Exceptions\IssuanceBlocked;
 use App\Exceptions\TransitionBlocked;
+use App\Livewire\Cases\Concerns\DraftsWithAi;
 use App\Models\DisciplinaryCase;
+use App\Models\Document;
 use App\Services\Documents\DocumentDrafts;
 use App\Support\Access\CaseVisibility;
 use Illuminate\Contracts\View\View;
@@ -15,6 +17,8 @@ use Livewire\Component;
 
 class EditDocument extends Component
 {
+    use DraftsWithAi;
+
     public int $caseId;
 
     public ?int $documentId = null;
@@ -81,8 +85,23 @@ class EditDocument extends Component
         $case = CaseVisibility::for(auth()->user())->findOrFail($this->caseId);
         Gate::authorize('manageDocuments', $case);
 
-        return view('livewire.cases.edit-document', ['record' => $case, 'languages' => array_unique(array_merge(['ar', 'en'], $case->company->enabled_languages))])
+        $document = $this->documentId ? $case->documents()->findOrFail($this->documentId) : null;
+
+        return view('livewire.cases.edit-document', ['record' => $case, 'document' => $document,
+            'aiAvailable' => $this->canRequestAi($case), 'aiBusy' => $case->status === $this->aiBusyStage() && $case->ai_request_id !== null,
+            'aiFailed' => $this->aiFailed($case),
+            'units' => $this->citableUnits($case), 'languages' => array_unique(array_merge(['ar', 'en'], $case->company->enabled_languages))])
             ->layout('layouts.workspace');
+    }
+
+    protected function aiDocumentType(): DocumentType
+    {
+        return DocumentType::DefenseLetter;
+    }
+
+    protected function loadAiBodies(Document $document): void
+    {
+        $this->bodies = $document->contents->pluck('body', 'language_code')->all();
     }
 
     private function currentCase(): DisciplinaryCase

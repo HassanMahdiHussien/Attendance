@@ -78,8 +78,8 @@ class CaseWorkflow
             }
         }
         if ($case->status === S::Open && $to === S::DefenseLetterCitationCheck
-            && ! $case->documents()->where('document_type', DocumentType::DefenseLetter->value)->where('drafted_by', 'human')->exists()) {
-            throw new TransitionBlocked('A human defense-letter draft is required.');
+            && ! $case->documents()->where('document_type', DocumentType::DefenseLetter->value)->where('is_locked', false)->exists()) {
+            throw new TransitionBlocked('A defense-letter draft is required.');
         }
         if (in_array($to, [S::DefenseLetterReadyForReview, S::RecommendationsAwaitingApprovals, S::DecisionLetterReadyForReview], true)) {
             $type = match ($to) {

@@ -48,6 +48,11 @@ class CaseTimeline
     public static function format(string $type, array $payload = [], array $context = []): string
     {
         return match ($type) {
+            'ai_draft_requested' => 'طُلبت صياغة بالذكاء الاصطناعي',
+            'ai_draft_saved' => 'حُفظت مسودة الذكاء الاصطناعي',
+            'ai_draft_failed' => 'تعذرت الصياغة بالذكاء الاصطناعي',
+            'citation_relevance_checked' => 'فُحصت ملاءمة الاستشهادات',
+            'citation_overridden' => 'تجاوز ملاحظة استشهاد',
             'status_changed' => 'انتقلت الحالة إلى: '.self::statusLabel($payload['to'] ?? ''),
             'appeal_filed' => 'سُجل تقديم طعن',
             'appeal_outcome_recorded' => 'سُجلت نتيجة الطعن'.self::detail($payload['outcome'] ?? null),

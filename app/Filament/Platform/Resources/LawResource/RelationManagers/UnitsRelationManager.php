@@ -2,12 +2,14 @@
 
 namespace App\Filament\Platform\Resources\LawResource\RelationManagers;
 
+use App\LegalLibrary\LawManagement;
 use App\LegalLibrary\MismatchResolver;
 use App\LegalLibrary\UnitCorrection;
 use App\Models\LegalUnit;
 use App\Support\Format\LegalLibraryLabels;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Columns\TextColumn;
@@ -32,12 +34,22 @@ class UnitsRelationManager extends RelationManager
                 ->formatStateUsing(fn ($state): string => LegalLibraryLabels::unitStatus($state instanceof \BackedEnum ? $state->value : (string) $state))
                 ->color(fn ($state): string => LegalLibraryLabels::statusColor($state instanceof \BackedEnum ? $state->value : (string) $state)),
             TextColumn::make('version')->label('الإصدار'),
+            TextColumn::make('topics.topic')->label('الموضوعات')->badge(),
             TextColumn::make('source_page')->label('صورة الصفحة')
                 ->url(fn (LegalUnit $record): ?string => $record->source_page !== null && $record->import_run_id !== null
                     ? route('legal-library.pages.show', ['run' => $record->import_run_id, 'page' => $record->source_page]) : null)
                 ->openUrlInNewTab(),
         ])->recordActions([
             Action::make('viewText')->label('النص والتاريخ')->modalContent(fn (LegalUnit $record): HtmlString => $this->historyHtml($record)),
+            Action::make('topics')->label('الموضوعات')->visible(fn (LegalUnit $record): bool => $record->superseded_by_id === null)
+                ->schema([TextInput::make('topics')->label('الموضوعات، مفصولة بفاصلة')
+                    ->helperText('استخدم discipline لمواد الانضباط. يمكن إضافة موضوعات أخرى مفصولة بفاصلة.')
+                    ->default(fn (LegalUnit $record): string => $record->topics()->pluck('topic')->implode(', '))])
+                ->action(function (LegalUnit $record, array $data): void {
+                    $topics = array_filter(array_map('trim', preg_split('/[,،]/u', $data['topics'] ?? '')));
+                    app(LawManagement::class)->setUnitTopics($record, auth()->user(), $topics);
+                    Notification::make()->title('حُفظت الموضوعات')->success()->send();
+                }),
             Action::make('correct')->label('تصحيح')->visible(fn (LegalUnit $record): bool => in_array($record->status->value, ['verified_auto', 'verified_human', 'verified_text'], true) && $record->superseded_by_id === null)
                 ->schema([
                     Textarea::make('text')->label('النص الرسمي')->required()->default(fn (LegalUnit $record): string => $record->official_text),

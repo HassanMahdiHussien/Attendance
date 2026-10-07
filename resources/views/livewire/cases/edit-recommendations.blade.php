@@ -5,6 +5,8 @@
         <p class="text-gray-500">اكتب النتائج والتوصيات بكل لغة مفعلة. العربية هي النص المعتمد.</p>
         @if($notice)<p role="status" class="bg-amber-light text-amber rounded-2xl p-4">{{ $notice }}</p>@endif
         @error('notice')<p role="alert" class="bg-red-light text-red rounded-2xl p-4">{{ $message }}</p>@enderror
+        @include('livewire.cases.partials.ai-editor-controls')
+        @include('livewire.cases.partials.citation-review')
         @foreach($languages as $language)
             <div class="border-t pt-5 space-y-3" wire:key="language-{{ $language }}">
                 <h2 class="font-black">{{ ['ar'=>'العربية','en'=>'English','ku'=>'کوردی'][$language] ?? $language }}</h2>

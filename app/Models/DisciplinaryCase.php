@@ -78,6 +78,7 @@ class DisciplinaryCase extends Model
             'session_majority_reached' => 'boolean',
             'defense_letter_issued_at' => 'datetime',
             'decision_issued_at' => 'datetime',
+            'ai_request_started_at' => 'datetime',
         ];
     }
 

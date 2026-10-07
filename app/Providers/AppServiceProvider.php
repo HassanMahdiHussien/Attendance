@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Ai\ClaudeClient;
+use App\Ai\SdkClaudeClient;
 use App\Filament\Auth\LoginResponse;
 use App\LegalLibrary\ClaudePageReader;
 use App\LegalLibrary\PageReader;
@@ -27,6 +29,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->scoped(TenantContext::class, fn () => new TenantContext);
         $this->app->bind(PageReader::class, ClaudePageReader::class);
+        $this->app->bind(ClaudeClient::class, SdkClaudeClient::class);
     }
 
     /**

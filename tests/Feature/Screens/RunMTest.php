@@ -339,7 +339,7 @@ test('female attendee labels and approved outcome wording render while old compa
     $law = Law::factory()->create();
     $case = DisciplinaryCase::factory()->create(['opened_by_user_id' => $admin->id,
         'law_version_id' => $law->id, 'status' => CaseStatus::CommitteeSessionHeld, 'defense_letter_issued_at' => now()->subDay(),
-        'committee_session_held_at' => now(), 'session_majority_reached' => true]);
+        'committee_session_held_at' => now(), 'session_majority_reached' => true, 'outcome' => 'warning']);
     $mandate = CommitteeMandate::factory()->create(['effective_from' => now()->subDays(3)]);
     $female = Employee::factory()->create(['gender' => 'female', 'name' => 'عضوة اللجنة']);
     foreach (PoolRole::cases() as $role) {
