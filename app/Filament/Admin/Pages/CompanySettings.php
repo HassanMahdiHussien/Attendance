@@ -39,6 +39,8 @@ class CompanySettings extends Page
         $state = [
             'kurdish_enabled' => in_array('ku', $company->enabled_languages, true),
             'requires_second_review' => $company->requires_second_review,
+            'hotspot_min_cases' => $company->hotspot_min_cases,
+            'hotspot_window_days' => $company->hotspot_window_days,
         ];
         foreach ($company->enabled_languages as $language) {
             $letterhead = CompanyLetterhead::query()->where('company_id', $company->id)
@@ -55,6 +57,8 @@ class CompanySettings extends Page
         $fields = [
             Checkbox::make('kurdish_enabled')->label('إضافة الكردية (اختياري)'),
             Checkbox::make('requires_second_review')->label('مراجعة ثانية قبل الإصدار'),
+            TextInput::make('hotspot_min_cases')->label('الحد الأدنى لتنبيه التكرار')->numeric()->integer()->required()->minValue(2)->maxValue(50),
+            TextInput::make('hotspot_window_days')->label('نافذة تنبيه التكرار بالأيام')->numeric()->integer()->required()->minValue(7)->maxValue(365),
         ];
         foreach (Filament::getTenant()?->enabled_languages ?? ['ar', 'en'] as $language) {
             $prefix = $language.'.';
@@ -100,8 +104,14 @@ class CompanySettings extends Page
         $company = Filament::getTenant();
         abort_unless($company && auth()->user()->can('update', $company), 403);
         $data = $this->form->getState();
-        DB::transaction(function () use ($company, $data): void {
+        $validated = validator($data, [
+            'hotspot_min_cases' => ['required', 'integer', 'between:2,50'],
+            'hotspot_window_days' => ['required', 'integer', 'between:7,365'],
+        ])->validate();
+        DB::transaction(function () use ($company, $data, $validated): void {
             $company->update([
+                'hotspot_min_cases' => $validated['hotspot_min_cases'],
+                'hotspot_window_days' => $validated['hotspot_window_days'],
                 'enabled_languages' => ['ar', 'en', ...(($data['kurdish_enabled'] ?? false) ? ['ku'] : [])],
                 'requires_second_review' => (bool) ($data['requires_second_review'] ?? false),
             ]);

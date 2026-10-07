@@ -4,6 +4,7 @@ namespace App\Livewire\Cases;
 
 use App\Enums\UserRole;
 use App\Services\Cases\CaseBoard;
+use App\Services\Dashboards\CaseMetrics;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 
@@ -18,6 +19,12 @@ class MyCases extends Component
     {
         $this->mount();
 
-        return view('livewire.cases.my-cases', ['cases' => app(CaseBoard::class)->mine(auth()->user())])->layout('layouts.workspace');
+        $user = auth()->user();
+
+        return view('livewire.cases.my-cases', [
+            'cases' => app(CaseBoard::class)->mine($user),
+            'summary' => $user->primary_role === UserRole::ExternalLegalReviewer
+                ? app(CaseMetrics::class)->reviewerSummary($user) : null,
+        ])->layout('layouts.workspace');
     }
 }

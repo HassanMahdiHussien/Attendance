@@ -19,6 +19,9 @@ use App\Livewire\Cases\ReviewApproval;
 use App\Livewire\Cases\ReviewConsultation;
 use App\Livewire\Cases\ShowCase;
 use App\Livewire\Cases\SignedScan;
+use App\Livewire\Dashboard\CaseDrilldown;
+use App\Livewire\Dashboard\HrDashboard;
+use App\Livewire\Dashboard\PartnerCases;
 use App\Livewire\Home;
 use App\Livewire\Reports\Inbox;
 use App\Livewire\Reports\MyReports;
@@ -45,6 +48,8 @@ Route::middleware('auth')->group(function (): void {
         return redirect('/login');
     })->name('logout');
     Route::get('/cases', Board::class)->name('cases.index');
+    Route::get('/dashboard', HrDashboard::class)->name('dashboard.index');
+    Route::get('/dashboard/cases', CaseDrilldown::class)->name('dashboard.cases');
     Route::get('/cases/new', CreateCase::class)->name('cases.create');
     Route::get('/cases/{case}', ShowCase::class)->name('cases.show');
     Route::get('/cases/{case}/session', RecordSession::class)->name('cases.session');
@@ -63,6 +68,7 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/reports/inbox', Inbox::class)->name('reports.inbox');
     Route::get('/my-cases', MyCases::class)->name('cases.mine');
     Route::get('/home', Home::class)->name('workspace.home');
+    Route::get('/home/cases/{company}', PartnerCases::class)->name('partner.cases');
     Route::get('/attachments/{attachment}', AttachmentDownloadController::class)->name('attachments.download');
     Route::get('/documents/{document}/preview', [DocumentOutputController::class, 'preview'])->name('documents.preview');
     Route::get('/documents/{document}/pdf', [DocumentOutputController::class, 'pdf'])->name('documents.pdf');

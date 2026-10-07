@@ -14,6 +14,7 @@
             <a href="{{ \App\Support\Access\Landing::for(auth()->user()) }}" class="font-black text-lg text-primary">نظام الانضباط</a>
             <nav class="flex flex-wrap gap-1 text-sm text-gray-500" aria-label="التنقل الرئيسي">
                 @if(in_array($role, [\App\Enums\UserRole::CompanyAdmin, \App\Enums\UserRole::HrStaff], true))
+                    @if(\App\Support\Access\DashboardNav::visible(auth()->user()))<a href="/dashboard" class="px-3 py-2 rounded-lg {{ request()->is('dashboard*') ? 'bg-primary-light text-primary font-bold' : 'hover:bg-gray-50' }}">لوحة المتابعة</a>@endif
                     <a href="/cases" class="px-3 py-2 rounded-lg {{ request()->is('cases*') ? 'bg-primary-light text-primary font-bold' : 'hover:bg-gray-50' }}">الحالات</a>
                     <a href="/reports/inbox" class="px-3 py-2 rounded-lg {{ request()->is('reports/inbox') ? 'bg-primary-light text-primary font-bold' : 'hover:bg-gray-50' }}">البلاغات</a>
                 @elseif(in_array($role, [\App\Enums\UserRole::Reporter, \App\Enums\UserRole::DeptManager], true))
