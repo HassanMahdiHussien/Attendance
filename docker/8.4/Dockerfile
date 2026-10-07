@@ -97,6 +97,11 @@ RUN apt-get update \
     && fc-cache -f \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# Legal library import: PDF text layer / page images (poppler) and Arabic OCR (Tesseract).
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends poppler-utils tesseract-ocr tesseract-ocr-ara \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
 RUN setcap "cap_net_bind_service=+ep" /usr/bin/php8.4
 
 RUN userdel -r ubuntu
