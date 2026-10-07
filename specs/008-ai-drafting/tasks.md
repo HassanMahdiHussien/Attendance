@@ -19,6 +19,6 @@ Research R12 (plan review resolutions) overrides earlier research sections.
 - [x] T008 Editors: AI button (policy + preconditions), polling while drafting, unavailable banner, notes panel, citation picker modal inserting markers at the cursor
 - [x] T009 ConfirmDocument: relevance badges + reasons, re-check, override form, superseded replacement; Arabic timeline labels for the new events
 - [x] T010 Platform library: law name_en field; unit topic tags (discipline + free text)
-- [x] T011 Local-only `ai:demo-fake` toggle for walkthroughs (refused outside local)
+- [ ] T011 Local-only `ai:demo-fake` toggle for walkthroughs (refused outside local) — skipped (optional; walkthrough used a one-off script)
 - [x] T012 Tests: screens per role (HR, admin, hr_staff unassigned, pool member, reviewer, reporter), Livewire update-endpoint authorisation, polling end states, picker only offers citable units, override requires reason
 - [x] T013 docs: ERD, WEIRDNESS (AI never sees names/IDs; outcome keyword check is conservative; topics outside the immutable unit row), ADR 0003 note (AI boundary implemented); orchestrator walkthrough; PR
