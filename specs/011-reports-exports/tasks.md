@@ -6,6 +6,8 @@
 ## Setup (orchestrator)
 - [x] T001 composer `openspout/openspout` ^4.32 (approved)
 
+Research R7 (plan review resolutions) overrides earlier sections.
+
 ## Run T
 - [ ] T002 Migration report_exports (tenant FKs, working down()); model; register in tenancy test registries
 - [ ] T003 EmployeeProfile + `/employees` search + `/employees/{employee}` page (R2); links from case page, board, drill-down
