@@ -87,9 +87,11 @@ Artisan::command('ai:reconcile-drafting', function (): void {
                             CaseStatus::AiDraftingRecommendations, CaseStatus::AiVerifyAndClose], true)) {
                             app(CaseWorkflow::class)->transition($case, $from, null, 'AI drafting timed out');
                         }
+                        $operation = $case->ai_request_document_type;
                         $case->forceFill(['ai_request_id' => null, 'ai_request_document_type' => null,
-                            'ai_request_from_status' => null, 'ai_request_started_at' => null])->save();
-                        app(CaseEventLogger::class)->log($case, 'ai_draft_failed', ['reason' => 'AI unavailable — write it manually or try again']);
+                            'ai_request_from_status' => null, 'ai_request_attachment_id' => null, 'ai_request_started_at' => null])->save();
+                        app(CaseEventLogger::class)->log($case, in_array($operation, ['response_transcription', 'signature_presence'], true)
+                            ? 'ai_request_expired' : 'ai_draft_failed', ['operation' => $operation, 'reason' => 'AI unavailable — write it manually or try again']);
                     });
                 });
             }

@@ -31,7 +31,9 @@ use App\Models\LegalUnit;
 use App\Models\LegalUnitApproval;
 use App\Models\Location;
 use App\Models\ReportWitness;
+use App\Models\ResponseTranscription;
 use App\Models\Signature;
+use App\Models\SignaturePresenceSuggestion;
 use App\Models\User;
 use App\Models\ViolationReport;
 use App\Support\Tenancy\TenantContext;
@@ -48,6 +50,7 @@ test('every tenant foreign key rejects a row from another company through models
         'case_witnesses' => CaseWitness::class, 'case_events' => CaseEvent::class,
         'case_links' => CaseLink::class, 'committee_session_attendances' => CommitteeSessionAttendance::class,
         'appeal_trackings' => AppealTracking::class, 'documents' => Document::class,
+        'attachments' => Attachment::class,
         'document_contents' => DocumentContent::class, 'document_approvals' => DocumentApproval::class,
         'signatures' => Signature::class, 'citations' => Citation::class,
         'case_alerts' => CaseAlert::class, 'case_conflict_clearances' => CaseConflictClearance::class,
@@ -57,6 +60,8 @@ test('every tenant foreign key rejects a row from another company through models
         'legal_import_pages' => LegalImportPage::class,
         'legal_unit_approvals' => LegalUnitApproval::class,
         'ai_draft_notes' => AiDraftNote::class,
+        'response_transcriptions' => ResponseTranscription::class,
+        'signature_presence_suggestions' => SignaturePresenceSuggestion::class,
         'ai_generation_logs' => AiGenerationLog::class,
     ];
     $keys = DB::select("SELECT TABLE_NAME AS source_table, CONSTRAINT_NAME AS constraint_name, REFERENCED_TABLE_NAME AS target_table, MAX(CASE WHEN COLUMN_NAME <> 'company_id' THEN COLUMN_NAME END) AS foreign_column FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = DATABASE() AND REFERENCED_TABLE_NAME IS NOT NULL GROUP BY TABLE_NAME, CONSTRAINT_NAME, REFERENCED_TABLE_NAME HAVING COUNT(*) = 2 AND SUM(COLUMN_NAME = 'company_id') = 1");

@@ -2,6 +2,7 @@
     <a href="/my-cases" class="text-primary text-sm">← حالاتي</a>
     <section class="bg-white rounded-3xl p-6 space-y-5">
         <h1 class="text-2xl font-black">الاستشارة القانونية — الحالة {{ \App\Support\Format\ArabicDigits::convert($case->case_number) }}</h1>
+        @if($case->confirmedResponseText())<section class="bg-gray-50 rounded-2xl p-4"><h2 class="font-bold">نص منقول — الأصل هو الصورة الممسوحة</h2><p class="whitespace-pre-wrap">{{ $case->confirmedResponseText() }}</p></section>@endif
         <p>{{ $case->employee?->name }} — {{ $case->violation_type }}</p>
         <h2 class="font-bold">محضر جلسة اللجنة</h2><p class="whitespace-pre-wrap">{{ $case->committee_session_notes }}</p>
         @foreach($case->documents as $document)

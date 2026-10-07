@@ -115,7 +115,7 @@ class DraftDocumentWithAi implements ShouldQueue
                     'document_id' => $document->id, 'ai_generation_log_id' => $response['_generation_log_id'],
                     'notes' => $notes, 'created_at' => now()]);
                 $locked->forceFill(['ai_request_id' => null, 'ai_request_document_type' => null,
-                    'ai_request_from_status' => null, 'ai_request_started_at' => null])->save();
+                    'ai_request_from_status' => null, 'ai_request_attachment_id' => null, 'ai_request_started_at' => null])->save();
                 $audit->log('ai.draft_saved', $document, ['document_type' => $this->type->value], $actor);
                 $events->log($locked, 'ai_draft_saved', ['document_id' => $document->id], actor: $actor);
             });
@@ -134,7 +134,7 @@ class DraftDocumentWithAi implements ShouldQueue
                 $actor = User::find($this->actorId);
                 app(CaseWorkflow::class)->transition($case, CaseStatus::from($case->ai_request_from_status), null, 'AI draft failed');
                 $case->forceFill(['ai_request_id' => null, 'ai_request_document_type' => null,
-                    'ai_request_from_status' => null, 'ai_request_started_at' => null])->save();
+                    'ai_request_from_status' => null, 'ai_request_attachment_id' => null, 'ai_request_started_at' => null])->save();
                 app(AuditLogger::class)->log('ai.draft_failed', $case, ['error' => $exception?->getMessage()], $actor);
                 app(CaseEventLogger::class)->log($case, 'ai_draft_failed', ['reason' => 'AI unavailable — write it manually or try again'], actor: $actor);
             });

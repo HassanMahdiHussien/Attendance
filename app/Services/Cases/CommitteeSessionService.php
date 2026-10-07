@@ -96,6 +96,11 @@ class CommitteeSessionService
                 'session_majority_reached' => $approvals > count($attendees) / 2,
                 'minutes_typed_by_pool_member_id' => $minutesTypedByPoolMemberId,
             ])->save();
+            if ($case->ai_request_document_type === 'response_transcription' && $case->ai_request_id !== null) {
+                $this->events->log($case, 'ai_request_superseded', ['operation' => 'response_transcription'], actor: $actor);
+                $case->forceFill(['ai_request_id' => null, 'ai_request_document_type' => null,
+                    'ai_request_from_status' => null, 'ai_request_attachment_id' => null, 'ai_request_started_at' => null])->save();
+            }
             if ($case->status !== CaseStatus::CommitteeSessionHeld) {
                 $case = $this->workflow->transition($case, CaseStatus::CommitteeSessionHeld, $actor, 'Committee session recorded');
             }

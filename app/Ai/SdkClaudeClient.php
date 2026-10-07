@@ -63,7 +63,7 @@ class SdkClaudeClient implements ClaudeClient
                 'company_id' => $logContext['company_id'] ?? null, 'case_id' => $logContext['case_id'] ?? null,
                 'document_id' => $logContext['document_id'] ?? null, 'actor_user_id' => $logContext['actor_user_id'] ?? null,
                 'touchpoint' => $touchpoint, 'model' => $model,
-                'input' => json_encode($messages, JSON_UNESCAPED_UNICODE), 'output' => $output,
+                'input' => json_encode($this->safeMessages($messages, $logContext['attachment_id'] ?? null), JSON_UNESCAPED_UNICODE), 'output' => $output,
                 'status' => $status, 'error' => $error, 'input_tokens' => $inputTokens,
                 'output_tokens' => $outputTokens, 'duration_ms' => (int) round((microtime(true) - $started) * 1000),
                 'created_at' => now(),
@@ -73,5 +73,27 @@ class SdkClaudeClient implements ClaudeClient
         $data['_generation_log_id'] = $log->id;
 
         return $data;
+    }
+
+    public function safeMessages(array $messages, ?int $attachmentId = null): array
+    {
+        return array_map(function (array $message) use ($attachmentId): array {
+            if (! is_array($message['content'] ?? null)) {
+                return $message;
+            }
+            $message['content'] = array_map(function (array $block) use ($attachmentId): array {
+                if (! in_array($block['type'] ?? null, ['image', 'document'], true)) {
+                    return $block;
+                }
+                $source = $block['source'] ?? [];
+                $bytes = base64_decode($source['data'] ?? '', true) ?: '';
+
+                return ['type' => $block['type'], 'media_type' => $source['mediaType'] ?? null,
+                    'attachment_id' => $attachmentId,
+                    'sha256' => hash('sha256', $bytes), 'bytes' => strlen($bytes)];
+            }, $message['content']);
+
+            return $message;
+        }, $messages);
     }
 }

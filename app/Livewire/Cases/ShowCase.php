@@ -11,6 +11,7 @@ use App\Models\Attachment;
 use App\Models\CommitteePoolMember;
 use App\Models\DisciplinaryCase;
 use App\Models\Employee;
+use App\Models\ResponseTranscription;
 use App\Models\Signature;
 use App\Models\User;
 use App\Services\Cases\CaseAssignment;
@@ -21,6 +22,7 @@ use App\Services\Cases\ConflictClearance;
 use App\Services\Cases\ConsultationService;
 use App\Services\Cases\Deadlines;
 use App\Services\Cases\HandOffService;
+use App\Services\Cases\ResponseReading;
 use App\Services\Cases\ResponseService;
 use App\Services\Cases\SignaturePresence;
 use App\Services\Documents\DocumentCorrector;
@@ -63,6 +65,18 @@ class ShowCase extends Component
     public string $witnessTwo = '';
 
     public $responseScan;
+
+    public bool $responseScanSafe = false;
+
+    public string $responseText = '';
+
+    public string $responseOrigin = 'human';
+
+    public string $responseCorrectionReason = '';
+
+    public ?int $shownTranscriptionId = null;
+
+    public string $lastAiPrefill = '';
 
     public string $correctionReason = '';
 
@@ -203,6 +217,35 @@ class ShowCase extends Component
         $this->notice = 'سُجل عدم ورود رد.';
     }
 
+    public function requestResponseReading(ResponseReading $reading): void
+    {
+        $case = $this->editable('uploadAttachment');
+        $this->validate(['responseScanSafe' => ['accepted']]);
+        $reading->request($case, auth()->user(), $this->responseScanSafe);
+        $this->notice = 'بدأت قراءة مسح الرد.';
+    }
+
+    public function confirmResponse(ResponseReading $reading): void
+    {
+        $case = $this->editable('uploadAttachment');
+        $this->validate(['responseText' => ['required', 'string'], 'responseOrigin' => ['required', 'in:human,ai_checked']]);
+        $reading->confirm($case, $this->responseText, $this->responseOrigin, auth()->user());
+        $this->expectedStatus = CaseStatus::AiIngestedResponse->value;
+        $this->notice = 'تأكد نص الرد بعد مراجعته مقابل الصورة.';
+    }
+
+    public function correctResponse(ResponseReading $reading): void
+    {
+        $case = $this->editable('uploadAttachment');
+        $this->validate(['responseCorrectionReason' => ['required', 'string', 'max:2000']]);
+        $reading->correct($case, $this->responseCorrectionReason, auth()->user());
+        $this->expectedStatus = CaseStatus::ResponseScannedUploaded->value;
+        $this->responseText = '';
+        $this->lastAiPrefill = '';
+        $this->responseOrigin = 'human';
+        $this->notice = 'بدأ تصحيح نص الرد.';
+    }
+
     public function startCorrection(int $documentId, DocumentCorrector $corrector): void
     {
         $case = $this->editable('correct');
@@ -224,7 +267,7 @@ class ShowCase extends Component
         }
         $record->setRelation('employee', Employee::withoutGlobalScopes()->find($record->employee_id));
 
-        $record->load(['documents.contents', 'events.actorUser', 'assignedHrUser']);
+        $record->load(['documents.contents', 'events.actorUser', 'assignedHrUser', 'responseChecker']);
         $insights = app(CaseInsights::class);
         $deadlines = app(Deadlines::class);
         $assigneeIds = $record->events->where('event_type', 'case_assigned')
@@ -235,9 +278,24 @@ class ShowCase extends Component
             ->where('is_locked', true)->last();
         $decisionDocument = $record->documents->where('document_type', DocumentType::DecisionLetter)
             ->where('is_locked', true)->last();
+        $responseScan = app(ResponseReading::class)->latestScan($record);
+        $aiAttempt = $responseScan && $record->status === CaseStatus::ResponseScannedUploaded
+            && in_array(auth()->user()->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)
+            ? ResponseTranscription::query()->where('case_id', $record->id)->where('attachment_id', $responseScan->id)
+                ->where('origin', 'ai')->orderByDesc('id')->first() : null;
+        if ($aiAttempt && $this->shownTranscriptionId !== $aiAttempt->id) {
+            $this->shownTranscriptionId = $aiAttempt->id;
+            if ($this->responseText === '' || $this->responseText === $this->lastAiPrefill) {
+                $this->responseText = $aiAttempt->text;
+                $this->responseOrigin = 'ai_checked';
+            }
+            $this->lastAiPrefill = $aiAttempt->text;
+        }
 
         return view('livewire.cases.show-case', [
             'record' => $record,
+            'responseScanAttachment' => $responseScan,
+            'aiAttempt' => $aiAttempt,
             'success' => session()->pull('case_success_'.$record->id),
             'assigneeNames' => User::query()->where('company_id', $record->company_id)->whereIn('id', $assigneeIds)->pluck('name', 'id')->all(),
             'signatures' => Signature::query()->where('case_id', $record->id)->whereIn('id', $signatureIds)->get()->keyBy('id'),

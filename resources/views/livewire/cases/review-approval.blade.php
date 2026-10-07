@@ -2,6 +2,7 @@
     <a href="/committee" class="text-primary text-sm">← اللجنة</a>
     <section class="bg-white rounded-3xl p-6 md:p-8 shadow-sm space-y-5">
         <h1 class="text-2xl font-black">مراجعة توصيات اللجنة</h1>
+        @if($document->disciplinaryCase->confirmedResponseText())<section class="bg-gray-50 rounded-2xl p-4"><h2 class="font-bold">نص منقول — الأصل هو الصورة الممسوحة</h2><p class="whitespace-pre-wrap">{{ $document->disciplinaryCase->confirmedResponseText() }}</p></section>@endif
         <p class="text-gray-500">قرارك يشمل كل اللغات المعروضة. النص للقراءة فقط.</p>
         @if($notice)<p role="status" class="bg-red-light text-red rounded-2xl p-4">{{ $notice }}</p>@endif
         @error('notice')<p role="alert" class="bg-red-light text-red rounded-2xl p-4">{{ $message }}</p>@enderror

@@ -79,6 +79,7 @@ class DisciplinaryCase extends Model
             'defense_letter_issued_at' => 'datetime',
             'decision_issued_at' => 'datetime',
             'ai_request_started_at' => 'datetime',
+            'employee_response_checked_at' => 'datetime',
         ];
     }
 
@@ -155,5 +156,13 @@ class DisciplinaryCase extends Model
     public function witnesses(): HasMany
     {
         return $this->hasMany(CaseWitness::class, 'case_id');
+    }
+
+    public function confirmedResponseText(): ?string
+    {
+        return $this->employee_response_checked_at !== null
+            && $this->employee_response_origin !== null
+            && $this->status !== CaseStatus::ResponseScannedUploaded
+            ? $this->employee_response_text : null;
     }
 }

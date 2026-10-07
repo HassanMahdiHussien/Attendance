@@ -16,10 +16,10 @@
     @if($record->minutes_typed_by_pool_member_id)<p class="bg-white rounded-2xl p-4 text-sm">محضر الجلسة كتبه: {{ \App\Models\CommitteePoolMember::query()->find($record->minutes_typed_by_pool_member_id)?->person_name }}</p>@endif
     @if($record->status === \App\Enums\CaseStatus::AwaitingCommitteeSignatures)
         @foreach($signatureChecks->where('presence_check', \App\Enums\PresenceCheck::BoxAppearsEmpty) as $check)
-            <p role="alert" class="bg-red-light text-red rounded-2xl p-4">{{ $check->signer_name }} — خانة التوقيع تبدو فارغة. يلزم رفع مسح جديد أو تسجيل سبب التجاوز.</p>
+            <p role="alert" class="bg-red-light text-red rounded-2xl p-4">{{ $check->signer_name }} — {{ \App\Services\Cases\PresenceWording::choice('empty') }}. يلزم رفع مسح جديد أو تسجيل سبب التجاوز.</p>
         @endforeach
     @endif
-    @foreach($decisionSignatureChecks as $check)<p class="bg-gray-50 rounded-2xl p-4">{{ $check->signer_name }} — {{ $check->presence_check === \App\Enums\PresenceCheck::BoxAppearsEmpty ? 'خانة التوقيع تبدو فارغة' : 'خانة التوقيع تبدو ممتلئة' }}. هذا فحص حضور فقط.</p>@endforeach
+    @foreach($decisionSignatureChecks as $check)<p class="bg-gray-50 rounded-2xl p-4">{{ $check->signer_name }} — {{ \App\Services\Cases\PresenceWording::choice($check->presence_check === \App\Enums\PresenceCheck::BoxAppearsEmpty ? 'empty' : 'filled') }}. هذا فحص حضور فقط.</p>@endforeach
     @foreach($record->documents->where('document_type', \App\Enums\DocumentType::Recommendations) as $recommendationsDocument)
         @foreach($recommendationsDocument->approvals()->where('decision', 'rejected')->whereNull('invalidated_at')->get() as $rejection)
             <p role="alert" class="bg-red-light text-red rounded-2xl p-4">أعيدت التوصيات من اللجنة: {{ $rejection->comment }}</p>
@@ -66,6 +66,37 @@
             @if(in_array($record->status, [\App\Enums\CaseStatus::AwaitingEmployeeResponse,\App\Enums\CaseStatus::ResponseReceived,\App\Enums\CaseStatus::ResponseRefusedToSign,\App\Enums\CaseStatus::ResponseDeliveryRefused], true))<div class="mt-5"><label class="block font-bold mb-2">مسح رد الموظف</label><input type="file" wire:model="responseScan" accept=".pdf,.jpg,.jpeg,.png" class="block mb-2"><button wire:click="uploadResponse" class="border border-primary text-primary rounded-2xl px-5 py-2">رفع المسح</button>@error('responseScan')<p class="text-red">{{ $message }}</p>@enderror</div>@endif
             @if($record->status === \App\Enums\CaseStatus::Open)<div class="mt-6 border-t pt-4"><h3 class="font-bold mb-2">المكلف من الموارد البشرية</h3><select wire:model="assigneeId" class="rounded-xl border p-2"><option value="">غير مكلف</option>@foreach($hrUsers as $user)<option value="{{ $user->id }}">{{ $user->name }}</option>@endforeach</select><button wire:click="assign" class="text-primary font-bold px-3">حفظ التكليف</button>@error('assigneeId')<p class="text-red">{{ $message }}</p>@enderror</div>@endif
         @else<p class="text-gray-500">هذه الحالة للعرض فقط.</p>@endif
+        @if(in_array($record->status, [\App\Enums\CaseStatus::ResponseScannedUploaded, \App\Enums\CaseStatus::AiIngestedResponse], true) && ($responseScanAttachment || $record->confirmedResponseText()))
+            <div class="mt-6 border-t pt-4 space-y-4">
+                <h3 class="font-bold">رد الموظف</h3>
+                @if($record->confirmedResponseText())
+                    <p class="text-sm text-gray-500">نص منقول — الأصل هو الصورة الممسوحة</p>
+                    <p class="whitespace-pre-wrap">{{ $record->confirmedResponseText() }}</p>
+                    <p class="text-sm text-gray-500">أكّد النص: {{ $record->responseChecker?->name }}، {{ \App\Support\Format\ArabicDigits::convert(\App\Documents\IraqiDate::format($record->employee_response_checked_at->copy()->timezone('Asia/Baghdad'), 'ar').'، '.$record->employee_response_checked_at->copy()->timezone('Asia/Baghdad')->format('H:i')) }} · {{ $record->employee_response_origin === 'ai_checked' ? 'بمساعدة الذكاء الاصطناعي' : 'إدخال يدوي' }}</p>
+                    @if($canManage && $record->status === \App\Enums\CaseStatus::AiIngestedResponse)
+                        <label>سبب تصحيح النص <textarea wire:model="responseCorrectionReason" class="block w-full rounded-xl border p-3"></textarea></label>
+                        <button wire:click="correctResponse" class="text-primary underline">تصحيح النص</button>
+                        @error('responseCorrectionReason')<p class="text-red">{{ $message }}</p>@enderror
+                    @endif
+                @endif
+                @if($responseScanAttachment && $record->status === \App\Enums\CaseStatus::ResponseScannedUploaded && $canManage)
+                    @if($record->ai_request_document_type === 'response_transcription')<p wire:poll.3s role="status">قراءة الرد جارية…</p>@endif
+                    <label class="flex gap-2"><input type="checkbox" wire:model="responseScanSafe">تحققتُ أن الصورة لا تتضمن رقم هوية أو راتباً أو رقم هاتف</label>
+                    @error('responseScanSafe')<p class="text-red">{{ $message }}</p>@enderror
+                    <button wire:click="requestResponseReading" class="border border-primary text-primary rounded-2xl px-5 py-2">قراءة الرد بالذكاء الاصطناعي</button>
+                    @error('scan')<p class="text-red">{{ $message }}</p>@enderror
+                    @if($record->events->contains('event_type', 'response_reading_failed'))<p role="alert">تعذرت القراءة بالذكاء الاصطناعي — يمكنك كتابة النص يدوياً</p>@endif
+                    <div class="grid lg:grid-cols-2 gap-4">
+                        <div><p class="text-sm text-gray-500">الصورة الممسوحة هي الأصل</p><object data="{{ route('attachments.download', $responseScanAttachment) }}?preview=1" type="{{ $responseScanAttachment->mime_type }}" class="w-full h-96 border rounded-xl"><a class="text-primary underline" href="{{ route('attachments.download', $responseScanAttachment) }}">فتح المسح للمراجعة</a></object></div>
+                        <div><label>النص المنقول <textarea wire:model="responseText" rows="12" class="block w-full rounded-xl border p-3"></textarea></label>
+                            <label>المصدر <select wire:model="responseOrigin" class="rounded-xl border p-2"><option value="human">كتابة يدوية</option>@if($aiAttempt)<option value="ai_checked">قراءة الذكاء الاصطناعي بعد مراجعة HR</option>@endif</select></label>
+                            <button wire:click="confirmResponse" class="bg-primary text-white rounded-2xl px-5 py-2">تأكيد النص بعد مراجعته مقابل الصورة</button>
+                        </div>
+                    </div>
+                    @error('responseText')<p class="text-red">{{ $message }}</p>@enderror
+                @endif
+            </div>
+        @endif
     </section><section class="bg-white rounded-3xl p-6"><h2 class="text-lg font-black mb-4">المهل</h2>@foreach([['title'=>'الرد','due'=>$deadlines->responseDue($record),'state'=>$deadlines->responseStatus($record)],['title'=>'الإجراء','due'=>$deadlines->procedureDue($record),'state'=>$deadlines->procedureStatus($record)],['title'=>'الطعن','due'=>$deadlines->appealEnd($record),'state'=>$deadlines->appealStatus($record)]] as $deadline)<div class="rounded-2xl p-4 mb-3 {{ $colors[$deadline['state']] ?? 'bg-gray-50 text-gray-500' }}"><strong>{{ $deadline['title'] }}</strong><p class="text-sm">{{ $deadline['due'] ? \App\Support\Format\ArabicDigits::convert(\App\Documents\IraqiDate::format($deadline['due'], 'ar')) : 'لم تبدأ بعد' }}</p><p class="text-xs">{{ ['met'=>'تم ضمن المهلة','on_track'=>'ضمن المهلة','approaching'=>'تقترب','missed'=>'فاتت المهلة','overdue'=>'متأخرة'][$deadline['state']] ?? '' }}</p></div>@endforeach</section></div>
     <section class="bg-white rounded-3xl p-6"><h2 class="text-lg font-black mb-4">المستندات والإصدارات</h2>@forelse($record->documents->sortByDesc('created_at') as $document)<div class="border-t py-4 flex flex-wrap items-center gap-3"><div class="flex-1"><strong>{{ $documentTypes[$document->document_type->value] ?? 'مستند' }} — إصدار {{ \App\Support\Format\ArabicDigits::convert($document->version) }}</strong> @if($document->drafted_by === \App\Enums\DraftedBy::Ai)<span class="rounded-full bg-primary-light text-primary px-2 py-1 text-xs font-bold">AI</span>@endif <p class="text-sm text-gray-500">{{ $documentStatuses[$document->status->value] ?? 'مستند' }} · {{ ! $document->is_locked ? 'PDF بعد الإصدار' : ($document->pdf_status === 'ready' ? 'PDF جاهز' : ($document->pdf_status === 'failed' ? 'تعذر إعداد PDF' : 'PDF قيد الإعداد')) }}</p></div>@if($document->pdf_status === 'ready')<a href="{{ route('documents.pdf', $document) }}" class="text-primary underline">تنزيل PDF</a>@endif @if($canManage && $document->is_locked)<input wire:model="correctionReason" placeholder="سبب التصحيح" class="rounded-xl border p-2"><button wire:click="startCorrection({{ $document->id }})" class="text-primary underline">بدء التصحيح</button>@endif</div>@empty<p class="text-gray-500">لا توجد مستندات.</p>@endforelse @error('correctionReason')<p class="text-red">{{ $message }}</p>@enderror</section>
     <section class="bg-white rounded-3xl p-6"><h2 class="text-lg font-black mb-4">المرفقات</h2>@forelse($attachments as $attachment)<div class="border-t py-3 flex justify-between gap-3"><span>{{ $attachment->original_name }} — {{ $attachment->kind->value }}</span><a href="{{ route('attachments.download', $attachment) }}" class="text-primary underline">تنزيل</a></div>@empty<p class="text-gray-500">لا توجد مرفقات.</p>@endforelse</section>

@@ -27,6 +27,9 @@ class Signature extends Model
     protected static function booted(): void
     {
         static::saving(function (self $signature): void {
+            if ($signature->exists && $signature->isDirty()) {
+                throw new ImmutableRecordException('Signatures cannot be updated.');
+            }
             if (in_array($signature->status?->value, ['refused_to_sign', 'delivery_refused'], true)
                 && (blank($signature->witness_1_name) || blank($signature->witness_2_name))) {
                 throw ValidationException::withMessages(['status' => 'Two witnesses are required for refusal.']);
@@ -67,5 +70,28 @@ class Signature extends Model
     public function committeePoolMember(): BelongsTo
     {
         return $this->belongsTo(CommitteePoolMember::class, 'committee_pool_member_id');
+    }
+
+    public function attachment(): BelongsTo
+    {
+        return $this->belongsTo(Attachment::class);
+    }
+
+    public function presenceSuggestion(): BelongsTo
+    {
+        return $this->belongsTo(SignaturePresenceSuggestion::class, 'presence_suggestion_id');
+    }
+
+    public function aiSuggestionDisposition(): ?string
+    {
+        if ($this->presence_suggestion_id === null || $this->ai_suggestion === null) {
+            return null;
+        }
+
+        return match ($this->ai_suggestion) {
+            'appears_filled' => $this->presence_check === PresenceCheck::BoxFilled ? 'accepted' : 'changed',
+            'appears_empty' => $this->presence_check === PresenceCheck::BoxAppearsEmpty ? 'accepted' : 'changed',
+            default => 'changed',
+        };
     }
 }

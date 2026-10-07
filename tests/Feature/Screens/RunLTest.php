@@ -23,6 +23,7 @@ use App\Services\Cases\CommitteeSessionService;
 use App\Services\Cases\ConsultationService;
 use App\Services\Cases\DocumentApprovalService;
 use App\Services\Cases\PoolEligibility;
+use App\Services\Cases\PresenceWording;
 use App\Services\Cases\RecommendationsEditor;
 use App\Services\Cases\SignaturePresence;
 use App\Support\Tenancy\TenantContext;
@@ -243,6 +244,9 @@ test('another company cannot open the new case screens', function (): void {
 test('signature presence screens use appearance wording', function (): void {
     $views = file_get_contents(resource_path('views/livewire/cases/signed-scan.blade.php'))
         .file_get_contents(resource_path('views/livewire/cases/show-case.blade.php'));
-    expect($views)->toContain('خانة التوقيع تبدو موقعة')->toContain('خانة التوقيع تبدو فارغة')
+    // The labels come from PresenceWording (009); the views must use it and never claim verification.
+    expect($views)->toContain('PresenceWording::')
         ->not->toContain('التوقيع موثق')->not->toContain('صحة التوقيع');
+    expect(PresenceWording::choice('filled'))->toBe('خانة التوقيع تبدو ممتلئة');
+    expect(PresenceWording::choice('empty'))->toBe('خانة التوقيع تبدو فارغة');
 });

@@ -38,6 +38,7 @@ class PayloadBuilder
             ];
         }
         if ($type === DocumentType::Recommendations) {
+            $payload['employee_response'] = $case->confirmedResponseText() === null ? null : $this->minimize($case->confirmedResponseText());
             $payload['minutes'] = $this->minimize($case->committee_session_notes ?? '');
             $payload['outcome'] = $case->outcome?->value;
             $payload['defense_acceptance'] = $case->defense_acceptance?->value;
