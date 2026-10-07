@@ -11,7 +11,9 @@ return [
     'role_hr' => 'Human Resources',
     'role_labor_union' => 'Labour Union Representative',
     'chair_label' => 'Chairman',
+    'chair_label_female' => 'Chairwoman',
     'member_label' => 'Member',
+    'member_label_female' => 'Member',
     'signature_line' => 'Signature:',
     'reference_label' => 'Reference:',
 ];

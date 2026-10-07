@@ -6,6 +6,7 @@ use App\Enums\AttachmentKind;
 use App\Enums\UserRole;
 use App\Models\Attachment;
 use App\Models\DisciplinaryCase;
+use App\Models\Document;
 use App\Models\User;
 use App\Models\ViolationReport;
 use Illuminate\Http\UploadedFile;
@@ -15,11 +16,14 @@ use Illuminate\Validation\ValidationException;
 
 class AttachmentService
 {
-    public function store(DisciplinaryCase|ViolationReport $parent, AttachmentKind $kind, UploadedFile $file, User $actor): Attachment
+    public function store(DisciplinaryCase|ViolationReport|Document $parent, AttachmentKind $kind, UploadedFile $file, User $actor): Attachment
     {
-        if ($parent instanceof DisciplinaryCase) {
-            Gate::forUser($actor)->authorize('uploadAttachment', $parent);
+        if ($parent instanceof DisciplinaryCase || $parent instanceof Document) {
+            Gate::forUser($actor)->authorize('uploadAttachment', $parent instanceof Document ? $parent->disciplinaryCase : $parent);
             $allowed = [AttachmentKind::EmployeeResponseScan, AttachmentKind::DeliveryProof, AttachmentKind::SignedDocumentScan];
+            if ($parent instanceof Document && ($kind !== AttachmentKind::SignedDocumentScan || ! $parent->is_locked)) {
+                throw ValidationException::withMessages(['attachments' => 'نوع المرفق غير مسموح.']);
+            }
         } else {
             abort_unless($actor->is_active && $actor->company?->is_active
                 && ($actor->primary_role === UserRole::Reporter || $actor->primary_role === UserRole::DeptManager), 403);

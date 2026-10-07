@@ -52,3 +52,5 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 - **An invisible case returns 404.** The URL does not reveal whether another tenant's or another assignee's case exists. (2026-10-05)
 - **No response is a case event, not a committee session.** HR may record that the response deadline passed without inventing a session or changing the case stage. (2026-10-05)
 - **A second reviewer differs from both the issuer and the last content editor.** Editing after review clears the review, so issuance covers the current text. (2026-10-05)
+- **HR or a company admin records the committee session, while the minutes name the attending pool member who typed them.** This preserves committee authorship without giving an unrecorded attendee a case transition. (2026-10-06)
+- **Signature presence is recorded manually by HR from the scan until the AI presence check is built.** A filled box is a visual observation, never proof of signer identity. (2026-10-06)

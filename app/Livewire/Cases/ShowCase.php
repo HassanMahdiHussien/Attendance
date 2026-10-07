@@ -3,6 +3,7 @@
 namespace App\Livewire\Cases;
 
 use App\Enums\CaseStatus;
+use App\Enums\DocumentType;
 use App\Enums\SignaturePurpose;
 use App\Enums\SignatureStatus;
 use App\Enums\UserRole;
@@ -13,14 +14,18 @@ use App\Models\Employee;
 use App\Models\Signature;
 use App\Models\User;
 use App\Services\Cases\CaseAssignment;
+use App\Services\Cases\CaseClosure;
 use App\Services\Cases\CaseInsights;
 use App\Services\Cases\CaseOpening;
 use App\Services\Cases\ConflictClearance;
+use App\Services\Cases\ConsultationService;
 use App\Services\Cases\Deadlines;
 use App\Services\Cases\HandOffService;
 use App\Services\Cases\ResponseService;
+use App\Services\Cases\SignaturePresence;
 use App\Services\Documents\DocumentCorrector;
 use App\Support\Access\CaseVisibility;
+use App\Support\Tenancy\TenantContext;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
@@ -60,6 +65,10 @@ class ShowCase extends Component
     public $responseScan;
 
     public string $correctionReason = '';
+
+    public string $consultationCancelReason = '';
+
+    public array $decisionSignaturePresence = ['general_manager' => 'filled', 'union' => 'filled'];
 
     public function mount(string $case): void
     {
@@ -112,15 +121,17 @@ class ShowCase extends Component
     {
         $case = $this->editable('recordHandOff');
         $this->validate([
-            'handoffPurpose' => ['required', 'in:defense_letter_receipt,response_submission'],
+            'handoffPurpose' => ['required', 'in:defense_letter_receipt,response_submission,decision_letter_receipt'],
             'handoffStatus' => ['required', 'in:signed,refused_to_sign,delivery_refused'],
             'signedAt' => ['required_if:handoffStatus,signed', 'nullable', 'date'], 'attemptedAt' => ['required_if:handoffStatus,delivery_refused', 'nullable', 'date'],
             'attemptLocation' => ['required_if:handoffStatus,delivery_refused', 'nullable', 'string', 'max:255'], 'attemptedBy' => ['required_if:handoffStatus,delivery_refused', 'nullable', 'string', 'max:255'],
             'witnessOne' => ['required_unless:handoffStatus,signed', 'nullable', 'string', 'max:255'], 'witnessTwo' => ['required_unless:handoffStatus,signed', 'different:witnessOne', 'nullable', 'string', 'max:255'],
         ]);
-        $purpose = SignaturePurpose::from($this->handoffPurpose);
+        $purpose = in_array($case->status, [CaseStatus::AwaitingAppealWindow, CaseStatus::AppealPending], true)
+            ? SignaturePurpose::DecisionLetterReceipt : SignaturePurpose::from($this->handoffPurpose);
         $status = SignatureStatus::from($this->handoffStatus);
-        if ($case->status !== CaseStatus::AwaitingEmployeeResponse) {
+        if (($purpose === SignaturePurpose::DecisionLetterReceipt && ! in_array($case->status, [CaseStatus::AwaitingAppealWindow, CaseStatus::AppealPending], true))
+            || ($purpose !== SignaturePurpose::DecisionLetterReceipt && $case->status !== CaseStatus::AwaitingEmployeeResponse)) {
             $this->stale();
 
             return;
@@ -135,6 +146,44 @@ class ShowCase extends Component
             $handOffs->record($case, $purpose, $status, $data, auth()->user());
         }
         $this->notice = 'سُجل التسليم.';
+    }
+
+    public function requestConsultation(ConsultationService $consultations): void
+    {
+        $case = CaseVisibility::for(auth()->user())->findOrFail($this->caseId);
+        if ($case->status->value !== $this->expectedStatus) {
+            throw ValidationException::withMessages(['notice' => 'تغيرت الحالة، أعد التحميل']);
+        }
+        $consultations->request($case, auth()->user());
+        $this->notice = 'طُلبت الاستشارة القانونية. تستمر مهلة الإجراء أثناء انتظارها.';
+    }
+
+    public function cancelConsultation(ConsultationService $consultations): void
+    {
+        $case = $this->editable('update');
+        $this->validate(['consultationCancelReason' => ['required', 'string', 'max:2000']]);
+        $consultations->cancel($case, $this->consultationCancelReason, auth()->user());
+        $this->consultationCancelReason = '';
+        $this->notice = 'أُلغيت الاستشارة مع تسجيل السبب.';
+    }
+
+    public function closeWithoutPenalty(CaseClosure $closure): void
+    {
+        $case = $this->editable('update');
+        $closure->closeWithoutPenalty($case, auth()->user());
+        $this->expectedStatus = CaseStatus::ArchivedFinal->value;
+        $this->notice = 'أُرشفت الحالة دون عقوبة.';
+    }
+
+    public function recordDecisionSignatures(SignaturePresence $presence): void
+    {
+        $case = $this->editable('update');
+        $this->validate(['decisionSignaturePresence.general_manager' => ['required', 'in:filled,empty'],
+            'decisionSignaturePresence.union' => ['required', 'in:filled,empty']]);
+        $document = $case->documents()->where('document_type', DocumentType::DecisionLetter->value)
+            ->where('is_locked', true)->orderByDesc('version')->firstOrFail();
+        $presence->recordDecisionSignatures($document, $this->decisionSignaturePresence, auth()->user());
+        $this->notice = 'سُجلت حالة خانات توقيع المدير العام وممثل النقابة.';
     }
 
     public function uploadResponse(ResponseService $responses): void
@@ -160,13 +209,19 @@ class ShowCase extends Component
         $this->validate(['correctionReason' => ['required', 'string', 'max:1000']]);
         $document = $case->documents()->findOrFail($documentId);
         $draft = $corrector->startCorrection($document, $this->correctionReason, auth()->user());
-        $this->redirect('/cases/'.$case->id.'/documents/'.$draft->id.'/edit', navigate: true);
+        $url = $draft->document_type === DocumentType::Recommendations
+            ? '/cases/'.$case->id.'/recommendations/'.$draft->id
+            : '/cases/'.$case->id.'/documents/'.$draft->id.'/edit';
+        $this->redirect($url, navigate: true);
     }
 
     public function render(): View
     {
         $record = CaseVisibility::for(auth()->user())->findOrFail($this->caseId);
         Gate::authorize('view', $record);
+        if (auth()->user()->primary_role === UserRole::ExternalLegalReviewer) {
+            app(TenantContext::class)->setCompany($record->company);
+        }
         $record->setRelation('employee', Employee::withoutGlobalScopes()->find($record->employee_id));
 
         $record->load(['documents.contents', 'events.actorUser', 'assignedHrUser']);
@@ -176,17 +231,30 @@ class ShowCase extends Component
             ->pluck('payload')->map(fn (array $payload) => $payload['user_id'] ?? null)->filter()->unique();
         $signatureIds = $record->events->whereIn('event_type', ['hand_off_recorded', 'response_handoff_recorded'])
             ->pluck('payload')->map(fn (array $payload) => $payload['signature_id'] ?? null)->filter()->unique();
+        $recommendationsDocument = $record->documents->where('document_type', DocumentType::Recommendations)
+            ->where('is_locked', true)->last();
+        $decisionDocument = $record->documents->where('document_type', DocumentType::DecisionLetter)
+            ->where('is_locked', true)->last();
 
         return view('livewire.cases.show-case', [
             'record' => $record,
             'success' => session()->pull('case_success_'.$record->id),
             'assigneeNames' => User::query()->where('company_id', $record->company_id)->whereIn('id', $assigneeIds)->pluck('name', 'id')->all(),
             'signatures' => Signature::query()->where('case_id', $record->id)->whereIn('id', $signatureIds)->get()->keyBy('id'),
-            'priors' => $insights->priorBanner($record),
-            'pattern' => $insights->responsiblePersonPattern($record),
-            'conflicts' => app(ConflictClearance::class)->conflicts($record),
+            'signatureChecks' => $recommendationsDocument
+                ? app(SignaturePresence::class)->latestChecks($recommendationsDocument) : collect(),
+            'decisionSignatureChecks' => $decisionDocument ? Signature::query()->where('document_id', $decisionDocument->id)
+                ->whereIn('purpose', [SignaturePurpose::GeneralManagerSignature->value, SignaturePurpose::UnionSignature->value])
+                ->orderByDesc('id')->get()->unique(fn (Signature $check) => $check->purpose->value)->values() : collect(),
+            'priors' => auth()->user()->primary_role === UserRole::ExternalLegalReviewer ? ['count' => 0, 'cases' => []] : $insights->priorBanner($record),
+            'pattern' => auth()->user()->primary_role === UserRole::ExternalLegalReviewer ? ['flagged' => false, 'count' => 0] : $insights->responsiblePersonPattern($record),
+            'conflicts' => auth()->user()->primary_role === UserRole::ExternalLegalReviewer ? [] : app(ConflictClearance::class)->conflicts($record),
             'deadlines' => $deadlines,
-            'attachments' => Attachment::query()->where('attachable_type', $record->getMorphClass())->where('attachable_id', $record->id)->orderByDesc('created_at')->get(),
+            'attachments' => Attachment::query()->where(function ($query) use ($record): void {
+                $query->where(fn ($caseAttachments) => $caseAttachments->where('attachable_type', $record->getMorphClass())->where('attachable_id', $record->id))
+                    ->orWhere(fn ($documentAttachments) => $documentAttachments->where('attachable_type', 'document')
+                        ->whereIn('attachable_id', $record->documents->pluck('id')));
+            })->orderByDesc('created_at')->get(),
             'hrUsers' => User::query()->where('company_id', $record->company_id)->where('is_active', true)
                 ->whereIn('primary_role', [UserRole::HrStaff->value, UserRole::CompanyAdmin->value])->get(),
         ])->layout('layouts.workspace');

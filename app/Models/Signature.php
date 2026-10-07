@@ -22,6 +22,8 @@ class Signature extends Model
 
     protected array $companyParents = ['disciplinaryCase'];
 
+    protected array $companyUserKeys = ['checked_by'];
+
     protected static function booted(): void
     {
         static::saving(function (self $signature): void {

@@ -11,6 +11,7 @@ use App\Models\DisciplinaryCase;
 use App\Models\Document;
 use App\Models\Employee;
 use App\Services\Documents\DocumentIssuer;
+use App\Support\Format\OutcomeLabel;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
@@ -66,15 +67,20 @@ class DocumentFacts
                 $extra['attendees'][] = ['name' => $this->required($member?->employee
                     ? $this->localized($member->employee, 'name', $language)
                     : ($language === 'en' && filled($member?->person_name_en) ? $member->person_name_en : $member?->person_name), 'attendee.name'),
-                    'role' => $member?->role_type?->value, 'is_chair' => $attendance->is_chair];
+                    'role' => $member?->role_type?->value, 'is_chair' => $attendance->is_chair,
+                    'is_female' => $member?->employee?->gender === EmployeeGender::Female];
             }
-            foreach (PoolRole::cases() as $role) {
-                if (! collect($extra['attendees'])->contains('role', $role->value)) {
-                    throw new MissingDocumentFact("attendee.{$role->value}");
+            if (count($extra['attendees']) < 3 || ! collect($extra['attendees'])->contains('role', PoolRole::LaborUnion->value)
+                || ! collect($extra['attendees'])->contains('is_chair', true)) {
+                throw new MissingDocumentFact('committee_attendance');
+            }
+            if ($document->document_type === DocumentType::Recommendations && ! $draft) {
+                $approvals = $document->approvals()->whereNull('invalidated_at')->where('decision', 'approved')
+                    ->with('approver')->get()->keyBy(fn ($approval) => $approval->role_category->value);
+                foreach (PoolRole::cases() as $role) {
+                    $extra['approvers'][$role->value] = $this->required($approvals->get($role->value)?->approver?->name,
+                        "approver.{$role->value}");
                 }
-            }
-            if (! collect($extra['attendees'])->contains(fn ($attendee) => $attendee['role'] === PoolRole::Legal->value && $attendee['is_chair'])) {
-                throw new MissingDocumentFact('legal_chair');
             }
         }
         if ($document->document_type === DocumentType::DecisionLetter) {
@@ -95,7 +101,14 @@ class DocumentFacts
             foreach ($prior as $old) {
                 $extra['prior_cases'][] = IraqiDate::format($this->date($old->violation_time, 'prior_case_date'), $language)
                     .' — '.$this->required($old->violation_type, 'prior_case_type')
-                    .' — '.$this->required($old->outcome?->value, 'prior_case_outcome');
+                    .' — '.($language === 'ar'
+                        ? OutcomeLabel::arabic($old->outcome)
+                        : match ($old->outcome?->value) {
+                            'recommendation_only' => 'recommendation without penalty',
+                            'warning' => 'warning',
+                            'termination' => 'termination',
+                            default => 'no outcome yet',
+                        });
             }
         }
 

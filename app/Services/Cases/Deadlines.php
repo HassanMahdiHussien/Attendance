@@ -59,7 +59,7 @@ class Deadlines
         if ($due === null) {
             return null;
         }
-        if (in_array($case->status, [CaseStatus::AppealPending, CaseStatus::AppealResolved], true)) {
+        if (in_array($case->status, [CaseStatus::AppealPending, CaseStatus::AppealResolved, CaseStatus::ArchivedFinal], true)) {
             return 'met';
         }
 

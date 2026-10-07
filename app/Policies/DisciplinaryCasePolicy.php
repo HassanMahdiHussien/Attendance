@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\CaseStatus;
 use App\Enums\UserRole;
 use App\Models\DisciplinaryCase;
 use App\Models\User;
@@ -29,7 +30,7 @@ class DisciplinaryCasePolicy
 
     public function update(User $user, DisciplinaryCase $case): bool
     {
-        return $this->create($user) && $this->view($user, $case);
+        return $case->status !== CaseStatus::ArchivedFinal && $this->create($user) && $this->view($user, $case);
     }
 
     public function manageDocuments(User $user, DisciplinaryCase $case): bool

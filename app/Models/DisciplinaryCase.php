@@ -27,7 +27,8 @@ class DisciplinaryCase extends Model
 
     protected $attributes = ['status' => 'draft'];
 
-    protected array $companyUserKeys = ['opened_by_user_id', 'assigned_hr_user_id', 'legal_review_requested_by', 'employee_response_checked_by'];
+    protected array $companyUserKeys = ['opened_by_user_id', 'assigned_hr_user_id', 'legal_review_requested_by',
+        'legal_review_cancelled_by', 'employee_response_checked_by'];
 
     protected array $companyParents = ['branch'];
 

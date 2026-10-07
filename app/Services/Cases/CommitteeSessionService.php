@@ -16,16 +16,18 @@ use App\Models\User;
 use App\Services\CaseEventLogger;
 use App\Support\Access\CaseVisibility;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 
 class CommitteeSessionService
 {
     public function __construct(private CaseWorkflow $workflow, private ConflictClearance $conflicts, private CaseEventLogger $events) {}
 
     public function recordSession(DisciplinaryCase $case, array $attendees, ?int $chairId, string $minutes,
-        Outcome $outcome, DefenseAcceptance $defenseAcceptance, User $actor): DisciplinaryCase
+        Outcome $outcome, DefenseAcceptance $defenseAcceptance, User $actor, int $minutesTypedByPoolMemberId): DisciplinaryCase
     {
-        return DB::transaction(function () use ($case, $attendees, $chairId, $minutes, $outcome, $defenseAcceptance, $actor): DisciplinaryCase {
+        return DB::transaction(function () use ($case, $attendees, $chairId, $minutes, $outcome, $defenseAcceptance, $actor, $minutesTypedByPoolMemberId): DisciplinaryCase {
             $case = DisciplinaryCase::query()->lockForUpdate()->findOrFail($case->id);
+            Gate::forUser($actor)->authorize('update', $case);
             $sources = [CaseStatus::AwaitingEmployeeResponse, CaseStatus::ResponseReceived,
                 CaseStatus::ResponseRefusedToSign, CaseStatus::ResponseDeliveryRefused,
                 CaseStatus::ResponseScannedUploaded, CaseStatus::AiIngestedResponse, CaseStatus::CommitteeSessionHeld];
@@ -74,6 +76,9 @@ class CommitteeSessionService
             if ($chairId === null || ! in_array($chairId, $ids, true)) {
                 throw new TransitionBlocked('The chair must be an attendee.');
             }
+            if (! in_array($minutesTypedByPoolMemberId, $ids, true)) {
+                throw new TransitionBlocked('The minutes must be attributed to an attendee.');
+            }
             CommitteeSessionAttendance::query()->where('case_id', $case->id)->delete();
             foreach ($attendees as $attendee) {
                 CommitteeSessionAttendance::create([
@@ -89,6 +94,7 @@ class CommitteeSessionService
                 'committee_session_held_at' => now(), 'outcome' => $outcome,
                 'defense_acceptance' => $defenseAcceptance,
                 'session_majority_reached' => $approvals > count($attendees) / 2,
+                'minutes_typed_by_pool_member_id' => $minutesTypedByPoolMemberId,
             ])->save();
             if ($case->status !== CaseStatus::CommitteeSessionHeld) {
                 $case = $this->workflow->transition($case, CaseStatus::CommitteeSessionHeld, $actor, 'Committee session recorded');
@@ -96,6 +102,7 @@ class CommitteeSessionService
             $this->events->log($case, 'committee_session_recorded', [
                 'attendee_ids' => $ids, 'chair_id' => $chairId, 'approve_votes' => $approvals,
                 'majority_reached' => $case->session_majority_reached,
+                'minutes_typed_by_pool_member_id' => $minutesTypedByPoolMemberId,
             ], actor: $actor);
 
             return $case;

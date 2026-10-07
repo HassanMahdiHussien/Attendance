@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\UserRole;
 use App\Models\Attachment;
 use App\Models\DisciplinaryCase;
+use App\Models\Document;
 use App\Models\ViolationReport;
 use App\Support\Access\CaseVisibility;
 use App\Support\Access\ViolationReportVisibility;
@@ -20,11 +21,13 @@ class AttachmentDownloadController extends Controller
         $user = $request->user();
         $parent = match ($attachment->attachable_type) {
             'case' => DisciplinaryCase::withoutGlobalScopes()->find($attachment->attachable_id),
+            'document' => Document::withoutGlobalScopes()->find($attachment->attachable_id),
             'violation_report' => ViolationReport::withoutGlobalScopes()->find($attachment->attachable_id),
             default => null,
         };
         $visible = match (true) {
             $parent instanceof DisciplinaryCase => CaseVisibility::for($user)->whereKey($parent->id)->exists(),
+            $parent instanceof Document => CaseVisibility::for($user)->whereKey($parent->case_id)->exists(),
             $parent instanceof ViolationReport => $parent->case_id !== null
                 ? CaseVisibility::for($user)->whereKey($parent->case_id)->exists()
                 : in_array($user->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)

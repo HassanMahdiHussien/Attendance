@@ -3,6 +3,7 @@
 namespace App\Services\Cases;
 
 use App\Enums\CaseStatus;
+use App\Enums\DocumentType;
 use App\Enums\SignaturePurpose;
 use App\Enums\SignatureStatus;
 use App\Enums\UserRole;
@@ -34,6 +35,21 @@ class HandOffService
             }
             if ($purpose === SignaturePurpose::ResponseSubmission && $case->status !== CaseStatus::AwaitingEmployeeResponse) {
                 throw new TransitionBlocked('The response is not awaiting hand-off.');
+            }
+            if ($purpose === SignaturePurpose::DefenseLetterReceipt && $case->status !== CaseStatus::AwaitingEmployeeResponse) {
+                throw new TransitionBlocked('The defense letter is not awaiting hand-off.');
+            }
+            if ($purpose === SignaturePurpose::DecisionLetterReceipt
+                && ! in_array($case->status, [CaseStatus::AwaitingAppealWindow, CaseStatus::AppealPending], true)) {
+                throw new TransitionBlocked('An issued decision is required for receipt.');
+            }
+            if ($purpose === SignaturePurpose::DecisionLetterReceipt) {
+                $issued = $case->documents()->where('document_type', DocumentType::DecisionLetter->value)
+                    ->where('status', 'issued')->orderByDesc('version')->first();
+                if (! $issued || isset($data['document_id']) && (int) $data['document_id'] !== $issued->id) {
+                    throw new TransitionBlocked('The receipt must reference the current issued decision.');
+                }
+                $data['document_id'] = $issued->id;
             }
             if ($status === SignatureStatus::Signed && empty($data['signed_at'])) {
                 throw new TransitionBlocked('A signature date is required.');

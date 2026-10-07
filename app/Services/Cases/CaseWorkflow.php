@@ -132,6 +132,11 @@ class CaseWorkflow
             && $case->outcome?->value !== 'recommendation_only') {
             throw new TransitionBlocked('Only a recommendation without penalty can close here.');
         }
+        if ($to === S::ArchivedFinal && in_array($case->status, [S::SignedRecommendationsUploaded, S::AiVerifyAndClose], true)
+            && $case->legal_review_requested_at !== null && $case->legal_review_completed_at === null
+            && $case->legal_review_cancelled_at === null) {
+            throw new TransitionBlocked('The requested consultation must be completed or cancelled before closure.');
+        }
         if ($to === S::ArchivedFinal && $case->status === S::AwaitingAppealWindow) {
             $end = app(Deadlines::class)->appealEnd($case);
             if ($end === null || now('Asia/Baghdad')->toDateString() <= $end->toDateString()) {

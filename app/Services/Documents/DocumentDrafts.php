@@ -7,12 +7,15 @@ use App\Enums\CaseStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\DocumentType;
 use App\Enums\DraftedBy;
+use App\Enums\Outcome;
+use App\Enums\PenaltyType;
 use App\Exceptions\TransitionBlocked;
 use App\Models\DisciplinaryCase;
 use App\Models\Document;
 use App\Models\User;
 use App\Services\CaseEventLogger;
 use App\Services\Cases\CaseWorkflow;
+use App\Support\Access\CaseVisibility;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
@@ -76,6 +79,90 @@ class DocumentDrafts
             $this->events->log($case, 'document_draft_saved', ['document_id' => $draft->id, 'content_changed' => $changed], actor: $actor);
 
             return $draft->refresh();
+        });
+    }
+
+    public function createOrUpdateDecision(DisciplinaryCase $case, array $bodies, User $actor, ?Document $draft = null): Document
+    {
+        return DB::transaction(function () use ($case, $bodies, $actor, $draft): Document {
+            $case = DisciplinaryCase::query()->lockForUpdate()->findOrFail($case->id);
+            Gate::forUser($actor)->authorize('manageDocuments', $case);
+            if (! in_array($case->status, [CaseStatus::SignedRecommendationsUploaded, CaseStatus::DecisionLetterCitationCheck], true)
+                || ! in_array($case->outcome, [Outcome::Warning, Outcome::Termination], true)
+                || ! CaseVisibility::for($actor)->whereKey($case->id)->exists()) {
+                throw new TransitionBlocked('A signed recommendation with a penalty is required.');
+            }
+            $languages = array_values(array_unique(array_merge(['ar', 'en'], $case->company->enabled_languages)));
+            if (array_diff($languages, array_keys($bodies)) || array_diff(array_keys($bodies), $languages)) {
+                throw ValidationException::withMessages(['bodies' => 'يجب كتابة أسباب القرار بكل اللغات المفعلة.']);
+            }
+            foreach ($bodies as $language => $body) {
+                if (! is_string($body) || blank($body)) {
+                    throw ValidationException::withMessages(["bodies.{$language}" => 'أسباب القرار مطلوبة.']);
+                }
+            }
+            $document = $draft ? $case->documents()->lockForUpdate()->findOrFail($draft->id)
+                : $case->documents()->where('document_type', DocumentType::DecisionLetter->value)->where('is_locked', false)->lockForUpdate()->first();
+            if ($document && ($document->is_locked || $document->document_type !== DocumentType::DecisionLetter || $document->version !== 1)) {
+                throw new TransitionBlocked('Issued documents cannot be edited.');
+            }
+            if (! $document) {
+                $document = Document::create(['company_id' => $case->company_id, 'case_id' => $case->id,
+                    'document_type' => DocumentType::DecisionLetter, 'penalty_type' => PenaltyType::from($case->outcome->value),
+                    'drafted_by' => DraftedBy::Human, 'status' => DocumentStatus::Draft,
+                    'version' => 1, 'created_by' => $actor->id]);
+            }
+            foreach ($bodies as $language => $body) {
+                $document->contents()->updateOrCreate(['language_code' => $language],
+                    ['company_id' => $case->company_id, 'body' => $body, 'is_authoritative' => $language === 'ar']);
+            }
+            $document->forceFill(['last_edited_by' => $actor->id, 'second_reviewed_by' => null,
+                'second_reviewed_at' => null, 'status' => DocumentStatus::Draft])->save();
+            $this->events->log($case, 'decision_draft_saved', ['document_id' => $document->id], actor: $actor);
+
+            return $document->refresh();
+        });
+    }
+
+    public function submitDecision(Document $draft, User $actor): Document
+    {
+        return DB::transaction(function () use ($draft, $actor): Document {
+            $document = Document::query()->lockForUpdate()->findOrFail($draft->id);
+            $case = DisciplinaryCase::query()->lockForUpdate()->findOrFail($document->case_id);
+            Gate::forUser($actor)->authorize('manageDocuments', $case);
+            if ($document->document_type !== DocumentType::DecisionLetter || $document->is_locked
+                || $document->version !== 1 || ! in_array($case->status, [CaseStatus::SignedRecommendationsUploaded, CaseStatus::DecisionLetterCitationCheck], true)
+                || $case->outcome?->value !== $document->penalty_type?->value) {
+                throw new TransitionBlocked('The decision draft cannot be submitted at this stage.');
+            }
+            if ($case->status === CaseStatus::SignedRecommendationsUploaded) {
+                $case = $this->workflow->transition($case, CaseStatus::DecisionLetterCitationCheck, $actor, 'Decision draft submitted');
+            }
+            app(CitationGate::class)->assertIssuable($document);
+            $document->forceFill(['status' => DocumentStatus::ReadyForReview])->save();
+            $target = $case->legal_review_requested_at && ! $case->legal_review_completed_at
+                ? CaseStatus::AwaitingExternalLegalConsultation : CaseStatus::DecisionLetterReadyForReview;
+            $this->workflow->transition($case, $target, $actor, 'Decision citation check passed');
+            $this->events->log($case, 'decision_submitted_for_review', ['document_id' => $document->id], actor: $actor);
+
+            return $document->refresh();
+        });
+    }
+
+    public function backToEditDecision(Document $draft, User $actor): void
+    {
+        DB::transaction(function () use ($draft, $actor): void {
+            $document = Document::query()->lockForUpdate()->findOrFail($draft->id);
+            $case = DisciplinaryCase::query()->lockForUpdate()->findOrFail($document->case_id);
+            Gate::forUser($actor)->authorize('manageDocuments', $case);
+            if ($document->document_type !== DocumentType::DecisionLetter || $document->is_locked
+                || $case->status !== CaseStatus::DecisionLetterReadyForReview) {
+                throw new TransitionBlocked('The decision cannot be returned to editing.');
+            }
+            $this->workflow->transition($case, CaseStatus::DecisionLetterCitationCheck, $actor, 'Decision returned to edit');
+            $document->forceFill(['status' => DocumentStatus::Draft, 'second_reviewed_by' => null,
+                'second_reviewed_at' => null])->save();
+            $this->events->log($case, 'document_sent_back', ['document_id' => $document->id], actor: $actor);
         });
     }
 

@@ -60,7 +60,7 @@ function driveCaseToSignedRecommendations(Outcome $outcome): array
         $approvers[] = $user;
     }
     $case = app(CommitteeSessionService::class)->recordSession($case, $attendees, null, 'Human committee minutes',
-        $outcome, DefenseAcceptance::Rejected, $hr);
+        $outcome, DefenseAcceptance::Rejected, $hr, $attendees[0]['pool_member_id']);
     $recommendations = Document::factory()->create(['case_id' => $case->id, 'document_type' => 'recommendations', 'created_by' => $hr->id]);
     app(RecommendationsEditor::class)->update($recommendations, [
         'ar' => ['body' => 'Human findings', 'secondary_body' => 'Human recommendations'],
