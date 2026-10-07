@@ -4,6 +4,8 @@
 `docker compose exec -T -u sail laravel.test php artisan test` · `… ./vendor/bin/pint --test`.
 Never run two test processes at once (shared testing DB and fake disk).
 
+Research R12 (plan review resolutions) overrides earlier research sections.
+
 ## Run P — services
 - [ ] T001 Migrations per data-model.md (laws.name_en + seed values, citations.override_reason + citations trigger update with working down(), ai_draft_notes append-only, legal_unit_topics); models; tenancy test registries
 - [ ] T002 ClaudeClient (structured calls, logging, exception mapping, refusal/max_tokens handling, AiUnavailable without key) + FakeClaudeClient for tests; config keys

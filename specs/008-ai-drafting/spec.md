@@ -75,8 +75,8 @@ minutes and the recorded outcome only. The prior-cases paragraph comes from the 
 for the three approvals as today.
 
 **Acceptance Scenarios**:
-1. **Given** minutes and outcome "warning", **Then** the draft recommends exactly a warning; a draft recommending
-   any other outcome is rejected and retried.
+1. **Given** minutes and outcome "warning", **Then** the printed recommendation sentence states a warning from
+   the recorded outcome; AI text that mentions a different penalty is flagged to the reviewer.
 2. **Given** no minutes recorded, **Then** the AI action is not offered (the manual editor still is).
 
 ### User Story 4 - The decision letter is drafted from the approved recommendations (Priority: P2)
@@ -135,14 +135,18 @@ In every editor (AI-drafted or manual), "إدراج مادة" opens a search ove
 - **FR-006**: Saving an AI draft MUST create or update the document draft through the existing services with
   `drafted_by = ai`, create the citation rows for the markers, store the AI notes for the draft, and write the AI
   generation log (input, output, model, tokens, duration, status). Notes are never inserted into the letter.
-- **FR-007**: A deterministic check MUST reject a recommendations or decision draft whose wording states an outcome
-  or penalty different from the recorded one (keyword check per language).
+- **FR-007**: The AI MUST NOT write the operative decision: the recommended outcome and the decision letter's
+  penalty and defense-outcome sentences are template text filled from the recorded decision. An outcome/penalty
+  keyword detector (Arabic, English) flags drafts that mention a different penalty, shown to the reviewer; every
+  number or date in AI prose MUST occur in the request input, otherwise the output is rejected and retried.
 - **FR-008**: On submit of any draft with citations (AI or manual), the system MUST run the independent relevance
   check (a separate AI call that is given only each claim sentence and the cited unit's official text) and store
   supports / partial / does not support with a one-line reason per citation. The result is cleared when the text
   changes.
-- **FR-009**: Issuance MUST stay blocked for a citation that is not "supports" unless a reviewer overrides it with a
-  reason; overrides are logged in the audit log (who, when, the flagged result).
+- **FR-009**: Issuance MUST stay blocked for a claim whose citation is not "supports" (including not checked)
+  unless a reviewer overrides it with a reason; overrides are logged in the audit log (who, when, the flagged
+  result). The check runs while the draft is edited, so results and overrides are visible before submit. Each
+  claim (sentence containing a marker) is checked separately.
 - **FR-010**: When the AI is unavailable or the output keeps failing validation, the case MUST return to the state it
   was in before drafting, with a clear message, and the manual path MUST remain available. No case can stay in an
   AI drafting state after its job ends.

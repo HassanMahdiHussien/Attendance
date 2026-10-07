@@ -102,3 +102,63 @@
 - Fake Claude client (no network) returning scripted outputs/failures; payload assertions (allow-list, forbidden
   fields absent); validator unit tests; workflow tests for success / unavailable / stale job / reconcile;
   relevance check + override + gate; citations sync; English rendering; screens per role.
+
+## R12 Plan review resolutions (Codex review, 2026-10-07) — override earlier sections where they differ
+- **A1 Relevance timing**: the relevance check runs in the editor stage, not after submit. Every save of a draft
+  with markers (AI save, manual save, marker insert) dispatches `CheckCitationRelevance` for the citations whose
+  result is empty; the editor shows per-claim status (checking / supports / partial / does not support / not
+  checked), the reason, "إعادة الفحص" and the override form. Submit (all three documents, incl. corrected
+  versions) stays guarded by `CitationGate` exactly as today, so it succeeds only when every claim is "supports"
+  or overridden. The confirmation screen shows the same results read-only plus override. No new status.
+- **A2 Unchecked override**: `CitationGate::valid` accepts an override for a null result (check unavailable) as
+  well as partial / does_not_support, always after the citable-unit check; an override requires
+  `override_reason`. Tested end to end with the check unavailable.
+- **A3 Saving from the job**: requests carry a token (`cases.ai_request_id` uuid, `ai_request_document_type`,
+  `ai_request_from_status`, `ai_request_started_at`). The job, in one transaction with the case row locked:
+  verifies the token and that the case is still in the AI state, transitions back to `ai_request_from_status`,
+  saves through the existing service with a new `DraftedBy $origin = DraftedBy::Human` parameter (AI passes
+  `DraftedBy::Ai`), syncs citations, stores notes, clears the token. A mismatching token saves nothing.
+  Failures follow the same transaction shape (back to the previous status, token cleared, `ai_draft_failed`).
+- **A4 Outcome**: the AI never writes the operative decision. The recommendations template gains a required
+  block `outcome_sentence` (ar "توصي اللجنة بـ{outcome}", en "The committee recommends {outcome}") printed after
+  `recommendations_intro` from the recorded outcome (company template versions without the block fall back to the
+  default block, as 006 did for new blocks); the AI writes `body` = findings and `secondary_body` = reasons /
+  additional recommendations without stating a penalty. The decision letter's penalty and defense-outcome
+  sentences are already template text. The outcome keyword detector (ar, en) becomes a **flag** shown in the
+  notes panel and on the confirmation screen, not a guarantee. FR-007 is rewritten accordingly.
+- **New deterministic guard**: every number or date in the AI prose (digits in any script) must occur in the
+  request payload; otherwise the output is rejected and retried ("no invented numbers").
+- **A5 Per-claim citations**: a citation row is one claim: `(document_id, legal_unit_id, claim_hash)` where the
+  claim is the Arabic sentence containing the marker occurrence (new column `claim_hash`, unique per document).
+  Other languages must contain the same multiset of unit ids as Arabic (validator). CitationGate checks every
+  Arabic marker occurrence against the row of its own sentence; other-language occurrences against the unit's
+  rows. Editing a sentence changes its hash → new unchecked row; rows no longer present are removed (draft only).
+- **B1 Prior record**: the defense letter payload gets no prior-record data (the template prints the block when
+  ticked). The recommendations payload gets prior summaries (type, date, outcome) as context only, with the
+  instruction not to restate them (the السوابق block is printed from the DB); the number guard catches restated
+  dates or counts.
+- **B2 Free-text minimisation**: before sending, known personal names (employee, alleged responsible employee,
+  witnesses, attendees, approvers, HR users) in free text are replaced by role tokens (⟦الموظف⟧, ⟦الشاهد 1⟧ …) and
+  restored in the output; sequences of 7+ digits and phone/email patterns are masked as ⟦رقم⟧ / ⟦بريد⟧ and must
+  not appear in the output (rejected if they do). Tests assert the payload contains none of the seeded names,
+  IDs, phones or emails even when they are typed into description or minutes.
+- **B3 Stale jobs**: the token handles it (A3). `ai:reconcile-drafting` clears tokens older than 20 minutes and
+  returns those cases to `ai_request_from_status`; a late worker then fails the token check.
+- **B4 Save transactions**: `CitationSync::sync` runs inside each service's own transaction (DocumentDrafts
+  create/update/decision, RecommendationsEditor create/update — the latter keeps its approvals reset). Corrected
+  issued documents start with fresh unchecked citations; the original rows stay immutable.
+- **B5 Candidates**: topics from `legal_unit_topics` (current version), indexed by topic. Quotas: up to 20 statute
+  units + up to 10 regulation units (when the company has approved ones). The law/regulation conflict view stays
+  out of scope (noted); both are offered and the prompt says the law prevails.
+- **B6 Languages**: validator checks script share per language (ar/ku ≥ 80% Arabic-script letters, en ≥ 80% Latin),
+  Kurdish only when enabled AND the company has Kurdish templates (else it is not requested), and the same unit-id
+  multiset in every language. English clause rendering is tested on real splitter paths (`2/ثانياً/ب`,
+  `18/ثامن عشر`, `5/أولاً`); unknown forms fall back to the Arabic path.
+- **B7 Entry points**: AI is offered only for a fresh draft of a document in its initial stage — defense letter in
+  `open`, recommendations in `committee_session_held` (no submitted version), decision letter in
+  `signed_recommendations_uploaded`; when a draft already exists the AI replaces its bodies after an explicit
+  confirmation ("سيستبدل النص الحالي"). Not offered during citation check, approvals, after a rejection (HR edits
+  manually, as today), or for corrections of issued documents.
+- **Nits**: `ai_draft_notes` insert-only trigger, latest notes = newest row for the document; the Claude client is
+  an injectable service (`App\Ai\ClaudeClient` interface + SDK implementation; 007's page reader may keep its own
+  client); the local demo toggle (T011) is optional and not part of acceptance.
