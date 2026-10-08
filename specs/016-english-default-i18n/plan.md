@@ -47,6 +47,52 @@ Laravel 13 JSON translations (`lang/en.json`, `lang/ar.json`) · Filament 5 (shi
 - **R9 Docs**: CLAUDE.md §18 note is the product owner's to edit — report it; WEIRDNESS line: UI English default,
   documents unchanged.
 
+## R10 Plan review resolutions (Codex review, 2026-10-08) — override R1–R9 where they differ
+
+### Blockers
+- **A1 Staged coverage gate**: `TranslationCoverageTest` takes a path list. Z1 checks only the surfaces Z1 converts
+  (`resources/views/layouts`, `resources/views/livewire`, `resources/views/welcome.blade.php`, `app/Livewire`,
+  `app/Services`, `app/Exceptions`, `app/Enums`, `app/Models`, `app/Http`); Z2 extends it to everything (`app/Filament`,
+  `resources/views/filament`, `app/Notifications`, `app/Mail`, `app/Statistics`, `resources/views/reports`, `app/Jobs`,
+  remaining). The full suite is green after each run.
+- **A2 No control flow on message text**: before translating, every place that branches on `getMessage()` (e.g.
+  `app/Livewire/Cases/RecordSession.php:87`) switches to an exception type or a stable `code` property on the
+  `*Blocked` exceptions. Screens keep displaying the (now translated) message. Exceptions thrown inside queued jobs
+  and stored as technical errors (e.g. `documents.pdf_error`) stay English — they are operator text, not UI.
+
+### Should-fix
+- **B1 Stored text is never translated at write time.** `case_events` types/payloads, stored notes and frozen content
+  stay exactly as written. Display labels (`App\Support\Format\CaseTimeline`) translate the event *type* at render
+  time. New app-authored notes (e.g. in `DraftDocumentWithAi`) are stored as a translation key + parameters and
+  rendered with `__()` at display; existing stored notes display as stored. AI-generated prose is data, untouched.
+- **B2 Exports**: `GenerateReportExport` sets `App::setLocale($export->locale)` around building and rendering both
+  PDF and XLSX (`try/finally` restore); `reports/pdf.blade.php` `lang`/`dir`/alignment and `ExcelReport` sheet RTL
+  follow that locale; the live preview uses the request locale. Test: requester changes preference after queuing →
+  both files still use the captured locale.
+- **B3 Notifications**: remove the forced Arabic locale in `CaseDeadlineAlert`; `User` implements
+  `HasLocalePreference`; database notifications store a key + parameters (not prose) and translate at display; tests
+  for mail and database channels in both languages. Operational mail (`OperationsMessage`, `ops:test-mail`, backup
+  and drill failure mails) is operator mail: English always (WEIRDNESS line).
+- **B4/B5 Catalogues**: two layers — (1) short UI chrome: JSON literal keys (`__('Cases')`), English key = English
+  text, `lang/ar.json` holds Arabic; (2) workflow/blocking/validation/notification messages: structured PHP files
+  `lang/{en,ar}/messages.php` with domain keys (`messages.handoff.witness_scan_required`) and named placeholders whose
+  values stay data. The coverage test checks: every literal JSON key used exists in `ar.json`; every structured key
+  used exists in **both** `en` and `ar` files; no Arabic letters in UI code outside a purpose-specific allowlist
+  (document templates `resources/views/documents/**`, `app/Documents/**`, AI prompt builders, legal-library
+  parsing/normalising, seeders, Iraqi month-name constants, `lang/ar*`) — whole directories that also render UI are
+  not exempt.
+- **B6 Livewire lifecycle tests**: an Arabic user's Livewire action via `/livewire/update` and a Filament action both
+  render Arabic, including a translated service exception; locale precedence after login and on later requests.
+- **B7 Direction/fonts**: walkthrough and class sweep include Filament custom views and the statistical PDF;
+  content-language blocks (bilingual review panels, document previews) keep their explicit `dir`; §18 font roles kept
+  (Tajawal chrome in both languages, Amiri for document previews, JetBrains Mono for identifiers).
+- **B8 Test migration**: ~67 Arabic assertion lines in 24 files — UI assertions assert English by default or set the
+  acting user's locale to `ar` when the test is about Arabic rendering; document/AI content assertions unchanged;
+  add regression tests that switching UI language leaves rendered document content and AI prompt language rules
+  unchanged.
+- **Nits**: `Ui::date()` formats in `Asia/Baghdad` (presentation only); login switch verified on the custom login and
+  both Filament logins; CLAUDE.md §18 edit is the product owner's — the PR description proposes the wording.
+
 ## Constitution Check
 | Principle | Status | How |
 |---|---|---|
