@@ -250,7 +250,13 @@ test('case page requires two witnesses for refusal and records the response even
         ->set('witnessOne', 'شاهد أول')->call('recordHandOff')->assertHasErrors(['witnessTwo']);
     Livewire::test(ShowCase::class, ['case' => (string) $case->id])
         ->set('handoffPurpose', 'response_submission')->set('handoffStatus', 'refused_to_sign')
-        ->set('witnessOne', 'شاهد أول')->set('witnessTwo', 'شاهد ثان')->call('recordHandOff')->assertHasNoErrors();
+        ->set('witnessOne', 'شاهد أول')->set('witnessTwo', 'شاهد ثان')
+        ->call('recordHandOff')->assertHasErrors(['witnessScan']);
+    Livewire::test(ShowCase::class, ['case' => (string) $case->id])
+        ->set('handoffPurpose', 'response_submission')->set('handoffStatus', 'refused_to_sign')
+        ->set('witnessOne', 'شاهد أول')->set('witnessTwo', 'شاهد ثان')
+        ->set('witnessScan', UploadedFile::fake()->createWithContent('witnesses.pdf', "%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF"))
+        ->call('recordHandOff')->assertHasNoErrors();
     expect($case->fresh()->status)->toBe(CaseStatus::ResponseRefusedToSign);
     expect($case->events()->where('event_type', 'response_handoff_recorded')->exists())->toBeTrue();
 });

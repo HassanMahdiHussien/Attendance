@@ -27,17 +27,17 @@ class DocumentCorrector
             Gate::forUser($actor)->authorize('correct', $case);
             $source = Document::query()->lockForUpdate()->findOrFail($issued->id);
             if ($source->status !== DocumentStatus::Issued || ! $source->is_locked) {
-                throw new IssuanceBlocked('Only a currently issued document can be corrected.');
+                throw new IssuanceBlocked('لا يمكن تصحيح إلا المستند الصادر الحالي.');
             }
             if ($actor->company_id !== $source->company_id) {
-                throw new IssuanceBlocked('The correcting user must belong to the document company.');
+                throw new IssuanceBlocked('يجب أن ينتمي المستخدم المصحح إلى شركة المستند.');
             }
             if (blank($reason)) {
-                throw ValidationException::withMessages(['correction_reason' => 'A correction reason is required.']);
+                throw ValidationException::withMessages(['correction_reason' => 'يلزم بيان سبب التصحيح.']);
             }
             if (Document::query()->where('case_id', $case->id)->where('document_type', $source->document_type->value)
                 ->whereIn('status', [DocumentStatus::Draft->value, DocumentStatus::ReadyForReview->value])->exists()) {
-                throw new IssuanceBlocked('An open draft already exists for this case and document type.');
+                throw new IssuanceBlocked('توجد مسودة مفتوحة لهذا النوع من المستندات في الحالة.');
             }
 
             $correction = Document::create([

@@ -24,11 +24,11 @@ class DefenseLetterFlow
             $document = Document::query()->where('case_id', $case->id)->findOrFail($draft->id);
             if ($document->document_type !== DocumentType::DefenseLetter || $document->is_locked
                 || $document->status !== DocumentStatus::ReadyForReview) {
-                throw new TransitionBlocked('The defense letter is unavailable.');
+                throw new TransitionBlocked('كتاب الدفاع غير متاح.');
             }
             if ($document->version === 1) {
                 if ($case->status !== CaseStatus::DefenseLetterReadyForReview) {
-                    throw new TransitionBlocked('The case changed, reload.');
+                    throw new TransitionBlocked('تغيرت الحالة، أعد التحميل.');
                 }
                 $case = $this->workflow->transition($case, CaseStatus::DefenseLetterConfirmed, $actor, 'HR confirmed defense letter');
             }

@@ -41,7 +41,7 @@ class RecommendationsEditor
                 || ! in_array($hrUser->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)
                 || ! CaseVisibility::for($hrUser)->whereKey($case->id)->exists()
                 || $case->documents()->where('document_type', DocumentType::Recommendations->value)->exists()) {
-                throw new TransitionBlocked('An eligible HR user and committee majority are required.');
+                throw new TransitionBlocked('يلزم مستخدم موارد بشرية مخوّل وأغلبية اللجنة.');
             }
             $document = Document::create(['company_id' => $case->company_id, 'case_id' => $case->id,
                 'document_type' => DocumentType::Recommendations, 'drafted_by' => $origin,
@@ -64,15 +64,15 @@ class RecommendationsEditor
                 || ! $hrUser->is_active || ! $case->company->is_active
                 || ! in_array($hrUser->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)
                 || ! CaseVisibility::for($hrUser)->whereKey($case->id)->exists()) {
-                throw new TransitionBlocked('This recommendations draft cannot be submitted.');
+                throw new TransitionBlocked('لا يمكن تقديم مسودة التوصيات هذه.');
             }
             if ($document->approvals()->whereNull('invalidated_at')->where('decision', 'rejected')->exists()) {
-                throw new TransitionBlocked('Edit the recommendations after rejection before resubmitting.');
+                throw new TransitionBlocked('عدّل التوصيات بعد رفضها قبل إعادة تقديمها.');
             }
             foreach (app(DraftLanguages::class)->for($case->company, DocumentType::Recommendations) as $language) {
                 $content = $document->contents()->where('language_code', $language)->first();
                 if (blank($content?->body) || blank($content?->secondary_body)) {
-                    throw new TransitionBlocked("Findings and recommendations are required for {$language}.");
+                    throw new TransitionBlocked("يلزم إدخال النتائج والتوصيات باللغة {$language}.");
                 }
             }
             if ($document->version > 1) {
@@ -111,13 +111,13 @@ class RecommendationsEditor
                 || ! $hrUser->is_active || ! $case->company->is_active
                 || ! in_array($hrUser->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)
                 || ! CaseVisibility::for($hrUser)->whereKey($case->id)->exists()) {
-                throw new TransitionBlocked('HR access to a recommendations draft is required.');
+                throw new TransitionBlocked('يلزم امتلاك صلاحية الموارد البشرية على مسودة التوصيات.');
             }
             if (array_is_list($contents)) {
                 $contents = collect($contents)->mapWithKeys(fn (array $item) => [$item['language_code'] => $item])->all();
             }
             if (count($contents) !== count(array_unique(array_keys($contents))) || in_array('', $contents, true)) {
-                throw new TransitionBlocked('Content must have unique languages and nonempty text.');
+                throw new TransitionBlocked('يجب أن يتضمن المحتوى لغات غير مكررة ونصاً غير فارغ.');
             }
             self::$writing = true;
             try {
@@ -125,7 +125,7 @@ class RecommendationsEditor
                     $body = is_array($value) ? ($value['body'] ?? null) : $value;
                     $secondary = is_array($value) ? ($value['secondary_body'] ?? null) : null;
                     if (blank($body)) {
-                        throw new TransitionBlocked("Findings are required for {$language}.");
+                        throw new TransitionBlocked("يلزم إدخال النتائج باللغة {$language}.");
                     }
                     DocumentContent::updateOrCreate(
                         ['document_id' => $document->id, 'language_code' => $language],

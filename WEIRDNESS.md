@@ -77,6 +77,8 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 - Email forwards use a separate `email_drafts` table because an email lacks the structured facts required by a violation report or case. HR enters those facts through the normal form. (2026-10)
 - Only the topmost raw `Authentication-Results` header counts; its authserv-id must be the configured receiving host. Lower headers can be forged by a sender. (2026-10)
 - Discarded mail leaves only its sender domain, receipt time and rejection reason in the platform log. Addresses and content are never copied to a tenant. (2026-10)
+- The 48-hour duplicate check stays at HR case intake. A reporter sees only the bare status of a submitted report and must not learn whether a case already exists. (2026-10)
+- Committee members use their own accounts for invitations and approvals; invitation links are deliberately deferred. (2026-10)
 
 # Provisioning boundaries
 

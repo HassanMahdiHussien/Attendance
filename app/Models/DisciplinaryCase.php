@@ -46,21 +46,21 @@ class DisciplinaryCase extends Model
                     if ($case->jurisdiction_at_opening === null) {
                         $case->jurisdiction_at_opening = $branch->jurisdiction;
                     } elseif ($case->jurisdiction_at_opening !== $branch->jurisdiction) {
-                        throw ValidationException::withMessages(['jurisdiction_at_opening' => 'Jurisdiction must match the opening branch.']);
+                        throw ValidationException::withMessages(['jurisdiction_at_opening' => 'يجب أن تتطابق المنطقة القانونية مع فرع فتح الحالة.']);
                     }
                 }
             } elseif ($case->isDirty('jurisdiction_at_opening')) {
-                throw ValidationException::withMessages(['jurisdiction_at_opening' => 'Opening jurisdiction cannot change.']);
+                throw ValidationException::withMessages(['jurisdiction_at_opening' => 'لا يمكن تغيير المنطقة القانونية بعد فتح الحالة.']);
             }
             if ($case->exists && $case->isDirty('status') && ! CaseWorkflow::isWritingStatus()) {
                 throw new ImmutableRecordException('Case status changes only through the workflow.');
             }
             if ($case->status !== CaseStatus::Draft && $case->law_version_id === null) {
-                throw ValidationException::withMessages(['law_version_id' => 'A law version is required after draft.']);
+                throw ValidationException::withMessages(['law_version_id' => 'يلزم تحديد نسخة القانون بعد مرحلة المسودة.']);
             }
             if ($case->exists && $case->getRawOriginal('status') !== 'draft'
                 && $case->isDirty('law_version_id')) {
-                throw ValidationException::withMessages(['law_version_id' => 'The law version cannot change after draft.']);
+                throw ValidationException::withMessages(['law_version_id' => 'لا يمكن تغيير نسخة القانون بعد مرحلة المسودة.']);
             }
         });
         static::deleting(fn () => throw new ImmutableRecordException('Cases cannot be deleted.'));

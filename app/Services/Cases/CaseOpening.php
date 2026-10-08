@@ -25,11 +25,11 @@ class CaseOpening
             Gate::forUser($actor)->authorize('update', $case);
             if ($case->status !== CaseStatus::Draft || ! in_array($actor->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)
                 || ! CaseVisibility::for($actor)->whereKey($case->id)->exists()) {
-                throw new TransitionBlocked('HR access to a draft case is required.');
+                throw new TransitionBlocked('يلزم امتلاك صلاحية الموارد البشرية على مسودة الحالة.');
             }
             if ($case->employee_id === null || $case->branch_id === null || blank($case->violation_type)
                 || $case->violation_time === null || ($case->location_id === null && blank($case->violation_place_freetext))) {
-                throw new TransitionBlocked('Employee, branch, type, time and location are required.');
+                throw new TransitionBlocked('يلزم تحديد الموظف والفرع والنوع والوقت والمكان.');
             }
             $case->jurisdiction_at_opening = $case->branch->jurisdiction;
             $law = Law::query()->where('category', 'labor')->where('kind', 'statute')->where('approval_status', 'approved')
@@ -38,7 +38,7 @@ class CaseOpening
                 ->whereHas('jurisdictions', fn ($query) => $query->where('jurisdiction', $case->jurisdiction_at_opening->value))
                 ->orderByDesc('effective_from')->first();
             if ($law === null) {
-                throw new TransitionBlocked('No approved labor law is in force for this jurisdiction.');
+                throw new TransitionBlocked('لا يوجد قانون عمل معتمد ونافذ لهذه المنطقة.');
             }
             $case->law_version_id = $law->id;
             $case->save();

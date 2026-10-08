@@ -30,47 +30,47 @@ class DocumentIssuer
         return DB::transaction(function () use ($draft, $actor, $manualReference): Document {
             $document = Document::query()->lockForUpdate()->findOrFail($draft->id);
             if ($document->disciplinaryCase->status === CaseStatus::ArchivedFinal) {
-                throw new IssuanceBlocked('Archived cases are read-only.');
+                throw new IssuanceBlocked('الحالات المؤرشفة للقراءة فقط.');
             }
             if ($document->is_locked || ! in_array($document->status, [DocumentStatus::Draft, DocumentStatus::ReadyForReview], true)) {
-                throw new IssuanceBlocked('Only a draft or ready document can be issued.');
+                throw new IssuanceBlocked('لا يمكن إصدار إلا مستند مسودة أو جاهز.');
             }
             if ($actor->company_id !== $document->company_id) {
-                throw new IssuanceBlocked('The issuer must belong to the document company.');
+                throw new IssuanceBlocked('يجب أن ينتمي مُصدر المستند إلى شركته.');
             }
             if ($document->document_type === DocumentType::DecisionLetter) {
                 $case = $document->disciplinaryCase;
                 if ($case->legal_review_requested_at !== null && $case->legal_review_completed_at === null) {
-                    throw new IssuanceBlocked('The requested consultation must be completed.');
+                    throw new IssuanceBlocked('يلزم إكمال الاستشارة المطلوبة.');
                 }
                 if ($document->penalty_type === PenaltyType::Termination
                     && ($document->leave_confirmed_by === null || $document->leave_confirmed_at === null)) {
-                    throw new IssuanceBlocked('HR leave confirmation is required for termination.');
+                    throw new IssuanceBlocked('يلزم تأكيد حالة الإجازة من الموارد البشرية لإنهاء الخدمة.');
                 }
             }
 
             $company = $document->company;
             foreach ($company->enabled_languages as $language) {
                 if (blank($document->contents()->where('language_code', $language)->value('body'))) {
-                    throw new IssuanceBlocked("Missing content for language {$language}.");
+                    throw new IssuanceBlocked("المحتوى باللغة {$language} غير موجود.");
                 }
                 if ($document->document_type === DocumentType::Recommendations
                     && blank($document->contents()->where('language_code', $language)->value('secondary_body'))) {
-                    throw new IssuanceBlocked("Missing recommendations for language {$language}.");
+                    throw new IssuanceBlocked("التوصيات باللغة {$language} غير موجودة.");
                 }
             }
             $this->citationGate->assertIssuable($document);
             if ($company->requires_second_review && ($document->second_reviewed_by === null
                 || $document->second_reviewed_at === null || (int) $document->second_reviewed_by === (int) $actor->id
                 || (int) $document->second_reviewed_by === (int) $document->last_edited_by)) {
-                throw new IssuanceBlocked('A completed review by another user is required.');
+                throw new IssuanceBlocked('يلزم إكمال المراجعة من مستخدم آخر.');
             }
             if ($document->document_type === DocumentType::Recommendations) {
                 foreach ([PoolRole::Legal, PoolRole::Hr, PoolRole::LaborUnion] as $role) {
                     if (! $document->approvals()->where('role_category', $role->value)
                         ->where('decision', ApprovalDecision::Approved->value)
                         ->whereNull('invalidated_at')->exists()) {
-                        throw new IssuanceBlocked("A valid {$role->value} approval is required.");
+                        throw new IssuanceBlocked("يلزم اعتماد صالح لفئة {$role->value}.");
                     }
                 }
             }
@@ -86,10 +86,10 @@ class DocumentIssuer
                 DB::table('company_sequences')->where($identity)->lockForUpdate()->first();
                 $reference = trim($manualReference);
                 if ($reference === '') {
-                    throw ValidationException::withMessages(['reference_number' => 'Reference number is required.']);
+                    throw ValidationException::withMessages(['reference_number' => 'يلزم الرقم الرسمي.']);
                 }
                 if ($this->referenceTaken($document, $year, $reference)) {
-                    throw ValidationException::withMessages(['reference_number' => 'Reference number is already used this year.']);
+                    throw ValidationException::withMessages(['reference_number' => 'استُخدم الرقم الرسمي هذا العام.']);
                 }
             } else {
                 do {
@@ -117,7 +117,7 @@ class DocumentIssuer
                 $previous = Document::query()->lockForUpdate()->findOrFail($document->previous_version_id);
                 if ($previous->status !== DocumentStatus::Issued || $previous->case_id !== $document->case_id
                     || $previous->document_type !== $document->document_type) {
-                    throw new IssuanceBlocked('The previous version is not the current document for this case and type.');
+                    throw new IssuanceBlocked('النسخة السابقة ليست المستند الحالي لهذا النوع في الحالة.');
                 }
                 $previous->forceFill([
                     'status' => DocumentStatus::Superseded,

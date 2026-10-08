@@ -119,7 +119,7 @@ class CreateCase extends Component
             : ($this->emailId ? app(EmailDraftService::class)->convert(
                 EmailDraftVisibility::inbox(auth()->user())->findOrFail($this->emailId), auth()->user(), $data)
                 : ($this->reportId ? app(ReportService::class)->convert(
-                ViolationReportVisibility::inbox(auth()->user())->findOrFail($this->reportId), auth()->user(), null, $data)
+                    ViolationReportVisibility::inbox(auth()->user())->findOrFail($this->reportId), auth()->user(), null, $data)
                 : $drafts->create($data, auth()->user())));
         $this->draftId = $draft->id;
         $this->emailId = null;

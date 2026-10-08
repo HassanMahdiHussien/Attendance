@@ -57,7 +57,7 @@ class SignaturePresence
             if ($document->document_type !== DocumentType::Recommendations || ! $document->is_locked
                 || $case->status !== CaseStatus::AwaitingCommitteeSignatures
                 || ! in_array($hr->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)) {
-                throw new TransitionBlocked('Issued recommendations awaiting signatures are required.');
+                throw new TransitionBlocked('يلزم إصدار توصيات تنتظر التوقيعات.');
             }
             if ($suggest && (new \finfo(FILEINFO_MIME_TYPE))->file($file->getRealPath()) === 'application/pdf'
                 && app(PdfPages::class)->count($file->getRealPath()) > 20) {
@@ -91,7 +91,7 @@ class SignaturePresence
             if ($document->document_type !== DocumentType::Recommendations || ! $document->is_locked
                 || $case->status !== CaseStatus::AwaitingCommitteeSignatures
                 || ! in_array($hr->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)) {
-                throw new TransitionBlocked('Issued recommendations awaiting signatures are required.');
+                throw new TransitionBlocked('يلزم إصدار توصيات تنتظر التوقيعات.');
             }
             $newest = $this->latestScan($document);
             if (! $newest || $newest->id !== $scan->id) {
@@ -104,11 +104,11 @@ class SignaturePresence
             $attendees = CommitteeSessionAttendance::query()->where('case_id', $case->id)->with('committeePoolMember')->get();
             if ($attendees->count() < 3 || array_diff($attendees->modelKeys(), array_map('intval', array_keys($presence)))
                 || array_diff(array_map('intval', array_keys($presence)), $attendees->modelKeys())) {
-                throw new TransitionBlocked('Record every attendee signature box.');
+                throw new TransitionBlocked('سجّل حالة خانة توقيع كل حاضر.');
             }
             foreach ($presence as $value) {
                 if (! in_array($value, ['filled', 'empty'], true)) {
-                    throw new TransitionBlocked('Each signature box must be filled or empty.');
+                    throw new TransitionBlocked('يجب تحديد كل خانة توقيع بأنها ممتلئة أو فارغة.');
                 }
             }
             $suggestion = $suggestionId ? SignaturePresenceSuggestion::query()->where('company_id', $case->company_id)
@@ -164,14 +164,14 @@ class SignaturePresence
             if ($admin->primary_role !== UserRole::CompanyAdmin || blank($reason)
                 || $case->status !== CaseStatus::AwaitingCommitteeSignatures
                 || $document->document_type !== DocumentType::Recommendations || ! $document->is_locked) {
-                throw new TransitionBlocked('An administrator reason and issued recommendations are required.');
+                throw new TransitionBlocked('يلزم سبب من مسؤول الشركة وتوصيات صادرة.');
             }
             $latestScan = $this->latestChecks($document);
             if ($this->latestScan($document)?->id !== $latestScan->first()?->attachment_id) {
                 throw new TransitionBlocked('سُجّل مسح أحدث لم تُسجّل خاناته بعد.');
             }
             if ($latestScan->isEmpty() || ! $latestScan->contains(fn ($check) => $check->presence_check === PresenceCheck::BoxAppearsEmpty)) {
-                throw new TransitionBlocked('A recorded empty signature box is required.');
+                throw new TransitionBlocked('يلزم وجود خانة توقيع فارغة مسجلة.');
             }
             $this->events->log($case, 'empty_signature_box_overridden', ['document_id' => $document->id, 'reason' => $reason], actor: $admin);
             app(AuditLogger::class)->log('empty_signature_box_overridden', $document, ['reason' => $reason], $admin);
@@ -213,11 +213,11 @@ class SignaturePresence
                 || ! CaseVisibility::for($hr)->whereKey($case->id)->exists()
                 || array_diff(array_keys($presence), ['general_manager', 'union'])
                 || array_diff(['general_manager', 'union'], array_keys($presence))) {
-                throw new TransitionBlocked('An issued decision and both paper signer boxes are required.');
+                throw new TransitionBlocked('يلزم قرار صادر وحالتا خانتي توقيع الموقّعين على الورق.');
             }
             foreach ($presence as $value) {
                 if (! in_array($value, ['filled', 'empty'], true)) {
-                    throw new TransitionBlocked('Each signature box must be filled or empty.');
+                    throw new TransitionBlocked('يجب تحديد كل خانة توقيع بأنها ممتلئة أو فارغة.');
                 }
             }
             $gm = Employee::query()->where('company_id', $case->company_id)->where('is_general_manager', true)->where('is_active', true)->first();
@@ -225,7 +225,7 @@ class SignaturePresence
                 ->whereHas('committeePoolMember', fn ($query) => $query->where('role_type', PoolRole::LaborUnion->value))
                 ->with('committeePoolMember')->first();
             if (! $gm || ! $union) {
-                throw new TransitionBlocked('The decision paper signers are missing.');
+                throw new TransitionBlocked('بيانات الموقّعين على القرار الورقي ناقصة.');
             }
             foreach (['general_manager', 'union'] as $signer) {
                 $isGm = $signer === 'general_manager';

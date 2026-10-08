@@ -64,6 +64,8 @@ class ShowCase extends Component
 
     public string $witnessTwo = '';
 
+    public $witnessScan;
+
     public $responseScan;
 
     public bool $responseScanSafe = false;
@@ -140,6 +142,19 @@ class ShowCase extends Component
             'signedAt' => ['required_if:handoffStatus,signed', 'nullable', 'date'], 'attemptedAt' => ['required_if:handoffStatus,delivery_refused', 'nullable', 'date'],
             'attemptLocation' => ['required_if:handoffStatus,delivery_refused', 'nullable', 'string', 'max:255'], 'attemptedBy' => ['required_if:handoffStatus,delivery_refused', 'nullable', 'string', 'max:255'],
             'witnessOne' => ['required_unless:handoffStatus,signed', 'nullable', 'string', 'max:255'], 'witnessTwo' => ['required_unless:handoffStatus,signed', 'different:witnessOne', 'nullable', 'string', 'max:255'],
+            'witnessScan' => ['exclude_if:handoffStatus,signed', 'required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
+        ], [
+            'signedAt.required_if' => 'يلزم تاريخ التوقيع.',
+            'attemptedAt.required_if' => 'يلزم تاريخ محاولة التسليم.',
+            'attemptLocation.required_if' => 'يلزم مكان محاولة التسليم.',
+            'attemptedBy.required_if' => 'يلزم اسم القائم بمحاولة التسليم.',
+            'witnessOne.required_unless' => 'يلزم اسم الشاهد الأول عند الرفض.',
+            'witnessTwo.required_unless' => 'يلزم اسم الشاهد الثاني عند الرفض.',
+            'witnessTwo.different' => 'يجب أن يختلف اسما الشاهدين.',
+            'witnessScan.required' => 'يجب رفع مسح الورقة الموقعة من الشاهدين عند الرفض.',
+            'witnessScan.file' => 'يلزم رفع ملف لمسح الورقة الموقعة من الشاهدين.',
+            'witnessScan.mimes' => 'يسمح بملفات PDF و JPG و PNG فقط.',
+            'witnessScan.max' => 'يجب ألا يتجاوز حجم المسح 10 MB.',
         ]);
         $purpose = in_array($case->status, [CaseStatus::AwaitingAppealWindow, CaseStatus::AppealPending], true)
             ? SignaturePurpose::DecisionLetterReceipt : SignaturePurpose::from($this->handoffPurpose);
@@ -152,7 +167,8 @@ class ShowCase extends Component
         }
         $data = ['signed_at' => $this->signedAt ?: null, 'attempted_at' => $this->attemptedAt ?: null,
             'attempt_location' => $this->attemptLocation ?: null, 'attempted_by_name' => $this->attemptedBy ?: null,
-            'witness_1_name' => $this->witnessOne ?: null, 'witness_2_name' => $this->witnessTwo ?: null];
+            'witness_1_name' => $this->witnessOne ?: null, 'witness_2_name' => $this->witnessTwo ?: null,
+            'witness_scan' => $status === SignatureStatus::Signed ? null : $this->witnessScan];
         if ($purpose === SignaturePurpose::ResponseSubmission) {
             $responses->recordHandOff($case, $status, $data, auth()->user());
             $this->expectedStatus = $case->fresh()->status->value;
@@ -160,6 +176,7 @@ class ShowCase extends Component
             $handOffs->record($case, $purpose, $status, $data, auth()->user());
         }
         $this->notice = 'سُجل التسليم.';
+        $this->witnessScan = null;
     }
 
     public function requestConsultation(ConsultationService $consultations): void
@@ -298,7 +315,8 @@ class ShowCase extends Component
             'aiAttempt' => $aiAttempt,
             'success' => session()->pull('case_success_'.$record->id),
             'assigneeNames' => User::query()->where('company_id', $record->company_id)->whereIn('id', $assigneeIds)->pluck('name', 'id')->all(),
-            'signatures' => Signature::query()->where('case_id', $record->id)->whereIn('id', $signatureIds)->get()->keyBy('id'),
+            'signatures' => Signature::query()->where('case_id', $record->id)->whereIn('id', $signatureIds)
+                ->with('witnessScanAttachment')->get()->keyBy('id'),
             'signatureChecks' => $recommendationsDocument
                 ? app(SignaturePresence::class)->latestChecks($recommendationsDocument) : collect(),
             'decisionSignatureChecks' => $decisionDocument ? Signature::query()->where('document_id', $decisionDocument->id)

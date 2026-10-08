@@ -28,7 +28,7 @@ class Citation extends Model
         static::saving(function (self $citation): void {
             $document = Document::withoutGlobalScopes()->find($citation->document_id);
             if ($document?->is_locked) {
-                throw new ImmutableRecordException('Locked document citations cannot be changed.');
+                throw new ImmutableRecordException('لا يمكن تغيير استشهادات مستند مقفل.');
             }
             $unit = LegalUnit::withoutGlobalScopes()->find($citation->legal_unit_id);
             if ($unit?->company_id !== null && $document !== null
@@ -37,7 +37,7 @@ class Citation extends Model
             }
             if (! $citation->exists && $document !== null && ! LegalUnit::query()->citableFor($document->disciplinaryCase)
                 ->whereKey($citation->legal_unit_id)->exists()) {
-                throw ValidationException::withMessages(['legal_unit_id' => 'This legal unit is not citable for the case.']);
+                throw ValidationException::withMessages(['legal_unit_id' => 'هذه المادة القانونية غير صالحة للاستشهاد في الحالة.']);
             }
         });
         static::deleting(function (self $citation): void {

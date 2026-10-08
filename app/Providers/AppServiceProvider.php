@@ -12,7 +12,10 @@ use App\Listeners\AuditAuthEvents;
 use App\Models\Company;
 use App\Models\DisciplinaryCase;
 use App\Models\Document;
+use App\Models\EmailDraft;
 use App\Models\ViolationReport;
+use App\Services\EmailIntake\ImapMailbox;
+use App\Services\EmailIntake\IntakeMailbox;
 use App\Support\HealthPing;
 use App\Support\Tenancy\TenantContext;
 use Filament\Facades\Filament;
@@ -36,7 +39,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->bind(\App\Services\EmailIntake\IntakeMailbox::class, \App\Services\EmailIntake\ImapMailbox::class);
+        $this->app->bind(IntakeMailbox::class, ImapMailbox::class);
         $this->app->scoped(TenantContext::class, fn () => new TenantContext);
         $this->app->bind(PageReader::class, ClaudePageReader::class);
         $this->app->bind(ClaudeClient::class, SdkClaudeClient::class);
@@ -79,7 +82,7 @@ class AppServiceProvider extends ServiceProvider
         }
         Relation::morphMap([
             'violation_report' => ViolationReport::class,
-            'email_draft' => \App\Models\EmailDraft::class,
+            'email_draft' => EmailDraft::class,
             'case' => DisciplinaryCase::class,
             'document' => Document::class,
         ]);

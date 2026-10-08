@@ -33,21 +33,21 @@ class CommitteeSessionService
                 CaseStatus::ResponseScannedUploaded, CaseStatus::AiIngestedResponse, CaseStatus::CommitteeSessionHeld];
             if (! in_array($case->status, $sources, true) || ! in_array($actor->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)
                 || ! CaseVisibility::for($actor)->whereKey($case->id)->exists()) {
-                throw new TransitionBlocked('HR access at a response or session stage is required.');
+                throw new TransitionBlocked('يلزم امتلاك صلاحية الموارد البشرية في مرحلة الرد أو الجلسة.');
             }
             if ($case->defense_letter_issued_at === null || blank($minutes)) {
-                throw new TransitionBlocked('A defense-letter issue date and session minutes are required.');
+                throw new TransitionBlocked('يلزم تاريخ إصدار كتاب الدفاع ومحضر الجلسة.');
             }
             $mandate = CommitteeMandate::query()->where('company_id', $case->company_id)
                 ->inEffectOn($case->defense_letter_issued_at)->orderByDesc('effective_from')->first();
             if ($mandate === null) {
-                throw new TransitionBlocked('No committee mandate was in effect on the defense-letter issue date.');
+                throw new TransitionBlocked('لم يكن أمر تشكيل اللجنة نافذاً عند إصدار كتاب الدفاع.');
             }
             $pool = $mandate->poolMembers()->where(fn ($q) => $q->whereNull('branch_id')->orWhere('branch_id', $case->branch_id))
                 ->get()->keyBy('id');
             $ids = array_column($attendees, 'pool_member_id');
             if (count($ids) < 3 || count(array_unique($ids)) !== count($ids)) {
-                throw new TransitionBlocked('Three distinct attendees are required.');
+                throw new TransitionBlocked('يلزم حضور ثلاثة أعضاء مختلفين.');
             }
             $excluded = collect($this->conflicts->conflicts($case))->filter(fn ($row) => $row['excluded'])
                 ->map(fn ($row) => $row['member']->id)->all();
@@ -57,11 +57,11 @@ class CommitteeSessionService
             foreach ($attendees as $attendee) {
                 $member = $pool->get($attendee['pool_member_id'] ?? null);
                 if ($member === null || in_array($member->id, $excluded, true)) {
-                    throw new TransitionBlocked('An attendee is outside the eligible conflict-free pool.');
+                    throw new TransitionBlocked('أحد الحاضرين ليس ضمن أعضاء اللجنة المؤهلين الخالين من التعارض.');
                 }
                 $vote = $attendee['vote'] instanceof Vote ? $attendee['vote'] : Vote::tryFrom($attendee['vote'] ?? '');
                 if ($vote === null) {
-                    throw new TransitionBlocked('Each attendee needs an approve, reject or abstain vote.');
+                    throw new TransitionBlocked('يلزم تسجيل تصويت كل حاضر بالموافقة أو الرفض أو الامتناع.');
                 }
                 $union = $union || $member->role_type === PoolRole::LaborUnion;
                 if ($legalId === null && $member->role_type === PoolRole::Legal) {
@@ -70,14 +70,14 @@ class CommitteeSessionService
                 $approvals += (int) ($vote === Vote::Approve);
             }
             if (! $union) {
-                throw new TransitionBlocked('A labor-union attendee is required.');
+                throw new TransitionBlocked('يلزم حضور ممثل نقابة العمال.');
             }
             $chairId ??= $legalId;
             if ($chairId === null || ! in_array($chairId, $ids, true)) {
-                throw new TransitionBlocked('The chair must be an attendee.');
+                throw new TransitionBlocked('يجب أن يكون رئيس الجلسة من الحاضرين.');
             }
             if (! in_array($minutesTypedByPoolMemberId, $ids, true)) {
-                throw new TransitionBlocked('The minutes must be attributed to an attendee.');
+                throw new TransitionBlocked('يلزم نسبة المحضر إلى أحد الحاضرين.');
             }
             CommitteeSessionAttendance::query()->where('case_id', $case->id)->delete();
             foreach ($attendees as $attendee) {

@@ -17,7 +17,7 @@ class TemplateResolver
         } else {
             $file = app_path("Documents/Defaults/{$type}.{$language}.php");
             if (! is_file($file)) {
-                throw new IssuanceBlocked("Missing {$language} template for {$type}.");
+                throw new IssuanceBlocked("القالب باللغة {$language} للنوع {$type} غير موجود.");
             }
             $blocks = require $file;
             $options = ['show_footer' => true, 'header_mode' => 'logo_text'];

@@ -8,6 +8,6 @@ class MissingDocumentFact extends IssuanceBlocked
 {
     public function __construct(string $fact)
     {
-        parent::__construct("Missing document fact: {$fact}.");
+        parent::__construct("بيان المستند غير موجود: {$fact}.");
     }
 }

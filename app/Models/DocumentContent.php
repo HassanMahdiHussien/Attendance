@@ -34,10 +34,10 @@ class DocumentContent extends Model
             if ($document !== null) {
                 $company = Company::find($document->company_id);
                 if (! in_array($content->language_code, $company->enabled_languages, true)) {
-                    throw ValidationException::withMessages(['language_code' => 'Language is not enabled for this company.']);
+                    throw ValidationException::withMessages(['language_code' => 'هذه اللغة غير مفعلة للشركة.']);
                 }
                 if ($content->is_authoritative !== ($content->language_code === 'ar')) {
-                    throw ValidationException::withMessages(['is_authoritative' => 'Arabic is the authoritative language.']);
+                    throw ValidationException::withMessages(['is_authoritative' => 'العربية هي اللغة المعتمدة.']);
                 }
             }
         });

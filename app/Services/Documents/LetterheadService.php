@@ -21,7 +21,7 @@ class LetterheadService
         abort_unless(in_array($actor->primary_role, [UserRole::CompanyAdmin, UserRole::PlatformAdmin], true)
             && ($actor->primary_role === UserRole::PlatformAdmin || (int) $actor->company_id === (int) $company->id), 403);
         if (! in_array($language, $company->enabled_languages, true)) {
-            throw ValidationException::withMessages(['language' => 'Language is not enabled.']);
+            throw ValidationException::withMessages(['language' => 'اللغة غير مفعلة.']);
         }
         $fields = validator($fields, [
             'name' => 'required|string|max:255', 'address_lines' => 'nullable|string',
@@ -41,10 +41,10 @@ class LetterheadService
                     $path = "letterheads/{$company->id}/{$image['sha']}.{$image['ext']}";
                     $disk = Storage::disk('local');
                     if ($disk->exists($path) && hash('sha256', $disk->get($path)) !== $image['sha']) {
-                        throw ValidationException::withMessages([$key => 'Stored image hash mismatch.']);
+                        throw ValidationException::withMessages([$key => 'بصمة الصورة المخزنة غير مطابقة.']);
                     }
                     if (! $disk->exists($path) && ! $disk->put($path, $image['bytes'])) {
-                        throw ValidationException::withMessages([$key => 'Could not store the image.']);
+                        throw ValidationException::withMessages([$key => 'تعذر حفظ الصورة.']);
                     }
                     $fields[$key.'_path'] = $path;
                     $fields[$key.'_sha256'] = $image['sha'];
@@ -54,7 +54,7 @@ class LetterheadService
                 }
             }
             if ($fields['header_mode'] === 'image' && ! $fields['header_image_path']) {
-                throw ValidationException::withMessages(['header_image' => 'A header image is required for image mode.']);
+                throw ValidationException::withMessages(['header_image' => 'تلزم صورة للترويسة في وضع الصورة.']);
             }
             $version = CompanyLetterhead::create($fields + [
                 'company_id' => $company->id, 'language_code' => $language,
@@ -81,7 +81,7 @@ class LetterheadService
             'image/png' => 'png', 'image/jpeg' => 'jpg', default => null
         };
         if (! $ext || $file->getSize() > 2 * 1024 * 1024 || strlen($bytes) > 2 * 1024 * 1024 || getimagesizefromstring($bytes) === false) {
-            throw ValidationException::withMessages([$field => 'Upload a PNG or JPG image of at most 2 MB.']);
+            throw ValidationException::withMessages([$field => 'ارفع صورة PNG أو JPG بحجم لا يتجاوز 2 MB.']);
         }
 
         return ['bytes' => $bytes, 'sha' => hash('sha256', $bytes), 'ext' => $ext];

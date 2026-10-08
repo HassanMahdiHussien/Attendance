@@ -32,7 +32,7 @@ class DocumentApproval extends Model
                 throw new ImmutableRecordException('Locked documents cannot receive approvals.');
             }
             if ($approval->decision === ApprovalDecision::Rejected && blank($approval->comment)) {
-                throw ValidationException::withMessages(['comment' => 'A rejection comment is required.']);
+                throw ValidationException::withMessages(['comment' => 'يلزم تعليق يوضح سبب الرفض.']);
             }
         });
         static::updating(function (self $approval): void {

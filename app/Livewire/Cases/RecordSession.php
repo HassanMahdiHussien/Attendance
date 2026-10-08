@@ -85,8 +85,8 @@ class RecordSession extends Component
             $this->notice = $updated->session_majority_reached ? 'سُجلت الجلسة.' : 'سُجلت الجلسة دون أغلبية. يلزم إعادة التصويت.';
         } catch (TransitionBlocked $error) {
             $this->notice = match ($error->getMessage()) {
-                'A labor-union attendee is required.' => 'يلزم حضور ممثل نقابة العمال',
-                'Three distinct attendees are required.' => 'يلزم حضور ثلاثة أعضاء مختلفين',
+                'يلزم حضور ممثل نقابة العمال.' => 'يلزم حضور ممثل نقابة العمال',
+                'يلزم حضور ثلاثة أعضاء مختلفين.' => 'يلزم حضور ثلاثة أعضاء مختلفين',
                 default => $error->getMessage(),
             };
         }
