@@ -60,7 +60,7 @@ test('HR staff profile counts only visible cases and explains partial history', 
     expect($profile['counts']['total'])->toBe(2)->and($profile['counts']['warnings'])->toBe(1)
         ->and($profile['history'])->toHaveCount(1)->and($profile['partial'])->toBeTrue();
     $this->actingAs($viewer)->get('/employees/'.$employee->id)->assertOk()
-        ->assertSee('قد توجد حالات أخرى لا تظهر لك');
+        ->assertSee('There may be other cases you cannot see');
 });
 
 test('history links only issued documents with a ready PDF', function (): void {

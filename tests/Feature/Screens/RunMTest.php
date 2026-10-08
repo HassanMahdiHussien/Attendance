@@ -423,11 +423,11 @@ test('approval review formats every language and becomes read-only after that ca
     app(RecommendationsEditor::class)->submitForApproval($document, $admin);
     $this->actingAs($approvers['legal']);
     Livewire::test(ReviewApproval::class, ['document' => $document->id])
-        ->assertSee('العربية')->assertSee('English')->assertSeeHtml('<strong>Findings</strong>')
+        ->assertSee('Arabic')->assertSee('English')->assertSeeHtml('<strong>Findings</strong>')
         ->call('approve')->assertRedirect('/committee');
-    expect(session('committee_notice'))->toBe('سُجلت موافقتك');
+    expect(session('committee_notice'))->toBe('Your approval was recorded');
     Livewire::test(ReviewApproval::class, ['document' => $document->id])
-        ->assertSee('للقراءة فقط')->assertDontSee('رفض مع تعليق');
+        ->assertSee('read only')->assertDontSee('Reject with comment');
 });
 
 test('signature scan views describe appearance without claiming identity verification', function (): void {
@@ -435,5 +435,5 @@ test('signature scan views describe appearance without claiming identity verific
         ->map(fn ($name) => file_get_contents(resource_path("views/livewire/cases/{$name}.blade.php")))->implode(' ');
     expect($views)->not->toContain('هوية الموقّع موثقة', 'توقيع أصيل', 'signature verified');
     $session = file_get_contents(resource_path('views/livewire/cases/record-session.blade.php'));
-    expect($session)->toContain('aria-label="{{ $member->person_name }}"', 'كتابة التوصيات');
+    expect($session)->toContain('aria-label="{{ $member->person_name }}"', "__('Write recommendations')");
 });

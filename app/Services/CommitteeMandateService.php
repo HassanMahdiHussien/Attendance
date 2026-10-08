@@ -22,7 +22,7 @@ class CommitteeMandateService
             $latest = CommitteeMandate::query()->where('company_id', $companyId)->orderByDesc('effective_from')->lockForUpdate()->first();
             $effective = CarbonImmutable::parse($data['effective_from'], 'Asia/Baghdad')->startOfDay();
             if ($latest && $effective->toDateString() <= CarbonImmutable::parse($latest->effective_from)->toDateString()) {
-                throw ValidationException::withMessages(['effective_from' => 'يجب أن يكون تاريخ النفاذ بعد أحدث أمر تشكيل.']);
+                throw ValidationException::withMessages(['effective_from' => __('messages.committee.mandate_effective_after_latest')]);
             }
             if ($latest) {
                 $latest->update(['superseded_at' => $effective]);

@@ -3,6 +3,7 @@
 use App\Http\Controllers\AttachmentDownloadController;
 use App\Http\Controllers\DocumentOutputController;
 use App\Http\Controllers\LegalPageImageController;
+use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\ReportExportDownloadController;
 use App\Http\Middleware\SetTenantContext;
 use App\Livewire\Auth\Login;
@@ -47,6 +48,7 @@ Route::get('/', function () {
 });
 
 Route::middleware('guest')->get('/login', Login::class)->name('login');
+Route::post('/locale', LocaleController::class)->name('locale.update');
 
 Route::middleware('auth')->group(function (): void {
     Route::get('/admin/{company}/employees/import/template', function (Company $company) {

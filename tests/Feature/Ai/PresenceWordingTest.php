@@ -3,9 +3,10 @@
 use App\Services\Cases\PresenceWording;
 
 test('presence labels describe only the appearance of a box', function (): void {
+    app()->setLocale('en');
     foreach (['appears_filled', 'appears_empty', 'unclear'] as $result) {
         $label = PresenceWording::suggestion($result);
-        expect($label)->toContain('خانة التوقيع');
+        expect($label)->toContain('signature box');
         expect(mb_strtolower($label))->not->toMatch('/verified|authentic|genuine|identity|موثّق|أصلي/u');
     }
 });

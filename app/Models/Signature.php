@@ -32,11 +32,11 @@ class Signature extends Model
             }
             if (in_array($signature->status?->value, ['refused_to_sign', 'delivery_refused'], true)
                 && (blank($signature->witness_1_name) || blank($signature->witness_2_name))) {
-                throw ValidationException::withMessages(['status' => 'يلزم شاهدان عند رفض التسليم أو التوقيع.']);
+                throw ValidationException::withMessages(['status' => __('messages.handoff.two_witnesses_required')]);
             }
             if ($signature->isDirty('status') && in_array($signature->status?->value, ['refused_to_sign', 'delivery_refused'], true)
                 && ! $signature->witness_scan_attachment_id) {
-                throw ValidationException::withMessages(['status' => 'يجب رفع مسح الورقة الموقعة من الشاهدين.']);
+                throw ValidationException::withMessages(['status' => __('messages.handoff.signed_witness_scan_required')]);
             }
         });
         static::deleting(fn () => throw new ImmutableRecordException('Signatures cannot be deleted.'));

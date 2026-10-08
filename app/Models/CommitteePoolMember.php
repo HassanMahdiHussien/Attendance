@@ -23,7 +23,7 @@ class CommitteePoolMember extends Model
                 // account. Reporters and department managers can never sit on the committee.
                 $poolRoles = [UserRole::CommitteeMember, UserRole::HrStaff, UserRole::CompanyAdmin];
                 if (! $user || ! in_array($user->primary_role, $poolRoles, true) || (int) $user->company_id !== (int) $member->company_id) {
-                    throw ValidationException::withMessages(['user_id' => 'يجب أن يعود الحساب إلى عضو لجنة أو موظف موارد بشرية أو مسؤول في هذه الشركة.']);
+                    throw ValidationException::withMessages(['user_id' => __('messages.committee.account_role_required')]);
                 }
             }
         });

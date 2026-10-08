@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnforceIdleTimeout;
 use App\Http\Middleware\EnsureAccountIsActive;
+use App\Http\Middleware\SetLocale;
 use App\Http\Middleware\SetTenantContext;
 use App\Support\Access\Landing;
 use Filament\Http\Middleware\IdentifyTenant;
@@ -20,7 +21,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->redirectGuestsTo('/login');
         $middleware->redirectUsersTo(fn (Request $request) => Landing::for($request->user()));
-        $middleware->web(append: [EnsureAccountIsActive::class, EnforceIdleTimeout::class, SetTenantContext::class]);
+        $middleware->web(append: [SetLocale::class, EnsureAccountIsActive::class, EnforceIdleTimeout::class, SetTenantContext::class]);
+        $middleware->prependToPriorityList(before: AuthenticatesRequests::class, prepend: SetLocale::class);
         $middleware->prependToPriorityList(before: AuthenticatesRequests::class, prepend: SetTenantContext::class);
         $middleware->prependToPriorityList(before: AuthenticatesRequests::class, prepend: EnsureAccountIsActive::class);
         $middleware->prependToPriorityList(before: AuthenticatesRequests::class, prepend: EnforceIdleTimeout::class);

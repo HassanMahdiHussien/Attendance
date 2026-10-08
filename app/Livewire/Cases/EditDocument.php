@@ -54,7 +54,7 @@ class EditDocument extends Component
             auth()->user(), $this->documentId ? $case->documents()->findOrFail($this->documentId) : null);
         $this->documentId = $document->id;
         $this->expectedStatus = $case->fresh()->status->value;
-        $this->notice = 'حُفظت المسودة.';
+        $this->notice = __('messages.document.draft_saved');
     }
 
     public function submit(DocumentDrafts $drafts): void
@@ -77,7 +77,7 @@ class EditDocument extends Component
         $case = $this->currentCase();
         $drafts->backToEdit($case->documents()->findOrFail($this->documentId), auth()->user());
         $this->expectedStatus = $case->fresh()->status->value;
-        $this->notice = 'عادت المسودة للتحرير.';
+        $this->notice = __('messages.document.returned_to_editing');
     }
 
     public function render(): View
@@ -109,7 +109,7 @@ class EditDocument extends Component
         $case = CaseVisibility::for(auth()->user())->findOrFail($this->caseId);
         Gate::authorize('manageDocuments', $case);
         if ($case->status->value !== $this->expectedStatus) {
-            throw ValidationException::withMessages(['notice' => 'تغيرت الحالة، أعد التحميل']);
+            throw ValidationException::withMessages(['notice' => __('messages.case.changed_reload')]);
         }
 
         return $case;

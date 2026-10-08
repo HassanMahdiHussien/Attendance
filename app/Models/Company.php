@@ -50,7 +50,7 @@ class Company extends Model
         static::saving(function (self $company): void {
             $languages = $company->enabled_languages;
             if (! is_array($languages) || ! in_array('ar', $languages, true) || ! in_array('en', $languages, true)) {
-                throw ValidationException::withMessages(['enabled_languages' => 'يجب تفعيل العربية والإنجليزية.']);
+                throw ValidationException::withMessages(['enabled_languages' => __('messages.company.arabic_english_required')]);
             }
         });
     }

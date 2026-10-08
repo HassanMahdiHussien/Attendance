@@ -208,10 +208,10 @@ test('recommendations Livewire update reauthorizes and refuses a stale stage', f
     $this->actingAs($f['reporter'])->postJson(Livewire::getUpdateUri(), $payload, ['X-Livewire' => 'true'])->assertNotFound();
     $this->actingAs($f['admin']);
     app(CaseWorkflow::class)->transition($f['case'], CaseStatus::RecommendationsCitationCheck, $f['admin'], 'Stage changed');
-    // Arabic in the JSON payload is \u-escaped; assert on the decoded rendered HTML.
+    // The JSON payload escapes Unicode; assert on the decoded rendered HTML.
     $html = $this->postJson(Livewire::getUpdateUri(), $payload, ['X-Livewire' => 'true'])->assertOk()
         ->json('components.0.effects.html');
-    expect($html)->toContain('تغيرت الحالة');
+    expect($html)->toContain('The case changed');
 });
 
 test('approval Livewire update endpoint rejects a switched account', function (): void {
@@ -242,6 +242,7 @@ test('another company cannot open the new case screens', function (): void {
 });
 
 test('signature presence screens use appearance wording', function (): void {
+    app()->setLocale('ar');
     $views = file_get_contents(resource_path('views/livewire/cases/signed-scan.blade.php'))
         .file_get_contents(resource_path('views/livewire/cases/show-case.blade.php'));
     // The labels come from PresenceWording (009); the views must use it and never claim verification.

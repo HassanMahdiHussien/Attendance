@@ -29,7 +29,7 @@ class User extends Authenticatable implements FilamentUser, HasTenants
 
     protected string $guard_name = 'web';
 
-    protected $attributes = ['is_active' => true];
+    protected $attributes = ['is_active' => true, 'locale' => 'en'];
 
     protected static function booted(): void
     {

@@ -37,13 +37,13 @@ class DocumentOutputController extends Controller
         $document = Document::withoutGlobalScopes()->findOrFail($document);
         abort_unless($request->user()->can('view', $document),
             (int) $request->user()->company_id === (int) $document->company_id ? 403 : 404);
-        abort_unless($document->pdf_status === 'ready', 409, 'ملف PDF قيد الإنشاء أو تعذر إنشاؤه.');
+        abort_unless($document->pdf_status === 'ready', 409, __('messages.document.pdf_pending_or_failed'));
         $path = $document->pdf_file_path;
         $disk = Storage::disk('local');
         abort_unless($path && str_starts_with($path, "documents/{$document->company_id}/{$document->case_id}/")
             && $disk->exists($path)
             && hash_file('sha256', $disk->path($path)) === $document->pdf_sha256, 409,
-            'تعذر التحقق من سلامة ملف PDF.');
+            __('messages.document.pdf_integrity_failed'));
 
         return $disk->download($path, basename($path), ['Content-Type' => 'application/pdf']);
     }

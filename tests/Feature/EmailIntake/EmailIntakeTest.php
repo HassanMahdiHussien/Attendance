@@ -209,13 +209,13 @@ test('HR converts with entered facts and sender sees bare status; dismissal clos
     expect($case->violation_type)->toBe('Entered fact');
     expect($case->description)->toBeNull();
     expect($draft->fresh()->status)->toBe(EmailDraftStatus::Converted);
-    $this->actingAs($sender)->get('/reports')->assertSee('قيد المراجعة');
+    $this->actingAs($sender)->get('/reports')->assertSee('Under review');
     $this->mailbox->messages[2] = intakeMessage(2, str_replace('incident@example.test', 'second@example.test', intakeHeaders($sender->email)));
     intakeRun($this->mailbox);
     $second = EmailDraft::latest('id')->first();
     app(EmailDraftService::class)->dismiss($second, 'Not a report', $hr);
     expect($second->fresh()->status)->toBe(EmailDraftStatus::Dismissed);
-    $this->actingAs($sender)->get('/reports')->assertSee('مغلق');
+    $this->actingAs($sender)->get('/reports')->assertSee('Closed');
 });
 
 test('draft downloads require HR visibility and conversion copies evidence to the case', function (): void {
@@ -314,9 +314,9 @@ test('Livewire inbox dismisses an email and MyReports shows only the bare closed
     $draft = EmailDraft::create(['company_id' => $company->id, 'sender_user_id' => $sender->id,
         'subject' => 'Private subject', 'body_text' => 'Private body', 'received_at' => now()]);
     $this->actingAs($hr);
-    Livewire::test(Inbox::class)->assertSee('بريد مُعاد توجيهه')->assertSee('Private body')
+    Livewire::test(Inbox::class)->assertSee('Forwarded email')->assertSee('Private body')
         ->set('emailReasons.'.$draft->id, 'Outside policy')->call('dismissEmail', $draft->id);
     expect($draft->fresh()->status)->toBe(EmailDraftStatus::Dismissed);
     $this->actingAs($sender);
-    Livewire::test(MyReports::class)->assertSee('مغلق')->assertDontSee('Private subject')->assertDontSee('Private body');
+    Livewire::test(MyReports::class)->assertSee('Closed')->assertDontSee('Private subject')->assertDontSee('Private body');
 });

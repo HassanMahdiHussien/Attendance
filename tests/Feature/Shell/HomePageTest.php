@@ -5,12 +5,12 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Schedule;
 
-it('renders the Arabic RTL home page', function () {
+it('renders the English LTR home page', function () {
     $this->get('/')->assertOk()
-        ->assertSee('lang="ar"', false)
-        ->assertSee('dir="rtl"', false)
+        ->assertSee('lang="en"', false)
+        ->assertSee('dir="ltr"', false)
         ->assertSee('Tajawal')
-        ->assertSee('نظام الانضباط');
+        ->assertSee('Displanery');
 });
 
 it('dispatches the heartbeat job and schedules it every minute', function () {

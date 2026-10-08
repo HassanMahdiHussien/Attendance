@@ -6,6 +6,7 @@ use App\Filament\Auth\Login;
 use App\Filament\Platform\Widgets\CompaniesOverview;
 use App\Http\Middleware\EnforceIdleTimeout;
 use App\Http\Middleware\EnsureAccountIsActive;
+use App\Http\Middleware\SetLocale;
 use App\Http\Middleware\SetTenantContext;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -31,6 +32,7 @@ class PlatformPanelProvider extends PanelProvider
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,
+                SetLocale::class,
                 AuthenticateSession::class,
                 ShareErrorsFromSession::class,
                 ValidateCsrfToken::class,
@@ -42,6 +44,7 @@ class PlatformPanelProvider extends PanelProvider
                 EnforceIdleTimeout::class,
             ])
             ->persistentMiddleware([
+                SetLocale::class,
                 SetTenantContext::class,
                 EnsureAccountIsActive::class,
                 EnforceIdleTimeout::class,

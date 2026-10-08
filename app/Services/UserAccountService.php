@@ -84,7 +84,7 @@ class UserAccountService
         $role = $user->primary_role;
         $allowed = $this->allowedAddons($role);
         if (array_diff($names, $allowed)) {
-            throw ValidationException::withMessages(['addons' => 'الإضافة غير متاحة لهذا الدور.']);
+            throw ValidationException::withMessages(['addons' => __('messages.user.addon_unavailable_for_role')]);
         }
         $before = $user->getPermissionNames()->all();
         $user->syncPermissions($names);
@@ -97,11 +97,11 @@ class UserAccountService
     {
         abort_unless($actor->can('update', $user), 403);
         if (! in_array($user->primary_role, [UserRole::Reporter, UserRole::DeptManager], true) && $branchIds !== []) {
-            throw ValidationException::withMessages(['branches' => 'نطاق الفروع غير متاح لهذا الدور.']);
+            throw ValidationException::withMessages(['branches' => __('messages.user.branch_scope_unavailable')]);
         }
         foreach ($branchIds as $id) {
             if (! DB::table('branches')->where('id', $id)->where('company_id', $user->company_id)->exists()) {
-                throw ValidationException::withMessages(['branches' => 'الفرع يتبع شركة أخرى.']);
+                throw ValidationException::withMessages(['branches' => __('messages.user.branch_other_company')]);
             }
         }
         DB::transaction(function () use ($user, $branchIds, $actor): void {
@@ -124,7 +124,7 @@ class UserAccountService
     {
         if ($user->primary_role === UserRole::CompanyAdmin && $user->is_active && ! User::inCompany($user->company_id)
             ->where('primary_role', UserRole::CompanyAdmin->value)->where('is_active', true)->whereKeyNot($user->id)->exists()) {
-            throw ValidationException::withMessages(['primary_role' => 'لا يمكن إزالة آخر مسؤول شركة نشط.']);
+            throw ValidationException::withMessages(['primary_role' => __('messages.user.last_active_admin_required')]);
         }
     }
 

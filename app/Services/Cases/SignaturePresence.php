@@ -57,11 +57,11 @@ class SignaturePresence
             if ($document->document_type !== DocumentType::Recommendations || ! $document->is_locked
                 || $case->status !== CaseStatus::AwaitingCommitteeSignatures
                 || ! in_array($hr->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)) {
-                throw new TransitionBlocked('يلزم إصدار توصيات تنتظر التوقيعات.');
+                throw new TransitionBlocked(__('messages.signature.issued_recommendations_required'));
             }
             if ($suggest && (new \finfo(FILEINFO_MIME_TYPE))->file($file->getRealPath()) === 'application/pdf'
                 && app(PdfPages::class)->count($file->getRealPath()) > 20) {
-                throw ValidationException::withMessages(['scan' => 'لا يمكن قراءة ملف PDF يزيد على 20 صفحة.']);
+                throw ValidationException::withMessages(['scan' => __('messages.signature.pdf_page_limit')]);
             }
             $attachment = $this->attachments->store($document, AttachmentKind::SignedDocumentScan, $file, $hr);
             if ($case->ai_request_id !== null) {
@@ -91,24 +91,24 @@ class SignaturePresence
             if ($document->document_type !== DocumentType::Recommendations || ! $document->is_locked
                 || $case->status !== CaseStatus::AwaitingCommitteeSignatures
                 || ! in_array($hr->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)) {
-                throw new TransitionBlocked('يلزم إصدار توصيات تنتظر التوقيعات.');
+                throw new TransitionBlocked(__('messages.signature.issued_recommendations_required'));
             }
             $newest = $this->latestScan($document);
             if (! $newest || $newest->id !== $scan->id) {
-                throw new TransitionBlocked('يجب تسجيل خانات أحدث مسح مرفوع.');
+                throw new TransitionBlocked(__('messages.signature.latest_scan_boxes_required'));
             }
             if (Signature::query()->where('attachment_id', $scan->id)
                 ->where('purpose', SignaturePurpose::CommitteeSignature->value)->exists()) {
-                throw new TransitionBlocked('سُجلت خانات هذا المسح سابقاً؛ ارفع مسحاً جديداً.');
+                throw new TransitionBlocked(__('messages.signature.scan_boxes_already_recorded'));
             }
             $attendees = CommitteeSessionAttendance::query()->where('case_id', $case->id)->with('committeePoolMember')->get();
             if ($attendees->count() < 3 || array_diff($attendees->modelKeys(), array_map('intval', array_keys($presence)))
                 || array_diff(array_map('intval', array_keys($presence)), $attendees->modelKeys())) {
-                throw new TransitionBlocked('سجّل حالة خانة توقيع كل حاضر.');
+                throw new TransitionBlocked(__('messages.signature.each_attendee_box_required'));
             }
             foreach ($presence as $value) {
                 if (! in_array($value, ['filled', 'empty'], true)) {
-                    throw new TransitionBlocked('يجب تحديد كل خانة توقيع بأنها ممتلئة أو فارغة.');
+                    throw new TransitionBlocked(__('messages.signature.each_box_filled_or_empty'));
                 }
             }
             $suggestion = $suggestionId ? SignaturePresenceSuggestion::query()->where('company_id', $case->company_id)
@@ -164,14 +164,14 @@ class SignaturePresence
             if ($admin->primary_role !== UserRole::CompanyAdmin || blank($reason)
                 || $case->status !== CaseStatus::AwaitingCommitteeSignatures
                 || $document->document_type !== DocumentType::Recommendations || ! $document->is_locked) {
-                throw new TransitionBlocked('يلزم سبب من مسؤول الشركة وتوصيات صادرة.');
+                throw new TransitionBlocked(__('messages.signature.admin_reason_and_issued_recommendations_required'));
             }
             $latestScan = $this->latestChecks($document);
             if ($this->latestScan($document)?->id !== $latestScan->first()?->attachment_id) {
-                throw new TransitionBlocked('سُجّل مسح أحدث لم تُسجّل خاناته بعد.');
+                throw new TransitionBlocked(__('messages.signature.newer_scan_unrecorded'));
             }
             if ($latestScan->isEmpty() || ! $latestScan->contains(fn ($check) => $check->presence_check === PresenceCheck::BoxAppearsEmpty)) {
-                throw new TransitionBlocked('يلزم وجود خانة توقيع فارغة مسجلة.');
+                throw new TransitionBlocked(__('messages.signature.empty_box_required'));
             }
             $this->events->log($case, 'empty_signature_box_overridden', ['document_id' => $document->id, 'reason' => $reason], actor: $admin);
             app(AuditLogger::class)->log('empty_signature_box_overridden', $document, ['reason' => $reason], $admin);
@@ -213,11 +213,11 @@ class SignaturePresence
                 || ! CaseVisibility::for($hr)->whereKey($case->id)->exists()
                 || array_diff(array_keys($presence), ['general_manager', 'union'])
                 || array_diff(['general_manager', 'union'], array_keys($presence))) {
-                throw new TransitionBlocked('يلزم قرار صادر وحالتا خانتي توقيع الموقّعين على الورق.');
+                throw new TransitionBlocked(__('messages.signature.issued_decision_and_boxes_required'));
             }
             foreach ($presence as $value) {
                 if (! in_array($value, ['filled', 'empty'], true)) {
-                    throw new TransitionBlocked('يجب تحديد كل خانة توقيع بأنها ممتلئة أو فارغة.');
+                    throw new TransitionBlocked(__('messages.signature.each_box_filled_or_empty'));
                 }
             }
             $gm = Employee::query()->where('company_id', $case->company_id)->where('is_general_manager', true)->where('is_active', true)->first();
@@ -225,7 +225,7 @@ class SignaturePresence
                 ->whereHas('committeePoolMember', fn ($query) => $query->where('role_type', PoolRole::LaborUnion->value))
                 ->with('committeePoolMember')->first();
             if (! $gm || ! $union) {
-                throw new TransitionBlocked('بيانات الموقّعين على القرار الورقي ناقصة.');
+                throw new TransitionBlocked(__('messages.signature.paper_decision_signers_incomplete'));
             }
             foreach (['general_manager', 'union'] as $signer) {
                 $isGm = $signer === 'general_manager';

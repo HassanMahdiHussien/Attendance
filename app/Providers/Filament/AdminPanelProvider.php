@@ -5,6 +5,7 @@ namespace App\Providers\Filament;
 use App\Filament\Auth\Login;
 use App\Http\Middleware\EnforceIdleTimeout;
 use App\Http\Middleware\EnsureAccountIsActive;
+use App\Http\Middleware\SetLocale;
 use App\Http\Middleware\SetTenantContext;
 use App\Http\Middleware\SetTenantFromFilament;
 use App\Models\Company;
@@ -32,6 +33,7 @@ class AdminPanelProvider extends PanelProvider
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,
+                SetLocale::class,
                 AuthenticateSession::class,
                 ShareErrorsFromSession::class,
                 ValidateCsrfToken::class,
@@ -43,6 +45,7 @@ class AdminPanelProvider extends PanelProvider
                 EnforceIdleTimeout::class,
             ])
             ->persistentMiddleware([
+                SetLocale::class,
                 SetTenantContext::class,
                 EnsureAccountIsActive::class,
                 EnforceIdleTimeout::class,

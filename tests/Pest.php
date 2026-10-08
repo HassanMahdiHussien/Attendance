@@ -18,6 +18,7 @@ use Tests\TestCase;
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
     ->beforeEach(function (): void {
+        app()->setLocale('en');
         Storage::fake('local');
         Bus::fake([GenerateDocumentPdf::class]);
         app()->bind(PageReader::class, FakePageReader::class);

@@ -99,7 +99,7 @@ test('draft preview is authorised and pending PDF downloads return the Arabic 40
     }
     $this->actingAs($actor)->get(route('documents.preview', $document))->assertOk()->assertSee('DRAFT');
     $issued = app(DocumentIssuer::class)->issue($document, $actor);
-    $this->actingAs($actor)->get(route('documents.pdf', $issued))->assertStatus(409)->assertSee('ملف PDF');
+    $this->actingAs($actor)->get(route('documents.pdf', $issued))->assertStatus(409)->assertSee('The PDF is being created');
     $outsider = User::factory()->create(['company_id' => $company->id, 'primary_role' => 'reporter']);
     $this->actingAs($outsider)->get(route('documents.pdf', $issued))->assertForbidden();
 });

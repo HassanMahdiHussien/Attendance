@@ -46,10 +46,10 @@ class CaseDrafts
     {
         Gate::forUser($actor)->authorize('update', $case);
         if ($case->status !== CaseStatus::Draft) {
-            throw ValidationException::withMessages(['case' => 'لا يمكن تعديل الحالة بعد فتحها.']);
+            throw ValidationException::withMessages(['case' => __('messages.case.cannot_edit_open_case')]);
         }
         if ((int) $case->branch_id !== (int) $data['branch_id']) {
-            throw ValidationException::withMessages(['branch_id' => 'لا يمكن تغيير فرع المسودة. افتح مسودة جديدة.']);
+            throw ValidationException::withMessages(['branch_id' => __('messages.case.draft_branch_immutable')]);
         }
 
         return DB::transaction(function () use ($case, $data, $actor): DisciplinaryCase {
@@ -78,7 +78,7 @@ class CaseDrafts
         if (! empty($data['assigned_hr_user_id'])) {
             $assignee = User::query()->where('company_id', $actor->company_id)->where('is_active', true)->findOrFail($data['assigned_hr_user_id']);
             if (! in_array($assignee->primary_role, [UserRole::HrStaff, UserRole::CompanyAdmin], true)) {
-                throw ValidationException::withMessages(['assigned_hr_user_id' => 'يجب اختيار موظف موارد بشرية نشط.']);
+                throw ValidationException::withMessages(['assigned_hr_user_id' => __('messages.case.active_hr_required')]);
             }
         }
     }

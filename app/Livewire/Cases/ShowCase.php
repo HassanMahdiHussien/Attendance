@@ -99,12 +99,12 @@ class ShowCase extends Component
     {
         $case = $this->editable('assign');
         if ($case->status !== CaseStatus::Open) {
-            throw ValidationException::withMessages(['notice' => 'التكليف متاح عند فتح الحالة.']);
+            throw ValidationException::withMessages(['notice' => __('messages.case.assignment_only_when_open')]);
         }
         $this->validate(['assigneeId' => ['nullable', 'integer']]);
         $user = $this->assigneeId === '' ? null : User::query()->where('company_id', $case->company_id)->findOrFail($this->assigneeId);
         $assignments->assign($case, $user, auth()->user());
-        $this->notice = 'حُدث التكليف.';
+        $this->notice = __('messages.case.assignment_updated');
     }
 
     public function clearConflict(int $memberId, ConflictClearance $clearances): void
@@ -114,7 +114,7 @@ class ShowCase extends Component
         $member = CommitteePoolMember::query()->where('company_id', $case->company_id)->findOrFail($memberId);
         $clearances->clear($case, $member, $this->clearanceReason, auth()->user());
         $this->clearanceReason = '';
-        $this->notice = 'سُجل تحقق الهوية.';
+        $this->notice = __('messages.case.identity_check_recorded');
     }
 
     public function open(CaseOpening $opening): void
@@ -126,11 +126,11 @@ class ShowCase extends Component
             return;
         }
         if (app(CaseInsights::class)->duplicateCandidates($case)['cases']->isNotEmpty()) {
-            throw ValidationException::withMessages(['notice' => 'قد توجد حالة مكررة؛ راجع فحص التكرار قبل الفتح.']);
+            throw ValidationException::withMessages(['notice' => __('messages.case.possible_duplicate')]);
         }
         $opening->open($case, auth()->user());
         $this->expectedStatus = CaseStatus::Open->value;
-        $this->notice = 'فُتحت الحالة.';
+        $this->notice = __('messages.case.opened');
     }
 
     public function recordHandOff(HandOffService $handOffs, ResponseService $responses): void
@@ -144,17 +144,17 @@ class ShowCase extends Component
             'witnessOne' => ['required_unless:handoffStatus,signed', 'nullable', 'string', 'max:255'], 'witnessTwo' => ['required_unless:handoffStatus,signed', 'different:witnessOne', 'nullable', 'string', 'max:255'],
             'witnessScan' => ['exclude_if:handoffStatus,signed', 'required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
         ], [
-            'signedAt.required_if' => 'يلزم تاريخ التوقيع.',
-            'attemptedAt.required_if' => 'يلزم تاريخ محاولة التسليم.',
-            'attemptLocation.required_if' => 'يلزم مكان محاولة التسليم.',
-            'attemptedBy.required_if' => 'يلزم اسم القائم بمحاولة التسليم.',
-            'witnessOne.required_unless' => 'يلزم اسم الشاهد الأول عند الرفض.',
-            'witnessTwo.required_unless' => 'يلزم اسم الشاهد الثاني عند الرفض.',
-            'witnessTwo.different' => 'يجب أن يختلف اسما الشاهدين.',
-            'witnessScan.required' => 'يجب رفع مسح الورقة الموقعة من الشاهدين عند الرفض.',
-            'witnessScan.file' => 'يلزم رفع ملف لمسح الورقة الموقعة من الشاهدين.',
-            'witnessScan.mimes' => 'يسمح بملفات PDF و JPG و PNG فقط.',
-            'witnessScan.max' => 'يجب ألا يتجاوز حجم المسح 10 MB.',
+            'signedAt.required_if' => __('messages.handoff.signed_date_required'),
+            'attemptedAt.required_if' => __('messages.handoff.attempt_date_required'),
+            'attemptLocation.required_if' => __('messages.handoff.attempt_location_required'),
+            'attemptedBy.required_if' => __('messages.handoff.attempt_actor_required'),
+            'witnessOne.required_unless' => __('messages.handoff.first_witness_required'),
+            'witnessTwo.required_unless' => __('messages.handoff.second_witness_required'),
+            'witnessTwo.different' => __('messages.handoff.distinct_witnesses_required'),
+            'witnessScan.required' => __('messages.handoff.witness_scan_required'),
+            'witnessScan.file' => __('messages.handoff.witness_scan_file_required'),
+            'witnessScan.mimes' => __('messages.attachment.pdf_jpg_png_only'),
+            'witnessScan.max' => __('messages.handoff.witness_scan_too_large'),
         ]);
         $purpose = in_array($case->status, [CaseStatus::AwaitingAppealWindow, CaseStatus::AppealPending], true)
             ? SignaturePurpose::DecisionLetterReceipt : SignaturePurpose::from($this->handoffPurpose);
@@ -175,7 +175,7 @@ class ShowCase extends Component
         } else {
             $handOffs->record($case, $purpose, $status, $data, auth()->user());
         }
-        $this->notice = 'سُجل التسليم.';
+        $this->notice = __('messages.handoff.recorded');
         $this->witnessScan = null;
     }
 
@@ -183,10 +183,10 @@ class ShowCase extends Component
     {
         $case = CaseVisibility::for(auth()->user())->findOrFail($this->caseId);
         if ($case->status->value !== $this->expectedStatus) {
-            throw ValidationException::withMessages(['notice' => 'تغيرت الحالة، أعد التحميل']);
+            throw ValidationException::withMessages(['notice' => __('messages.case.changed_reload')]);
         }
         $consultations->request($case, auth()->user());
-        $this->notice = 'طُلبت الاستشارة القانونية. تستمر مهلة الإجراء أثناء انتظارها.';
+        $this->notice = __('messages.consultation.requested_deadline_continues');
     }
 
     public function cancelConsultation(ConsultationService $consultations): void
@@ -195,7 +195,7 @@ class ShowCase extends Component
         $this->validate(['consultationCancelReason' => ['required', 'string', 'max:2000']]);
         $consultations->cancel($case, $this->consultationCancelReason, auth()->user());
         $this->consultationCancelReason = '';
-        $this->notice = 'أُلغيت الاستشارة مع تسجيل السبب.';
+        $this->notice = __('messages.consultation.cancelled_with_reason');
     }
 
     public function closeWithoutPenalty(CaseClosure $closure): void
@@ -203,7 +203,7 @@ class ShowCase extends Component
         $case = $this->editable('update');
         $closure->closeWithoutPenalty($case, auth()->user());
         $this->expectedStatus = CaseStatus::ArchivedFinal->value;
-        $this->notice = 'أُرشفت الحالة دون عقوبة.';
+        $this->notice = __('messages.case.archived_without_penalty');
     }
 
     public function recordDecisionSignatures(SignaturePresence $presence): void
@@ -214,7 +214,7 @@ class ShowCase extends Component
         $document = $case->documents()->where('document_type', DocumentType::DecisionLetter->value)
             ->where('is_locked', true)->orderByDesc('version')->firstOrFail();
         $presence->recordDecisionSignatures($document, $this->decisionSignaturePresence, auth()->user());
-        $this->notice = 'سُجلت حالة خانات توقيع المدير العام وممثل النقابة.';
+        $this->notice = __('messages.signature.decision_boxes_recorded');
     }
 
     public function uploadResponse(ResponseService $responses): void
@@ -224,14 +224,14 @@ class ShowCase extends Component
         $responses->attachScan($case, $this->responseScan, auth()->user());
         $this->responseScan = null;
         $this->expectedStatus = CaseStatus::ResponseScannedUploaded->value;
-        $this->notice = 'رُفع مسح الرد.';
+        $this->notice = __('messages.response.scan_uploaded');
     }
 
     public function markNoResponse(ResponseService $responses): void
     {
         $case = $this->editable('recordHandOff');
         $responses->markNoResponse($case, auth()->user());
-        $this->notice = 'سُجل عدم ورود رد.';
+        $this->notice = __('messages.response.no_response_recorded');
     }
 
     public function requestResponseReading(ResponseReading $reading): void
@@ -239,7 +239,7 @@ class ShowCase extends Component
         $case = $this->editable('uploadAttachment');
         $this->validate(['responseScanSafe' => ['accepted']]);
         $reading->request($case, auth()->user(), $this->responseScanSafe);
-        $this->notice = 'بدأت قراءة مسح الرد.';
+        $this->notice = __('messages.response.scan_reading_started');
     }
 
     public function confirmResponse(ResponseReading $reading): void
@@ -248,7 +248,7 @@ class ShowCase extends Component
         $this->validate(['responseText' => ['required', 'string'], 'responseOrigin' => ['required', 'in:human,ai_checked']]);
         $reading->confirm($case, $this->responseText, $this->responseOrigin, auth()->user());
         $this->expectedStatus = CaseStatus::AiIngestedResponse->value;
-        $this->notice = 'تأكد نص الرد بعد مراجعته مقابل الصورة.';
+        $this->notice = __('messages.response.text_confirmed_against_scan');
     }
 
     public function correctResponse(ResponseReading $reading): void
@@ -260,7 +260,7 @@ class ShowCase extends Component
         $this->responseText = '';
         $this->lastAiPrefill = '';
         $this->responseOrigin = 'human';
-        $this->notice = 'بدأ تصحيح نص الرد.';
+        $this->notice = __('messages.response.correction_started');
     }
 
     public function startCorrection(int $documentId, DocumentCorrector $corrector): void
@@ -342,7 +342,7 @@ class ShowCase extends Component
         Gate::authorize($ability, $case);
         if ($case->status->value !== $this->expectedStatus) {
             $this->stale();
-            throw ValidationException::withMessages(['notice' => 'تغيرت الحالة، أعد التحميل']);
+            throw ValidationException::withMessages(['notice' => __('messages.case.changed_reload')]);
         }
 
         return $case;
@@ -350,6 +350,6 @@ class ShowCase extends Component
 
     private function stale(): void
     {
-        $this->notice = 'تغيرت الحالة، أعد التحميل';
+        $this->notice = __('messages.case.changed_reload');
     }
 }

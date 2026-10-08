@@ -36,13 +36,13 @@ class ReviewConsultation extends Component
     {
         $case = CaseVisibility::for(auth()->user())->findOrFail($this->caseId);
         if ($case->status->value !== $this->expectedStatus || $case->status === CaseStatus::ArchivedFinal) {
-            throw ValidationException::withMessages(['notice' => 'تغيرت الحالة، أعد التحميل']);
+            throw ValidationException::withMessages(['notice' => __('messages.case.changed_reload')]);
         }
         $this->validate(['note' => ['required', 'string', 'max:50000']]);
         try {
             $consultations->complete($case, auth()->user(), $this->note);
             $this->expectedStatus = CaseVisibility::for(auth()->user())->findOrFail($this->caseId)->status->value;
-            $this->notice = 'سُجلت الاستشارة القانونية.';
+            $this->notice = __('messages.consultation.recorded');
         } catch (TransitionBlocked $error) {
             $this->notice = $error->getMessage();
         }

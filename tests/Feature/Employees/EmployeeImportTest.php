@@ -27,6 +27,7 @@ function employeeHeaders(): string
 }
 
 beforeEach(function (): void {
+    app()->setLocale('ar');
     $this->company = Company::factory()->create();
     $this->admin = User::factory()->create(['company_id' => $this->company->id, 'primary_role' => UserRole::CompanyAdmin]);
     actingInAdminTenant($this, $this->admin, $this->company);

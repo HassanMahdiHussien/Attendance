@@ -17,7 +17,7 @@ class CitationOverride
     public function override(Citation $citation, User $actor, string $reason): Citation
     {
         if (blank(trim($reason))) {
-            throw ValidationException::withMessages(['reason' => 'يلزم بيان سبب التجاوز.']);
+            throw ValidationException::withMessages(['reason' => __('messages.citation.override_reason_required')]);
         }
 
         return DB::transaction(function () use ($citation, $actor, $reason): Citation {

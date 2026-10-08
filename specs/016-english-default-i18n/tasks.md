@@ -6,11 +6,11 @@
 plan.md review resolutions (when added) override earlier sections.
 
 ## Run Z1 — infrastructure and workspace
-- [ ] T001 Locale column, SetLocale middleware, switch route/controller, layouts lang/dir (R2–R4)
-- [ ] T002 `Ui` formatter and direction-neutral classes in all workspace views (R4, R5)
-- [ ] T003 Workspace views + Livewire components + services/exception/validation messages + enum labels through
+- [x] T001 Locale column, SetLocale middleware, switch route/controller, layouts lang/dir (R2–R4)
+- [x] T002 `Ui` formatter and direction-neutral classes in all workspace views (R4, R5)
+- [x] T003 Workspace views + Livewire components + services/exception/validation messages + enum labels through
   `__()`; `lang/ar.json` with today's Arabic wording (R1, R6)
-- [ ] T004 TranslationCoverageTest replacing ArabicMessagesTest; update affected tests (R6, R8)
+- [x] T004 TranslationCoverageTest replacing ArabicMessagesTest; update affected tests (R6, R8)
 
 ## Run Z2 — panels, outbound, remaining
 - [ ] T005 Filament admin + platform panels (labels, navigation, notifications, login switch) (R3)

@@ -25,7 +25,7 @@ class AttachmentService
             $allowed = [AttachmentKind::EmployeeResponseScan, AttachmentKind::DeliveryProof, AttachmentKind::SignedDocumentScan,
                 AttachmentKind::ReportEvidence];
             if ($parent instanceof Document && ($kind !== AttachmentKind::SignedDocumentScan || ! $parent->is_locked)) {
-                throw ValidationException::withMessages(['attachments' => 'نوع المرفق غير مسموح.']);
+                throw ValidationException::withMessages(['attachments' => __('messages.attachment.type_not_allowed')]);
             }
         } elseif ($parent instanceof EmailDraft) {
             abort_unless((int) $parent->sender_user_id === (int) $actor->id
@@ -38,7 +38,7 @@ class AttachmentService
             $allowed = [AttachmentKind::ReportEvidence];
         }
         if (! in_array($kind, $allowed, true) || $file->getSize() > 10 * 1024 * 1024) {
-            throw ValidationException::withMessages(['attachments' => 'نوع المرفق أو حجمه غير مسموح.']);
+            throw ValidationException::withMessages(['attachments' => __('messages.attachment.type_or_size_not_allowed')]);
         }
         $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($file->getRealPath());
         $extension = match ($mime) {
@@ -46,7 +46,7 @@ class AttachmentService
             default => null,
         };
         if ($extension === null) {
-            throw ValidationException::withMessages(['attachments' => 'يسمح بملفات PDF و JPG و PNG فقط.']);
+            throw ValidationException::withMessages(['attachments' => __('messages.attachment.pdf_jpg_png_only')]);
         }
         $digest = hash_file('sha256', $file->getRealPath());
         $path = $parent instanceof EmailDraft
@@ -57,7 +57,7 @@ class AttachmentService
         if ($createdFile) {
             if ($disk->putFileAs(dirname($path), $file, basename($path)) === false) {
                 $disk->delete($path);
-                throw ValidationException::withMessages(['attachments' => 'تعذر حفظ المرفق.']);
+                throw ValidationException::withMessages(['attachments' => __('messages.attachment.save_failed')]);
             }
         }
         try {

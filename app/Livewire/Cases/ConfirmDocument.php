@@ -19,7 +19,7 @@ use App\Services\Documents\DocumentDrafts;
 use App\Services\Documents\DocumentIssuer;
 use App\Services\Documents\SecondReview;
 use App\Support\Access\CaseVisibility;
-use App\Support\Format\ArabicDigits;
+use App\Support\Format\Ui;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
@@ -69,7 +69,7 @@ class ConfirmDocument extends Component
         Gate::authorize('secondReview', $draft->disciplinaryCase);
         try {
             $reviews->mark($draft, auth()->user());
-            $this->notice = 'سُجلت المراجعة الثانية.';
+            $this->notice = __('messages.document.second_review_recorded');
         } catch (IssuanceBlocked $error) {
             $this->notice = $error->getMessage();
         }
@@ -83,7 +83,7 @@ class ConfirmDocument extends Component
         }
         $this->validate(['leaveChecked' => ['accepted']]);
         $confirmations->confirm($draft, auth()->user());
-        $this->notice = 'سُجل تأكيد عدم وجود إجازة قانونية أو غياب مرضي موثق.';
+        $this->notice = __('messages.document.leave_clearance_recorded');
     }
 
     public function issue(DefenseLetterFlow $flow, CaseDocumentIssuance $issuance): void
@@ -132,16 +132,16 @@ class ConfirmDocument extends Component
         if ($document->document_type === DocumentType::Recommendations) {
             foreach (PoolRole::cases() as $category) {
                 if (! $document->approvals()->where('role_category', $category->value)->where('decision', 'approved')->whereNull('invalidated_at')->exists()) {
-                    $blockers[] = 'موافقة '.(['legal' => 'القانونية', 'hr' => 'الموارد البشرية', 'labor_union' => 'نقابة العمال'][$category->value]);
+                    $blockers[] = __('messages.document.category_approval_required', ['category' => ['legal' => __('Legal'), 'hr' => __('HR'), 'labor_union' => __('Labor union')][$category->value]]);
                 }
             }
         }
         if ($document->document_type === DocumentType::DecisionLetter) {
             if ($case->legal_review_requested_at && ! $case->legal_review_completed_at) {
-                $blockers[] = 'بانتظار الاستشارة القانونية';
+                $blockers[] = __('messages.document.awaiting_legal_consultation');
             }
             if ($document->penalty_type === PenaltyType::Termination && ! $document->leave_confirmed_at) {
-                $blockers[] = 'يلزم تأكيد عدم وجود إجازة قانونية أو غياب مرضي موثق';
+                $blockers[] = __('messages.document.leave_clearance_required');
             }
         }
 
@@ -165,7 +165,7 @@ class ConfirmDocument extends Component
             return $document;
         }
         if ($case->status->value !== $this->expectedStatus) {
-            throw ValidationException::withMessages(['notice' => 'تغيرت الحالة، أعد التحميل']);
+            throw ValidationException::withMessages(['notice' => __('messages.case.changed_reload')]);
         }
 
         return $document;
@@ -173,9 +173,9 @@ class ConfirmDocument extends Component
 
     private function finish(Document $document): void
     {
-        $message = 'صدر الكتاب بالعدد '.ArabicDigits::convert((string) $document->reference_number);
+        $message = __('messages.document.issued_with_reference', ['reference' => Ui::number((string) $document->reference_number)]);
         if (! $this->referenceDirty && $this->reference !== $document->reference_number) {
-            $message .= ' — تغير الرقم المقترح أثناء العمل؛ الرقم المعتمد هو '.$document->reference_number;
+            $message .= ' — '.__('messages.document.reference_changed', ['reference' => Ui::number((string) $document->reference_number)]);
         }
         session()->flash('case_success_'.$this->caseId, $message);
         $this->redirect('/cases/'.$this->caseId, navigate: true);

@@ -295,7 +295,7 @@ test('case intake shows a same-employee duplicate before opening', function (): 
         ->set('branchId', (string) $branch->id)->set('employeeId', (string) $employee->id)
         ->set('place', 'البوابة')->set('violationTime', now()->format('Y-m-d H:i:s'))
         ->set('violationType', 'تأخير')->call('checkDuplicates')
-        ->assertSet('checkedDuplicates', true)->assertSee(ArabicDigits::convert($earlier->case_number));
+        ->assertSet('checkedDuplicates', true)->assertSee($earlier->case_number);
 });
 
 test('case attachment downloads require case visibility', function (): void {

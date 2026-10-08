@@ -46,21 +46,21 @@ class DisciplinaryCase extends Model
                     if ($case->jurisdiction_at_opening === null) {
                         $case->jurisdiction_at_opening = $branch->jurisdiction;
                     } elseif ($case->jurisdiction_at_opening !== $branch->jurisdiction) {
-                        throw ValidationException::withMessages(['jurisdiction_at_opening' => 'يجب أن تتطابق المنطقة القانونية مع فرع فتح الحالة.']);
+                        throw ValidationException::withMessages(['jurisdiction_at_opening' => __('messages.case.jurisdiction_branch_mismatch')]);
                     }
                 }
             } elseif ($case->isDirty('jurisdiction_at_opening')) {
-                throw ValidationException::withMessages(['jurisdiction_at_opening' => 'لا يمكن تغيير المنطقة القانونية بعد فتح الحالة.']);
+                throw ValidationException::withMessages(['jurisdiction_at_opening' => __('messages.case.jurisdiction_immutable_after_open')]);
             }
             if ($case->exists && $case->isDirty('status') && ! CaseWorkflow::isWritingStatus()) {
                 throw new ImmutableRecordException('Case status changes only through the workflow.');
             }
             if ($case->status !== CaseStatus::Draft && $case->law_version_id === null) {
-                throw ValidationException::withMessages(['law_version_id' => 'يلزم تحديد نسخة القانون بعد مرحلة المسودة.']);
+                throw ValidationException::withMessages(['law_version_id' => __('messages.case.law_version_required')]);
             }
             if ($case->exists && $case->getRawOriginal('status') !== 'draft'
                 && $case->isDirty('law_version_id')) {
-                throw ValidationException::withMessages(['law_version_id' => 'لا يمكن تغيير نسخة القانون بعد مرحلة المسودة.']);
+                throw ValidationException::withMessages(['law_version_id' => __('messages.case.law_version_immutable')]);
             }
         });
         static::deleting(fn () => throw new ImmutableRecordException('Cases cannot be deleted.'));

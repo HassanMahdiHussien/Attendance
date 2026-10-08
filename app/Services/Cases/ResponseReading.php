@@ -35,7 +35,7 @@ class ResponseReading
             $this->authorize($locked, $actor);
             $scan = $this->latestScan($locked);
             if (! $noSensitiveData || ! $scan || $locked->status !== CaseStatus::ResponseScannedUploaded || $locked->ai_request_id !== null) {
-                throw new TransitionBlocked('تأكد من خلو الصورة من رقم الهوية والراتب ورقم الهاتف قبل القراءة.');
+                throw new TransitionBlocked(__('messages.response.remove_sensitive_data_before_reading'));
             }
             app(ScanBlocks::class)->for($scan);
             $token = (string) Str::uuid();
@@ -54,11 +54,11 @@ class ResponseReading
             $this->authorize($locked, $actor);
             $scan = $this->latestScan($locked);
             if ($locked->status !== CaseStatus::ResponseScannedUploaded || ! $scan || ! in_array($origin, ['ai_checked', 'human'], true) || blank($text)) {
-                throw new TransitionBlocked('يلزم نص الرد والمسح قبل التأكيد.');
+                throw new TransitionBlocked(__('messages.response.text_and_scan_required'));
             }
             if ($origin === 'ai_checked' && ! ResponseTranscription::query()->where('case_id', $locked->id)
                 ->where('attachment_id', $scan->id)->where('origin', 'ai')->exists()) {
-                throw new TransitionBlocked('لا توجد محاولة قراءة لهذا المسح.');
+                throw new TransitionBlocked(__('messages.response.no_reading_for_scan'));
             }
             $this->supersede($locked, $actor);
             $transcription = ResponseTranscription::create(['company_id' => $locked->company_id, 'case_id' => $locked->id,
@@ -77,7 +77,7 @@ class ResponseReading
             $locked = DisciplinaryCase::query()->lockForUpdate()->findOrFail($case->id);
             $this->authorize($locked, $actor);
             if ($locked->status !== CaseStatus::AiIngestedResponse || blank($reason)) {
-                throw new TransitionBlocked('يلزم سبب تصحيح النص.');
+                throw new TransitionBlocked(__('messages.response.correction_reason_required'));
             }
             $previous = ResponseTranscription::query()->where('case_id', $locked->id)->whereIn('origin', ['ai_checked', 'human'])->orderByDesc('id')->first();
             $locked->forceFill(['employee_response_text' => null, 'employee_response_checked_by' => null,

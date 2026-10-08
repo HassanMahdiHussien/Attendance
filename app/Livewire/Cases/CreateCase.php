@@ -183,8 +183,8 @@ class CreateCase extends Component
             'assignedHrUserId' => ['nullable', 'integer'],
         ]);
         if (blank($this->locationId) && blank($this->place)) {
-            $this->addError('place', 'اختر موقعاً أو اكتب المكان.');
-            throw ValidationException::withMessages(['place' => 'اختر موقعاً أو اكتب المكان.']);
+            $this->addError('place', __('messages.report.location_or_place_required'));
+            throw ValidationException::withMessages(['place' => __('messages.report.location_or_place_required')]);
         }
 
         return [

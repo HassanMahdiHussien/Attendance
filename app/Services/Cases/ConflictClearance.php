@@ -53,11 +53,11 @@ class ConflictClearance
         if ($case->status === CaseStatus::ArchivedFinal || blank($reason)
             || ! in_array($hrUser->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)
             || ! CaseVisibility::for($hrUser)->whereKey($case->id)->exists()) {
-            throw ValidationException::withMessages(['reason' => 'يلزم امتلاك صلاحية الموارد البشرية وبيان سبب التحقق من الهوية.']);
+            throw ValidationException::withMessages(['reason' => __('messages.case.hr_identity_reason_required')]);
         }
         $conflict = collect($this->conflicts($case))->first(fn (array $row) => $row['member']->id === $member->id);
         if ($conflict === null || $conflict['type'] !== 'name_only') {
-            throw ValidationException::withMessages(['member' => 'لا يمكن رفع إلا تنبيه التعارض المبني على الاسم فقط.']);
+            throw ValidationException::withMessages(['member' => __('messages.case.only_name_conflict_clearable')]);
         }
         DB::transaction(function () use ($case, $member, $reason, $hrUser): void {
             $clearance = CaseConflictClearance::firstOrCreate([

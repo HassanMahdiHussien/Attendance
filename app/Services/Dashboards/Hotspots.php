@@ -46,7 +46,7 @@ class Hotspots
         $labels = $this->labels($group, $rows->pluck('group_key')->all());
 
         return $rows->map(fn ($row) => [
-            'key' => (string) ($row->group_key ?? ''), 'label' => $labels[(string) ($row->group_key ?? '')] ?? ($group === 'location' ? 'موقع غير محدد' : 'غير محدد'),
+            'key' => (string) ($row->group_key ?? ''), 'label' => $labels[(string) ($row->group_key ?? '')] ?? ($group === 'location' ? __('messages.dashboard.location_unspecified') : __('messages.dashboard.unspecified')),
             'count' => (int) $row->total, 'previous' => (int) ($previous[$row->group_key ?? ''] ?? 0),
             'delta' => (int) $row->total - (int) ($previous[$row->group_key ?? ''] ?? 0),
             'width' => round(100 * $row->total / $max),
@@ -69,7 +69,7 @@ class Hotspots
             $labels = $this->labels($group, $rows->pluck('group_key')->all());
             foreach ($rows as $row) {
                 $results[] = ['group' => $group, 'key' => (string) $row->group_key,
-                    'violation' => (string) $row->violation_key, 'label' => $labels[(string) $row->group_key] ?? 'غير محدد',
+                    'violation' => (string) $row->violation_key, 'label' => $labels[(string) $row->group_key] ?? __('messages.dashboard.unspecified'),
                     'count' => (int) $row->total];
             }
         }
@@ -107,14 +107,14 @@ class Hotspots
     private function labels(string $group, array $keys): array
     {
         if (in_array($group, ['department', 'violation'], true)) {
-            return array_combine(array_map('strval', $keys), array_map(fn ($key) => (string) $key ?: 'غير محدد', $keys)) ?: [];
+            return array_combine(array_map('strval', $keys), array_map(fn ($key) => (string) $key ?: __('messages.dashboard.unspecified'), $keys)) ?: [];
         }
         if ($group === 'responsible') {
             $names = DB::table('employees')->whereIn('id', array_map(fn ($key) => substr((string) $key, 2),
                 array_filter($keys, fn ($key) => str_starts_with((string) $key, 'e:'))))->pluck('name', 'id')->all();
 
             return collect($keys)->mapWithKeys(fn ($key) => [(string) $key => str_starts_with((string) $key, 'e:')
-                ? ($names[substr((string) $key, 2)] ?? 'غير محدد') : (substr((string) $key, 2) ?: 'غير محدد')])->all();
+                ? ($names[substr((string) $key, 2)] ?? __('messages.dashboard.unspecified')) : (substr((string) $key, 2) ?: __('messages.dashboard.unspecified'))])->all();
         }
         $table = match ($group) {
             'branch' => 'branches', 'location' => 'locations', 'employee' => 'employees',

@@ -13,9 +13,9 @@ use App\Services\Cases\CaseBoard;
 use App\Services\Cases\CaseOpening;
 use App\Services\Cases\DefenseLetterFlow;
 use App\Services\Documents\DocumentDrafts;
-use App\Support\Format\ArabicDigits;
 use App\Support\Format\CaseTimeline;
 use App\Support\Format\StageIndicator;
+use App\Support\Format\Ui;
 use App\Support\Tenancy\TenantContext;
 use Livewire\Livewire;
 
@@ -57,7 +57,7 @@ test('board offers five unique stages and stage four contains committee statuses
     }
     $this->actingAs($hr);
     $html = $this->get('/cases')->assertOk()->getContent();
-    preg_match('/<select[^>]*aria-label="المرحلة"[^>]*>(.*?)<\/select>/s', $html, $select);
+    preg_match('/<select[^>]*aria-label="Stage"[^>]*>(.*?)<\/select>/s', $html, $select);
     preg_match_all('/<option[^>]*>(.*?)<\/option>/s', $select[1], $options);
     expect($options[1])->toHaveCount(6);
     expect(array_unique($options[1]))->toHaveCount(6);
@@ -73,9 +73,9 @@ test('successful issuance redirects with a flash shown once on the case page', f
     Livewire::test(ConfirmDocument::class, ['case' => (string) $case->id, 'document' => (string) $document->id])
         ->call('issue')->assertRedirect('/cases/'.$case->id);
     $reference = $document->fresh()->reference_number;
-    expect(session('case_success_'.$case->id))->toBe('صدر الكتاب بالعدد '.ArabicDigits::convert($reference));
-    $this->get('/cases/'.$case->id)->assertOk()->assertSee('صدر الكتاب بالعدد '.ArabicDigits::convert($reference));
-    $this->get('/cases/'.$case->id)->assertOk()->assertDontSee('صدر الكتاب بالعدد '.ArabicDigits::convert($reference));
+    expect(session('case_success_'.$case->id))->toBe('The letter was issued with reference number '.Ui::number($reference));
+    $this->get('/cases/'.$case->id)->assertOk()->assertSee('The letter was issued with reference number '.Ui::number($reference));
+    $this->get('/cases/'.$case->id)->assertOk()->assertDontSee('The letter was issued with reference number '.Ui::number($reference));
 });
 
 test('a changed provisional number is explained after issuance', function (): void {
@@ -89,8 +89,8 @@ test('a changed provisional number is explained after issuance', function (): vo
     app(DefenseLetterFlow::class)->confirmAndIssue($firstDocument, $hr);
     $secondScreen->call('issue')->assertRedirect('/cases/'.$secondCase->id);
     expect($secondDocument->fresh()->reference_number)->not->toBe($preview);
-    expect(session('case_success_'.$secondCase->id))->toContain('صدر الكتاب بالعدد '.ArabicDigits::convert($secondDocument->fresh()->reference_number));
-    expect(session('case_success_'.$secondCase->id))->toContain('تغير الرقم المقترح أثناء العمل');
+    expect(session('case_success_'.$secondCase->id))->toContain('The letter was issued with reference number '.Ui::number($secondDocument->fresh()->reference_number));
+    expect(session('case_success_'.$secondCase->id))->toContain('The proposed number changed while you worked');
 });
 
 test('a repeated confirm action reports the existing issuance without issuing again', function (): void {
@@ -103,11 +103,11 @@ test('a repeated confirm action reports the existing issuance without issuing ag
     $count = $case->events()->where('event_type', 'document_issued')->count();
     $screen->call('issue')->assertRedirect('/cases/'.$case->id);
     expect($case->events()->where('event_type', 'document_issued')->count())->toBe($count);
-    expect(session('case_success_'.$case->id))->toContain('صدر الكتاب بالعدد '.ArabicDigits::convert($document->fresh()->reference_number));
+    expect(session('case_success_'.$case->id))->toContain('The letter was issued with reference number '.Ui::number($document->fresh()->reference_number));
 });
 
-test('every recorded case event type has a specific Arabic timeline label', function (string $type): void {
-    expect(CaseTimeline::format($type))->not->toStartWith('حدث غير مصنف');
+test('every recorded case event type has a specific English timeline label', function (string $type): void {
+    expect(CaseTimeline::format($type))->not->toStartWith('Unclassified event');
 })->with([
     'appeal_filed', 'appeal_outcome_recorded', 'approvals_invalidated', 'case_assigned',
     'case_draft_created', 'case_draft_updated', 'case_opened', 'committee_session_recorded',
@@ -121,24 +121,34 @@ test('every recorded case event type has a specific Arabic timeline label', func
     'termination_leave_confirmed',
 ]);
 
-test('every case status has an Arabic label and the timeline names its target', function (): void {
+test('every case status has an English label and the timeline names its target', function (): void {
     foreach (CaseStatus::cases() as $status) {
-        expect(CaseTimeline::statusLabel($status))->not->toBe('حالة غير معروفة');
+        expect(CaseTimeline::statusLabel($status))->not->toBe('Unknown status');
     }
     expect(CaseTimeline::format('status_changed', ['to' => CaseStatus::ResponseReceived->value]))
-        ->toBe('انتقلت الحالة إلى: استلام رد الموظف');
+        ->toBe('Case moved to: Employee response received');
     expect(CaseTimeline::format('document_issued', ['reference_number' => '1097']))
-        ->toBe('صدر المستند بالعدد ١٠٩٧');
+        ->toBe('The document was issued with reference number 1097');
     expect(CaseTimeline::format('hand_off_recorded', ['purpose' => 'defense_letter_receipt',
         'status' => 'refused_to_sign'], ['witnesses' => ['أحمد', 'علي']]))
-        ->toContain('كتاب طلب الدفاع');
+        ->toContain('defense request letter');
     expect(CaseTimeline::format('hand_off_recorded', ['purpose' => 'defense_letter_receipt',
-        'status' => 'refused_to_sign'], ['witnesses' => ['أحمد', 'علي']]))->toContain('أحمد، علي');
+        'status' => 'refused_to_sign'], ['witnesses' => ['أحمد', 'علي']]))->toContain('أحمد, علي');
 });
 
-test('case page renders a status transition with its Arabic target', function (): void {
+test('case page renders a status transition with its English target', function (): void {
     [$company, $hr] = uxCompanyAndHr();
     $case = DisciplinaryCase::factory()->create(['company_id' => $company->id, 'opened_by_user_id' => $hr->id]);
     app(CaseEventLogger::class)->log($case, 'status_changed', ['to' => CaseStatus::Open->value], actor: $hr);
-    $this->actingAs($hr)->get('/cases/'.$case->id)->assertOk()->assertSee('انتقلت الحالة إلى: مفتوحة');
+    $this->actingAs($hr)->get('/cases/'.$case->id)->assertOk()->assertSee('Case moved to: Open');
+});
+
+test('case timeline translates event types at display while preserving stored details', function (): void {
+    $payload = ['to' => CaseStatus::Open->value];
+    app()->setLocale('en');
+    expect(CaseTimeline::format('status_changed', $payload))->toBe('Case moved to: Open');
+    app()->setLocale('ar');
+    expect(CaseTimeline::format('status_changed', $payload))->toBe('انتقلت الحالة إلى: مفتوحة');
+    expect(CaseTimeline::format('report_dismissed', ['reason' => 'unchanged user text']))->toContain('unchanged user text');
+    expect($payload['to'])->toBe(CaseStatus::Open->value);
 });

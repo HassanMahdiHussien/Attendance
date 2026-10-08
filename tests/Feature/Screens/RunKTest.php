@@ -140,7 +140,7 @@ test('a stale case stage at the Livewire endpoint shows the reload message', fun
     $snapshot = runKSnapshot($this, $case);
     runKOpen($case, $hr);
     $html = runKUpdate($this, $snapshot, 'open')->assertOk()->json('components.0.effects.html');
-    expect($html)->toContain('تغيرت الحالة، أعد التحميل');
+    expect($html)->toContain('The case changed. Reload the page.');
 });
 
 test('deactivated account is refused at the Livewire update endpoint', function (): void {

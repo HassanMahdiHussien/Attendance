@@ -32,7 +32,7 @@ class DocumentDrafts
             Gate::forUser($actor)->authorize('manageDocuments', $case);
             if ($type !== DocumentType::DefenseLetter || ($draft?->version === 1
                 && ! in_array($case->status, [CaseStatus::Open, CaseStatus::DefenseLetterCitationCheck, CaseStatus::DefenseLetterReadyForReview], true))) {
-                throw new TransitionBlocked('لا يمكن تحرير المستند في هذه المرحلة.');
+                throw new TransitionBlocked(__('messages.document.edit_wrong_stage'));
             }
             if ($draft !== null) {
                 $draft = Document::query()->lockForUpdate()->where('case_id', $case->id)->findOrFail($draft->id);
@@ -40,20 +40,20 @@ class DocumentDrafts
                 $draft = $case->documents()->where('document_type', $type->value)->whereIn('status', ['draft', 'ready_for_review'])->orderByDesc('version')->lockForUpdate()->first();
             }
             if ($draft?->is_locked || ($draft !== null && $draft->document_type !== $type)) {
-                throw new TransitionBlocked('لا يمكن تحرير المستندات الصادرة.');
+                throw new TransitionBlocked(__('messages.document.issued_immutable'));
             }
             $languages = app(DraftLanguages::class)->for($case->company, $type);
             if (array_diff($languages, array_keys($bodies)) || array_diff(array_keys($bodies), $languages)) {
-                throw ValidationException::withMessages(['bodies' => 'يجب كتابة النص بكل اللغات المفعلة.']);
+                throw ValidationException::withMessages(['bodies' => __('messages.document.body_all_languages_required')]);
             }
             foreach ($bodies as $language => $body) {
                 if (! is_string($body) || blank($body)) {
-                    throw ValidationException::withMessages(["bodies.{$language}" => 'النص مطلوب.']);
+                    throw ValidationException::withMessages(["bodies.{$language}" => __('messages.document.body_required')]);
                 }
             }
             if ($draft === null) {
                 if ($case->status !== CaseStatus::Open) {
-                    throw new TransitionBlocked('تغيرت الحالة، أعد التحميل.');
+                    throw new TransitionBlocked(__('messages.case.changed_reload_period'));
                 }
                 $draft = Document::create([
                     'company_id' => $case->company_id, 'case_id' => $case->id, 'document_type' => $type,
@@ -94,21 +94,21 @@ class DocumentDrafts
                 && ! in_array($case->status, [CaseStatus::SignedRecommendationsUploaded, CaseStatus::DecisionLetterCitationCheck], true)
                 || ! in_array($case->outcome, [Outcome::Warning, Outcome::Termination], true)
                 || ! CaseVisibility::for($actor)->whereKey($case->id)->exists()) {
-                throw new TransitionBlocked('يلزم توصية موقعة تتضمن عقوبة.');
+                throw new TransitionBlocked(__('messages.document.signed_penalty_recommendation_required'));
             }
             $languages = app(DraftLanguages::class)->for($case->company, DocumentType::DecisionLetter);
             if (array_diff($languages, array_keys($bodies)) || array_diff(array_keys($bodies), $languages)) {
-                throw ValidationException::withMessages(['bodies' => 'يجب كتابة أسباب القرار بكل اللغات المفعلة.']);
+                throw ValidationException::withMessages(['bodies' => __('messages.document.decision_reasons_all_languages_required')]);
             }
             foreach ($bodies as $language => $body) {
                 if (! is_string($body) || blank($body)) {
-                    throw ValidationException::withMessages(["bodies.{$language}" => 'أسباب القرار مطلوبة.']);
+                    throw ValidationException::withMessages(["bodies.{$language}" => __('messages.document.decision_reasons_required')]);
                 }
             }
             $document = $draft ? $case->documents()->lockForUpdate()->findOrFail($draft->id)
                 : $case->documents()->where('document_type', DocumentType::DecisionLetter->value)->where('is_locked', false)->lockForUpdate()->first();
             if ($document && ($document->is_locked || $document->document_type !== DocumentType::DecisionLetter)) {
-                throw new TransitionBlocked('لا يمكن تحرير المستندات الصادرة.');
+                throw new TransitionBlocked(__('messages.document.issued_immutable'));
             }
             if (! $document) {
                 $document = Document::create(['company_id' => $case->company_id, 'case_id' => $case->id,
@@ -138,7 +138,7 @@ class DocumentDrafts
             if ($document->document_type !== DocumentType::DecisionLetter || $document->is_locked
                 || $document->version !== 1 || ! in_array($case->status, [CaseStatus::SignedRecommendationsUploaded, CaseStatus::DecisionLetterCitationCheck], true)
                 || $case->outcome?->value !== $document->penalty_type?->value) {
-                throw new TransitionBlocked('لا يمكن تقديم مسودة القرار في هذه المرحلة.');
+                throw new TransitionBlocked(__('messages.document.decision_submit_wrong_stage'));
             }
             if ($case->status === CaseStatus::SignedRecommendationsUploaded) {
                 $case = $this->workflow->transition($case, CaseStatus::DecisionLetterCitationCheck, $actor, 'Decision draft submitted');
@@ -162,7 +162,7 @@ class DocumentDrafts
             Gate::forUser($actor)->authorize('manageDocuments', $case);
             if ($document->document_type !== DocumentType::DecisionLetter || $document->is_locked
                 || $case->status !== CaseStatus::DecisionLetterReadyForReview) {
-                throw new TransitionBlocked('لا يمكن إعادة القرار إلى التحرير.');
+                throw new TransitionBlocked(__('messages.document.decision_cannot_return_to_editing'));
             }
             $this->workflow->transition($case, CaseStatus::DecisionLetterCitationCheck, $actor, 'Decision returned to edit');
             $document->forceFill(['status' => DocumentStatus::Draft, 'second_reviewed_by' => null,
@@ -177,7 +177,7 @@ class DocumentDrafts
         Gate::forUser($actor)->authorize('manageDocuments', $case);
         $document = $case->documents()->findOrFail($document->id);
         if ($document->is_locked || $document->document_type !== DocumentType::DefenseLetter) {
-            throw new TransitionBlocked('لا يمكن تقديم المستند.');
+            throw new TransitionBlocked(__('messages.document.cannot_submit'));
         }
         if ($document->version > 1) {
             app(CitationGate::class)->assertIssuable($document);
@@ -193,7 +193,7 @@ class DocumentDrafts
             $case = $this->workflow->transition($case, CaseStatus::DefenseLetterCitationCheck, $actor, 'Defense draft submitted');
         }
         if ($case->status !== CaseStatus::DefenseLetterCitationCheck) {
-            throw new TransitionBlocked('تغيرت الحالة، أعد التحميل.');
+            throw new TransitionBlocked(__('messages.case.changed_reload_period'));
         }
         DB::transaction(function () use ($case, $document, $actor): void {
             $this->workflow->transition($case, CaseStatus::DefenseLetterReadyForReview, $actor, 'Citation check passed');
@@ -216,7 +216,7 @@ class DocumentDrafts
                 return;
             }
             if (! in_array($case->status, [CaseStatus::DefenseLetterCitationCheck, CaseStatus::DefenseLetterReadyForReview], true)) {
-                throw new TransitionBlocked('تغيرت الحالة، أعد التحميل.');
+                throw new TransitionBlocked(__('messages.case.changed_reload_period'));
             }
             $this->workflow->transition($case, CaseStatus::Open, $actor, 'Document sent back to edit');
             $document->status = DocumentStatus::Draft;
