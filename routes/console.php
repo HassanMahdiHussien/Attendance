@@ -15,6 +15,9 @@ use App\Services\CaseEventLogger;
 use App\Services\Cases\CaseAlertDispatcher;
 use App\Services\Cases\CaseWorkflow;
 use App\Services\Cases\ExpiredAppealArchiver;
+use App\Services\EmailIntake\EmailIntakeFetcher;
+use App\Services\EmailIntake\EmailSenderVerifier;
+use App\Services\EmailIntake\IntakeMailbox;
 use App\Support\HealthPing;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Foundation\Inspiring;
@@ -28,6 +31,28 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('app:heartbeat --dispatch')->everyMinute();
+
+Artisan::command('email-intake:fetch', function (): void {
+    $counts = app(EmailIntakeFetcher::class)->run(app(IntakeMailbox::class));
+    $this->info(json_encode($counts));
+})->purpose('Fetch authenticated forwarded email drafts');
+
+Artisan::command('email-intake:inspect-latest', function (): void {
+    try {
+        $latest = app(IntakeMailbox::class)->latest();
+        if (! $latest) {
+            $this->info('INBOX is empty.');
+
+            return;
+        }
+        $this->info(json_encode(app(EmailSenderVerifier::class)->verdict($latest->rawHeaders)));
+    } catch (Throwable) {
+        $this->error('Mailbox inspection failed.');
+    }
+})->purpose('Inspect the topmost receiving-server authentication verdict');
+
+Schedule::command('email-intake:fetch')->everyFiveMinutes()
+    ->when(fn () => config('displanery.email_intake.enabled'))->withoutOverlapping();
 
 Artisan::command('cases:send-deadline-alerts', function (): void {
     try {

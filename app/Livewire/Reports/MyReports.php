@@ -4,6 +4,7 @@ namespace App\Livewire\Reports;
 
 use App\Enums\UserRole;
 use App\Support\Access\ViolationReportVisibility;
+use App\Support\Access\EmailDraftVisibility;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 
@@ -18,6 +19,9 @@ class MyReports extends Component
     {
         $this->mount();
 
-        return view('livewire.reports.my-reports', ['reports' => ViolationReportVisibility::for(auth()->user())->latest()->get()])->layout('layouts.workspace');
+        return view('livewire.reports.my-reports', [
+            'reports' => ViolationReportVisibility::for(auth()->user())->latest()->get(),
+            'emails' => EmailDraftVisibility::for(auth()->user())->with('disciplinaryCase')->latest('received_at')->get(),
+        ])->layout('layouts.workspace');
     }
 }

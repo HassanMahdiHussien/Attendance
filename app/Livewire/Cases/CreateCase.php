@@ -12,8 +12,10 @@ use App\Models\User;
 use App\Services\Cases\CaseDrafts;
 use App\Services\Cases\CaseInsights;
 use App\Services\Cases\CaseOpening;
+use App\Services\EmailIntake\EmailDraftService;
 use App\Services\Reports\ReportService;
 use App\Support\Access\CaseVisibility;
+use App\Support\Access\EmailDraftVisibility;
 use App\Support\Access\ViolationReportVisibility;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
@@ -55,6 +57,8 @@ class CreateCase extends Component
 
     public ?int $reportId = null;
 
+    public ?int $emailId = null;
+
     public bool $checkedDuplicates = false;
 
     public array $duplicates = [];
@@ -84,6 +88,13 @@ class CreateCase extends Component
 
             return;
         }
+        if ($id = request()->query('email')) {
+            $email = EmailDraftVisibility::inbox(auth()->user())->findOrFail($id);
+            $this->emailId = $email->id;
+            $this->branchId = (string) $email->branch_id;
+
+            return;
+        }
         if ($id = request()->query('report')) {
             $report = ViolationReportVisibility::inbox(auth()->user())->findOrFail($id);
             $this->reportId = $report->id;
@@ -105,10 +116,13 @@ class CreateCase extends Component
         $this->authorizeCreate();
         $data = $this->validatedFacts();
         $draft = $this->draftId ? $drafts->update(CaseVisibility::for(auth()->user())->findOrFail($this->draftId), $data, auth()->user())
-            : ($this->reportId ? app(ReportService::class)->convert(
+            : ($this->emailId ? app(EmailDraftService::class)->convert(
+                EmailDraftVisibility::inbox(auth()->user())->findOrFail($this->emailId), auth()->user(), $data)
+                : ($this->reportId ? app(ReportService::class)->convert(
                 ViolationReportVisibility::inbox(auth()->user())->findOrFail($this->reportId), auth()->user(), null, $data)
-                : $drafts->create($data, auth()->user()));
+                : $drafts->create($data, auth()->user())));
         $this->draftId = $draft->id;
+        $this->emailId = null;
         $this->checkedDuplicates = false;
         $this->dispatch('draft-saved');
     }
@@ -147,6 +161,7 @@ class CreateCase extends Component
         $this->authorizeCreate();
 
         return view('livewire.cases.create-case', [
+            'email' => $this->emailId ? EmailDraftVisibility::inbox(auth()->user())->with('attachments')->findOrFail($this->emailId) : null,
             'branches' => Branch::query()->where('company_id', auth()->user()->company_id)->where('is_active', true)->get(),
             'employees' => $this->branchId ? Employee::query()->where('branch_id', $this->branchId)->where('is_active', true)
                 ->when($this->employeeSearch !== '', fn ($q) => $q->where('name', 'like', '%'.$this->employeeSearch.'%'))->get() : collect(),

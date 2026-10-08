@@ -23,6 +23,7 @@ use App\Models\Document;
 use App\Models\DocumentApproval;
 use App\Models\DocumentContent;
 use App\Models\DocumentTemplate;
+use App\Models\EmailDraft;
 use App\Models\Employee;
 use App\Models\Law;
 use App\Models\LegalImportPage;
@@ -63,6 +64,7 @@ test('every tenant foreign key rejects a row from another company through models
         'response_transcriptions' => ResponseTranscription::class,
         'signature_presence_suggestions' => SignaturePresenceSuggestion::class,
         'ai_generation_logs' => AiGenerationLog::class,
+        'email_drafts' => EmailDraft::class,
     ];
     $keys = DB::select("SELECT TABLE_NAME AS source_table, CONSTRAINT_NAME AS constraint_name, REFERENCED_TABLE_NAME AS target_table, MAX(CASE WHEN COLUMN_NAME <> 'company_id' THEN COLUMN_NAME END) AS foreign_column FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = DATABASE() AND REFERENCED_TABLE_NAME IS NOT NULL GROUP BY TABLE_NAME, CONSTRAINT_NAME, REFERENCED_TABLE_NAME HAVING COUNT(*) = 2 AND SUM(COLUMN_NAME = 'company_id') = 1");
     expect(count($keys))->toBeGreaterThan(25);

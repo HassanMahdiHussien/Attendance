@@ -26,6 +26,7 @@ class Attachment extends Model
         static::creating(function (self $attachment): void {
             $model = match ($attachment->attachable_type) {
                 'violation_report' => ViolationReport::class,
+                'email_draft' => EmailDraft::class,
                 'case' => DisciplinaryCase::class,
                 'document' => Document::class,
                 default => throw new TenantMismatch('Unknown attachment parent.'),

@@ -36,6 +36,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->bind(\App\Services\EmailIntake\IntakeMailbox::class, \App\Services\EmailIntake\ImapMailbox::class);
         $this->app->scoped(TenantContext::class, fn () => new TenantContext);
         $this->app->bind(PageReader::class, ClaudePageReader::class);
         $this->app->bind(ClaudeClient::class, SdkClaudeClient::class);
@@ -78,6 +79,7 @@ class AppServiceProvider extends ServiceProvider
         }
         Relation::morphMap([
             'violation_report' => ViolationReport::class,
+            'email_draft' => \App\Models\EmailDraft::class,
             'case' => DisciplinaryCase::class,
             'document' => Document::class,
         ]);

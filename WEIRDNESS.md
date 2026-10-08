@@ -74,6 +74,10 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 - **Empty optional employee CSV cells never erase stored email or gender.** Imports update known employees while preserving those values unless a replacement is supplied. (2026-10)
 - **Employee CSV accepts Windows-1256 as well as UTF-8.** Iraqi Excel exports may use this encoding and semicolon separators; the file is decoded before row validation. (2026-10)
 
+- Email forwards use a separate `email_drafts` table because an email lacks the structured facts required by a violation report or case. HR enters those facts through the normal form. (2026-10)
+- Only the topmost raw `Authentication-Results` header counts; its authserv-id must be the configured receiving host. Lower headers can be forged by a sender. (2026-10)
+- Discarded mail leaves only its sender domain, receipt time and rejection reason in the platform log. Addresses and content are never copied to a tenant. (2026-10)
+
 # Provisioning boundaries
 
 - Outside local and testing, a backup refuses an archive password shorter than 32 characters. The archive entries expose storage path names, but their contents require the password.

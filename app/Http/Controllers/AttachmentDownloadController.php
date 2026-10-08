@@ -6,8 +6,10 @@ use App\Enums\UserRole;
 use App\Models\Attachment;
 use App\Models\DisciplinaryCase;
 use App\Models\Document;
+use App\Models\EmailDraft;
 use App\Models\ViolationReport;
 use App\Support\Access\CaseVisibility;
+use App\Support\Access\EmailDraftVisibility;
 use App\Support\Access\ViolationReportVisibility;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -23,10 +25,12 @@ class AttachmentDownloadController extends Controller
             'case' => DisciplinaryCase::withoutGlobalScopes()->find($attachment->attachable_id),
             'document' => Document::withoutGlobalScopes()->find($attachment->attachable_id),
             'violation_report' => ViolationReport::withoutGlobalScopes()->find($attachment->attachable_id),
+            'email_draft' => EmailDraft::withoutGlobalScopes()->find($attachment->attachable_id),
             default => null,
         };
         $visible = match (true) {
             $parent instanceof DisciplinaryCase => CaseVisibility::for($user)->whereKey($parent->id)->exists(),
+            $parent instanceof EmailDraft => EmailDraftVisibility::inbox($user)->whereKey($parent->id)->exists(),
             $parent instanceof Document => CaseVisibility::for($user)->whereKey($parent->case_id)->exists(),
             $parent instanceof ViolationReport => $parent->case_id !== null
                 ? CaseVisibility::for($user)->whereKey($parent->case_id)->exists()
