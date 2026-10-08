@@ -83,6 +83,7 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 - Committee members use their own accounts for invitations and approvals; invitation links are deliberately deferred. (2026-10)
 
 - The workspace follows the approved mockup's layout and components, while its proposed global search and extra home actions wait for their own features. The design refresh does not add routes or change case behavior. (2026-10)
+- A case's next action favors one the viewer can take, then a pending corrected document, then a requested consultation, then its workflow stage; deadline alerts change the badge, never the actor. Product-owner default (2026-10-08).
 
 # Provisioning boundaries
 

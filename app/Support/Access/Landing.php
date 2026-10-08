@@ -11,10 +11,8 @@ class Landing
     {
         return match ($user->primary_role) {
             UserRole::PlatformAdmin => '/platform',
-            UserRole::CompanyAdmin, UserRole::HrStaff => '/cases',
-            UserRole::Reporter, UserRole::DeptManager => '/reports',
-            UserRole::CommitteeMember, UserRole::ExternalLegalReviewer => '/my-cases',
-            UserRole::HrPartnerStaff => '/home',
+            UserRole::CompanyAdmin, UserRole::HrStaff, UserRole::Reporter, UserRole::DeptManager,
+            UserRole::CommitteeMember, UserRole::ExternalLegalReviewer, UserRole::HrPartnerStaff => '/home',
         };
     }
 }

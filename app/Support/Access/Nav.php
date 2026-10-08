@@ -16,8 +16,8 @@ class Nav
 
         $role = $user->primary_role;
         $items = [];
-        if ($role === UserRole::HrPartnerStaff) {
-            $items[] = self::item('Dashboard', '/home', 'home', 'home*');
+        if ($role !== UserRole::PlatformAdmin) {
+            $items[] = self::item('My work', '/home', 'home', 'home');
         }
         if (in_array($role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)) {
             if (DashboardNav::visible($user)) {

@@ -2,10 +2,6 @@
 
 namespace App\Support\Access;
 
-use App\Enums\CaseStatus;
-use App\Enums\DocumentStatus;
-use App\Enums\DocumentType;
-use App\Models\Document;
 use App\Models\User;
 use App\Services\Cases\PoolEligibility;
 
@@ -22,14 +18,6 @@ class CommitteeNav
             return false;
         }
 
-        return Document::query()
-            ->where('document_type', DocumentType::Recommendations->value)
-            ->where('is_locked', false)
-            ->where(fn ($query) => $query
-                ->whereHas('disciplinaryCase', fn ($case) => $case->where('status', CaseStatus::RecommendationsAwaitingApprovals->value))
-                ->orWhere(fn ($correction) => $correction->where('version', '>', 1)->where('status', DocumentStatus::ReadyForReview->value)))
-            ->get()
-            ->contains(fn (Document $document) => app(PoolEligibility::class)->forDocument($document)
-                ->contains(fn (array $row) => $row['user']->id === $user->id));
+        return app(PoolEligibility::class)->pendingFor($user)->isNotEmpty();
     }
 }

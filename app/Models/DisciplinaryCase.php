@@ -153,6 +153,11 @@ class DisciplinaryCase extends Model
         return $this->hasMany(CaseEvent::class, 'case_id');
     }
 
+    public function signatures(): HasMany
+    {
+        return $this->hasMany(Signature::class, 'case_id');
+    }
+
     public function witnesses(): HasMany
     {
         return $this->hasMany(CaseWitness::class, 'case_id');
