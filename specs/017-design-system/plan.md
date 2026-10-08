@@ -43,6 +43,50 @@ utilities only) · Alpine (ships with Livewire) for the mobile "More" sheet and 
   assert behaviour/text, not markup). Visual verification by the orchestrator (screenshots per screen × 2 widths × 2
   languages).
 
+## R7 Plan review resolutions (Codex review, 2026-10-08) — override R1–R6 where they differ
+
+### Blockers
+- **A1 Behaviour inventory**: before rewriting any view, D1 generates `tests/fixtures/ui-inventory.json` from the
+  current views (per view: every `wire:model*` target, `wire:click`/`wire:submit` method with arguments pattern,
+  `wire:key` presence, `@error` keys, `@can`/`@if` role/permission conditions by expression, `<input type=file>`
+  bindings, route/link targets). `tests/Feature/Ui/BehaviourInventoryTest.php` re-extracts the same from the rebuilt
+  views and fails if anything is missing (additions are allowed only through an explicit, commented allowlist in the
+  test). The legally significant screens (confirm-document incl. leave confirmation, second review, blockers,
+  reference number, issue/send back; signed-scan incl. role-dependent override and appearance-only wording;
+  hand-offs incl. witness scan; review-approval; record-session quorum) are also screenshot-verified in their key
+  states by the orchestrator.
+- **A2 Nav counts bounded**: the reports inbox shows a number (one `count()` over `ViolationReportVisibility::inbox()`
+  + `EmailDraftVisibility::inbox()`); pending approvals show a **dot** using the existing `CommitteeNav::hasPending()`
+  boolean — no per-document scan for a number. Both computed once per request (memoised in `Nav`). Tests: counts and
+  dot correct per role and never include another company's rows.
+
+### Should-fix
+- **B1** `/home` (`livewire.home`) is added to D2; the drilldown view is verified under both the HR and the partner
+  route.
+- **B2** Existing markup-asserting tests (`RunMTest.php:426` `<strong>Findings</strong>`, `SignedScanBindingTest.php:93`
+  `border-red`, locale `lang`/`dir`) are kept where they protect meaning (e.g. bold findings, red warning tone) —
+  update the markup expectation deliberately and keep the meaning assertion; never delete such an assertion.
+- **B3 Component contract**: `$attributes->merge()` lands on the real `<input>/<select>/<textarea>/<button>/<a>` so
+  `wire:model*`, `wire:click`, `wire:key`, `type`, `accept`, `disabled`, `name` pass through; `<x-ui.field>` takes the
+  error key explicitly (`error="presence.{{ $id }}"`) so nested keys work. Tables: each row rendered once; below `md`
+  the same row is styled as a card and each cell shows its localized label from a `label` attribute on
+  `<x-ui.td>`; dynamic tables (statistics preview) pass header labels from the same data used for the header row;
+  empty rows use `<x-ui.empty>`.
+- **B4 Toasts**: only for success outcomes. The layout shows `session('status')` once as a toast (works across
+  redirects); components may dispatch a `notify` browser event for in-place successes. Validation/blocking errors
+  stay inline next to their fields/actions (unchanged). Issuance and approval feedback keep their current
+  post-redirect visibility (flash → toast).
+- **B5 Accessibility**: badge text uses the darker shades (red-700, amber-700, green-700, indigo-600 on the light
+  tint) as in the mockup — never the bright tokens as text; focus-visible rings on all interactive components; the
+  "More" sheet traps focus, closes on Escape and returns focus to its trigger; bottom bar leaves content padding;
+  directional icons flip in RTL; case/reference numbers wrapped in `<bdi>` with JetBrains Mono.
+- **B6 Acceptance gates**: D1 and D2 each end with the full suite + Pint green and a recorded screenshot matrix
+  (route, role, state, width 1280/768/375, locale en/ar) — confirm-document in draft, blocked and issued states.
+  T004 is split into per-screen checkboxes.
+- **Nits**: Filament already sets colours/font/`viteTheme`; T003 only adds the translated brand name, favicon and any
+  measured adjustment in the existing theme file. Breakpoints: navigation switches at `lg`, tables at `md`; the
+  matrix includes 768 px.
+
 ## Constitution Check
 | Principle | Status | How |
 |---|---|---|

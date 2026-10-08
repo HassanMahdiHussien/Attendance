@@ -3,17 +3,24 @@
 **Tests**: REQUIRED. Gates (as sail): `docker compose exec -T -u sail laravel.test php artisan test` ·
 `… ./vendor/bin/pint --test`. Never run two test processes at once.
 
-plan.md review resolutions (when added) override earlier sections.
+plan.md R7 (review resolutions) overrides earlier sections.
 
 ## Run D1
-- [ ] T001 UI components + icon set (R1), Tone helper (R2)
-- [ ] T002 Workspace + guest layouts with sidebar, top bar, bottom tab bar, Nav helper with counts (R3)
-- [ ] T003 Filament theme + translated brand (R5)
-- [ ] T004 Rebuild cases board, case page and its sub-screens (show-case, create-case, confirm-document, edit-*,
-  record-session, record-appeal, review-*, signed-scan, pending-approvals, my-cases) (R4)
-- [ ] T005 Component tests (R6)
+- [ ] T001 Generate `tests/fixtures/ui-inventory.json` from the CURRENT views + BehaviourInventoryTest (R7 A1) — first,
+  before any view changes
+- [ ] T002 UI components + icon set (R1, R7 B3/B5), Tone helper (R2)
+- [ ] T003 Workspace + guest layouts: sidebar, top bar, bottom tab bar + More sheet, Nav helper with bounded counts,
+  toasts (R3, R7 A2/B4)
+- [ ] T004 Filament: translated brand name, favicon (R5, R7 nit)
+- [ ] T005a Rebuild cases board + my-cases + pending-approvals
+- [ ] T005b Rebuild show-case (incl. hand-offs, witness scan, response, decision signatures, consultation, appeal)
+- [ ] T005c Rebuild create-case
+- [ ] T005d Rebuild confirm-document (keep §18 distinct document card) + edit-document + edit-recommendations +
+  edit-decision-letter
+- [ ] T005e Rebuild record-session + record-appeal + review-approval + review-consultation + signed-scan
+- [ ] T006 Component + nav tests; markup-assertion updates per R7 B2
 
 ## Run D2
-- [ ] T006 Rebuild reports (inbox, my-reports, submit-report), employees, dashboard (hr-dashboard, case-drilldown),
-  statistics, login (R4)
-- [ ] T007 Remaining polish found in the screenshot pass; WEIRDNESS line if any deliberate deviation from the mockup
+- [ ] T007 Rebuild home, reports (inbox, my-reports, submit-report), employees (index, page), dashboard (hr-dashboard,
+  case-drilldown — HR and partner routes), statistics, login/guest
+- [ ] T008 Fixes from the screenshot matrix; WEIRDNESS line for any deliberate deviation from the mockup
