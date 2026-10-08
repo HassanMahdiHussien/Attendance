@@ -29,7 +29,9 @@ class Deadlines
         if ($due === null) {
             return null;
         }
-        $received = $case->events()->where('event_type', 'response_handoff_recorded')->orderBy('created_at')->first();
+        $received = $case->relationLoaded('events')
+            ? $case->events->where('event_type', 'response_handoff_recorded')->sortBy('created_at')->first()
+            : $case->events()->where('event_type', 'response_handoff_recorded')->orderBy('created_at')->first();
         if ($received !== null) {
             return CarbonImmutable::parse($received->created_at, config('app.timezone'))->setTimezone('Asia/Baghdad')->toDateString() <= $due->toDateString() ? 'met' : 'missed';
         }

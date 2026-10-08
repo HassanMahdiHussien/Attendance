@@ -48,6 +48,8 @@ erDiagram
     LEGAL_UNITS ||--o| LEGAL_UNIT_APPROVALS : approved_by_reviewer
     CASES |o--o{ AI_GENERATION_LOGS : records
     USERS |o--o{ AUDIT_LOGS : acts
+    USERS ||--o{ REPORT_EXPORTS : requests
+    COMPANIES |o--o{ REPORT_EXPORTS : scopes
 
     COMPANIES {
         bigint id PK
@@ -84,6 +86,19 @@ erDiagram
         string email
         string password
         boolean is_active
+    }
+    REPORT_EXPORTS {
+        bigint id PK
+        bigint company_id FK
+        bigint requested_by FK
+        string report_type
+        json parameters
+        string format
+        string status
+        string file_path
+        string file_sha256
+        datetime ready_at
+        datetime expires_at
     }
     BRANCHES {
         bigint id PK
@@ -465,6 +480,10 @@ erDiagram
 ```
 
 ## Integrity notes
+
+### Report exports (2026-10-08)
+
+`report_exports` stores `company_id` (nullable only for Platform Admin all-company periodic or hotspot reports), `requested_by` (users FK), `report_type`, JSON `parameters`, `format`, `status` (`queued`, `ready`, `failed`, `expired`, `revoked`), private `file_path`, `file_sha256`, `error`, `ready_at`, `expires_at`, and timestamps. The application model enforces the nullable company rule and tenant scope. A company-scoped export may be owned by a cross-company Platform Admin or HR partner, so `requested_by` is a single users FK; access is checked by role and company at request, generation, and download. Ready files expire seven days after generation.
 
 ### AI drafting and citation review (2026-10-08)
 

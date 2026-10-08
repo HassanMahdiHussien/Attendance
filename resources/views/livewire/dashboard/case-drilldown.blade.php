@@ -17,6 +17,7 @@
             <span class="hidden sm:flex gap-1.5" aria-label="{{ \App\Support\Format\StageIndicator::label($case->status) }}">@for($i=1;$i<=5;$i++)<span class="w-2 h-2 rounded-full {{ $i <= $step ? ($archived ? 'bg-green' : 'bg-primary') : 'bg-gray-200' }}"></span>@endfor</span>
             <span class="text-xs font-bold px-3 py-1.5 rounded-full {{ $archived ? 'bg-green-light text-green' : 'bg-primary-light text-primary' }}">{{ \App\Support\Format\StageIndicator::label($case->status) }}</span>
         </a>
+        @if($case->employee_id && app(\App\Policies\EmployeeProfilePolicy::class)->companyAllowed(auth()->user(), (int) $case->company_id))<a href="{{ route('employees.show', $case->employee_id) }}" class="block text-sm text-primary mr-4">صفحة الموظف</a>@endif
     @empty<p class="bg-white rounded-2xl p-8 text-gray-500">لا توجد حالات مطابقة.</p>@endforelse</div>
     <div class="mt-6">{{ $cases->links() }}</div>
 </div>

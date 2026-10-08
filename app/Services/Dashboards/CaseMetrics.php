@@ -36,6 +36,20 @@ class CaseMetrics
         return $counts;
     }
 
+    public function periodCounts(User $viewer, DashboardFilters $filters, bool $aggregate = false, ?int $company = null): array
+    {
+        $counts = $this->counts($viewer, $filters, $aggregate, $company);
+        $counts['open'] = $this->base($viewer, $filters, $aggregate, $company)
+            ->whereRaw("COALESCE((SELECT MIN(e.created_at) FROM case_events e WHERE e.case_id = cases.id AND e.event_type = 'case_opened'), cases.created_at) < ?", [$filters->end])
+            ->where(fn (Builder $query) => $query->whereNull('cases.closed_at')
+                ->orWhere('cases.closed_at', '>=', $filters->end))->count();
+        $counts['closed_month'] = $this->base($viewer, $filters, $aggregate, $company)
+            ->where('cases.closed_at', '>=', $filters->start)
+            ->where('cases.closed_at', '<', $filters->end)->count();
+
+        return $counts;
+    }
+
     public function metricQuery(User $viewer, DashboardFilters $filters, string $metric, bool $aggregate = false, ?int $company = null): Builder
     {
         $query = $this->base($viewer, $filters, $aggregate, $company);

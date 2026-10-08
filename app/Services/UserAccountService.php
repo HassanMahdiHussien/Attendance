@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\UserRole;
 use App\Models\User;
+use App\Services\Statistics\ReportExporter;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -69,6 +70,7 @@ class UserAccountService
             }
             if ($wasActive && ! $user->is_active) {
                 $this->purgeSessions($user, $actor);
+                app(ReportExporter::class)->revokeAllFor($user);
             }
 
             return $user;

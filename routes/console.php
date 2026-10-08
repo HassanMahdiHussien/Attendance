@@ -10,6 +10,7 @@ use App\Models\Company;
 use App\Models\DisciplinaryCase;
 use App\Models\Document;
 use App\Models\LegalImportRun;
+use App\Models\ReportExport;
 use App\Services\CaseEventLogger;
 use App\Services\Cases\CaseAlertDispatcher;
 use App\Services\Cases\CaseWorkflow;
@@ -71,6 +72,26 @@ Artisan::command('legal-library:reconcile', function (): void {
 })->purpose('Recover stalled legal library imports');
 
 Schedule::command('legal-library:reconcile')->everyTenMinutes();
+
+Artisan::command('report-exports:prune', function (): void {
+    app(TenantContext::class)->runAcrossAllCompanies(function (): void {
+        ReportExport::where('status', 'ready')->where('expires_at', '<=', now())
+            ->chunkById(100, function ($exports): void {
+                foreach ($exports as $export) {
+                    $work = function () use ($export): void {
+                        if ($export->file_path === "report-exports/{$export->id}.{$export->format}") {
+                            Storage::disk('local')->delete($export->file_path);
+                        }
+                        $export->forceFill(['status' => 'expired', 'file_path' => null, 'file_sha256' => null])->save();
+                    };
+                    $export->company_id === null ? app(TenantContext::class)->runAcrossAllCompanies($work)
+                        : app(TenantContext::class)->runForCompany($export->company_id, $work);
+                }
+            });
+    });
+})->purpose('Expire seven-day report exports');
+
+Schedule::command('report-exports:prune')->daily();
 
 Artisan::command('ai:reconcile-drafting', function (): void {
     DisciplinaryCase::withoutGlobalScopes()->whereNotNull('ai_request_id')
