@@ -1,0 +1,29 @@
+# Tasks: Server Provisioning, Backups and Monitoring
+
+**Tests**: REQUIRED. Gates (as sail): `docker compose exec -T -u sail laravel.test php artisan test` ·
+`… ./vendor/bin/pint --test` · shellcheck on `deploy/**/*.sh`. Never run two test processes at once.
+
+plan.md review resolutions (when added) override earlier sections.
+
+## Run V — application side
+- [ ] T001 Install `spatie/laravel-backup` + `league/flysystem-sftp-v3` (orchestrator runs composer); publish and trim
+  `config/backup.php` per R1; `backup-sftp` disk per R2; `.env.example` keys (empty values)
+- [ ] T002 `HealthPing` + heartbeat/backup event pings (R3)
+- [ ] T003 `backup:restore-drill` command (R4) + schedule entries (R5)
+- [ ] T004 `app:create-platform-admin` + production guard on demo seeders (R6)
+- [ ] T005 Tests: backup refuses without password outside local/testing; archive is encrypted (cannot be opened
+  without the password); pings (unset URL → no request; timeout/500 swallowed; URL never logged; heartbeat job pings;
+  backup success/failure events ping); restore drill end to end against a real `backup:run` on a local disk
+  (success; missing table → fail; missing document file → fail; wrong password → fail; refuses when the drill
+  database equals the live one; scratch database always dropped); schedule registered only when backups enabled;
+  create-platform-admin (creates, refuses second without flag, password rules, audit has no password); demo seeders
+  refuse in production
+
+## Run W — server side
+- [ ] T006 `deploy/provision.sh` + `lib/` + templates + `server.env.example` (R8–R10)
+- [ ] T007 `deploy/deploy.sh` + `rollback.sh` (R11)
+- [ ] T008 `deploy/backup-server.sh` (R12)
+- [ ] T009 `deploy/README.md` runbook (R13); WEIRDNESS lines (LUKS auto-unlock limit; backups refuse without
+  password; restore drill uses a scratch database); ADR for the production runtime/backups if warranted
+- [ ] T010 Verification (R14): shellcheck clean; container smoke run; local SFTP end-to-end backup + restore drill;
+  PR
