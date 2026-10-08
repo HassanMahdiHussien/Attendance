@@ -22,10 +22,10 @@ plan.md review resolutions (when added) override earlier sections.
   refuse in production
 
 ## Run W — server side
-- [ ] T006 `deploy/provision.sh` + `lib/` + templates + `server.env.example` (R8–R10)
-- [ ] T007 `deploy/deploy.sh` + `rollback.sh` (R11)
-- [ ] T008 `deploy/backup-server.sh` (R12)
-- [ ] T009 `deploy/README.md` runbook (R13); WEIRDNESS lines (LUKS auto-unlock limit; backups refuse without
+- [x] T006 `deploy/provision.sh` + `lib/` + templates + `server.env.example` (R8–R10)
+- [x] T007 `deploy/deploy.sh` + `rollback.sh` (R11)
+- [x] T008 `deploy/backup-server.sh` (R12)
+- [x] T009 `deploy/README.md` runbook (R13); WEIRDNESS lines (LUKS auto-unlock limit; backups refuse without
   password; restore drill uses a scratch database); ADR for the production runtime/backups if warranted
 - [ ] T010 Verification (R14): shellcheck clean; container smoke run; local SFTP end-to-end backup + restore drill;
   PR
