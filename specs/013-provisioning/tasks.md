@@ -27,5 +27,5 @@ plan.md review resolutions (when added) override earlier sections.
 - [x] T008 `deploy/backup-server.sh` (R12)
 - [x] T009 `deploy/README.md` runbook (R13); WEIRDNESS lines (LUKS auto-unlock limit; backups refuse without
   password; restore drill uses a scratch database); ADR for the production runtime/backups if warranted
-- [ ] T010 Verification (R14): shellcheck clean; container smoke run; local SFTP end-to-end backup + restore drill;
+- [x] T010 Verification (R14): shellcheck clean; container smoke run; local SFTP end-to-end backup + restore drill;
   PR
