@@ -18,7 +18,7 @@ domain="$(sed -n 's/^APP_URL=https:\/\///p' "$base/shared/.env" | head -1)"
 curl_tls=()
 if [[ $(cat "$base/tls-mode") == self-signed ]]; then curl_tls=(--insecure); fi
 export GIT_SSH_COMMAND='ssh -i /home/deploy/.ssh/github_deploy -o IdentitiesOnly=yes'
-if pgrep -f '[a]rtisan backup:run' >/dev/null; then
+if pgrep -f '^(/usr/bin/)?php[0-9.]* (/[^ ]*/)?artisan backup:run' >/dev/null; then
     echo "backup:run is active; refusing deploy"
     exit 1
 fi
@@ -65,7 +65,7 @@ npm run build
 php artisan optimize
 php artisan filament:optimize
 if [[ -L $current ]]; then
-    if pgrep -f '[a]rtisan backup:run' >/dev/null; then
+    if pgrep -f '^(/usr/bin/)?php[0-9.]* (/[^ ]*/)?artisan backup:run' >/dev/null; then
         echo "backup:run started during build; refusing deploy"
         exit 1
     fi
@@ -90,9 +90,11 @@ ln -s "$release" "$base/current.new"
 mv -Tf "$base/current.new" "$current"
 switched=1
 sudo systemctl reload php8.4-fpm
-if (( pending == 1 )); then sudo supervisorctl start displanery-worker; fi
+# Both are no-ops when already running/up, and they bring the site back after a fix-forward
+# deploy that follows a failed migration (which left maintenance on and the worker stopped).
+sudo supervisorctl start displanery-worker
 php artisan queue:restart
-if (( maintenance == 1 )); then php artisan up; fi
+php artisan up
 curl "${curl_tls[@]}" --fail --silent --show-error --max-time 15 --resolve "$domain:443:127.0.0.1" "https://$domain/up" >/dev/null
 maintenance=0
 # Keep five newest releases; never remove the active target.

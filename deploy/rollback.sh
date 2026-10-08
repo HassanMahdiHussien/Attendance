@@ -33,7 +33,7 @@ if [[ -n $unknown && ${1:-} != --force ]]; then
     exit 1
 fi
 if [[ -n $unknown ]]; then echo "WARNING: previous code does not know migrations: $unknown"; fi
-if pgrep -f '[a]rtisan backup:run' >/dev/null; then echo "Backup running; refusing rollback"; exit 1; fi
+if pgrep -f '^(/usr/bin/)?php[0-9.]* (/[^ ]*/)?artisan backup:run' >/dev/null; then echo "Backup running; refusing rollback"; exit 1; fi
 (cd "$active" && php artisan down --retry=15)
 sudo supervisorctl stop displanery-worker
 ln -s "$previous" "$base/current.new"

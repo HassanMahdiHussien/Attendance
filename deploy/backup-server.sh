@@ -27,7 +27,8 @@ install -d -m 0750 -o displanery-backup -g displanery-backup /srv/backups/displa
 install -d -m 0700 -o root -g root /srv/backup-vault /srv/backup-vault/daily /srv/backup-vault/monthly
 install -d -m 0755 /etc/ssh/authorized_keys
 printf '%s\n' "$BACKUP_PUBLIC_KEY" > /etc/ssh/authorized_keys/displanery-backup
-chmod 0600 /etc/ssh/authorized_keys/displanery-backup
+# sshd reads AuthorizedKeysFile as the target user; root ownership keeps it unwritable by that user.
+chmod 0644 /etc/ssh/authorized_keys/displanery-backup
 cat > /etc/ssh/sshd_config.d/00-displanery-backup.conf <<EOF
 Port $SSH_PORT
 PasswordAuthentication no
