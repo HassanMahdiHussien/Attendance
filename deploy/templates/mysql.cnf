@@ -1,0 +1,5 @@
+[mysqld]
+bind-address=127.0.0.1
+log_bin_trust_function_creators=1
+tmpdir=/srv/data/tmp/mysql
+innodb_buffer_pool_size=1G

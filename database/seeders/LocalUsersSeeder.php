@@ -12,6 +12,9 @@ class LocalUsersSeeder extends Seeder
 {
     public function run(): void
     {
+        if (app()->isProduction()) {
+            throw new RuntimeException('Demo seeders cannot run in production.');
+        }
         $password = config('app.seed_default_password');
         if (! is_string($password) || trim($password) === '') {
             throw new RuntimeException('SEED_DEFAULT_PASSWORD must be set before seeding local users.');

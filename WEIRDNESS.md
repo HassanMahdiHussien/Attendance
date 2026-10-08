@@ -73,3 +73,11 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 - **Every Excel text cell is an explicit string.** A name beginning with a formula character remains text to prevent spreadsheet formula injection. (2026-10)
 - **Empty optional employee CSV cells never erase stored email or gender.** Imports update known employees while preserving those values unless a replacement is supplied. (2026-10)
 - **Employee CSV accepts Windows-1256 as well as UTF-8.** Iraqi Excel exports may use this encoding and semicolon separators; the file is decoded before row validation. (2026-10)
+
+# Provisioning boundaries
+
+- Outside local and testing, a backup refuses an archive password shorter than 32 characters. The archive entries expose storage path names, but their contents require the password.
+- Restore drills use a dedicated scratch database and marker table. The drill checks its account grants in production; tests share the `testing%` database account and skip that grant check.
+- The LUKS data volume unlocks with a key stored on the root disk. This protects a detached volume or volume-only snapshot, not a running server or both disks together.
+- MySQL uses a bind mount from the encrypted volume to /var/lib/mysql, created before installation, so AppArmor's normal datadir path remains valid.
+- Production migrations are expand-then-contract. A failed migration leaves maintenance enabled; deploy never reopens old code against a possibly changed schema.

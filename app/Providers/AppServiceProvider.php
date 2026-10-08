@@ -13,6 +13,7 @@ use App\Models\Company;
 use App\Models\DisciplinaryCase;
 use App\Models\Document;
 use App\Models\ViolationReport;
+use App\Support\HealthPing;
 use App\Support\Tenancy\TenantContext;
 use Filament\Facades\Filament;
 use Illuminate\Auth\Events\Failed;
@@ -23,6 +24,10 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\ServiceProvider;
+use Spatie\Backup\Events\BackupHasFailed;
+use Spatie\Backup\Events\BackupManifestWasCreated;
+use Spatie\Backup\Events\BackupWasSuccessful;
+use Spatie\Backup\Events\DumpingDatabase;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -41,6 +46,27 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $guardBackup = function (): void {
+            if (! app()->environment(['local', 'testing']) && mb_strlen((string) config('backup.backup.password')) < 32) {
+                throw new \RuntimeException('A backup archive password of at least 32 characters is required.');
+            }
+            if (! app()->environment(['local', 'testing'])
+                && ! filter_var(config('displanery.backups.notify_email'), FILTER_VALIDATE_EMAIL)) {
+                throw new \RuntimeException('A backup notification email is required.');
+            }
+            if (in_array('backup-sftp', config('backup.backup.destination.disks', []), true)
+                && ! config('filesystems.disks.backup-sftp.hostFingerprint')) {
+                throw new \RuntimeException('A pinned backup SFTP host fingerprint is required.');
+            }
+        };
+        Event::listen(DumpingDatabase::class, $guardBackup);
+        Event::listen(BackupManifestWasCreated::class, $guardBackup);
+        Event::listen(BackupWasSuccessful::class, function (BackupWasSuccessful $event): void {
+            if ($event->diskName === last(config('backup.backup.destination.disks', []))) {
+                app(HealthPing::class)->success('backup');
+            }
+        });
+        Event::listen(BackupHasFailed::class, fn () => app(HealthPing::class)->failure('backup', 'Backup failed'));
         Gate::define('importEmployees', fn ($user, Company $company): bool => $user->is_active
             && in_array($user->primary_role, [UserRole::CompanyAdmin, UserRole::PlatformAdmin], true)
             && Filament::getTenant() instanceof Company
