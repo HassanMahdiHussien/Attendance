@@ -53,6 +53,23 @@ exec > >(tee -a "$LOG") 2>&1
 step() { printf '[%s] %s\n' "$(date -u +%FT%TZ)" "$*"; }
 trap 'step "Provision failed at line $LINENO; inspect $LOG"' ERR
 export DEBIAN_FRONTEND=noninteractive
+# The MySQL repository is set up before the first update, so a rerun after a failed run never
+# trips over a half-configured source. Oracle's published 2025 key is pinned by its full fingerprint.
+if ! command -v curl >/dev/null || ! command -v gpg >/dev/null; then
+    rm -f /etc/apt/sources.list.d/mysql.list
+    apt-get update
+    apt-get install -y --no-install-recommends ca-certificates curl gnupg
+fi
+install -d -m 0755 /etc/apt/keyrings
+key_tmp="$(mktemp)"
+curl -fsSL https://repo.mysql.com/RPM-GPG-KEY-mysql-2025 -o "$key_tmp"
+fingerprint="$(gpg --batch --show-keys --with-colons "$key_tmp" | awk -F: '$1 == "fpr" { print $10; exit }')"
+[[ $fingerprint == BCA43417C3B485DD128EC6D4B7B3B788A8D3785C ]] || { echo "Unexpected MySQL signing key"; exit 1; }
+gpg --batch --yes --dearmor -o /etc/apt/keyrings/mysql.gpg "$key_tmp"
+rm -f "$key_tmp"
+printf 'deb [signed-by=/etc/apt/keyrings/mysql.gpg] https://repo.mysql.com/apt/ubuntu/ noble mysql-8.4-lts\n' > /etc/apt/sources.list.d/mysql.list
+# apt verifies signatures as the unprivileged _apt user; the script's umask 077 would hide these from it.
+chmod 0644 /etc/apt/keyrings/mysql.gpg /etc/apt/sources.list.d/mysql.list
 apt-get update
 apt-get install -y --no-install-recommends ca-certificates curl gnupg lsb-release software-properties-common cryptsetup e2fsprogs util-linux ufw fail2ban unattended-upgrades nginx certbot supervisor git unzip zip fontconfig openssh-server systemd-timesyncd sudo openssl
 if cryptsetup isLuks "$device"; then
@@ -85,10 +102,12 @@ ufw allow "$SSH_PORT/tcp"
 ufw allow 80/tcp
 ufw allow 443/tcp
 ufw --force enable
+# sshd -t needs this directory; with socket activation it may not exist until the first login.
+install -d -m 0755 /run/sshd
 sshd -t
 # Ubuntu 24.04 starts sshd from ssh.socket; its port comes from a generator that reads sshd_config.
 systemctl daemon-reload
-if systemctl is-active --quiet ssh.socket; then systemctl restart ssh.socket; else systemctl reload ssh; fi
+if systemctl is-active --quiet ssh.socket; then systemctl restart ssh.socket; else systemctl try-reload-or-restart ssh; fi
 cat > /etc/fail2ban/jail.d/displanery.local <<EOF
 [sshd]
 enabled = true
@@ -147,16 +166,6 @@ fi
 grep -q '^/srv/data/swapfile ' /etc/fstab || printf '/srv/data/swapfile none swap sw,nofail 0 0\n' >> /etc/fstab
 swapon --show=NAME | grep -Fxq /srv/data/swapfile || swapon /srv/data/swapfile
 
-# Oracle's published 2025 key is pinned by its complete fingerprint.
-install -d -m 0755 /etc/apt/keyrings
-key_tmp="$(mktemp)"
-curl -fsSL https://repo.mysql.com/RPM-GPG-KEY-mysql-2025 -o "$key_tmp"
-fingerprint="$(gpg --batch --show-keys --with-colons "$key_tmp" | awk -F: '$1 == "fpr" { print $10; exit }')"
-[[ $fingerprint == BCA43417C3B485DD128EC6D4B7B3B788A8D3785C ]] || { echo "Unexpected MySQL signing key"; exit 1; }
-gpg --batch --yes --dearmor -o /etc/apt/keyrings/mysql.gpg "$key_tmp"
-rm -f "$key_tmp"
-printf 'deb [signed-by=/etc/apt/keyrings/mysql.gpg] https://repo.mysql.com/apt/ubuntu/ noble mysql-8.4-lts\n' > /etc/apt/sources.list.d/mysql.list
-apt-get update
 apt-get install -y mysql-community-server mysql-community-client
 install -m 0644 "$BASE/templates/mysql.cnf" /etc/mysql/mysql.conf.d/99-displanery.cnf
 chown -R mysql:mysql /srv/data/mysql /srv/data/tmp/mysql
@@ -237,6 +246,8 @@ chmod 0440 /etc/sudoers.d/displanery-deploy
 visudo -cf /etc/sudoers.d/displanery-deploy
 install -m 0644 "$BASE/templates/supervisor-worker.conf" /etc/supervisor/conf.d/displanery-worker.conf
 systemctl enable --now supervisor
+# supervisorctl fails until supervisord has created its control socket.
+for _ in {1..30}; do [[ -S /var/run/supervisor.sock ]] && break; sleep 1; done
 supervisorctl reread
 supervisorctl update
 

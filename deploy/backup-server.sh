@@ -49,10 +49,12 @@ EOF
 fi
 ufw allow "$SSH_PORT/tcp"
 ufw --force enable
+# sshd -t needs this directory; with socket activation it may not exist until the first login.
+install -d -m 0755 /run/sshd
 sshd -t
 # Ubuntu 24.04 starts sshd from ssh.socket; its port comes from a generator that reads sshd_config.
 systemctl daemon-reload
-if systemctl is-active --quiet ssh.socket; then systemctl restart ssh.socket; else systemctl reload ssh; fi
+if systemctl is-active --quiet ssh.socket; then systemctl restart ssh.socket; else systemctl try-reload-or-restart ssh; fi
 cat > /etc/fail2ban/jail.d/displanery-backup.local <<EOF
 [sshd]
 enabled = true
