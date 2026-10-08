@@ -36,7 +36,7 @@ test('dashboard counts use exactly the drill-down predicates and exclude other c
     }
     expect(CaseVisibility::for($outsider)->whereKey($case->id)->exists())->toBeFalse();
     $this->actingAs($admin);
-    Livewire::test(HrDashboard::class)->assertSee('لوحة المتابعة')->set('branch', (string) $case->branch_id)->assertSee('الحالات المفتوحة');
+    Livewire::test(HrDashboard::class)->assertSee('Dashboard')->set('branch', (string) $case->branch_id)->assertSee('Open cases');
     $this->get('/dashboard/cases?metric=open')->assertOk()->assertSee($case->employee->name);
     app(TenantContext::class)->setCompany($other);
     $this->actingAs($outsider)->get('/dashboard')->assertOk()->assertDontSee($case->employee->name);

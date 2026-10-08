@@ -5,9 +5,11 @@ namespace App\Providers\Filament;
 use App\Filament\Auth\Login;
 use App\Http\Middleware\EnforceIdleTimeout;
 use App\Http\Middleware\EnsureAccountIsActive;
+use App\Http\Middleware\SetLocale;
 use App\Http\Middleware\SetTenantContext;
 use App\Http\Middleware\SetTenantFromFilament;
 use App\Models\Company;
+use Filament\Actions\Action;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
@@ -18,6 +20,7 @@ use Filament\Support\Colors\Color;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
@@ -28,10 +31,23 @@ class AdminPanelProvider extends PanelProvider
     public function panel(Panel $panel): Panel
     {
         return $panel->default()->id('admin')->path('admin')->login(Login::class)
+            ->userMenuItems([
+                Action::make('locale_en')->label(fn (): string => __('English'))->action(function (): RedirectResponse {
+                    auth()->user()->forceFill(['locale' => 'en'])->save();
+
+                    return redirect()->to(url()->current());
+                }),
+                Action::make('locale_ar')->label(fn (): string => __('Arabic'))->action(function (): RedirectResponse {
+                    auth()->user()->forceFill(['locale' => 'ar'])->save();
+
+                    return redirect()->to(url()->current());
+                }),
+            ])
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,
+                SetLocale::class,
                 AuthenticateSession::class,
                 ShareErrorsFromSession::class,
                 ValidateCsrfToken::class,
@@ -43,6 +59,7 @@ class AdminPanelProvider extends PanelProvider
                 EnforceIdleTimeout::class,
             ])
             ->persistentMiddleware([
+                SetLocale::class,
                 SetTenantContext::class,
                 EnsureAccountIsActive::class,
                 EnforceIdleTimeout::class,

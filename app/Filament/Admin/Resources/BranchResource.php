@@ -19,20 +19,26 @@ class BranchResource extends Resource
 {
     protected static ?string $model = Branch::class;
 
-    protected static ?string $modelLabel = 'فرع';
+    public static function getModelLabel(): string
+    {
+        return __('Branch');
+    }
 
-    protected static ?string $pluralModelLabel = 'الفروع';
+    public static function getPluralModelLabel(): string
+    {
+        return __('Branches');
+    }
 
     protected static bool $isGloballySearchable = false;
 
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
-            TextInput::make('name')->label('اسم الفرع')->required(),
-            TextInput::make('address')->label('العنوان'),
-            Select::make('jurisdiction')->label('الولاية القضائية')->options([
-                Jurisdiction::FederalIraq->value => 'العراق الاتحادي',
-                Jurisdiction::KurdistanRegion->value => 'إقليم كردستان',
+            TextInput::make('name')->label(__('Branch name'))->required(),
+            TextInput::make('address')->label(__('Address')),
+            Select::make('jurisdiction')->label(__('Jurisdiction'))->options([
+                Jurisdiction::FederalIraq->value => __('Federal Iraq'),
+                Jurisdiction::KurdistanRegion->value => __('Kurdistan Region'),
             ])->required(),
         ]);
     }
@@ -40,16 +46,16 @@ class BranchResource extends Resource
     public static function table(Table $table): Table
     {
         return $table->columns([
-            TextColumn::make('name')->label('الفرع'),
-            TextColumn::make('jurisdiction')->label('الولاية القضائية')
+            TextColumn::make('name')->label(__('Branch')),
+            TextColumn::make('jurisdiction')->label(__('Jurisdiction'))
                 ->formatStateUsing(fn ($state): string => match ($state instanceof \BackedEnum ? $state->value : $state) {
-                    'federal_iraq' => 'العراق الاتحادي', 'kurdistan_region' => 'إقليم كردستان',
+                    'federal_iraq' => __('Federal Iraq'), 'kurdistan_region' => __('Kurdistan Region'),
                 }),
-            TextColumn::make('is_active')->label('الحالة')->formatStateUsing(fn (bool $state): string => $state ? 'نشط' : 'معطل'),
+            TextColumn::make('is_active')->label(__('Status'))->formatStateUsing(fn (bool $state): string => $state ? __('Active') : __('Inactive')),
         ])->recordActions([
             ViewAction::make(),
             EditAction::make(),
-            Action::make('deactivate')->label('تعطيل')->color('danger')->requiresConfirmation()
+            Action::make('deactivate')->label(__('Deactivate'))->color('danger')->requiresConfirmation()
                 ->visible(fn (Branch $record): bool => $record->is_active && auth()->user()->can('update', $record))
                 ->action(fn (Branch $record) => $record->update(['is_active' => false])),
         ]);

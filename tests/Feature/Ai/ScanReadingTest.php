@@ -155,7 +155,7 @@ test('a requested reading is only an attempt until HR confirms and a correction 
         ->and($confirmed->employee_response_origin)->toBe('ai_checked')
         ->and(app(PayloadBuilder::class)->build($confirmed, DocumentType::Recommendations, collect())['employee_response'])->not->toBeNull();
     Livewire::actingAs($hr)->test(ShowCase::class, ['case' => (string) $case->id])
-        ->assertSee('أكّد النص: '.$hr->name)->assertSee('بمساعدة الذكاء الاصطناعي')->assertSee('تصحيح النص');
+        ->assertSee('Text confirmed by: '.$hr->name)->assertSee('With AI assistance')->assertSee('Correct text');
     $reading->correct($case, 'المسح أوضح الكلمة', $hr);
     $correcting = $case->fresh();
     expect($correcting->status)->toBe(CaseStatus::ResponseScannedUploaded)
@@ -166,7 +166,7 @@ test('a requested reading is only an attempt until HR confirms and a correction 
     $reading->confirm($case, 'النص النهائي', 'human', $hr);
     expect($case->fresh()->confirmedResponseText())->toBe('النص النهائي')
         ->and($case->fresh()->employee_response_origin)->toBe('human');
-    Livewire::actingAs($hr)->test(ShowCase::class, ['case' => (string) $case->id])->assertSee('إدخال يدوي');
+    Livewire::actingAs($hr)->test(ShowCase::class, ['case' => (string) $case->id])->assertSee('Manual entry');
 });
 
 test('late reading workers cannot save after manual confirmation or a newer scan', function (): void {

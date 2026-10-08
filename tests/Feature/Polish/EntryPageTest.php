@@ -2,8 +2,8 @@
 
 use App\Models\User;
 
-test('guests can enter through the Arabic home page', function (): void {
-    $this->get('/')->assertOk()->assertSee('نظام الانضباط')->assertSee('تسجيل الدخول')
+test('guests can enter through the English home page', function (): void {
+    $this->get('/')->assertOk()->assertSee('Displanery')->assertSee('Log in')
         ->assertSee(route('login'));
 });
 

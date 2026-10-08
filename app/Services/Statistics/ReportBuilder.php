@@ -2,7 +2,6 @@
 
 namespace App\Services\Statistics;
 
-use App\Documents\IraqiDate;
 use App\Enums\UserRole;
 use App\Models\Company;
 use App\Models\Employee;
@@ -13,9 +12,7 @@ use App\Services\Dashboards\CaseMetrics;
 use App\Services\Dashboards\DashboardFilters;
 use App\Services\Employees\EmployeeProfile;
 use App\Support\Access\CaseVisibility;
-use App\Support\Format\ArabicDigits;
-use App\Support\Format\OutcomeLabel;
-use App\Support\Format\StageIndicator;
+use App\Support\Format\Ui;
 use App\Support\Tenancy\TenantContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
@@ -106,25 +103,29 @@ class ReportBuilder
             'to' => $params['to'], 'branch' => $params['branch']], $params['company_id']);
         $partnerAggregate = $viewer->primary_role === UserRole::HrPartnerStaff && in_array($type, ['periodic', 'hotspots'], true);
         $aggregate = $partnerAggregate;
-        $title = ['periodic' => 'الملخص الدوري', 'employee' => 'تقرير الموظف',
-            'compliance' => 'تقرير الالتزام بالمواعيد', 'hotspots' => 'تقرير بؤر التكرار'][$type];
+        $title = ['periodic' => __('Periodic summary'), 'employee' => __('Employee report'),
+            'compliance' => __('Deadline compliance report'), 'hotspots' => __('Hotspots report')][$type];
         $report = ['type' => $type, 'title' => $title, 'parameters' => $params,
             'company' => $params['company_id'] ? Company::find($params['company_id']) : null,
             'summary' => [], 'sections' => [], 'truncated' => false];
         if ($type === 'employee') {
             $employee = Employee::withoutGlobalScopes()->findOrFail($params['employee_id']);
             $profile = $this->profiles->build($viewer, $employee);
-            $report['summary'] = ['الموظف' => $employee->name, 'الرقم الوظيفي' => $employee->employee_code,
-                'القسم' => $employee->department, 'الوظيفة' => $employee->position,
-                'الفرع' => $employee->branch?->name, 'تاريخ التعيين' => $this->date($employee->hire_date),
-                'الحالة المفتوحة' => $profile['open']?->case_number,
-                'المرحلة' => $profile['open'] ? StageIndicator::label($profile['open']->status) : null,
-                'إجمالي الحالات' => $profile['counts']['total'], 'الإنذارات' => $profile['counts']['warnings'],
-                'آخر ١٢ شهراً' => $profile['counts']['last_year']];
-            $report['sections'][] = $this->section('السجل الانضباطي', ['رقم الحالة', 'الموظف', 'تاريخ الواقعة', 'ISO', 'المخالفة', 'النتيجة', 'المستندات'],
+            $report['summary'] = [__('Employee') => $employee->name, __('Employee number') => $employee->employee_code,
+                __('Department') => $employee->department, __('Position') => $employee->position,
+                __('Branch') => $employee->branch?->name, __('Hire date') => $this->date($employee->hire_date),
+                __('Open case') => $profile['open']?->case_number,
+                __('Stage') => $profile['open'] ? Ui::stage($profile['open']->status) : null,
+                __('Total cases') => $profile['counts']['total'], __('Warnings') => $profile['counts']['warnings'],
+                __('Last 12 months') => $profile['counts']['last_year']];
+            $report['sections'][] = $this->section(__('Disciplinary record'), [__('Case number'), __('Employee'), __('Incident date'), 'ISO', __('Violation'), __('Outcome'), __('Documents')],
                 $profile['history']->map(fn ($case) => [$case->case_number, $employee->name,
                     $this->date($case->violation_time), $this->iso($case->violation_time), $case->violation_type,
-                    OutcomeLabel::arabic($case->outcome), $case->documents->pluck('document_type.value')->implode('، ')])->all(), $limit, $report);
+                    Ui::outcome($case->outcome), $case->documents->map(fn ($document): string => match ($document->document_type->value) {
+                        'defense_letter' => __('Defense request letter'),
+                        'recommendations' => __('Committee recommendations'),
+                        'decision_letter' => __('Decision letter'),
+                    })->implode(__(', '))])->all(), $limit, $report);
         } elseif ($type === 'compliance') {
             $rows = [];
             $totals = ['met' => 0, 'overdue' => 0, 'missed' => 0, 'open' => 0, 'not_started' => 0];
@@ -143,22 +144,22 @@ class ReportBuilder
                     $report['truncated'] = true;
                 }
             }
-            $report['summary'] = ['ضمن المهلة' => $totals['met'], 'تأخر الإنجاز' => $totals['overdue'],
-                'فاتت المهلة' => $totals['missed'], 'قيد المهلة' => $totals['open'], 'لم يبدأ' => $totals['not_started']];
-            $report['sections'][] = $this->section('الحالات', ['رقم الحالة', 'الموظف', 'كتاب الدفاع', 'مهلة ١٥ يوماً',
-                'تاريخ الإنجاز', 'الإجراء', 'مهلة الرد', 'الرد', 'ISO'], $rows, $limit, $report);
+            $report['summary'] = [__('Within deadline') => $totals['met'], __('Completed late') => $totals['overdue'],
+                __('Deadline missed') => $totals['missed'], __('In progress') => $totals['open'], __('Not started') => $totals['not_started']];
+            $report['sections'][] = $this->section(__('Cases'), [__('Case number'), __('Employee'), __('Defense letter'), __('15-day deadline'),
+                __('Completion date'), __('Procedure'), __('Response deadline'), __('Response'), 'ISO'], $rows, $limit, $report);
         } else {
             if ($type === 'periodic') {
                 $counts = $this->metrics->periodCounts($viewer, $filters, $aggregate, $params['company_id']);
-                $report['summary'] = ['مفتوحة حتى نهاية الفترة' => $counts['open'], 'أغلقت في الفترة' => $counts['closed_month'],
-                    'توصية فقط' => $counts['recommendation_only'], 'إنذار' => $counts['warning'],
-                    'إنهاء خدمة' => $counts['termination'], 'متوسط أيام الإجراء' => $counts['average_days'],
-                    'نسبة الإنجاز خلال ١٥ يوماً' => $counts['within15_percent']];
+                $report['summary'] = [__('Open at period end') => $counts['open'], __('Closed in period') => $counts['closed_month'],
+                    __('Recommendation only') => $counts['recommendation_only'], __('Warning') => $counts['warning'],
+                    __('Termination') => $counts['termination'], __('Average procedure days') => $counts['average_days'],
+                    __('Completed within 15 days (%)') => $counts['within15_percent']];
             }
             $hotspots = $this->metrics->hotspots($viewer, $filters, $aggregate, $params['company_id']);
             foreach ($hotspots as $group => $items) {
                 $rows = array_map(fn ($item) => [$item['label'], $item['count'], $item['previous'], $item['delta']], $items);
-                $report['sections'][] = $this->section($this->groupLabel($group), ['التصنيف', 'الفترة', 'الفترة السابقة', 'التغير'], $rows, $limit, $report);
+                $report['sections'][] = $this->section($this->groupLabel($group), [__('Category'), __('Period'), __('Previous period'), __('Change')], $rows, $limit, $report);
             }
             if ($type === 'periodic' && ! $partnerAggregate) {
                 $rows = [];
@@ -166,13 +167,13 @@ class ReportBuilder
                     ->orderBy('cases.id')->lazy(500) as $case) {
                     $rows[] = [$case->case_number, $case->employee?->name, $this->date($case->violation_time),
                         $this->iso($case->violation_time), $case->violation_type,
-                        OutcomeLabel::arabic($case->outcome)];
+                        Ui::outcome($case->outcome)];
                     if ($limit !== null && count($rows) > $limit) {
                         break;
                     }
                 }
-                $report['sections'][] = $this->section('قائمة الحالات',
-                    ['رقم الحالة', 'الموظف', 'تاريخ الواقعة', 'ISO', 'المخالفة', 'النتيجة'], $rows, $limit, $report);
+                $report['sections'][] = $this->section(__('Case list'),
+                    [__('Case number'), __('Employee'), __('Incident date'), 'ISO', __('Violation'), __('Outcome')], $rows, $limit, $report);
             }
         }
         $report['partial'] = $viewer->primary_role === UserRole::HrStaff && ! $viewer->can('view_all_company_cases');
@@ -234,29 +235,28 @@ class ReportBuilder
     private function procedureLabel(?string $status): string
     {
         return match ($status) {
-            'met' => 'ضمن المهلة', 'overdue' => 'تأخر الإنجاز', 'missed' => 'فاتت المهلة',
-            'on_track', 'approaching' => 'قيد المهلة', default => 'لم يبدأ',
+            'met' => __('Within deadline'), 'overdue' => __('Completed late'), 'missed' => __('Deadline missed'),
+            'on_track', 'approaching' => __('In progress'), default => __('Not started'),
         };
     }
 
     private function responseLabel(?string $status): string
     {
         return match ($status) {
-            'met' => 'ضمن المهلة', 'missed' => 'فاتت المهلة',
-            'on_track', 'approaching' => 'قيد المهلة', default => 'لم يبدأ',
+            'met' => __('Within deadline'), 'missed' => __('Deadline missed'),
+            'on_track', 'approaching' => __('In progress'), default => __('Not started'),
         };
     }
 
     private function groupLabel(string $group): string
     {
-        return ['branch' => 'الفروع', 'department' => 'الأقسام', 'location' => 'المواقع',
-            'violation' => 'أنواع المخالفات', 'responsible' => 'الأشخاص المعنيون', 'employee' => 'الموظفون'][$group];
+        return ['branch' => __('Branches'), 'department' => __('Departments'), 'location' => __('Locations'),
+            'violation' => __('Violation types'), 'responsible' => __('Responsible people'), 'employee' => __('Employees')][$group];
     }
 
     private function date(mixed $date): string
     {
-        return $date ? ArabicDigits::convert(
-            IraqiDate::format(CarbonImmutable::parse($date), 'ar')) : '—';
+        return Ui::date($date);
     }
 
     private function iso(mixed $date): string

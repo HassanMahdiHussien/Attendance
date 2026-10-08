@@ -54,7 +54,7 @@ class EditDecisionLetter extends Component
         $document = $drafts->createOrUpdateDecision($case, $this->reasons, auth()->user(),
             $this->documentId ? $case->documents()->findOrFail($this->documentId) : null);
         $this->documentId = $document->id;
-        $this->notice = 'حُفظت مسودة القرار.';
+        $this->notice = __('messages.document.decision_draft_saved');
     }
 
     public function confirmLeave(TerminationLeaveConfirmation $confirmations): void
@@ -63,7 +63,7 @@ class EditDecisionLetter extends Component
         $this->validate(['leaveChecked' => ['accepted']]);
         $this->save(app(DocumentDrafts::class));
         $confirmations->confirm($case->documents()->findOrFail($this->documentId), auth()->user());
-        $this->notice = 'سُجل تأكيد عدم وجود إجازة قانونية أو غياب مرضي موثق.';
+        $this->notice = __('messages.document.leave_clearance_recorded');
     }
 
     public function submit(DocumentDrafts $drafts): void
@@ -106,7 +106,7 @@ class EditDecisionLetter extends Component
         Gate::authorize('manageDocuments', $case);
         if ($case->status->value !== $this->expectedStatus || ! in_array($case->status,
             [CaseStatus::SignedRecommendationsUploaded, CaseStatus::DecisionLetterCitationCheck], true)) {
-            throw ValidationException::withMessages(['notice' => 'تغيرت الحالة، أعد التحميل']);
+            throw ValidationException::withMessages(['notice' => __('messages.case.changed_reload')]);
         }
 
         return $case;

@@ -13,7 +13,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 
-test('an alert has one claim, retries a failed delivery, and notifies active recipients in Arabic', function (): void {
+test('an alert has one claim, retries a failed delivery, and notifies active recipients', function (): void {
     $company = Company::factory()->create();
     app(TenantContext::class)->setCompany($company);
     $admin = User::factory()->create(['company_id' => $company->id, 'primary_role' => 'company_admin']);
@@ -38,7 +38,7 @@ test('an alert has one claim, retries a failed delivery, and notifies active rec
     Notification::assertSentTo([$admin, $hr], CaseDeadlineAlert::class);
     Notification::assertNotSentTo($inactive, CaseDeadlineAlert::class);
     $notification = new CaseDeadlineAlert($case, 'procedure_approaching');
-    expect($notification->toMail($admin)->subject)->toContain('تنبيه');
+    expect($notification->toMail($admin)->subject)->toContain('deadline alert');
 });
 
 test('the scheduled dispatcher iterates companies and the archiver waits until the day after appeal end', function (): void {

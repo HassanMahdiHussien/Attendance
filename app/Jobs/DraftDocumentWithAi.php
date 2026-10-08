@@ -106,10 +106,10 @@ class DraftDocumentWithAi implements ShouldQueue
                 }
                 $notes = array_slice($response['notes'], 0, 8);
                 if ($units->isEmpty()) {
-                    $notes[] = 'لا توجد مواد موثقة قابلة للاستشهاد';
+                    $notes[] = ['key' => 'messages.ai.no_verified_citations', 'params' => []];
                 }
                 if ($flagged) {
-                    $notes[] = 'راجع ذكر العقوبة أو النتيجة في النص المصاغ';
+                    $notes[] = ['key' => 'messages.ai.review_outcome_wording', 'params' => []];
                 }
                 AiDraftNote::create(['company_id' => $locked->company_id, 'case_id' => $locked->id,
                     'document_id' => $document->id, 'ai_generation_log_id' => $response['_generation_log_id'],

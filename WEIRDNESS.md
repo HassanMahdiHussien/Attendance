@@ -4,6 +4,8 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 
 ---
 
+- **The interface defaults to English and remembers each user's Arabic choice.** Statistical exports use the language captured when requested; issued documents keep their bilingual content with Arabic governing, while operational mail to the service operator stays English.
+
 - **Shared-schema multi-tenancy (`company_id` column) instead of a separate database per company.** Deliberate simplification for the expected scale (<10 companies in year one). Revisit only if the client count grows past ~15-20, or if a large client contractually requires full data isolation — see PRD Section 13, technical architecture note.
 
 - **Committee membership is a many-to-many "pool" (with alternates per role), not a fixed single person per role.** This matches the structure of a real Administrative Order the company provided — HR/Legal/Labor-Union roles each list multiple alternate names, and attendance is recorded per session. Don't simplify this back to one-person-per-role; it would break real committee sessions where a different alternate attends. See CLAUDE.md Section 4.

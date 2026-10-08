@@ -203,7 +203,7 @@ test('the last active company admin remains active', function (): void {
         $this->fail('The last admin guard did not run.');
     } catch (ValidationException $exception) {
         expect($exception->errors())->toHaveKey('primary_role');
-        expect($exception->errors()['primary_role'][0])->toContain('آخر مسؤول شركة نشط');
+        expect($exception->errors()['primary_role'][0])->toContain('last active company administrator');
     }
     expect($this->admin->fresh()->is_active)->toBeTrue();
 

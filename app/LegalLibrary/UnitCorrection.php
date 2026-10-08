@@ -17,7 +17,7 @@ class UnitCorrection
         abort_unless($actor->can('review', $unit->law), 403);
         if (! in_array($unit->status->value, ['verified_auto', 'verified_human', 'verified_text'], true)
             || $unit->superseded_by_id !== null || blank($text) || blank($reason)) {
-            throw ValidationException::withMessages(['unit' => 'يلزم وجود مادة حالية متحقَّق منها، ونص التصحيح وسببه.']);
+            throw ValidationException::withMessages(['unit' => __('messages.legal.correction_required')]);
         }
 
         return DB::transaction(function () use ($unit, $actor, $text, $reason): LegalUnit {

@@ -21,9 +21,15 @@ class InternalRegulation extends Page
     use ReviewsLegalMismatch;
     use WithFileUploads;
 
-    protected static ?string $navigationLabel = 'النظام الداخلي';
+    public static function getNavigationLabel(): string
+    {
+        return __('Internal regulation');
+    }
 
-    protected static ?string $title = 'النظام الداخلي';
+    public function getTitle(): string
+    {
+        return __('Internal regulation');
+    }
 
     protected string $view = 'filament.admin.pages.internal-regulation';
 
@@ -120,7 +126,7 @@ class InternalRegulation extends Page
         $unit = $this->units()->firstWhere('id', $id);
         abort_unless($unit && auth()->user()->can('review', $unit->law), 403);
         app(RegulationApprovals::class)->approve($unit, auth()->user());
-        Notification::make()->title('تم اعتماد الوحدة')->success()->send();
+        Notification::make()->title(__('Unit approved'))->success()->send();
     }
 
     public function approveAll(): void
@@ -128,7 +134,7 @@ class InternalRegulation extends Page
         $law = $this->laws()->firstWhere('id', $this->selectedLawId);
         abort_unless($law && auth()->user()->can('review', $law), 403);
         app(RegulationApprovals::class)->approveAllVerified($law, auth()->user());
-        Notification::make()->title('تم اعتماد الوحدات الموثقة')->success()->send();
+        Notification::make()->title(__('Verified units approved'))->success()->send();
     }
 
     protected function mismatchQuery(): Builder

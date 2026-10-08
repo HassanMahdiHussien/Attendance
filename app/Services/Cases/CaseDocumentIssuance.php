@@ -25,7 +25,7 @@ class CaseDocumentIssuance
             Gate::forUser($actor)->authorize('issue', $case);
             $document = Document::query()->lockForUpdate()->findOrFail($draft->id);
             if (! CaseVisibility::for($actor)->whereKey($case->id)->exists()) {
-                throw new IssuanceBlocked('لا تملك صلاحية الوصول إلى هذه الحالة.');
+                throw new IssuanceBlocked(__('messages.workflow.case_access_denied'));
             }
             $stages = [
                 DocumentType::DefenseLetter->value => S::DefenseLetterConfirmed,
@@ -33,10 +33,10 @@ class CaseDocumentIssuance
                 DocumentType::DecisionLetter->value => S::DecisionLetterReadyForReview,
             ];
             if ($document->version === 1 && $case->status !== $stages[$document->document_type->value]) {
-                throw new IssuanceBlocked('الحالة ليست في مرحلة إصدار هذا المستند.');
+                throw new IssuanceBlocked(__('messages.document.wrong_issuance_stage'));
             }
             if ($document->version > 1 && $case->status === S::Draft) {
-                throw new IssuanceBlocked('لا يمكن تصحيح مستند لحالة ما زالت مسودة.');
+                throw new IssuanceBlocked(__('messages.document.draft_case_correction_blocked'));
             }
 
             $issued = $this->issuer->issue($document, $actor, $manualRef);

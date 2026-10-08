@@ -7,9 +7,9 @@ class PresenceWording
     public static function suggestion(?string $result): string
     {
         return match ($result) {
-            'appears_filled' => 'خانة التوقيع تبدو ممتلئة',
-            'appears_empty' => 'خانة التوقيع تبدو فارغة',
-            default => 'خانة التوقيع غير واضحة',
+            'appears_filled' => __('messages.signature.box_appears_filled'),
+            'appears_empty' => __('messages.signature.box_appears_empty'),
+            default => __('messages.signature.box_unclear'),
         };
     }
 

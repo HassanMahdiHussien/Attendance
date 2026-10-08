@@ -58,7 +58,7 @@ test('AI drafting button and action are limited to editors with visible cases', 
     foreach ([$f['admin'], $assigned] as $editor) {
         $this->actingAs($editor);
         Livewire::test(EditDocument::class, ['case' => $f['case']->id, 'document' => 'new'])
-            ->assertSee('صياغة بالذكاء الاصطناعي');
+            ->assertSee('Draft with AI');
     }
     foreach ([$unassigned, $pool, $reviewer, $reporter] as $outsider) {
         $this->actingAs($outsider);
@@ -66,7 +66,7 @@ test('AI drafting button and action are limited to editors with visible cases', 
     }
     $this->actingAs($f['admin']);
     Livewire::test(EditDocument::class, ['case' => $f['case']->id, 'document' => 'new'])
-        ->call('requestAiDraft')->assertSee('جارٍ الصياغة');
+        ->call('requestAiDraft')->assertSee('Drafting…');
     expect($f['case']->fresh()->status)->toBe(CaseStatus::AiDraftingDefenseLetter);
     Bus::assertDispatched(DraftDocumentWithAi::class);
 });
@@ -77,7 +77,7 @@ test('citation picker offers only citable units and refuses a forged selection',
     $blocked = LegalUnit::factory()->create(['law_id' => $f['law']->id, 'article_number' => '11', 'status' => 'unverified']);
     $this->actingAs($f['admin']);
     Livewire::test(EditDocument::class, ['case' => $f['case']->id, 'document' => 'new'])
-        ->call('openCitationPicker')->assertSee('المادة 10')->assertDontSee('المادة 11')
+        ->call('openCitationPicker')->assertSee('Article 10')->assertDontSee('Article 11')
         ->call('selectCitation', $blocked->id)->assertNotFound();
     expect($allowed->id)->not->toBe($blocked->id);
 });
@@ -88,9 +88,9 @@ test('an existing draft requires explicit replacement before AI is queued', func
         ['ar' => 'طلب دفاع يدوي', 'en' => 'Manual defense request'], $f['admin']);
     $this->actingAs($f['admin']);
     $screen = Livewire::test(EditDocument::class, ['case' => $f['case']->id, 'document' => (string) $document->id]);
-    $screen->call('requestAiDraft')->assertSee('سيستبدل النص الحالي');
+    $screen->call('requestAiDraft')->assertSee('This will replace the current text');
     expect($f['case']->fresh()->status)->toBe(CaseStatus::Open);
-    $screen->call('requestAiDraft')->assertSee('جارٍ الصياغة');
+    $screen->call('requestAiDraft')->assertSee('Drafting…');
     expect($f['case']->fresh()->status)->toBe(CaseStatus::AiDraftingDefenseLetter);
 });
 
@@ -106,14 +106,14 @@ test('polling loads a saved draft and reports a failed request', function (): vo
     app()->instance(ClaudeClient::class, $fake);
     app()->call([new DraftDocumentWithAi($f['case']->id, $f['company']->id, $f['admin']->id,
         DocumentType::DefenseLetter, $token), 'handle']);
-    $screen->call('pollAiDraft')->assertSee('حُفظت مسودة الذكاء الاصطناعي');
+    $screen->call('pollAiDraft')->assertSee('The AI draft was saved');
     expect($screen->get('bodies.ar'))->toBe('الوقائع المثبتة في المحضر.');
 
     $screen->call('requestAiDraft')->call('requestAiDraft');
     $failed = new DraftDocumentWithAi($f['case']->id, $f['company']->id, $f['admin']->id,
         DocumentType::DefenseLetter, $f['case']->fresh()->ai_request_id);
     $failed->failed(new AiUnavailable('unavailable'));
-    $screen->call('pollAiDraft')->assertSee('تعذرت الصياغة بالذكاء الاصطناعي');
+    $screen->call('pollAiDraft')->assertSee('AI drafting failed');
 });
 
 test('citation override needs a reason and records an audit entry', function (): void {
@@ -164,6 +164,9 @@ test('platform law editing exposes English name and statute topics only to platf
     $unit = LegalUnit::factory()->create(['law_id' => $law->id]);
     $this->actingAs($platform);
     Filament::setCurrentPanel(Filament::getPanel('platform'));
+    $this->get(LawResource::getUrl('edit', ['record' => $law], panel: 'platform'))
+        ->assertOk()->assertSee('English law name');
+    $platform->forceFill(['locale' => 'ar'])->save();
     $this->get(LawResource::getUrl('edit', ['record' => $law], panel: 'platform'))
         ->assertOk()->assertSee('اسم القانون بالإنجليزية');
     app(LawManagement::class)->update($law, $platform, ['name_en' => 'Labour Law']);

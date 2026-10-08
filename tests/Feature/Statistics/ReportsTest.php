@@ -41,8 +41,8 @@ test('past quarter open and closed counts describe that quarter', function (): v
         'violation_time' => '2024-11-20 10:00:00']);
     $report = app(ReportBuilder::class)->build($viewer, 'periodic',
         ['period' => 'quarter', 'year' => 2025, 'quarter' => 1]);
-    expect($report['summary']['مفتوحة حتى نهاية الفترة'])->toBe(1)
-        ->and($report['summary']['أغلقت في الفترة'])->toBe(1);
+    expect($report['summary']['Open at period end'])->toBe(1)
+        ->and($report['summary']['Closed in period'])->toBe(1);
 });
 
 test('compliance uses due-day boundary and recommendation-only closing date', function (): void {
@@ -56,17 +56,17 @@ test('compliance uses due-day boundary and recommendation-only closing date', fu
         'closed_at' => '2025-01-16 23:59:00']);
     $report = app(ReportBuilder::class)->build($viewer, 'compliance',
         ['period' => 'month', 'year' => 2025, 'month' => 1]);
-    expect($report['summary']['ضمن المهلة'])->toBe(1)
+    expect($report['summary']['Within deadline'])->toBe(1)
         ->and($report['sections'][0]['rows'][0][4])->not->toBe('—');
     $case->forceFill(['closed_at' => '2025-01-17 00:01:00'])->save();
     $late = app(ReportBuilder::class)->build($viewer, 'compliance',
         ['period' => 'month', 'year' => 2025, 'month' => 1]);
-    expect($late['summary']['تأخر الإنجاز'])->toBe(1);
+    expect($late['summary']['Completed late'])->toBe(1);
     CaseEvent::factory()->create(['case_id' => $case->id, 'event_type' => 'response_handoff_recorded',
         'created_at' => '2025-01-04 23:59:00']);
     $onDay = app(ReportBuilder::class)->build($viewer, 'compliance',
         ['period' => 'month', 'year' => 2025, 'month' => 1]);
-    expect($onDay['sections'][0]['rows'][0][7])->toBe('ضمن المهلة');
+    expect($onDay['sections'][0]['rows'][0][7])->toBe('Within deadline');
     $other = DisciplinaryCase::factory()->create(['law_version_id' => $law->id,
         'status' => CaseStatus::Open, 'violation_time' => '2025-01-02 09:00:00',
         'defense_letter_issued_at' => '2025-01-01 09:00:00']);
@@ -74,7 +74,7 @@ test('compliance uses due-day boundary and recommendation-only closing date', fu
         'created_at' => '2025-01-05 00:01:00']);
     $afterDay = app(ReportBuilder::class)->build($viewer, 'compliance',
         ['period' => 'month', 'year' => 2025, 'month' => 1]);
-    expect($afterDay['sections'][0]['rows'][1][7])->toBe('فاتت المهلة');
+    expect($afterDay['sections'][0]['rows'][1][7])->toBe('Deadline missed');
 });
 
 test('live period report outcome figures use dashboard metric definitions', function (): void {
@@ -86,9 +86,9 @@ test('live period report outcome figures use dashboard metric definitions', func
     $params = ['period' => 'custom', 'from' => now()->subDays(7)->toDateString(), 'to' => now()->toDateString()];
     $report = app(ReportBuilder::class)->build($viewer, 'periodic', $params);
     $metrics = app(CaseMetrics::class)->counts($viewer, DashboardFilters::fromInput($viewer, $params));
-    expect($report['summary']['مفتوحة حتى نهاية الفترة'])->toBe($metrics['open'])
-        ->and($report['summary']['إنذار'])->toBe($metrics['warning'])
-        ->and($report['summary']['إنهاء خدمة'])->toBe($metrics['termination']);
+    expect($report['summary']['Open at period end'])->toBe($metrics['open'])
+        ->and($report['summary']['Warning'])->toBe($metrics['warning'])
+        ->and($report['summary']['Termination'])->toBe($metrics['termination']);
 });
 
 test('export job publishes once, downloads for owner, and expires only ready rows', function (): void {
@@ -162,7 +162,7 @@ test('Platform Admin all-company periodic figures include both companies', funct
     $platform = User::factory()->create(['company_id' => null, 'primary_role' => 'platform_admin']);
     $report = app(ReportBuilder::class)->build($platform, 'periodic',
         ['period' => 'quarter', 'year' => 2025, 'quarter' => 1]);
-    expect($report['company'])->toBeNull()->and($report['summary']['مفتوحة حتى نهاية الفترة'])->toBe(2);
+    expect($report['company'])->toBeNull()->and($report['summary']['Open at period end'])->toBe(2);
 });
 
 test('a stats-only partner sees aggregate labels and cannot request person reports', function (): void {
@@ -303,6 +303,8 @@ test('PDF report sends landscape to the generator', function (): void {
 
 test('Excel uses RTL sheets and stores formula-looking names as string cells', function (): void {
     $path = tempnam(sys_get_temp_dir(), 'report-');
+    $previousLocale = app()->getLocale();
+    app()->setLocale('ar');
     try {
         app(ExcelReport::class)->render(['summary' => [], 'sections' => [[
             'title' => 'السجل', 'headers' => ['الموظف', 'ISO'],
@@ -323,6 +325,7 @@ test('Excel uses RTL sheets and stores formula-looking names as string cells', f
             ->toContain('t="inlineStr"><is><t>=HYPERLINK(&quot;x&quot;)</t></is>')->not->toContain('<f>');
         $zip->close();
     } finally {
+        app()->setLocale($previousLocale);
         @unlink($path);
     }
 });

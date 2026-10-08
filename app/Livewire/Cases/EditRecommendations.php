@@ -57,7 +57,7 @@ class EditRecommendations extends Component
         $contents = [];
         foreach ($languages as $language) {
             if (blank($this->findings[$language] ?? null) || blank($this->recommendations[$language] ?? null)) {
-                throw ValidationException::withMessages(['notice' => 'النتائج والتوصيات مطلوبة بكل اللغات المفعلة.']);
+                throw ValidationException::withMessages(['notice' => __('messages.document.findings_recommendations_required')]);
             }
             $contents[$language] = ['body' => $this->findings[$language], 'secondary_body' => $this->recommendations[$language]];
         }
@@ -65,7 +65,7 @@ class EditRecommendations extends Component
             : $editor->create($case, $contents, auth()->user());
         $this->documentId = $document->id;
         $this->expectedStatus = $case->fresh()->status->value;
-        $this->notice = 'حُفظت المسودة.';
+        $this->notice = __('messages.document.draft_saved');
     }
 
     public function submit(RecommendationsEditor $editor): void
@@ -74,7 +74,7 @@ class EditRecommendations extends Component
         try {
             $editor->submitForApproval(Document::query()->findOrFail($this->documentId), auth()->user());
             $this->expectedStatus = CaseStatus::RecommendationsAwaitingApprovals->value;
-            $this->notice = 'أُرسلت التوصيات إلى أعضاء اللجنة للموافقة.';
+            $this->notice = __('messages.document.recommendations_sent_for_approval');
         } catch (TransitionBlocked|IssuanceBlocked $error) {
             $this->expectedStatus = CaseVisibility::for(auth()->user())->findOrFail($this->caseId)->status->value;
             $this->notice = $error->getMessage();
@@ -109,7 +109,7 @@ class EditRecommendations extends Component
         $case = CaseVisibility::for(auth()->user())->findOrFail($this->caseId);
         Gate::authorize('manageDocuments', $case);
         if ($case->status->value !== $this->expectedStatus) {
-            throw ValidationException::withMessages(['notice' => 'تغيرت الحالة، أعد التحميل']);
+            throw ValidationException::withMessages(['notice' => __('messages.case.changed_reload')]);
         }
 
         return $case;

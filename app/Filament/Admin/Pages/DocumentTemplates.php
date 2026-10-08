@@ -23,42 +23,42 @@ use Illuminate\Validation\ValidationException;
 class DocumentTemplates extends Page
 {
     private const BLOCK_LABELS = [
-        'title' => 'العنوان',
-        'title_warning' => 'عنوان الإنذار',
-        'title_termination' => 'عنوان إنهاء الخدمة',
-        'from_label' => 'تسمية «من»',
-        'from_value' => 'نص «من»',
-        'to_label' => 'تسمية «إلى»',
-        'cc_label' => 'تسمية «بالإشارة إلى»',
-        'cc_value' => 'نص «بالإشارة إلى»',
-        'subject_label' => 'تسمية الموضوع',
-        'subject_value' => 'نص الموضوع',
-        'date_label' => 'تسمية التاريخ',
-        'reference_label' => 'تسمية العدد',
-        'salutation' => 'التحية',
-        'opening' => 'الفقرة الافتتاحية',
-        'deadline_sentence' => 'جملة المهلة',
-        'prior_record' => 'فقرة السوابق',
-        'employee_block' => 'كتلة توقيع الموظف',
-        'mandate_sentence' => 'جملة الأمر الإداري',
-        'lead_in' => 'التمهيد',
-        'findings_intro' => 'مقدمة النتائج',
-        'recommendations_intro' => 'مقدمة التوصيات',
-        'role_legal' => 'تسمية الدور القانوني',
-        'role_hr' => 'تسمية دور الموارد البشرية',
-        'role_labor_union' => 'تسمية دور ممثل النقابة',
-        'chair_label' => 'تسمية رئيس اللجنة',
-        'chair_label_female' => 'تسمية رئيسة اللجنة',
-        'member_label' => 'تسمية عضو اللجنة',
-        'member_label_female' => 'تسمية عضوة اللجنة',
-        'signature_line' => 'سطر التوقيع',
-        'defense_outcome_rejected' => 'نتيجة الدفاع (مرفوض)',
-        'defense_outcome_partial' => 'نتيجة الدفاع (مقبول جزئياً)',
-        'defense_outcome_accepted' => 'نتيجة الدفاع (مقبول بالكامل)',
-        'decision_sentence' => 'جملة القرار',
-        'gm_title' => 'توقيع المدير العام',
-        'union_title' => 'توقيع ممثل النقابة',
-        'acknowledgment' => 'إقرار الموظف',
+        'title' => 'Title',
+        'title_warning' => 'Warning title',
+        'title_termination' => 'Termination title',
+        'from_label' => 'From label',
+        'from_value' => 'From text',
+        'to_label' => 'To label',
+        'cc_label' => 'Reference label',
+        'cc_value' => 'Reference text',
+        'subject_label' => 'Subject label',
+        'subject_value' => 'Subject text',
+        'date_label' => 'Date label',
+        'reference_label' => 'Reference number label',
+        'salutation' => 'Salutation',
+        'opening' => 'Opening paragraph',
+        'deadline_sentence' => 'Deadline sentence',
+        'prior_record' => 'Prior record paragraph',
+        'employee_block' => 'Employee signature block',
+        'mandate_sentence' => 'Administrative order sentence',
+        'lead_in' => 'Lead-in',
+        'findings_intro' => 'Findings introduction',
+        'recommendations_intro' => 'Recommendations introduction',
+        'role_legal' => 'Legal role label',
+        'role_hr' => 'HR role label',
+        'role_labor_union' => 'Union representative role label',
+        'chair_label' => 'Committee chair label',
+        'chair_label_female' => 'Female committee chair label',
+        'member_label' => 'Committee member label',
+        'member_label_female' => 'Female committee member label',
+        'signature_line' => 'Signature line',
+        'defense_outcome_rejected' => 'Defense outcome (rejected)',
+        'defense_outcome_partial' => 'Defense outcome (partially accepted)',
+        'defense_outcome_accepted' => 'Defense outcome (fully accepted)',
+        'decision_sentence' => 'Decision sentence',
+        'gm_title' => 'General Manager signature',
+        'union_title' => 'Union representative signature',
+        'acknowledgment' => 'Employee acknowledgment',
     ];
 
     private const REQUIRED_BLOCKS = [
@@ -67,9 +67,15 @@ class DocumentTemplates extends Page
         'decision_letter' => ['title_warning', 'title_termination', 'salutation', 'opening', 'defense_outcome_rejected', 'defense_outcome_partial', 'defense_outcome_accepted', 'decision_sentence', 'gm_title', 'union_title'],
     ];
 
-    protected static ?string $navigationLabel = 'قوالب المستندات';
+    public static function getNavigationLabel(): string
+    {
+        return __('Document templates');
+    }
 
-    protected static ?string $title = 'قوالب المستندات';
+    public function getTitle(): string
+    {
+        return __('Document templates');
+    }
 
     protected string $view = 'filament.admin.pages.document-templates';
 
@@ -114,7 +120,7 @@ class DocumentTemplates extends Page
         $defaults = $this->resolved()['blocks'];
         $fields = [];
         foreach (array_keys($defaults) as $key) {
-            $fields[] = Textarea::make($key)->label(self::BLOCK_LABELS[$key] ?? $key)->default($defaults[$key])
+            $fields[] = Textarea::make($key)->label(__(self::BLOCK_LABELS[$key] ?? $key))->default($defaults[$key])
                 ->hint($key)->required(in_array($key, self::REQUIRED_BLOCKS[$this->documentType], true))->rows(3)
                 ->extraInputAttributes(['dir' => $this->language === 'en' ? 'ltr' : 'rtl'])
                 ->live(debounce: 400);

@@ -20,47 +20,53 @@ class CompanyResource extends Resource
 {
     protected static ?string $model = Company::class;
 
-    protected static ?string $modelLabel = 'شركة';
+    public static function getModelLabel(): string
+    {
+        return __('Company');
+    }
 
-    protected static ?string $pluralModelLabel = 'الشركات';
+    public static function getPluralModelLabel(): string
+    {
+        return __('Companies');
+    }
 
     protected static bool $isGloballySearchable = false;
 
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
-            TextInput::make('name')->label('اسم الشركة')->required()->maxLength(255),
-            TextInput::make('letterhead_logo_path')->label('مسار الشعار'),
-            TextInput::make('letterhead_address')->label('عنوان الترويسة'),
-            TextInput::make('letterhead_phone')->label('هاتف الترويسة'),
-            TextInput::make('letterhead_email')->label('بريد الترويسة')->email(),
-            Checkbox::make('kurdish_enabled')->label('إضافة الكردية (اختياري)'),
-            Checkbox::make('requires_second_review')->label('مراجعة ثانية قبل الإصدار'),
-            Select::make('subscription_status')->label('حالة الاشتراك')
+            TextInput::make('name')->label(__('Company name'))->required()->maxLength(255),
+            TextInput::make('letterhead_logo_path')->label(__('Logo path')),
+            TextInput::make('letterhead_address')->label(__('Letterhead address')),
+            TextInput::make('letterhead_phone')->label(__('Letterhead phone')),
+            TextInput::make('letterhead_email')->label(__('Letterhead email'))->email(),
+            Checkbox::make('kurdish_enabled')->label(__('Enable Kurdish (optional)')),
+            Checkbox::make('requires_second_review')->label(__('Second review before issuance')),
+            Select::make('subscription_status')->label(__('Subscription status'))
                 ->options(collect(SubscriptionStatus::cases())->mapWithKeys(fn (SubscriptionStatus $status) => [$status->value => match ($status) {
-                    SubscriptionStatus::Trial => 'تجريبي',
-                    SubscriptionStatus::Active => 'نشط',
-                    SubscriptionStatus::Suspended => 'معلق',
-                    SubscriptionStatus::Cancelled => 'ملغى',
+                    SubscriptionStatus::Trial => __('Trial'),
+                    SubscriptionStatus::Active => __('Active'),
+                    SubscriptionStatus::Suspended => __('Suspended'),
+                    SubscriptionStatus::Cancelled => __('Cancelled'),
                 }])->all())->required()->default(SubscriptionStatus::Trial->value),
-            TextInput::make('first_admin_name')->label('اسم مدير الشركة الأول')->required(fn (string $operation): bool => $operation === 'create'),
-            TextInput::make('first_admin_email')->label('بريد مدير الشركة الأول')->email()->required(fn (string $operation): bool => $operation === 'create'),
-            TextInput::make('first_admin_password')->label('كلمة مرور مدير الشركة الأول')->password()->required(fn (string $operation): bool => $operation === 'create'),
+            TextInput::make('first_admin_name')->label(__('First company admin name'))->required(fn (string $operation): bool => $operation === 'create'),
+            TextInput::make('first_admin_email')->label(__('First company admin email'))->email()->required(fn (string $operation): bool => $operation === 'create'),
+            TextInput::make('first_admin_password')->label(__('First company admin password'))->password()->required(fn (string $operation): bool => $operation === 'create'),
         ]);
     }
 
     public static function table(Table $table): Table
     {
         return $table->columns([
-            TextColumn::make('name')->label('الشركة'),
-            TextColumn::make('subscription_status')->label('الاشتراك')
+            TextColumn::make('name')->label(__('Company')),
+            TextColumn::make('subscription_status')->label(__('Subscription'))
                 ->formatStateUsing(fn ($state): string => match ($state instanceof \BackedEnum ? $state->value : $state) {
-                    'trial' => 'تجريبي', 'active' => 'نشط', 'suspended' => 'معلق', 'cancelled' => 'ملغى',
+                    'trial' => __('Trial'), 'active' => __('Active'), 'suspended' => __('Suspended'), 'cancelled' => __('Cancelled'),
                 }),
-            TextColumn::make('is_active')->label('الحساب')->formatStateUsing(fn (bool $state): string => $state ? 'نشط' : 'معطل'),
+            TextColumn::make('is_active')->label(__('Account'))->formatStateUsing(fn (bool $state): string => $state ? __('Active') : __('Inactive')),
         ])->recordActions([
             EditAction::make(),
-            Action::make('toggleActive')->label(fn (Company $record): string => $record->is_active ? 'تعطيل' : 'تفعيل')
+            Action::make('toggleActive')->label(fn (Company $record): string => $record->is_active ? __('Deactivate') : __('Activate'))
                 ->color(fn (Company $record): string => $record->is_active ? 'danger' : 'success')
                 ->requiresConfirmation()
                 ->action(fn (Company $record) => app(CompanyStatusService::class)->setActive($record, ! $record->is_active, auth()->user())),

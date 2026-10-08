@@ -218,7 +218,7 @@ test('legal library labels cover every displayed code', function (): void {
     }
 });
 
-test('regulation shows an Arabic summary and approved units without approval controls', function (): void {
+test('regulation shows a localized summary and approved units without approval controls', function (): void {
     $company = Company::factory()->create();
     $reviewer = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::HrStaff]);
     Permission::findOrCreate('review_internal_regulation', 'web');
@@ -233,12 +233,12 @@ test('regulation shows an Arabic summary and approved units without approval con
     LegalUnitApproval::create(['legal_unit_id' => $unit->id, 'company_id' => $company->id,
         'approved_by' => $reviewer->id, 'created_at' => now()]);
     Livewire::test(InternalRegulation::class)->call('selectLaw', $law->id)
-        ->assertSee('١ وحدات — ١ من نص المصدر')
-        ->assertSee('معتمدة')
+        ->assertSee('1 Units — 1 Verified from source text')
+        ->assertSee('Approved')
         ->assertSee($reviewer->name)
         ->assertDontSee('verified_text')
         ->assertDontSee('{"pages"')
-        ->assertDontSee('اعتماد كل الوحدات الموثقة')
+        ->assertDontSee('Approve all verified units')
         ->assertDontSee('wire:click="approveUnit');
 });
 

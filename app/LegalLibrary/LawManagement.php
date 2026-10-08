@@ -71,7 +71,7 @@ class LawManagement
         abort_unless($unit->law->kind === LawKind::Statute && $unit->company_id === null && $unit->superseded_by_id === null, 403);
         $topics = array_values(array_unique(array_map('trim', $topics)));
         if (collect($topics)->contains(fn ($topic) => $topic === '' || mb_strlen($topic) > 80)) {
-            throw ValidationException::withMessages(['topics' => 'يجب ألا تكون الموضوعات فارغة، وألا يتجاوز طول كل منها 80 حرفاً.']);
+            throw ValidationException::withMessages(['topics' => __('messages.legal.topics_invalid')]);
         }
         DB::transaction(function () use ($unit, $actor, $topics): void {
             $before = $unit->topics()->pluck('topic')->all();

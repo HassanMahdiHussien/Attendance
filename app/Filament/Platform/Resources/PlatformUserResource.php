@@ -22,9 +22,15 @@ class PlatformUserResource extends Resource
 {
     protected static ?string $model = User::class;
 
-    protected static ?string $modelLabel = 'مستخدم المنصة';
+    public static function getModelLabel(): string
+    {
+        return __('Platform user');
+    }
 
-    protected static ?string $pluralModelLabel = 'مستخدمو المنصة';
+    public static function getPluralModelLabel(): string
+    {
+        return __('Platform users');
+    }
 
     protected static bool $isGloballySearchable = false;
 
@@ -40,18 +46,18 @@ class PlatformUserResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
-            TextInput::make('name')->label('الاسم')->required(),
-            TextInput::make('email')->label('البريد الإلكتروني')->email()->required(),
-            TextInput::make('password')->label('كلمة المرور')->password()->required(fn (string $operation): bool => $operation === 'create')->dehydrated(fn (?string $state): bool => filled($state)),
-            Select::make('primary_role')->label('الدور')->options([
-                UserRole::PlatformAdmin->value => 'مدير المنصة',
-                UserRole::ExternalLegalReviewer->value => 'مراجع قانوني خارجي',
-                UserRole::HrPartnerStaff->value => 'موظف شريك الموارد البشرية',
+            TextInput::make('name')->label(__('Name'))->required(),
+            TextInput::make('email')->label(__('Email address'))->email()->required(),
+            TextInput::make('password')->label(__('Password'))->password()->required(fn (string $operation): bool => $operation === 'create')->dehydrated(fn (?string $state): bool => filled($state)),
+            Select::make('primary_role')->label(__('Role'))->options([
+                UserRole::PlatformAdmin->value => __('Platform administrator'),
+                UserRole::ExternalLegalReviewer->value => __('External legal reviewer'),
+                UserRole::HrPartnerStaff->value => __('HR partner staff'),
             ])->required()->live(),
-            Select::make('law_firm_partner_id')->label('مكتب المحاماة')->options(fn (): array => LawFirmPartner::query()->pluck('name', 'id')->all())
+            Select::make('law_firm_partner_id')->label(__('Law firm'))->options(fn (): array => LawFirmPartner::query()->pluck('name', 'id')->all())
                 ->visible(fn ($get): bool => $get('primary_role') === UserRole::ExternalLegalReviewer->value)
                 ->required(fn ($get): bool => $get('primary_role') === UserRole::ExternalLegalReviewer->value),
-            Select::make('hr_partner_id')->label('شريك الموارد البشرية')->options(fn (): array => HrPartner::query()->pluck('name', 'id')->all())
+            Select::make('hr_partner_id')->label(__('HR partner'))->options(fn (): array => HrPartner::query()->pluck('name', 'id')->all())
                 ->visible(fn ($get): bool => $get('primary_role') === UserRole::HrPartnerStaff->value)
                 ->required(fn ($get): bool => $get('primary_role') === UserRole::HrPartnerStaff->value),
         ]);
@@ -60,18 +66,18 @@ class PlatformUserResource extends Resource
     public static function table(Table $table): Table
     {
         return $table->columns([
-            TextColumn::make('name')->label('الاسم'),
-            TextColumn::make('email')->label('البريد'),
-            TextColumn::make('primary_role')->label('الدور')
+            TextColumn::make('name')->label(__('Name')),
+            TextColumn::make('email')->label(__('Email')),
+            TextColumn::make('primary_role')->label(__('Role'))
                 ->formatStateUsing(fn ($state): string => [
-                    UserRole::PlatformAdmin->value => 'مدير المنصة',
-                    UserRole::ExternalLegalReviewer->value => 'مراجع قانوني خارجي',
-                    UserRole::HrPartnerStaff->value => 'موظف شريك الموارد البشرية',
+                    UserRole::PlatformAdmin->value => __('Platform administrator'),
+                    UserRole::ExternalLegalReviewer->value => __('External legal reviewer'),
+                    UserRole::HrPartnerStaff->value => __('HR partner staff'),
                 ][$state instanceof \BackedEnum ? $state->value : $state]),
-            TextColumn::make('is_active')->label('الحالة')->formatStateUsing(fn (bool $state): string => $state ? 'نشط' : 'معطل'),
+            TextColumn::make('is_active')->label(__('Status'))->formatStateUsing(fn (bool $state): string => $state ? __('Active') : __('Inactive')),
         ])->recordActions([
             EditAction::make(),
-            Action::make('toggleActive')->label(fn (User $record): string => $record->is_active ? 'تعطيل' : 'تفعيل')
+            Action::make('toggleActive')->label(fn (User $record): string => $record->is_active ? __('Deactivate') : __('Activate'))
                 ->requiresConfirmation()->action(fn (User $record) => app(UserAccountService::class)->update($record, ['is_active' => ! $record->is_active], auth()->user())),
         ]);
     }

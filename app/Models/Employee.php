@@ -29,14 +29,14 @@ class Employee extends Model
     {
         static::saving(function (self $employee): void {
             if (! EmployeeGender::tryFrom((string) ($employee->getAttributes()['gender'] ?? 'unspecified'))) {
-                throw ValidationException::withMessages(['gender' => 'يجب تحديد الجنس بذكر أو أنثى أو غير محدد.']);
+                throw ValidationException::withMessages(['gender' => __('messages.employee.gender_invalid')]);
             }
             if ($employee->is_general_manager && $employee->is_active && self::query()
                 ->where('company_id', $employee->company_id)
                 ->where('is_general_manager', true)->where('is_active', true)
                 ->when($employee->exists, fn ($query) => $query->whereKeyNot($employee->getKey()))
                 ->exists()) {
-                throw ValidationException::withMessages(['is_general_manager' => 'يسمح بمدير عام نشط واحد فقط.']);
+                throw ValidationException::withMessages(['is_general_manager' => __('messages.employee.single_active_general_manager')]);
             }
         });
         static::creating(function (self $employee): void {

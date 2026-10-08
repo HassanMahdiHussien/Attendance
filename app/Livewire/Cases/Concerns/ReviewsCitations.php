@@ -30,7 +30,7 @@ trait ReviewsCitations
     public function recheckCitations(RelevanceCheck $checks): void
     {
         $checks->clear($this->citationDocument());
-        $this->notice = 'أُعيد طلب فحص الاستشهادات.';
+        $this->notice = __('messages.citation.recheck_requested');
     }
 
     public function overrideCitation(int $citationId, CitationOverride $overrides): void
@@ -40,7 +40,7 @@ trait ReviewsCitations
         $this->validate(['overrideReasons.'.$citationId => ['required', 'string', 'max:1000']]);
         $overrides->override($citation, auth()->user(), $this->overrideReasons[$citationId]);
         unset($this->overrideReasons[$citationId]);
-        $this->notice = 'سُجل سبب تجاوز نتيجة الفحص.';
+        $this->notice = __('messages.citation.override_reason_recorded');
     }
 
     public function replaceCitation(int $unitId, CitationRefresh $refresh): void
@@ -52,6 +52,6 @@ trait ReviewsCitations
         if (method_exists($this, 'loadAiBodies')) {
             $this->loadAiBodies($document->fresh());
         }
-        $this->notice = 'استُبدلت المادة بالنص المصحح. يرجى مراجعة المسودة والفحص.';
+        $this->notice = __('messages.citation.corrected_text_replaced');
     }
 }

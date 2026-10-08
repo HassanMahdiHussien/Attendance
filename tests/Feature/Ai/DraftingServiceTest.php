@@ -78,8 +78,20 @@ test('AI defense draft saves with origin and notes then clears its request token
     expect($case->status)->toBe(CaseStatus::Open)
         ->and($case->ai_request_id)->toBeNull()
         ->and($document->drafted_by)->toBe(DraftedBy::Ai)
-        ->and($document->aiDraftNotes()->count())->toBe(1)
-        ->and($document->aiDraftNotes()->firstOrFail()->notes)->toContain('لا توجد مواد موثقة قابلة للاستشهاد');
+        ->and($document->aiDraftNotes()->count())->toBe(1);
+    $note = ['key' => 'messages.ai.no_verified_citations', 'params' => []];
+    expect($document->aiDraftNotes()->firstOrFail()->notes)->toContain($note);
+    $previousLocale = app()->getLocale();
+    try {
+        $f['hr']->forceFill(['locale' => 'ar']);
+        app()->setLocale($f['hr']->preferredLocale());
+        expect(__($note['key'], $note['params']))->toBe('لا توجد مواد موثقة قابلة للاستشهاد');
+        $f['hr']->forceFill(['locale' => 'en']);
+        app()->setLocale($f['hr']->preferredLocale());
+        expect(__($note['key'], $note['params']))->toBe('No verified legal provisions are available to cite.');
+    } finally {
+        app()->setLocale($previousLocale);
+    }
     expect(fn () => DB::table('ai_draft_notes')->where('document_id', $document->id)
         ->update(['notes' => json_encode(['Altered'])]))->toThrow(QueryException::class);
 });

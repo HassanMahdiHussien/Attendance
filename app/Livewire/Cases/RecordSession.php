@@ -65,7 +65,7 @@ class RecordSession extends Component
         $case = CaseVisibility::for(auth()->user())->findOrFail($this->caseId);
         Gate::authorize('update', $case);
         if ($case->status->value !== $this->expectedStatus) {
-            throw ValidationException::withMessages(['notice' => 'تغيرت الحالة، أعد التحميل']);
+            throw ValidationException::withMessages(['notice' => __('messages.case.changed_reload')]);
         }
         $this->validate(['selected' => ['required', 'array', 'min:3'], 'minutes' => ['required', 'string', 'max:50000'],
             'chairId' => ['required', 'integer'], 'minutesTypedBy' => ['required', 'integer'],
@@ -82,11 +82,11 @@ class RecordSession extends Component
                 Outcome::from($this->outcome), DefenseAcceptance::from($this->defenseAcceptance),
                 auth()->user(), (int) $this->minutesTypedBy);
             $this->expectedStatus = $updated->status->value;
-            $this->notice = $updated->session_majority_reached ? 'سُجلت الجلسة.' : 'سُجلت الجلسة دون أغلبية. يلزم إعادة التصويت.';
+            $this->notice = $updated->session_majority_reached ? __('messages.session.recorded') : __('messages.session.recorded_without_majority');
         } catch (TransitionBlocked $error) {
-            $this->notice = match ($error->getMessage()) {
-                'يلزم حضور ممثل نقابة العمال.' => 'يلزم حضور ممثل نقابة العمال',
-                'يلزم حضور ثلاثة أعضاء مختلفين.' => 'يلزم حضور ثلاثة أعضاء مختلفين',
+            $this->notice = match ($error->getCode()) {
+                1002 => __('messages.session.union_representative_required_short'),
+                1001 => __('messages.session.three_distinct_members_required_short'),
                 default => $error->getMessage(),
             };
         }

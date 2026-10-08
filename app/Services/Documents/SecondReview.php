@@ -21,7 +21,7 @@ class SecondReview
             Gate::forUser($reviewer)->authorize('secondReview', $document->disciplinaryCase);
             if ($document->is_locked || $document->status !== DocumentStatus::ReadyForReview
                 || (int) $document->last_edited_by === (int) $reviewer->id) {
-                throw new IssuanceBlocked('يجب أن يجري المراجعة شخص غير آخر محرر.');
+                throw new IssuanceBlocked(__('messages.document.second_reviewer_must_differ'));
             }
             $document->forceFill(['second_reviewed_by' => $reviewer->id, 'second_reviewed_at' => now()])->save();
             $this->events->log($document->disciplinaryCase, 'document_second_reviewed', ['document_id' => $document->id], actor: $reviewer);

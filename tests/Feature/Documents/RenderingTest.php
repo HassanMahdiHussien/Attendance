@@ -70,6 +70,24 @@ test('draft rendering uses provisional reference and watermark; issued rendering
     expect($issued->fresh()->rendered_html)->toBe($frozen);
 });
 
+test('interface locale does not change document rendering or frozen issued content', function (): void {
+    Queue::fake();
+    [, $actor, $document] = renderingFixture();
+    $renderer = app(DocumentRenderer::class);
+
+    app()->setLocale('ar');
+    $arabicInterfaceDraft = $renderer->render($document, true);
+    app()->setLocale('en');
+    expect($renderer->render($document, true))->toBe($arabicInterfaceDraft);
+
+    app()->setLocale('ar');
+    $issued = app(DocumentIssuer::class)->issue($document, $actor);
+    $frozen = $issued->rendered_html;
+    app()->setLocale('en');
+    expect($issued->fresh()->rendered_html)->toBe($frozen)
+        ->and($frozen)->toContain('lang="ar"', 'lang="en"');
+});
+
 test('female grammar is selected and unspecified gender blocks issuance', function (): void {
     Queue::fake();
     [, $actor, $document] = renderingFixture('female');

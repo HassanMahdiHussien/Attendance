@@ -23,12 +23,12 @@ class AppealService
             $case = DisciplinaryCase::query()->lockForUpdate()->findOrFail($case->id);
             $this->checkHr($case, $actor);
             if ($case->status !== CaseStatus::AwaitingAppealWindow) {
-                throw new TransitionBlocked('الحالة لا تنتظر طعناً.');
+                throw new TransitionBlocked(__('messages.appeal.not_awaiting'));
             }
             $tracking = AppealTracking::query()->where('case_id', $case->id)->lockForUpdate()->firstOrFail();
             $date = CarbonImmutable::parse($filedAt, 'Asia/Baghdad')->toDateString();
             if ($date < $tracking->window_start || $date > $tracking->window_end) {
-                throw new TransitionBlocked('تاريخ تقديم الطعن خارج مهلة الطعن.');
+                throw new TransitionBlocked(__('messages.appeal.outside_window'));
             }
             $tracking->forceFill(['appeal_filed' => true, 'appeal_filed_at' => $date, 'logged_by' => $actor->id])->save();
             $this->events->log($case, 'appeal_filed', ['filed_at' => $date], actor: $actor);
@@ -44,7 +44,7 @@ class AppealService
             $case = DisciplinaryCase::query()->lockForUpdate()->findOrFail($case->id);
             $this->checkHr($case, $actor);
             if ($case->status !== CaseStatus::AppealPending || blank($outcome)) {
-                throw new TransitionBlocked('يلزم طعن قيد النظر ونص نتيجته.');
+                throw new TransitionBlocked(__('messages.appeal.pending_with_outcome_required'));
             }
             $tracking = AppealTracking::query()->where('case_id', $case->id)->lockForUpdate()->firstOrFail();
             $tracking->forceFill(['appeal_outcome' => $outcome, 'logged_by' => $actor->id])->save();
@@ -60,7 +60,7 @@ class AppealService
     {
         if (! in_array($actor->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)
             || ! CaseVisibility::for($actor)->whereKey($case->id)->exists()) {
-            throw new TransitionBlocked('يلزم امتلاك صلاحية الموارد البشرية لتسجيل الطعن.');
+            throw new TransitionBlocked(__('messages.appeal.hr_permission_required'));
         }
     }
 }

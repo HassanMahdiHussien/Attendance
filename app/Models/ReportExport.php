@@ -16,6 +16,8 @@ class ReportExport extends Model
 
     protected $guarded = [];
 
+    protected $attributes = ['locale' => 'en'];
+
     protected static function booted(): void
     {
         static::addGlobalScope('tenant', function (Builder $query): void {
@@ -29,10 +31,11 @@ class ReportExport extends Model
             $owner = User::findOrFail($export->requested_by);
             if (! in_array($export->status, ['queued', 'ready', 'failed', 'expired', 'revoked'], true) ||
                 ! in_array($export->format, ['pdf', 'xlsx'], true) ||
+                ! in_array($export->locale, ['en', 'ar'], true) ||
                 ! in_array($export->report_type, ['periodic', 'employee', 'compliance', 'hotspots'], true)) {
                 throw new TenantMismatch('Invalid report export state.');
             }
-            if ($export->exists && $export->isDirty(['company_id', 'requested_by', 'report_type', 'parameters', 'format'])) {
+            if ($export->exists && $export->isDirty(['company_id', 'requested_by', 'report_type', 'parameters', 'format', 'locale'])) {
                 throw new TenantMismatch('Report export identity cannot change.');
             }
             if (! $export->exists && $export->company_id === null && ! $context->isAllCompanies()) {

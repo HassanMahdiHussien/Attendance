@@ -17,7 +17,7 @@ class CaseAssignment
     {
         if ($assignee !== null && ($assignee->company_id !== $case->company_id || ! $assignee->is_active
             || ! in_array($assignee->primary_role, [UserRole::HrStaff, UserRole::CompanyAdmin], true))) {
-            throw ValidationException::withMessages(['assigned_hr_user_id' => 'اختر موظف موارد بشرية نشطاً من الشركة.']);
+            throw ValidationException::withMessages(['assigned_hr_user_id' => __('messages.case.active_hr_assignee_required')]);
         }
 
         return DB::transaction(function () use ($case, $assignee, $actor): DisciplinaryCase {

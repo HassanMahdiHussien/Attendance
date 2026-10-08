@@ -90,7 +90,7 @@ test('suggestions prefill clear boxes, require a choice for unclear, and retain 
         ->and($component->get('presence.'.$f['attendees'][1]->id))->toBe('empty')
         ->and($component->get('presence.'.$f['attendees'][2]->id))->toBe('');
     $component->call('recordReadPresence')->assertHasErrors(['notice'])
-        ->assertSee('اختر حالة كل خانة توقيع')->assertSee('border-red');
+        ->assertSee('Select the state of every signature box')->assertSee('border-red');
     expect(Signature::query()->where('attachment_id', $scan->id)->count())->toBe(0);
     $component->set('presence.'.$f['attendees'][2]->id, 'filled')->call('recordReadPresence')->assertHasNoErrors();
     $rows = Signature::query()->where('attachment_id', $scan->id)->get();

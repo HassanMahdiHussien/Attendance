@@ -63,7 +63,7 @@ class ReportService
     {
         $this->authorizeInbox($report, $actor);
         if (blank($reason)) {
-            throw ValidationException::withMessages(['reason' => 'سبب الاستبعاد مطلوب.']);
+            throw ValidationException::withMessages(['reason' => __('messages.report.dismissal_reason_required')]);
         }
         DB::transaction(function () use ($report, $reason, $actor): void {
             $report = ViolationReport::query()->lockForUpdate()->findOrFail($report->id);

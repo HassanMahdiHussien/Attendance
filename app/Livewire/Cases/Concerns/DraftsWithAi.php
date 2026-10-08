@@ -122,7 +122,7 @@ trait DraftsWithAi
         if ($document) {
             $this->documentId = $document->id;
             $this->loadAiBodies($document);
-            $this->notice = 'حُفظت مسودة الذكاء الاصطناعي. راجع النص قبل الإرسال.';
+            $this->notice = __('messages.document.ai_draft_saved_review');
         }
     }
 

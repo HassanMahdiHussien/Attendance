@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Displanery — UI refresh (proposal for features 017–019)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=Amiri:wght@400;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{--ink:#111827;--muted:#6B7280;--line:#EEF0F4;--bg:#F7F8FB;--primary:#4F46E5;--primary-light:#EEF0FE;
+    --amber:#F59E0B;--amber-light:#FEF6E6;--red:#EF4444;--red-light:#FEECEC;--green:#10B981;--green-light:#E9FBF3;}
+  body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--ink);}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  .doc{font-family:'Amiri',serif;}
+  .card{background:#fff;border:1px solid var(--line);border-radius:1.25rem;box-shadow:0 1px 2px rgba(17,24,39,.04),0 8px 24px -14px rgba(17,24,39,.10);}
+  .nav-item{display:flex;align-items:center;gap:.75rem;padding:.6rem .85rem;border-radius:.85rem;color:#4B5563;font-weight:500;font-size:.92rem}
+  .nav-item.active{background:var(--primary-light);color:var(--primary);font-weight:700}
+  .nav-item:hover:not(.active){background:#F3F4F6}
+  .badge{display:inline-flex;align-items:center;gap:.35rem;border-radius:999px;padding:.2rem .65rem;font-size:.75rem;font-weight:700}
+  .b-red{background:var(--red-light);color:#B91C1C}.b-amber{background:var(--amber-light);color:#B45309}
+  .b-green{background:var(--green-light);color:#047857}.b-indigo{background:var(--primary-light);color:var(--primary)}
+  .b-gray{background:#F3F4F6;color:#4B5563}
+  .btn{display:inline-flex;align-items:center;gap:.5rem;border-radius:1rem;padding:.6rem 1.1rem;font-weight:700;font-size:.9rem}
+  .btn-primary{background:var(--primary);color:#fff;box-shadow:0 8px 18px -8px rgba(79,70,229,.6)}
+  .btn-ghost{border:1px solid var(--line);background:#fff;color:#374151}
+  .dot{width:.55rem;height:.55rem;border-radius:999px;background:#E5E7EB}.dot.on{background:var(--primary)}
+  .screen{display:none}.screen.show{display:block}
+  .tab{padding:.45rem .9rem;border-radius:.8rem;font-size:.85rem;font-weight:700;color:#4B5563}
+  .tab.on{background:#111827;color:#fff}
+  [dir=rtl] .flip{transform:scaleX(-1)}
+  .kbd{font-family:'JetBrains Mono',monospace;font-size:.7rem;border:1px solid var(--line);border-bottom-width:2px;border-radius:.4rem;padding:.05rem .35rem;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<!-- Proposal controls (not part of the app) -->
+<div class="sticky top-0 z-50 bg-[#111827] text-white px-4 py-2 flex flex-wrap items-center gap-2 text-sm">
+  <span class="font-bold me-2">Proposal — features 017–019</span>
+  <button class="tab on" data-screen="home" style="color:#fff">Home · my work</button>
+  <button class="tab" data-screen="cases" style="color:#D1D5DB">Cases</button>
+  <button class="tab" data-screen="case" style="color:#D1D5DB">Case page</button>
+  <button class="tab" data-screen="mobile" style="color:#D1D5DB">Phone</button>
+  <span class="ms-auto opacity-70">Language:</span>
+  <button id="lang" class="tab" style="background:#fff;color:#111827">English ⇄ العربية</button>
+</div>
+
+<div id="app" class="flex min-h-screen">
+  <!-- Sidebar -->
+  <aside class="hidden lg:flex w-64 shrink-0 flex-col gap-1 bg-white border-e border-[var(--line)] p-4">
+    <div class="flex items-center gap-2 px-2 pb-5 pt-1">
+      <div class="h-9 w-9 rounded-xl bg-[var(--primary)] text-white grid place-items-center font-extrabold">D</div>
+      <div><div class="font-extrabold leading-tight" data-t="Displanery|نظام الانضباط">Displanery</div>
+      <div class="text-xs text-[var(--muted)]" data-t="Al Waha Soft Drinks|شركة الواحة للمشروبات الغازية">Al Waha Soft Drinks</div></div>
+    </div>
+    <a class="nav-item active" data-nav="home"><span>🏠</span><span data-t="My work|عملي اليوم">My work</span><span class="ms-auto badge b-red">3</span></a>
+    <a class="nav-item" data-nav="cases"><span>📁</span><span data-t="Cases|الحالات">Cases</span></a>
+    <a class="nav-item"><span>📥</span><span data-t="Reports inbox|صندوق البلاغات">Reports inbox</span><span class="ms-auto badge b-indigo">2</span></a>
+    <a class="nav-item"><span>✅</span><span data-t="Approvals|الموافقات">Approvals</span></a>
+    <a class="nav-item"><span>👥</span><span data-t="Employees|الموظفون">Employees</span></a>
+    <a class="nav-item"><span>📊</span><span data-t="Dashboard & reports|المتابعة والتقارير">Dashboard & reports</span></a>
+    <div class="mt-4 px-3 text-[0.7rem] font-bold uppercase tracking-wide text-[var(--muted)]" data-t="Company|الشركة">Company</div>
+    <a class="nav-item"><span>📜</span><span data-t="Internal regulation|النظام الداخلي">Internal regulation</span></a>
+    <a class="nav-item"><span>⚙️</span><span data-t="Settings|الإعدادات">Settings</span></a>
+    <div class="mt-auto card p-3 flex items-center gap-3">
+      <div class="h-9 w-9 rounded-full bg-[var(--primary-light)] text-[var(--primary)] grid place-items-center font-bold">HM</div>
+      <div class="text-sm"><div class="font-bold" data-t="HR Manager|مدير شؤون الموظفين">HR Manager</div><div class="text-xs text-[var(--muted)]" data-t="Company admin|مسؤول الشركة">Company admin</div></div>
+    </div>
+  </aside>
+
+  <main class="flex-1 min-w-0">
+    <!-- Top bar with global search -->
+    <header class="sticky top-[40px] z-40 bg-[var(--bg)]/90 backdrop-blur border-b border-[var(--line)] px-4 sm:px-8 py-3 flex items-center gap-3">
+      <div class="flex-1 max-w-xl relative">
+        <input class="w-full rounded-2xl border border-[var(--line)] bg-white ps-10 pe-16 py-2.5 text-sm" data-ph="Search case no., employee name or ID…|ابحث برقم الحالة أو اسم الموظف أو رقمه…" placeholder="Search case no., employee name or ID…">
+        <span class="absolute start-3 top-2.5 text-[var(--muted)]">🔍</span>
+        <span class="absolute end-3 top-2.5 kbd">Ctrl K</span>
+      </div>
+      <button class="btn btn-primary ms-auto"><span>＋</span><span data-t="New case|حالة جديدة">New case</span></button>
+      <button class="btn btn-ghost hidden sm:inline-flex" data-t="EN · ع|ع · EN">EN · ع</button>
+    </header>
+
+    <!-- ===== Home: my work today ===== -->
+    <section class="screen show px-4 sm:px-8 py-6" id="home">
+      <div class="flex flex-wrap items-end justify-between gap-3 mb-6">
+        <div><h1 class="text-2xl font-extrabold" data-t="Good morning, HR Manager|صباح الخير، مدير شؤون الموظفين">Good morning, HR Manager</h1>
+        <p class="text-[var(--muted)]" data-t="Thursday 8 October · 3 things need you today|الخميس ٨ تشرين الأول · ٣ أمور تحتاجك اليوم">Thursday 8 October · 3 things need you today</p></div>
+        <select class="rounded-xl border border-[var(--line)] bg-white px-3 py-2 text-sm"><option data-t="All branches|كل الفروع">All branches</option></select>
+      </div>
+
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="card p-4"><div class="text-sm text-[var(--muted)]" data-t="Open cases|الحالات المفتوحة">Open cases</div><div class="text-3xl font-extrabold mt-1">12</div><div class="text-xs text-[var(--muted)] mt-1" data-t="+2 this week|+٢ هذا الأسبوع">+2 this week</div></div>
+        <div class="card p-4 border-[var(--red)]/30"><div class="text-sm text-[#B91C1C]" data-t="15-day deadline ≤ 48h|مهلة ١٥ يوماً ≤ ٤٨ ساعة">15-day deadline ≤ 48h</div><div class="text-3xl font-extrabold mt-1 text-[#B91C1C]">2</div><div class="text-xs text-[var(--muted)] mt-1" data-t="Decision not yet issued|لم يصدر القرار بعد">Decision not yet issued</div></div>
+        <div class="card p-4"><div class="text-sm text-[var(--muted)]" data-t="Waiting on committee|بانتظار اللجنة">Waiting on committee</div><div class="text-3xl font-extrabold mt-1">3</div><div class="text-xs text-[var(--muted)] mt-1" data-t="1 approval missing (Union)|موافقة ناقصة (النقابة)">1 approval missing (Union)</div></div>
+        <div class="card p-4"><div class="text-sm text-[var(--muted)]" data-t="Closed within 15 days|أُغلقت ضمن ١٥ يوماً">Closed within 15 days</div><div class="text-3xl font-extrabold mt-1 text-[#047857]">92%</div><div class="text-xs text-[var(--muted)] mt-1" data-t="Last 6 months|آخر ٦ أشهر">Last 6 months</div></div>
+      </div>
+
+      <div class="grid lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 card">
+          <div class="flex items-center justify-between px-5 py-4 border-b border-[var(--line)]"><h2 class="font-extrabold" data-t="Needs your action|يحتاج إجراءك">Needs your action</h2><span class="text-sm text-[var(--muted)]" data-t="Sorted by deadline|مرتّب حسب المهلة">Sorted by deadline</span></div>
+          <ul class="divide-y divide-[var(--line)]">
+            <li class="flex flex-wrap items-center gap-3 px-5 py-4">
+              <span class="badge b-red" data-t="Due in 1 day|خلال يوم">Due in 1 day</span>
+              <div class="min-w-0"><div class="font-bold">Safaa Waleed Mahmoud <span class="mono text-xs text-[var(--muted)]">#0001</span></div><div class="text-sm text-[var(--muted)]" data-t="Issue the decision letter — signatures complete|أصدر كتاب القرار — اكتملت التواقيع">Issue the decision letter — signatures complete</div></div>
+              <button class="btn btn-primary ms-auto text-sm" data-t="Review & issue|مراجعة وإصدار">Review & issue</button>
+            </li>
+            <li class="flex flex-wrap items-center gap-3 px-5 py-4">
+              <span class="badge b-amber" data-t="Response due today|الرد مستحق اليوم">Response due today</span>
+              <div class="min-w-0"><div class="font-bold">Marwan Nazim Taha <span class="mono text-xs text-[var(--muted)]">#0003</span></div><div class="text-sm text-[var(--muted)]" data-t="Record the employee's paper response|سجّل الرد الورقي للموظف">Record the employee's paper response</div></div>
+              <button class="btn btn-ghost ms-auto text-sm" data-t="Record hand-off|تسجيل التسليم">Record hand-off</button>
+            </li>
+            <li class="flex flex-wrap items-center gap-3 px-5 py-4">
+              <span class="badge b-indigo" data-t="New email report|بلاغ بريد جديد">New email report</span>
+              <div class="min-w-0"><div class="font-bold" data-t="Fight at production line 3|شجار عند خط الإنتاج ٣">Fight at production line 3</div><div class="text-sm text-[var(--muted)]" data-t="Forwarded by Dept. Manager · Hilla|أعاد توجيهه مدير القسم · الحلة">Forwarded by Dept. Manager · Hilla</div></div>
+              <button class="btn btn-ghost ms-auto text-sm" data-t="Open draft|فتح المسودة">Open draft</button>
+            </li>
+          </ul>
+        </div>
+        <div class="flex flex-col gap-6">
+          <div class="card p-5"><h2 class="font-extrabold mb-3" data-t="Quick actions|إجراءات سريعة">Quick actions</h2>
+            <div class="grid grid-cols-2 gap-2 text-sm">
+              <button class="btn btn-ghost justify-center" data-t="New case|حالة جديدة">New case</button>
+              <button class="btn btn-ghost justify-center" data-t="Reports inbox|البلاغات">Reports inbox</button>
+              <button class="btn btn-ghost justify-center" data-t="Import employees|استيراد موظفين">Import employees</button>
+              <button class="btn btn-ghost justify-center" data-t="Monthly report|التقرير الشهري">Monthly report</button>
+            </div></div>
+          <div class="card p-5"><h2 class="font-extrabold mb-3" data-t="Hotspot alert|تنبيه بؤرة">Hotspot alert</h2>
+            <p class="text-sm"><span class="badge b-amber" data-t="3 cases / 90 days|٣ حالات / ٩٠ يوماً">3 cases / 90 days</span></p>
+            <p class="text-sm text-[var(--muted)] mt-2" data-t="Lateness · Warehouse, Hilla — visibility only.|التأخر · المخزن، الحلة — للعلم فقط.">Lateness · Warehouse, Hilla — visibility only.</p></div>
+          <div class="card p-5"><h2 class="font-extrabold mb-3" data-t="Recent activity|آخر النشاطات">Recent activity</h2>
+            <ul class="space-y-2 text-sm text-[var(--muted)]">
+              <li data-t="Legal member approved recommendations · #0002 · 10:12|وافق العضو القانوني على التوصيات · #0002 · ١٠:١٢">Legal member approved recommendations · #0002 · 10:12</li>
+              <li data-t="Defense letter issued · #0003 · yesterday|صدر كتاب الدفاع · #0003 · أمس">Defense letter issued · #0003 · yesterday</li>
+            </ul></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Cases list ===== -->
+    <section class="screen px-4 sm:px-8 py-6" id="cases">
+      <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
+        <div><h1 class="text-2xl font-extrabold" data-t="Cases|الحالات">Cases</h1><p class="text-[var(--muted)]" data-t="12 open · 31 closed this year|١٢ مفتوحة · ٣١ مغلقة هذا العام">12 open · 31 closed this year</p></div>
+        <div class="flex gap-2"><button class="btn btn-ghost text-sm" data-t="Export|تصدير">Export</button><button class="btn btn-primary text-sm" data-t="New case|حالة جديدة">New case</button></div>
+      </div>
+      <div class="card p-3 mb-4 flex flex-wrap gap-2 items-center text-sm">
+        <span class="badge b-indigo" data-t="Branch: Hilla ✕|الفرع: الحلة ✕">Branch: Hilla ✕</span>
+        <span class="badge b-gray" data-t="Stage: any|المرحلة: الكل">Stage: any</span>
+        <span class="badge b-gray" data-t="Deadline: any|المهلة: الكل">Deadline: any</span>
+        <span class="badge b-gray" data-t="Assigned: me|المسؤول: أنا">Assigned: me</span>
+        <span class="ms-auto text-xs text-[var(--muted)]" data-t="Filters are remembered|تُحفظ عوامل التصفية">Filters are remembered</span>
+      </div>
+      <div class="card overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="bg-[#FAFAFC] text-[var(--muted)] text-start"><tr>
+            <th class="px-4 py-3 text-start" data-t="Case|الحالة">Case</th><th class="px-4 py-3 text-start" data-t="Employee|الموظف">Employee</th>
+            <th class="px-4 py-3 text-start hidden md:table-cell" data-t="Violation|المخالفة">Violation</th><th class="px-4 py-3 text-start" data-t="Progress|التقدم">Progress</th>
+            <th class="px-4 py-3 text-start" data-t="Deadline|المهلة">Deadline</th><th class="px-4 py-3 text-start" data-t="Status|الحالة">Status</th></tr></thead>
+          <tbody class="divide-y divide-[var(--line)]">
+            <tr class="hover:bg-[#FAFAFC]"><td class="px-4 py-3 mono">#0001</td><td class="px-4 py-3"><div class="font-bold">Safaa Waleed Mahmoud</div><div class="text-xs text-[var(--muted)]" data-t="Line supervisor · Production|مشرف خط · الإنتاج">Line supervisor · Production</div></td>
+              <td class="px-4 py-3 hidden md:table-cell" data-t="Safety breach|مخالفة سلامة">Safety breach</td><td class="px-4 py-3"><div class="flex gap-1"><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot"></i></div></td>
+              <td class="px-4 py-3"><span class="badge b-red" data-t="1 day|يوم واحد">1 day</span></td><td class="px-4 py-3"><span class="badge b-indigo" data-t="Decision|القرار">Decision</span></td></tr>
+            <tr class="hover:bg-[#FAFAFC]"><td class="px-4 py-3 mono">#0003</td><td class="px-4 py-3"><div class="font-bold">Marwan Nazim Taha</div><div class="text-xs text-[var(--muted)]" data-t="HR officer · Human resources|مسؤول شؤون الموظفين · الموارد البشرية">HR officer · Human resources</div></td>
+              <td class="px-4 py-3 hidden md:table-cell" data-t="Workplace fight|شجار في موقع العمل">Workplace fight</td><td class="px-4 py-3"><div class="flex gap-1"><i class="dot on"></i><i class="dot on"></i><i class="dot"></i><i class="dot"></i><i class="dot"></i></div></td>
+              <td class="px-4 py-3"><span class="badge b-amber" data-t="9 days|٩ أيام">9 days</span></td><td class="px-4 py-3"><span class="badge b-amber" data-t="Awaiting response|بانتظار الرد">Awaiting response</span></td></tr>
+            <tr class="opacity-60"><td class="px-4 py-3 mono">#0002</td><td class="px-4 py-3"><div class="font-bold">Maysoon Thamer Yousif</div><div class="text-xs text-[var(--muted)]" data-t="Storekeeper · Stores|أمينة مخزن · المخازن">Storekeeper · Stores</div></td>
+              <td class="px-4 py-3 hidden md:table-cell" data-t="Lateness|التأخر">Lateness</td><td class="px-4 py-3"><div class="flex gap-1"><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i><i class="dot on"></i></div></td>
+              <td class="px-4 py-3 text-[var(--muted)]">—</td><td class="px-4 py-3"><span class="badge b-green" data-t="Closed|مغلقة">Closed</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===== Case page ===== -->
+    <section class="screen px-4 sm:px-8 py-6" id="case">
+      <div class="flex flex-wrap items-start justify-between gap-3 mb-5">
+        <div><div class="text-sm text-[var(--muted)]"><span class="mono">#0003</span> · <span data-t="Opened 6 Oct · Hilla|فُتحت ٦ تشرين الأول · الحلة">Opened 6 Oct · Hilla</span></div>
+          <h1 class="text-2xl font-extrabold">Marwan Nazim Taha</h1>
+          <p class="text-[var(--muted)]" data-t="Workplace fight · Production line 3|شجار في موقع العمل · خط الإنتاج ٣">Workplace fight · Production line 3</p></div>
+        <div class="flex gap-2"><span class="badge b-amber" data-t="Response due today|الرد مستحق اليوم">Response due today</span><span class="badge b-gray" data-t="15-day deadline: 9 days left|مهلة ١٥ يوماً: بقي ٩ أيام">15-day deadline: 9 days left</span></div>
+      </div>
+
+      <div class="card p-5 mb-5">
+        <ol class="grid grid-cols-5 gap-2 text-center text-xs sm:text-sm">
+          <li><div class="mx-auto mb-2 h-8 w-8 rounded-full bg-[var(--primary)] text-white grid place-items-center">✓</div><span data-t="Opened|الفتح">Opened</span></li>
+          <li><div class="mx-auto mb-2 h-8 w-8 rounded-full bg-[var(--primary)] text-white grid place-items-center">✓</div><span data-t="Defense letter|خطاب الدفاع">Defense letter</span></li>
+          <li><div class="mx-auto mb-2 h-8 w-8 rounded-full border-2 border-[var(--primary)] text-[var(--primary)] grid place-items-center font-bold">3</div><span class="font-bold text-[var(--primary)]" data-t="Response|الرد">Response</span></li>
+          <li><div class="mx-auto mb-2 h-8 w-8 rounded-full bg-[#F3F4F6] text-[var(--muted)] grid place-items-center">4</div><span class="text-[var(--muted)]" data-t="Committee|اللجنة">Committee</span></li>
+          <li><div class="mx-auto mb-2 h-8 w-8 rounded-full bg-[#F3F4F6] text-[var(--muted)] grid place-items-center">5</div><span class="text-[var(--muted)]" data-t="Decision|القرار">Decision</span></li>
+        </ol>
+      </div>
+
+      <div class="grid lg:grid-cols-3 gap-5">
+        <div class="lg:col-span-2 flex flex-col gap-5">
+          <div class="card p-5 border-[var(--primary)]/40" style="background:linear-gradient(0deg,#fff,#fff),var(--primary-light)">
+            <div class="text-xs font-bold text-[var(--primary)] mb-1" data-t="NEXT STEP|الخطوة التالية">NEXT STEP</div>
+            <h2 class="text-lg font-extrabold" data-t="Record the employee's paper response|سجّل الرد الورقي للموظف">Record the employee's paper response</h2>
+            <p class="text-sm text-[var(--muted)] mt-1" data-t="Due today (3 calendar days from the defense letter, 5 Oct). If the employee refused, record two witnesses and upload their signed paper.|مستحق اليوم (٣ أيام تقويمية من كتاب الدفاع، ٥ تشرين الأول). عند الرفض سجّل شاهدين وارفع الورقة الموقعة منهما.">Due today (3 calendar days from the defense letter, 5 Oct). If the employee refused, record two witnesses and upload their signed paper.</p>
+            <div class="flex flex-wrap gap-2 mt-4"><button class="btn btn-primary text-sm" data-t="Employee signed|وقّع الموظف">Employee signed</button><button class="btn btn-ghost text-sm" data-t="Refused to sign|رفض التوقيع">Refused to sign</button><button class="btn btn-ghost text-sm" data-t="Refused delivery|رفض الاستلام">Refused delivery</button></div>
+          </div>
+          <div class="card p-5"><h2 class="font-extrabold mb-3" data-t="Documents|المستندات">Documents</h2>
+            <div class="flex items-center gap-3 py-2"><span>📄</span><div class="flex-1"><div class="font-bold" data-t="Defense request letter|كتاب طلب الدفاع">Defense request letter</div><div class="text-xs text-[var(--muted)]"><span data-t="Issued 5 Oct · Ref.|صدر ٥ تشرين الأول · العدد">Issued 5 Oct · Ref.</span> <span class="mono">1097/2026</span></div></div><span class="badge b-green" data-t="Issued|صادر">Issued</span><button class="btn btn-ghost text-xs">PDF</button></div>
+          </div>
+          <div class="card p-5"><h2 class="font-extrabold mb-3" data-t="Timeline|السجل الزمني">Timeline</h2>
+            <ol class="border-s-2 border-[var(--line)] ps-4 space-y-3 text-sm">
+              <li><b data-t="Defense letter issued|صدر كتاب الدفاع">Defense letter issued</b> <span class="text-[var(--muted)]" data-t="· HR Manager · 5 Oct 09:40|· مدير شؤون الموظفين · ٥ تشرين الأول ٠٩:٤٠">· HR Manager · 5 Oct 09:40</span></li>
+              <li><b data-t="Case opened from email report|فُتحت الحالة من بلاغ بريد">Case opened from email report</b> <span class="text-[var(--muted)]" data-t="· HR Manager · 4 Oct 14:02|· مدير شؤون الموظفين · ٤ تشرين الأول ١٤:٠٢">· HR Manager · 4 Oct 14:02</span></li>
+            </ol></div>
+        </div>
+        <div class="flex flex-col gap-5">
+          <div class="card p-5"><h2 class="font-extrabold mb-2" data-t="Prior cases|السوابق">Prior cases</h2><p class="text-sm text-[var(--muted)]" data-t="None for this employee.|لا توجد سوابق لهذا الموظف.">None for this employee.</p></div>
+          <div class="card p-5"><h2 class="font-extrabold mb-2" data-t="People|الأشخاص">People</h2>
+            <dl class="text-sm space-y-1"><div class="flex justify-between"><dt class="text-[var(--muted)]" data-t="Assigned HR|المسؤول">Assigned HR</dt><dd data-t="HR Manager|مدير شؤون الموظفين">HR Manager</dd></div>
+            <div class="flex justify-between"><dt class="text-[var(--muted)]" data-t="Witnesses|الشهود">Witnesses</dt><dd>Ahmed, Ali</dd></div></dl></div>
+          <div class="card p-5"><h2 class="font-extrabold mb-2" data-t="Other actions|إجراءات أخرى">Other actions</h2><div class="flex flex-col gap-2 text-sm"><button class="btn btn-ghost" data-t="Request legal consultation|طلب استشارة قانونية">Request legal consultation</button><button class="btn btn-ghost" data-t="Link a related case|ربط حالة ذات صلة">Link a related case</button></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Phone ===== -->
+    <section class="screen px-4 sm:px-8 py-6" id="mobile">
+      <p class="text-[var(--muted)] mb-4" data-t="Every screen collapses to one column on a phone; the sidebar becomes a bottom bar.|كل شاشة تصبح عموداً واحداً على الهاتف، والقائمة الجانبية تصبح شريطاً سفلياً.">Every screen collapses to one column on a phone; the sidebar becomes a bottom bar.</p>
+      <div class="mx-auto w-[360px] rounded-[2.2rem] border-[10px] border-[#111827] bg-[var(--bg)] overflow-hidden shadow-2xl">
+        <div class="px-4 py-3 bg-white border-b border-[var(--line)] flex items-center gap-2"><div class="h-7 w-7 rounded-lg bg-[var(--primary)] text-white grid place-items-center text-sm font-extrabold">D</div><b data-t="My work|عملي اليوم">My work</b><span class="ms-auto">🔍</span></div>
+        <div class="p-3 space-y-3">
+          <div class="grid grid-cols-2 gap-2"><div class="card p-3"><div class="text-xs text-[var(--muted)]" data-t="Open|مفتوحة">Open</div><div class="text-2xl font-extrabold">12</div></div><div class="card p-3"><div class="text-xs text-[#B91C1C]" data-t="≤ 48h|≤ ٤٨ ساعة">≤ 48h</div><div class="text-2xl font-extrabold text-[#B91C1C]">2</div></div></div>
+          <div class="card p-3"><span class="badge b-red" data-t="Due in 1 day|خلال يوم">Due in 1 day</span><div class="font-bold mt-2">Safaa Waleed Mahmoud <span class="mono text-xs text-[var(--muted)]">#0001</span></div><div class="text-sm text-[var(--muted)]" data-t="Issue the decision letter|أصدر كتاب القرار">Issue the decision letter</div><button class="btn btn-primary w-full justify-center mt-3 text-sm" data-t="Review & issue|مراجعة وإصدار">Review & issue</button></div>
+          <div class="card p-3"><span class="badge b-amber" data-t="Response due today|الرد مستحق اليوم">Response due today</span><div class="font-bold mt-2">Marwan Nazim Taha <span class="mono text-xs text-[var(--muted)]">#0003</span></div></div>
+        </div>
+        <nav class="grid grid-cols-4 bg-white border-t border-[var(--line)] text-[0.7rem] text-center py-2"><span class="text-[var(--primary)] font-bold">🏠<br><span data-t="Work|عملي">Work</span></span><span>📁<br><span data-t="Cases|الحالات">Cases</span></span><span>📥<br><span data-t="Inbox|البلاغات">Inbox</span></span><span>☰<br><span data-t="More|المزيد">More</span></span></nav>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+  const screens = document.querySelectorAll('.screen');
+  document.querySelectorAll('[data-screen]').forEach(b => b.onclick = () => {
+    screens.forEach(s => s.classList.toggle('show', s.id === b.dataset.screen));
+    document.querySelectorAll('[data-screen]').forEach(t => { t.classList.toggle('on', t === b); t.style.color = t === b ? '#fff' : '#D1D5DB'; });
+  });
+  let ar = false;
+  document.getElementById('lang').onclick = () => {
+    ar = !ar;
+    document.documentElement.lang = ar ? 'ar' : 'en';
+    document.documentElement.dir = ar ? 'rtl' : 'ltr';
+    document.querySelectorAll('[data-t]').forEach(el => el.textContent = el.dataset.t.split('|')[ar ? 1 : 0]);
+    document.querySelectorAll('[data-ph]').forEach(el => el.placeholder = el.dataset.ph.split('|')[ar ? 1 : 0]);
+  };
+</script>
+</body>
+</html>

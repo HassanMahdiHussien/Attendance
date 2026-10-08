@@ -45,7 +45,7 @@ test('incident grouping normalises violation types and preserves the exact drill
     $department = collect($metrics->thresholds($admin, $filters, 3, 90))->firstWhere('group', 'department');
     expect($department['count'])->toBe(3)
         ->and($metrics->thresholdQuery($admin, $filters, 'department', $department['key'], 'تأخير', 90)->count())->toBe(3);
-    expect(collect($metrics->hotspots($admin, $filters)['location'])->firstWhere('key', '')['label'])->toBe('موقع غير محدد')
+    expect(collect($metrics->hotspots($admin, $filters)['location'])->firstWhere('key', '')['label'])->toBe('Location unspecified')
         ->and(collect($metrics->thresholds($admin, $filters, 3, 90))->where('group', 'location')->count())->toBe(0);
     $company->update(['hotspot_min_cases' => 4, 'hotspot_window_days' => 30]);
     expect($metrics->thresholds($admin, $filters, $company->hotspot_min_cases, $company->hotspot_window_days))->toBe([]);
@@ -82,7 +82,7 @@ test('dashboard sections reject other roles and Livewire filter updates remain a
     $this->actingAs($admin)->get('/dashboard/cases?metric=unknown')->assertNotFound();
     $this->get('/dashboard/cases?metric=hotspot&group=bad&key=1')->assertNotFound();
     $this->get('/dashboard/cases?metric=open&period=13')->assertNotFound();
-    Livewire::actingAs($admin)->test(HrDashboard::class)->set('period', '3')->assertSee('الحالات المفتوحة');
+    Livewire::actingAs($admin)->test(HrDashboard::class)->set('period', '3')->assertSee('Open cases');
     $otherCompany = Company::factory()->create();
     $foreignBranch = app(TenantContext::class)->runForCompany($otherCompany, fn () => Branch::factory()->create());
     app(TenantContext::class)->setCompany($company);
@@ -96,7 +96,7 @@ test('empty dashboard figures have a zero denominator and no percentage', functi
     $counts = app(CaseMetrics::class)->counts($admin, DashboardFilters::fromInput($admin, ['period' => '6']));
     expect($counts['open'])->toBe(0)->and($counts['within15_denominator'])->toBe(0)
         ->and($counts['within15_percent'])->toBeNull();
-    $this->actingAs($admin)->get('/dashboard')->assertOk()->assertSee('لا توجد حالات في هذه الفترة.');
+    $this->actingAs($admin)->get('/dashboard')->assertOk()->assertSee('No cases in this period.');
 });
 
 test('a recorded response clears its alert and appeal alerts require the appeal window state', function (): void {
@@ -179,7 +179,7 @@ test('reviewer aggregates include archived consultations while hidden oldest cas
     $summary = app(CaseMetrics::class)->reviewerSummary($reviewer);
     expect($summary['waiting'])->toBe(1)->and($summary['completed_month'])->toBe(1)
         ->and($summary['oldest']['url'])->toBeNull();
-    $this->actingAs($reviewer)->get('/my-cases')->assertOk()->assertSee('استشارات مكتملة هذا الشهر');
+    $this->actingAs($reviewer)->get('/my-cases')->assertOk()->assertSee('Consultations completed this month');
 });
 
 test('HR staff add-on changes every dashboard count and its list together', function (): void {

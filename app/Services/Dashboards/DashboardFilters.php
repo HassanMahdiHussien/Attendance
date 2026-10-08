@@ -28,14 +28,14 @@ class DashboardFilters
         ])->validate();
         $branch = isset($data['branch']) ? (int) $data['branch'] : null;
         if ($branch && ! Branch::withoutGlobalScopes()->where('company_id', $companyId ?? $viewer->company_id)->whereKey($branch)->exists()) {
-            throw ValidationException::withMessages(['branch' => 'الفرع غير متاح.']);
+            throw ValidationException::withMessages(['branch' => __('messages.dashboard.branch_unavailable')]);
         }
         $today = CarbonImmutable::now('Asia/Baghdad')->startOfDay();
         $period = $data['period'] ?? '6';
         $start = $period === 'custom' ? CarbonImmutable::parse($data['from'], 'Asia/Baghdad')->startOfDay() : $today->subMonths((int) $period);
         $end = $period === 'custom' ? CarbonImmutable::parse($data['to'], 'Asia/Baghdad')->addDay()->startOfDay() : $today->addDay();
         if ($start->gte($end) || $start->diffInDays($end, true) > 3660) {
-            throw ValidationException::withMessages(['period' => 'النطاق الزمني غير صالح.']);
+            throw ValidationException::withMessages(['period' => __('messages.dashboard.period_invalid')]);
         }
 
         return new self($branch, $start, $end, $period, $data['from'] ?? null, $data['to'] ?? null);

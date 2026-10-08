@@ -40,32 +40,32 @@ class EmployeeImport
             $errors = [];
             $warnings = [];
             if (! $raw['columns_valid']) {
-                $errors[] = 'عدد الأعمدة غير صحيح';
+                $errors[] = __('messages.employee_import.wrong_column_count');
             }
-            foreach (['name' => 'الاسم', 'department' => 'القسم', 'position' => 'المنصب', 'hire_date' => 'تاريخ التعيين', 'branch' => 'الفرع'] as $field => $label) {
+            foreach (['name', 'department', 'position', 'hire_date', 'branch'] as $field) {
                 if (trim($input[$field] ?? '') === '') {
-                    $errors[] = "$label مطلوب";
+                    $errors[] = __('messages.employee_import.field_required', ['field' => __('messages.employee_import.fields.'.$field)]);
                 }
             }
             foreach (['name', 'employee_code', 'department', 'position', 'email'] as $field) {
                 if (mb_strlen($input[$field] ?? '') > 255) {
-                    $errors[] = "$field يتجاوز 255 حرفاً";
+                    $errors[] = __('messages.employee_import.field_too_long', ['field' => $field]);
                 }
             }
             $branchMatches = $branches->get($this->normalise($input['branch'] ?? ''), collect());
             if (($input['branch'] ?? '') !== '') {
                 if ($branchMatches->count() === 0) {
-                    $errors[] = 'الفرع غير معروف';
+                    $errors[] = __('messages.employee_import.branch_unknown');
                 } elseif ($branchMatches->count() > 1) {
-                    $errors[] = 'اسم الفرع غير مميز';
+                    $errors[] = __('messages.employee_import.branch_ambiguous');
                 }
             }
             $date = $this->date($input['hire_date'] ?? '');
             if (($input['hire_date'] ?? '') !== '' && ($date === null || $date > today()->toDateString())) {
-                $errors[] = 'تاريخ التعيين غير صالح';
+                $errors[] = __('messages.employee_import.hire_date_invalid');
             }
             if (($input['email'] ?? '') !== '' && ! filter_var($input['email'], FILTER_VALIDATE_EMAIL)) {
-                $errors[] = 'البريد الإلكتروني غير صالح';
+                $errors[] = __('messages.employee_import.email_invalid');
             }
             $gender = match ($this->normalise($input['gender'] ?? '')) {
                 'male', 'ذكر' => 'male',
@@ -74,7 +74,7 @@ class EmployeeImport
                 default => false,
             };
             if ($gender === false) {
-                $errors[] = 'الجنس غير صالح';
+                $errors[] = __('messages.employee_import.gender_invalid');
             }
             $values = [
                 'name' => $input['name'] ?? '',
@@ -100,18 +100,18 @@ class EmployeeImport
                         ->where('employee_id', $existing->id)->whereNotIn('status', [
                             CaseStatus::Draft->value, CaseStatus::ArchivedFinal->value, CaseStatus::AppealResolved->value,
                         ])->exists()) {
-                        $warnings[] = 'الحالة المفتوحة تبقى في فرعها';
+                        $warnings[] = __('messages.employee_import.open_case_stays_in_branch');
                     }
                     if (User::query()->where('employee_id', $existing->id)->exists()) {
-                        $warnings[] = 'صلاحيات المستخدم المرتبط لا تتغير';
+                        $warnings[] = __('messages.employee_import.linked_user_permissions_unchanged');
                     }
                 }
             }
             $rowIndex = count($rows);
             if ($key !== '') {
                 if (isset($codes[$key])) {
-                    $errors[] = 'رقم مكرر في الملف';
-                    $rows[$codes[$key]]['errors'][] = 'رقم مكرر في الملف';
+                    $errors[] = __('messages.employee_import.duplicate_code');
+                    $rows[$codes[$key]]['errors'][] = __('messages.employee_import.duplicate_code');
                     $rows[$codes[$key]]['status'] = 'error';
                 } else {
                     $codes[$key] = $rowIndex;
@@ -132,7 +132,7 @@ class EmployeeImport
         Gate::authorize('importEmployees', $company);
         abort_unless((int) auth()->id() === (int) $actor->id, 403);
         if (! hash_equals($expectedHash, hash_file('sha256', $file->getRealPath()))) {
-            throw ValidationException::withMessages(['sourceFile' => 'أعد المعاينة: الملف تغيّر.']);
+            throw ValidationException::withMessages(['sourceFile' => __('messages.employee_import.file_changed')]);
         }
 
         try {
@@ -140,11 +140,11 @@ class EmployeeImport
                 Company::query()->whereKey($company->id)->lockForUpdate()->firstOrFail();
                 Gate::authorize('importEmployees', $company);
                 if (! hash_equals($expectedHash, hash_file('sha256', $file->getRealPath()))) {
-                    throw ValidationException::withMessages(['sourceFile' => 'أعد المعاينة: الملف تغيّر.']);
+                    throw ValidationException::withMessages(['sourceFile' => __('messages.employee_import.file_changed')]);
                 }
                 $preview = $this->preview($company, $file, true);
                 if (! hash_equals($expectedHash, $preview->hash)) {
-                    throw ValidationException::withMessages(['sourceFile' => 'أعد المعاينة: الملف تغيّر.']);
+                    throw ValidationException::withMessages(['sourceFile' => __('messages.employee_import.file_changed')]);
                 }
                 if ($preview->errors() > 0) {
                     return ['committed' => false, 'preview' => $preview];
@@ -196,7 +196,7 @@ class EmployeeImport
             $preview = $this->preview($company, $file);
             if ($preview->errors() === 0) {
                 $preview->rows[0]['status'] = 'error';
-                $preview->rows[0]['errors'][] = 'تغيّرت البيانات أثناء الاستيراد؛ أعد المعاينة';
+                $preview->rows[0]['errors'][] = __('messages.employee_import.data_changed');
             }
 
             return ['committed' => false, 'preview' => $preview];

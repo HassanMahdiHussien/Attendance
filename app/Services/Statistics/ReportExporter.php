@@ -23,7 +23,7 @@ class ReportExporter
         $create = function () use ($viewer, $type, $parameters, $format): ReportExport {
             $export = ReportExport::create(['company_id' => $parameters['company_id'],
                 'requested_by' => $viewer->id, 'report_type' => $type, 'parameters' => $parameters,
-                'format' => $format, 'status' => 'queued']);
+                'format' => $format, 'locale' => $viewer->preferredLocale(), 'status' => 'queued']);
             $this->audit->log('report_export.requested', $export, ['report_type' => $type, 'format' => $format], $viewer);
 
             return $export;

@@ -23,11 +23,13 @@ class ApprovalRejected extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage)->subject('توصيات أعيدت للمراجعة')->line('أعيدت توصيات لجنة إلى الموارد البشرية. افتح النظام للاطلاع على التفاصيل.');
+        return (new MailMessage)->subject(__('messages.notifications.approval_rejected_subject'))
+            ->line(__('messages.notifications.approval_rejected_body'));
     }
 
     public function toArray(object $notifiable): array
     {
-        return ['case_id' => $this->caseId, 'document_id' => $this->documentId, 'kind' => 'approval_rejected'];
+        return ['case_id' => $this->caseId, 'document_id' => $this->documentId, 'kind' => 'approval_rejected',
+            'message_key' => 'messages.notifications.approval_rejected_body', 'message_params' => []];
     }
 }

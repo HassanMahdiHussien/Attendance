@@ -14,7 +14,7 @@ class ListEmployees extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Action::make('importEmployees')->label('استيراد من CSV')
+            Action::make('importEmployees')->label(__('Import from CSV'))
                 ->visible(fn (): bool => ImportEmployees::canAccess())
                 ->url(fn (): string => EmployeeResource::getUrl('import')),
             CreateAction::make(),

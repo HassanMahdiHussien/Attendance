@@ -24,7 +24,7 @@ class CsvReader
     {
         $path = $file->getRealPath();
         if ($path === false || filesize($path) === 0 || filesize($path) > 2 * 1024 * 1024) {
-            throw ValidationException::withMessages(['sourceFile' => 'الملف فارغ أو يتجاوز 2 ميغابايت.']);
+            throw ValidationException::withMessages(['sourceFile' => __('messages.import.file_empty_or_too_large')]);
         }
 
         $bytes = file_get_contents($path);
@@ -34,7 +34,7 @@ class CsvReader
             $text = iconv('CP1256', 'UTF-8//IGNORE', $text);
         }
         if ($text === false || ! mb_check_encoding($text, 'UTF-8')) {
-            throw ValidationException::withMessages(['sourceFile' => 'تعذر قراءة ترميز الملف.']);
+            throw ValidationException::withMessages(['sourceFile' => __('messages.import.encoding_unreadable')]);
         }
 
         $candidates = [];
@@ -49,16 +49,16 @@ class CsvReader
             }
         }
         if (count($candidates) !== 1) {
-            throw ValidationException::withMessages(['sourceFile' => 'ترويسات الملف ناقصة أو مكررة، أو تعذر تحديد الفاصل.']);
+            throw ValidationException::withMessages(['sourceFile' => __('messages.import.headers_or_separator_invalid')]);
         }
 
         $candidate = $candidates[0];
         $records = array_slice($candidate['records'], 1);
         if (count($records) > 5000) {
-            throw ValidationException::withMessages(['sourceFile' => 'الحد الأقصى 5,000 صف.']);
+            throw ValidationException::withMessages(['sourceFile' => __('messages.import.row_limit')]);
         }
         if ($records === []) {
-            throw ValidationException::withMessages(['sourceFile' => 'الملف لا يحتوي على موظفين.']);
+            throw ValidationException::withMessages(['sourceFile' => __('messages.import.no_employees')]);
         }
 
         $rows = [];

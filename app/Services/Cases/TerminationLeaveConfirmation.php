@@ -26,7 +26,7 @@ class TerminationLeaveConfirmation
                 || $document->is_locked || $document->leave_confirmed_at !== null
                 || ! in_array($hrUser->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)
                 || ! CaseVisibility::for($hrUser)->whereKey($document->case_id)->exists()) {
-                throw new TransitionBlocked('يلزم تأكيد حالة الإجازة من الموارد البشرية على كتاب إنهاء خدمة غير مقفل.');
+                throw new TransitionBlocked(__('messages.document.hr_leave_confirmation_required'));
             }
             $document->forceFill(['leave_confirmed_by' => $hrUser->id, 'leave_confirmed_at' => now()])->save();
             $this->events->log($document->disciplinaryCase, 'termination_leave_confirmed', ['document_id' => $document->id], actor: $hrUser);

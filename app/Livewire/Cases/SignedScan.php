@@ -56,7 +56,7 @@ class SignedScan extends Component
             $signatures->recordSignedScan($document, $this->scan, $this->presence, auth()->user());
             $this->scan = null;
             $this->expectedStatus = $case->fresh()->status->value;
-            $this->notice = $this->expectedStatus === CaseStatus::SignedRecommendationsUploaded->value ? 'رُفع المسح وسُجل ظهور التواقيع.' : 'رُفع المسح. توجد خانة توقيع تبدو فارغة.';
+            $this->notice = $this->expectedStatus === CaseStatus::SignedRecommendationsUploaded->value ? __('messages.signature.scan_uploaded_present') : __('messages.signature.scan_uploaded_empty_box');
         } catch (TransitionBlocked $error) {
             $this->notice = $error->getMessage();
         }
@@ -75,7 +75,7 @@ class SignedScan extends Component
             return;
         }
         $this->expectedStatus = CaseStatus::SignedRecommendationsUploaded->value;
-        $this->notice = 'سُجل سبب تجاوز الخانة الفارغة.';
+        $this->notice = __('messages.signature.empty_box_override_recorded');
     }
 
     public function uploadForReading(SignaturePresence $signatures): void
@@ -92,7 +92,7 @@ class SignedScan extends Component
         }
         $this->scan = null;
         $this->suggestionId = null;
-        $this->notice = 'رُفع المسح. ستظهر اقتراحات الخانات عند اكتمال القراءة.';
+        $this->notice = __('messages.signature.scan_reading_started');
     }
 
     public function recordReadPresence(SignaturePresence $signatures): void
@@ -104,12 +104,12 @@ class SignedScan extends Component
         $document = $case->documents()->where('document_type', DocumentType::Recommendations->value)->where('is_locked', true)->latest('id')->firstOrFail();
         $scan = $signatures->latestScan($document);
         if (! $scan) {
-            throw ValidationException::withMessages(['scan' => 'ارفع المسح أولاً.']);
+            throw ValidationException::withMessages(['scan' => __('messages.signature.scan_required')]);
         }
         // Unclear suggestions leave a row unselected: HR must decide every box before recording.
         if (collect($this->presence)->contains(fn ($value) => ! in_array($value, ['filled', 'empty'], true))
             || count(array_filter($this->presence)) < CommitteeSessionAttendance::query()->where('case_id', $case->id)->count()) {
-            throw ValidationException::withMessages(['notice' => 'اختر حالة كل خانة توقيع بعد مراجعة المسح، بما فيها الخانات غير الواضحة.']);
+            throw ValidationException::withMessages(['notice' => __('messages.signature.every_box_required')]);
         }
         try {
             $signatures->recordPresence($document, $scan, $this->presence, auth()->user(), $this->suggestionId);
@@ -120,7 +120,7 @@ class SignedScan extends Component
         }
         $this->expectedStatus = $case->fresh()->status->value;
         $this->notice = $this->expectedStatus === CaseStatus::SignedRecommendationsUploaded->value
-            ? 'سُجلت حالة خانات التوقيع بعد مراجعة المسح.' : 'سُجلت الخانات. توجد خانة توقيع تبدو فارغة.';
+            ? __('messages.signature.boxes_recorded') : __('messages.signature.boxes_recorded_empty');
     }
 
     public function close(CaseClosure $closure): void
@@ -135,7 +135,7 @@ class SignedScan extends Component
         $case = $this->currentCase();
         $this->validate(['reason' => ['required', 'string', 'max:2000']]);
         $consultations->cancel($case, $this->reason, auth()->user());
-        $this->notice = 'أُلغيت الاستشارة مع تسجيل السبب.';
+        $this->notice = __('messages.consultation.cancelled_with_reason');
     }
 
     public function render(): View
@@ -175,7 +175,7 @@ class SignedScan extends Component
         $case = CaseVisibility::for(auth()->user())->findOrFail($this->caseId);
         Gate::authorize('uploadAttachment', $case);
         if ($case->status->value !== $this->expectedStatus) {
-            throw ValidationException::withMessages(['notice' => 'تغيرت الحالة، أعد التحميل']);
+            throw ValidationException::withMessages(['notice' => __('messages.case.changed_reload')]);
         }
 
         return $case;

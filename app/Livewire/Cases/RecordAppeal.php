@@ -37,7 +37,7 @@ class RecordAppeal extends Component
         $this->validate(['filedAt' => ['required', 'date']]);
         $appeals->logFiled($case, auth()->user(), $this->filedAt);
         $this->expectedStatus = CaseStatus::AppealPending->value;
-        session()->flash('case_success_'.$this->caseId, 'سُجل تقديم الطعن.');
+        session()->flash('case_success_'.$this->caseId, __('messages.appeal.filed'));
         $this->redirect('/cases/'.$this->caseId, navigate: true);
     }
 
@@ -46,7 +46,7 @@ class RecordAppeal extends Component
         $case = $this->editable();
         $this->validate(['outcome' => ['required', 'string', 'max:50000']]);
         $appeals->logOutcome($case, auth()->user(), $this->outcome);
-        session()->flash('case_success_'.$this->caseId, 'سُجلت نتيجة الطعن وأُرشفت الحالة.');
+        session()->flash('case_success_'.$this->caseId, __('messages.appeal.resolved_archived'));
         $this->redirect('/cases/'.$this->caseId, navigate: true);
     }
 
@@ -65,7 +65,7 @@ class RecordAppeal extends Component
         Gate::authorize('update', $case);
         if ($case->status->value !== $this->expectedStatus || ! in_array($case->status,
             [CaseStatus::AwaitingAppealWindow, CaseStatus::AppealPending], true)) {
-            throw ValidationException::withMessages(['notice' => 'تغيرت الحالة، أعد التحميل']);
+            throw ValidationException::withMessages(['notice' => __('messages.case.changed_reload')]);
         }
 
         return $case;

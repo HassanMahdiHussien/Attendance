@@ -5,6 +5,7 @@ namespace App\Filament\Admin\Resources;
 use App\Filament\Admin\Resources\CommitteeMandateResource\Pages;
 use App\Filament\Admin\Resources\CommitteeMandateResource\RelationManagers\PoolMembersRelationManager;
 use App\Models\CommitteeMandate;
+use App\Support\Format\Ui;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\TextInput;
@@ -17,29 +18,35 @@ class CommitteeMandateResource extends Resource
 {
     protected static ?string $model = CommitteeMandate::class;
 
-    protected static ?string $modelLabel = 'أمر إداري';
+    public static function getModelLabel(): string
+    {
+        return __('Administrative order');
+    }
 
-    protected static ?string $pluralModelLabel = 'الأوامر الإدارية';
+    public static function getPluralModelLabel(): string
+    {
+        return __('Administrative orders');
+    }
 
     protected static bool $isGloballySearchable = false;
 
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
-            TextInput::make('order_number')->label('رقم الأمر')->required(),
-            DatePicker::make('order_date')->label('تاريخ الأمر')->required(),
-            DatePicker::make('effective_from')->label('ساري من')->required(),
-            TextInput::make('source_file_path')->label('مسار نسخة الأمر'),
+            TextInput::make('order_number')->label(__('Order number'))->required(),
+            DatePicker::make('order_date')->label(__('Order date'))->required(),
+            DatePicker::make('effective_from')->label(__('Effective from'))->required(),
+            TextInput::make('source_file_path')->label(__('Order copy path')),
         ]);
     }
 
     public static function table(Table $table): Table
     {
         return $table->columns([
-            TextColumn::make('order_number')->label('رقم الأمر'),
-            TextColumn::make('order_date')->label('تاريخ الأمر')->date(),
-            TextColumn::make('effective_from')->label('ساري من')->date(),
-            TextColumn::make('superseded_at')->label('نهاية السريان')->date(),
+            TextColumn::make('order_number')->label(__('Order number')),
+            TextColumn::make('order_date')->label(__('Order date'))->formatStateUsing(fn ($state): string => Ui::date($state)),
+            TextColumn::make('effective_from')->label(__('Effective from'))->formatStateUsing(fn ($state): string => Ui::date($state)),
+            TextColumn::make('superseded_at')->label(__('Valid until'))->formatStateUsing(fn ($state): string => Ui::date($state)),
         ])->recordActions([ViewAction::make()]);
     }
 

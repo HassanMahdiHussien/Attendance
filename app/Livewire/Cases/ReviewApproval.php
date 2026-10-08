@@ -43,7 +43,7 @@ class ReviewApproval extends Component
         $this->validate(['category' => ['required', 'in:legal,hr,labor_union']]);
         try {
             $approvals->approve($draft, auth()->user(), PoolRole::from($this->category));
-            session()->flash('committee_notice', 'سُجلت موافقتك');
+            session()->flash('committee_notice', __('messages.approval.recorded'));
             $this->redirect('/committee', navigate: true);
         } catch (TransitionBlocked $error) {
             $this->notice = $error->getMessage();
@@ -57,7 +57,7 @@ class ReviewApproval extends Component
             'comment' => ['required', 'string', 'max:2000']]);
         try {
             $approvals->reject($draft, auth()->user(), $this->comment, PoolRole::from($this->category));
-            session()->flash('committee_notice', 'سُجل رفضك');
+            session()->flash('committee_notice', __('messages.approval.rejected'));
             $this->redirect('/committee', navigate: true);
         } catch (TransitionBlocked $error) {
             $this->notice = $error->getMessage();
@@ -82,7 +82,7 @@ class ReviewApproval extends Component
             abort(404);
         }
         if ($draft->disciplinaryCase->status->value !== $this->expectedStatus) {
-            throw ValidationException::withMessages(['notice' => 'تغيرت الحالة، أعد التحميل']);
+            throw ValidationException::withMessages(['notice' => __('messages.case.changed_reload')]);
         }
 
         return $draft;

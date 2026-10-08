@@ -59,7 +59,7 @@ class SubmitReport extends Component
             'attachments' => ['array'], 'attachments.*' => ['file', 'max:10240'],
         ]);
         if (blank($this->locationId) && blank($this->place)) {
-            $this->addError('place', 'اختر موقعاً أو اكتب المكان.');
+            $this->addError('place', __('messages.report.location_or_place_required'));
 
             return;
         }

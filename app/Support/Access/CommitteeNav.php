@@ -10,7 +10,7 @@ use App\Models\User;
 use App\Services\Cases\PoolEligibility;
 
 /**
- * Whether the "اللجنة" navigation item should appear: the user is an eligible approver for at least
+ * Whether the committee navigation item should appear: the user is an eligible approver for at least
  * one recommendations document awaiting approval. Uses the same eligibility rule as the approval
  * service so the menu never offers work the service would refuse.
  */

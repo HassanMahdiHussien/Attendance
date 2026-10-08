@@ -50,22 +50,22 @@ class EditLaw extends EditRecord
 
     protected function getHeaderActions(): array
     {
-        return [Action::make('import')->label('استيراد')->schema([
-            FileUpload::make('source')->label('ملف PDF (اختياري: المصدر المحفوظ)')
+        return [Action::make('import')->label(__('Import'))->schema([
+            FileUpload::make('source')->label(__('PDF file (optional stored source)'))
                 ->acceptedFileTypes(['application/pdf'])->storeFiles(false),
-            TextInput::make('page_from')->label('من صفحة')->numeric()->minValue(1)->live(onBlur: true),
-            TextInput::make('page_to')->label('إلى صفحة')->numeric()->minValue(1)->live(onBlur: true),
-            Select::make('mode')->label('طريقة القراءة')->options(['auto' => 'تلقائي', 'text' => 'طبقة النص', 'ocr' => 'OCR'])
+            TextInput::make('page_from')->label(__('From page'))->numeric()->minValue(1)->live(onBlur: true),
+            TextInput::make('page_to')->label(__('To page'))->numeric()->minValue(1)->live(onBlur: true),
+            Select::make('mode')->label(__('Reading method'))->options(['auto' => __('Automatic'), 'text' => __('Text layer'), 'ocr' => 'OCR'])
                 ->default($this->record->import_mode)->required(),
-            Placeholder::make('range_preview')->label('الصفحة الأولى والأخيرة')
+            Placeholder::make('range_preview')->label(__('First and last page'))
                 ->content(fn (Get $get): HtmlString => $this->previewHtml($this->record, $get('source'), $get('page_from'), $get('page_to'))),
-            Checkbox::make('range_confirmed')->label('تحققت من بداية القانون في الصفحة الأولى ونهايته في الأخيرة'),
+            Checkbox::make('range_confirmed')->label(__('I verified the law starts on the first page and ends on the last')),
         ])->action(function (array $data): void {
             abort_unless(auth()->user()->can('import', $this->record), 403);
             $from = filled($data['page_from'] ?? null) ? (int) $data['page_from'] : null;
             $to = filled($data['page_to'] ?? null) ? (int) $data['page_to'] : null;
             if (($this->record->requires_page_range || $from !== null || $to !== null) && ! ($data['range_confirmed'] ?? false)) {
-                throw ValidationException::withMessages(['range_confirmed' => 'يجب تأكيد بداية القانون ونهايته.']);
+                throw ValidationException::withMessages(['range_confirmed' => __('The start and end of the law must be confirmed.')]);
             }
             if ($from !== null && $to !== null) {
                 app(LawImportService::class)->previewPages($this->record, $data['source'] ?? null, $from, $to);
@@ -80,17 +80,17 @@ class EditLaw extends EditRecord
     private function previewHtml(Law $law, mixed $source, mixed $from, mixed $to): HtmlString
     {
         if (! $from || ! $to) {
-            return new HtmlString('أدخل نطاق الصفحات لعرض طرفيه.');
+            return new HtmlString(__('Enter a page range to show both ends.'));
         }
         try {
             $paths = app(LawImportService::class)->previewPages($law, $source, (int) $from, (int) $to);
         } catch (Throwable) {
-            return new HtmlString('تعذر عرض النطاق. تحقق من الملف وأرقام الصفحات.');
+            return new HtmlString(__('Could not display the range. Check the file and page numbers.'));
         }
         $html = '<div dir="rtl" style="display:flex;gap:1rem;overflow:auto">';
         foreach ($paths as $number => $path) {
             $bytes = Storage::disk('local')->get($path);
-            $html .= '<figure><figcaption>صفحة '.e((string) $number).'</figcaption><img style="max-width:18rem" src="data:image/jpeg;base64,'.base64_encode($bytes).'" alt="صفحة '.e((string) $number).'"></figure>';
+            $html .= '<figure><figcaption>'.e(__('Page')).' '.e((string) $number).'</figcaption><img style="max-width:18rem" src="data:image/jpeg;base64,'.base64_encode($bytes).'" alt="'.e(__('Page')).' '.e((string) $number).'"></figure>';
         }
 
         return new HtmlString($html.'</div>');

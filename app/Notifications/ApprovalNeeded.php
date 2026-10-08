@@ -23,11 +23,13 @@ class ApprovalNeeded extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage)->subject('توصيات بانتظار قرارك')->line('لديك توصيات لجنة بانتظار مراجعتك في النظام.');
+        return (new MailMessage)->subject(__('messages.notifications.approval_needed_subject'))
+            ->line(__('messages.notifications.approval_needed_body'));
     }
 
     public function toArray(object $notifiable): array
     {
-        return ['document_id' => $this->documentId, 'kind' => 'approval_needed'];
+        return ['document_id' => $this->documentId, 'kind' => 'approval_needed',
+            'message_key' => 'messages.notifications.approval_needed_body', 'message_params' => []];
     }
 }

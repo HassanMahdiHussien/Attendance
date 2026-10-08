@@ -20,42 +20,48 @@ class EmployeeResource extends Resource
 {
     protected static ?string $model = Employee::class;
 
-    protected static ?string $modelLabel = 'موظف';
+    public static function getModelLabel(): string
+    {
+        return __('Employee');
+    }
 
-    protected static ?string $pluralModelLabel = 'الموظفون';
+    public static function getPluralModelLabel(): string
+    {
+        return __('Employees');
+    }
 
     protected static bool $isGloballySearchable = false;
 
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
-            TextInput::make('employee_code')->label('رقم الموظف')->helperText('يُنشأ تلقائياً إذا تُرك فارغاً')->scopedUnique(ignoreRecord: true),
-            TextInput::make('name')->label('الاسم')->required(),
-            TextInput::make('name_en')->label('الاسم بالإنجليزية'),
-            Select::make('gender')->label('الجنس')->options(['male' => 'ذكر', 'female' => 'أنثى'])->required(),
-            Select::make('branch_id')->label('الفرع')->options(fn (): array => Branch::query()->where('is_active', true)->pluck('name', 'id')->all())->required()->searchable(),
-            TextInput::make('department')->label('القسم')->required(),
-            TextInput::make('department_en')->label('القسم بالإنجليزية'),
-            TextInput::make('position')->label('المنصب')->required(),
-            TextInput::make('position_en')->label('المنصب بالإنجليزية'),
-            DatePicker::make('hire_date')->label('تاريخ التعيين')->required(),
-            TextInput::make('email')->label('البريد الإلكتروني')->email(),
-            Checkbox::make('is_general_manager')->label('المدير العام')
-                ->helperText('يمكن تحديد مدير عام نشط واحد فقط؛ أزل العلامة عن المدير الحالي أولاً.'),
+            TextInput::make('employee_code')->label(__('Employee number'))->helperText(__('Generated automatically if left blank'))->scopedUnique(ignoreRecord: true),
+            TextInput::make('name')->label(__('Name'))->required(),
+            TextInput::make('name_en')->label(__('English name')),
+            Select::make('gender')->label(__('Gender'))->options(['male' => __('Male'), 'female' => __('Female')])->required(),
+            Select::make('branch_id')->label(__('Branch'))->options(fn (): array => Branch::query()->where('is_active', true)->pluck('name', 'id')->all())->required()->searchable(),
+            TextInput::make('department')->label(__('Department'))->required(),
+            TextInput::make('department_en')->label(__('English department')),
+            TextInput::make('position')->label(__('Position'))->required(),
+            TextInput::make('position_en')->label(__('English position')),
+            DatePicker::make('hire_date')->label(__('Hire date'))->required(),
+            TextInput::make('email')->label(__('Email address'))->email(),
+            Checkbox::make('is_general_manager')->label(__('General Manager'))
+                ->helperText(__('Only one active General Manager may be selected; clear the current one first.')),
         ]);
     }
 
     public static function table(Table $table): Table
     {
         return $table->columns([
-            TextColumn::make('employee_code')->label('الرقم'),
-            TextColumn::make('name')->label('الموظف'),
-            TextColumn::make('branch.name')->label('الفرع'),
-            TextColumn::make('department')->label('القسم'),
-            TextColumn::make('is_active')->label('الحالة')->formatStateUsing(fn (bool $state): string => $state ? 'نشط' : 'معطل'),
+            TextColumn::make('employee_code')->label(__('Number')),
+            TextColumn::make('name')->label(__('Employee')),
+            TextColumn::make('branch.name')->label(__('Branch')),
+            TextColumn::make('department')->label(__('Department')),
+            TextColumn::make('is_active')->label(__('Status'))->formatStateUsing(fn (bool $state): string => $state ? __('Active') : __('Inactive')),
         ])->recordActions([
             EditAction::make(),
-            Action::make('deactivate')->label('تعطيل')->color('danger')->requiresConfirmation()
+            Action::make('deactivate')->label(__('Deactivate'))->color('danger')->requiresConfirmation()
                 ->visible(fn (Employee $record): bool => $record->is_active && auth()->user()->can('update', $record))
                 ->action(fn (Employee $record) => $record->update(['is_active' => false])),
         ]);
