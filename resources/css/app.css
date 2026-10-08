@@ -19,3 +19,40 @@
     --font-amiri: 'Amiri', serif;
     --font-mono: 'JetBrains Mono', monospace;
 }
+
+@layer components {
+    .ui-card { @apply min-w-0 bg-white shadow-sm; border: 1px solid #EEF0F4; border-radius: 1.25rem; }
+    .ui-badge { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold leading-tight; }
+    .ui-badge-red { @apply bg-red-light text-red-700; }
+    .ui-badge-amber { @apply bg-amber-light text-amber-700; }
+    .ui-badge-green { @apply bg-green-light text-green-700; }
+    .ui-badge-indigo { @apply bg-primary-light text-indigo-700; }
+    .ui-badge-gray { @apply bg-gray-100 text-gray-700; }
+    .ui-button { @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50; }
+    .ui-button-small { @apply min-h-10 px-3 py-2 text-xs; }
+    .ui-button-primary { @apply bg-primary text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700; }
+    .ui-button-secondary { @apply border bg-white text-gray-700 hover:bg-gray-50; border-color: #EEF0F4; }
+    .ui-button-ghost { @apply bg-transparent text-gray-700 hover:bg-gray-100; }
+    .ui-button-danger { @apply bg-red-600 text-white hover:bg-red-700; }
+    .ui-control { @apply min-h-10 w-full min-w-0 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary; }
+    .ui-link { @apply rounded-lg text-primary hover:text-indigo-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary; }
+    .ui-table-wrap { @apply min-w-0 overflow-hidden bg-white; border: 1px solid #EEF0F4; border-radius: 1.25rem; }
+    .ui-table { @apply w-full text-sm; }
+    .ui-table thead { @apply text-gray-600; background: #FAFAFC; }
+    .ui-table th { @apply px-4 py-3 text-start font-bold; }
+    .ui-table tbody tr { @apply border-t; border-color: #EEF0F4; }
+    .ui-table tbody tr:hover { background: #FAFAFC; }
+    .ui-td { @apply px-4 py-3 align-middle; }
+    .ui-td::before { display: none; }
+}
+
+@media (max-width: 767px) {
+    .ui-table thead { display: none; }
+    .ui-table, .ui-table tbody { display: block; }
+    .ui-table-wrap { border: 0; background: transparent; }
+    .ui-table tbody tr { display: block; margin-bottom: .75rem; border: 1px solid #EEF0F4; border-radius: 1.25rem; background: white; overflow: hidden; }
+    .ui-td { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; padding: .55rem 1rem; text-align: end; overflow-wrap: anywhere; }
+    .ui-td::before { display: block; flex-shrink: 0; content: attr(data-label); color: #6B7280; text-align: start; }
+}
+
+[x-cloak] { display: none !important; }

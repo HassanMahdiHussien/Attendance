@@ -1,16 +1,29 @@
 <div>
-    <h1 class="text-2xl font-black mb-6">{{ __('My cases') }}</h1>
+    <x-ui.page-header :title="__('My cases')" />
     @if($summary)
-        <div class="grid sm:grid-cols-3 gap-3 mb-6">
-            <div class="bg-white rounded-2xl p-5 shadow-sm">{{ __('Consultations awaiting review') }}<strong class="block text-2xl text-primary">{{ \App\Support\Format\Ui::number($summary['waiting']) }}</strong></div>
-            <div class="bg-white rounded-2xl p-5 shadow-sm">{{ __('Consultations completed this month') }}<strong class="block text-2xl text-primary">{{ \App\Support\Format\Ui::number($summary['completed_month']) }}</strong></div>
-            <div class="bg-white rounded-2xl p-5 shadow-sm">{{ __('Oldest pending consultation') }}
+        <div class="mb-6 grid gap-3 sm:grid-cols-3">
+            <x-ui.stat :label="__('Consultations awaiting review')" :value="\App\Support\Format\Ui::number($summary['waiting'])" tone="amber" />
+            <x-ui.stat :label="__('Consultations completed this month')" :value="\App\Support\Format\Ui::number($summary['completed_month'])" tone="green" />
+            <x-ui.card :title="__('Oldest pending consultation')">
                 @if($summary['oldest'])
-                    <span class="block text-sm">{{ __('Procedure due') }}: {{ $summary['oldest']['due'] ? \App\Support\Format\Ui::date($summary['oldest']['due']) : __('Not set') }}</span>
-                    @if($summary['oldest']['url'])<a class="text-primary text-sm font-bold" href="{{ $summary['oldest']['url'] }}">{{ __('View case') }}</a>@endif
-                @else<span class="block text-sm text-gray-400">{{ __('No pending consultation.') }}</span>@endif
-            </div>
+                    <p class="text-sm">{{ __('Procedure due') }}: {{ $summary['oldest']['due'] ? \App\Support\Format\Ui::date($summary['oldest']['due']) : __('Not set') }}</p>
+                    @if($summary['oldest']['url'])<a class="ui-link text-sm font-bold" href="{{ $summary['oldest']['url'] }}">{{ __('View case') }}</a>@endif
+                @else
+                    <p class="text-sm text-gray-500">{{ __('No pending consultation.') }}</p>
+                @endif
+            </x-ui.card>
         </div>
     @endif
-    <div class="space-y-3">@forelse($cases as $case)<a href="/cases/{{ $case->id }}" class="block bg-white rounded-2xl p-5 shadow-sm"><span class="font-bold">{{ $case->employee?->name }}</span><span class="text-xs font-mono text-gray-400 ms-2">{{ \App\Support\Format\Ui::number($case->case_number) }}</span></a>@empty<p class="bg-white rounded-2xl p-8 text-center text-gray-500">{{ __('No cases are currently available to you.') }}</p>@endforelse</div>
+    <x-ui.card padding="none">
+        @forelse($cases as $case)
+            <a href="/cases/{{ $case->id }}" class="flex min-h-16 items-center gap-3 border-b border-[#EEF0F4] px-5 py-4 text-sm hover:bg-[#FAFAFC] focus-visible:outline-2 focus-visible:outline-primary">
+                <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary-light font-bold text-primary">{{ \App\Support\Format\Initials::for($case->employee?->name ?? '') }}</span>
+                <span class="min-w-0 flex-1 font-bold">{{ $case->employee?->name }}</span>
+                <bdi class="font-mono text-xs text-gray-500">#{{ \App\Support\Format\Ui::number($case->case_number) }}</bdi>
+                <x-ui.icon name="chevron" class="h-4 w-4 text-gray-400 rtl:rotate-180" />
+            </a>
+        @empty
+            <x-ui.empty :title="__('No cases are currently available to you.')" />
+        @endforelse
+    </x-ui.card>
 </div>

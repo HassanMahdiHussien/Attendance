@@ -72,7 +72,7 @@ class PlatformPanelProvider extends PanelProvider
                 'warning' => Color::hex('#F59E0B'),
                 'danger' => Color::hex('#EF4444'),
                 'success' => Color::hex('#10B981'),
-            ])->font('Tajawal')->viteTheme('resources/css/filament/theme.css')
+            ])->font('Tajawal')->brandName(fn (): string => __('Displanery'))->favicon(asset('favicon.svg'))->viteTheme('resources/css/filament/theme.css')
             ->authMiddleware([Authenticate::class]);
     }
 }

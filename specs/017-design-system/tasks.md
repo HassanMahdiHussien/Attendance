@@ -6,19 +6,19 @@
 plan.md R7 (review resolutions) overrides earlier sections.
 
 ## Run D1
-- [ ] T001 Generate `tests/fixtures/ui-inventory.json` from the CURRENT views + BehaviourInventoryTest (R7 A1) — first,
+- [x] T001 Generate `tests/fixtures/ui-inventory.json` from the CURRENT views + BehaviourInventoryTest (R7 A1) — first,
   before any view changes
-- [ ] T002 UI components + icon set (R1, R7 B3/B5), Tone helper (R2)
-- [ ] T003 Workspace + guest layouts: sidebar, top bar, bottom tab bar + More sheet, Nav helper with bounded counts,
+- [x] T002 UI components + icon set (R1, R7 B3/B5), Tone helper (R2)
+- [x] T003 Workspace + guest layouts: sidebar, top bar, bottom tab bar + More sheet, Nav helper with bounded counts,
   toasts (R3, R7 A2/B4)
-- [ ] T004 Filament: translated brand name, favicon (R5, R7 nit)
-- [ ] T005a Rebuild cases board + my-cases + pending-approvals
-- [ ] T005b Rebuild show-case (incl. hand-offs, witness scan, response, decision signatures, consultation, appeal)
-- [ ] T005c Rebuild create-case
-- [ ] T005d Rebuild confirm-document (keep §18 distinct document card) + edit-document + edit-recommendations +
+- [x] T004 Filament: translated brand name, favicon (R5, R7 nit)
+- [x] T005a Rebuild cases board + my-cases + pending-approvals
+- [x] T005b Rebuild show-case (incl. hand-offs, witness scan, response, decision signatures, consultation, appeal)
+- [x] T005c Rebuild create-case
+- [x] T005d Rebuild confirm-document (keep §18 distinct document card) + edit-document + edit-recommendations +
   edit-decision-letter
-- [ ] T005e Rebuild record-session + record-appeal + review-approval + review-consultation + signed-scan
-- [ ] T006 Component + nav tests; markup-assertion updates per R7 B2
+- [x] T005e Rebuild record-session + record-appeal + review-approval + review-consultation + signed-scan
+- [x] T006 Component + nav tests; markup-assertion updates per R7 B2
 
 ## Run D2
 - [ ] T007 Rebuild home, reports (inbox, my-reports, submit-report), employees (index, page), dashboard (hr-dashboard,
