@@ -1,8 +1,40 @@
-<div class="space-y-6"><h1 class="text-2xl font-black">{{ __('Company overview') }}</h1>
+<div class="space-y-6">
+    <x-ui.page-header :title="__('Company overview')" />
+
     @forelse($overview as $row)
-        <section class="bg-white rounded-3xl p-6 shadow-sm"><div class="flex justify-between items-center"><h2 class="text-xl font-black">{{ $row['company']->name }}</h2>@if($row['full_access'])<a class="text-primary font-bold" href="/home/cases/{{ $row['company']->id }}">{{ __('View cases') }}</a>@endif</div>
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">@foreach(['open' => __('Open'), 'closed_month' => __('Closed this month'), 'recommendation_only' => __('Recommendation only'), 'warning' => __('Warnings'), 'termination' => __('Termination'), 'within15_numerator' => __('Within 15 days'), 'within15_denominator' => __('Measurable cases')] as $key => $label)<div class="bg-primary-light rounded-2xl p-4"><span class="text-sm text-gray-500">{{ $label }}</span><strong class="block text-xl text-primary">{{ \App\Support\Format\Ui::number($row['counts'][$key]) }}</strong></div>@endforeach<div class="bg-primary-light rounded-2xl p-4"><span class="text-sm text-gray-500">{{ __('Percent within 15 days') }}</span><strong class="block text-xl text-primary">{{ $row['counts']['within15_percent'] === null ? '—' : \App\Support\Format\Ui::number($row['counts']['within15_percent']).__('%') }}</strong></div><div class="bg-primary-light rounded-2xl p-4"><span class="text-sm text-gray-500">{{ __('Average procedure days') }}</span><strong class="block text-xl text-primary">{{ $row['counts']['average_days'] === null ? '—' : \App\Support\Format\Ui::number((string) $row['counts']['average_days']) }}</strong></div></div>
-            <div class="grid sm:grid-cols-2 gap-4 mt-5">@foreach(['violation' => __('Violation types'), 'department' => __('Current department'), 'branch' => __('Branches'), 'location' => __('Locations')] as $group => $title)<div><h3 class="font-bold mb-2">{{ $title }}</h3>@forelse($row['hotspots'][$group] as $item)<div class="flex justify-between text-sm border-b py-1"><span>{{ $item['label'] }}</span><span>{{ \App\Support\Format\Ui::number($item['count']) }}</span></div>@empty<p class="text-gray-400 text-sm">{{ __('No data.') }}</p>@endforelse</div>@endforeach</div>
-        </section>
-    @empty<p class="bg-white rounded-2xl p-8 text-gray-500">{{ __('No companies are linked to this account.') }}</p>@endforelse
+        <x-ui.card class="space-y-6">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <h2 class="text-xl font-bold text-ink">{{ $row['company']->name }}</h2>
+                @if($row['full_access'])
+                    <x-ui.button variant="secondary" href="/home/cases/{{ $row['company']->id }}">{{ __('View cases') }}</x-ui.button>
+                @endif
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+                @foreach(['open' => __('Open'), 'closed_month' => __('Closed this month'), 'recommendation_only' => __('Recommendation only'), 'warning' => __('Warnings'), 'termination' => __('Termination'), 'within15_numerator' => __('Within 15 days'), 'within15_denominator' => __('Measurable cases')] as $key => $label)
+                    <x-ui.stat :label="$label" :value="\App\Support\Format\Ui::number($row['counts'][$key])" />
+                @endforeach
+                <x-ui.stat :label="__('Percent within 15 days')" :value="$row['counts']['within15_percent'] === null ? '—' : \App\Support\Format\Ui::number($row['counts']['within15_percent']).__('%')" />
+                <x-ui.stat :label="__('Average procedure days')" :value="$row['counts']['average_days'] === null ? '—' : \App\Support\Format\Ui::number((string) $row['counts']['average_days'])" />
+            </div>
+
+            <div class="grid gap-6 sm:grid-cols-2">
+                @foreach(['violation' => __('Violation types'), 'department' => __('Current department'), 'branch' => __('Branches'), 'location' => __('Locations')] as $group => $title)
+                    <section>
+                        <h3 class="mb-2 font-semibold text-ink">{{ $title }}</h3>
+                        @forelse($row['hotspots'][$group] as $item)
+                            <div class="flex justify-between gap-3 border-b border-line py-2 text-sm">
+                                <span>{{ $item['label'] }}</span>
+                                <bdi class="font-medium">{{ \App\Support\Format\Ui::number($item['count']) }}</bdi>
+                            </div>
+                        @empty
+                            <x-ui.empty :title="__('No data.')" />
+                        @endforelse
+                    </section>
+                @endforeach
+            </div>
+        </x-ui.card>
+    @empty
+        <x-ui.empty :title="__('No companies are linked to this account.')" />
+    @endforelse
 </div>

@@ -1,0 +1,2 @@
+@php($status = session('status'))
+<div x-data="{ message: @js($status), open: @js((bool) $status) }" x-on:notify.window="message = $event.detail.message; open = true; setTimeout(() => open = false, 5000)" x-show="open" x-cloak role="status" class="fixed end-4 top-4 z-50 max-w-sm rounded-2xl border border-green-200 bg-white px-5 py-4 text-sm font-bold text-green-700 shadow-xl"> <span x-text="message"></span> </div>

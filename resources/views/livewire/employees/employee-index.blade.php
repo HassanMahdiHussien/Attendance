@@ -1,14 +1,17 @@
-<div>
-    <h1 class="text-2xl font-black mb-6">{{ __('Employees') }}</h1>
-    <input wire:model.live.debounce.300ms="search" type="search" placeholder="{{ __('Name, employee number, or department') }}" class="w-full rounded-xl border border-gray-200 p-3 mb-5" aria-label="{{ __('Search employees') }}">
+<div class="space-y-5">
+    <x-ui.page-header :title="__('Employees')" />
+    <x-ui.input wire:model.live.debounce.300ms="search" type="search" :placeholder="__('Name, employee number, or department')" :aria-label="__('Search employees')" />
     <div class="space-y-2">
         @forelse($employees as $employee)
-            <a href="{{ route('employees.show', $employee) }}" class="block bg-white rounded-xl p-4 hover:shadow">
-                <strong>{{ $employee->name }}</strong><span class="text-gray-500 ms-3">{{ \App\Support\Format\Ui::number($employee->employee_code) }} · {{ $employee->department }} · {{ $employee->branch_name }}</span>
-            </a>
+            <x-ui.card padding="none">
+                <a href="{{ route('employees.show', $employee) }}" class="block rounded-2xl p-4 hover:bg-primary-light focus-visible:outline-2 focus-visible:outline-primary">
+                    <strong class="text-ink">{{ $employee->name }}</strong>
+                    <span class="ms-3 text-sm text-gray-500"><bdi>{{ \App\Support\Format\Ui::number($employee->employee_code) }}</bdi> · {{ $employee->department }} · {{ $employee->branch_name }}</span>
+                </a>
+            </x-ui.card>
         @empty
-            <p class="bg-white rounded-xl p-5 text-gray-500">{{ __('No matching employees.') }}</p>
+            <x-ui.card><x-ui.empty :title="__('No matching employees.')" /></x-ui.card>
         @endforelse
     </div>
-    <div class="mt-5">{{ $employees->links() }}</div>
+    <div>{{ $employees->links() }}</div>
 </div>

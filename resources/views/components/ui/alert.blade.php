@@ -1,0 +1,2 @@
+@props(['tone' => 'amber'])
+<div {{ $attributes->class(['rounded-2xl border p-4 text-sm', 'border-red-200 bg-red-light text-red-700' => $tone === 'red', 'border-amber-200 bg-amber-light text-amber-700' => $tone === 'amber', 'border-green-200 bg-green-light text-green-700' => $tone === 'green', 'border-indigo-200 bg-primary-light text-indigo-700' => $tone === 'indigo'])->merge(['role' => 'alert']) }}>{{ $slot }}</div>

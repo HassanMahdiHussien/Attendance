@@ -82,6 +82,8 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 - The 48-hour duplicate check stays at HR case intake. A reporter sees only the bare status of a submitted report and must not learn whether a case already exists. (2026-10)
 - Committee members use their own accounts for invitations and approvals; invitation links are deliberately deferred. (2026-10)
 
+- The workspace follows the approved mockup's layout and components, while its proposed global search and extra home actions wait for their own features. The design refresh does not add routes or change case behavior. (2026-10)
+
 # Provisioning boundaries
 
 - Outside local and testing, a backup refuses an archive password shorter than 32 characters. The archive entries expose storage path names, but their contents require the password.
