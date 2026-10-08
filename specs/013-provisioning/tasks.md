@@ -6,12 +6,12 @@
 plan.md review resolutions (when added) override earlier sections.
 
 ## Run V — application side
-- [ ] T001 Install `spatie/laravel-backup` + `league/flysystem-sftp-v3` (orchestrator runs composer); publish and trim
+- [x] T001 Install `spatie/laravel-backup` + `league/flysystem-sftp-v3` (orchestrator runs composer); publish and trim
   `config/backup.php` per R1; `backup-sftp` disk per R2; `.env.example` keys (empty values)
-- [ ] T002 `HealthPing` + heartbeat/backup/deadline-alert pings, `ops:check-failures`, `ops:test-mail` (R3, R15 B6)
-- [ ] T003 `backup:restore-drill` command (R4 as amended by R15 A1–A3) + schedule entries (R5, R15 B7/nits)
-- [ ] T004 `app:create-platform-admin` + production guard on demo seeders (R6)
-- [ ] T005 Tests: backup refuses without password outside local/testing; archive is encrypted (cannot be opened
+- [x] T002 `HealthPing` + heartbeat/backup/deadline-alert pings, `ops:check-failures`, `ops:test-mail` (R3, R15 B6)
+- [x] T003 `backup:restore-drill` command (R4 as amended by R15 A1–A3) + schedule entries (R5, R15 B7/nits)
+- [x] T004 `app:create-platform-admin` + production guard on demo seeders (R6)
+- [x] T005 Tests: backup refuses without password outside local/testing; archive is encrypted (cannot be opened
   without the password); pings (unset URL → no request; timeout/500 swallowed; URL never logged; heartbeat job pings;
   backup success/failure events ping); restore drill end to end against a real `backup:run` on a local disk
   (success; missing table → fail; missing or altered referenced file → fail; append-only rows missing → fail;

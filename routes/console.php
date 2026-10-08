@@ -15,6 +15,7 @@ use App\Services\CaseEventLogger;
 use App\Services\Cases\CaseAlertDispatcher;
 use App\Services\Cases\CaseWorkflow;
 use App\Services\Cases\ExpiredAppealArchiver;
+use App\Support\HealthPing;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -29,7 +30,13 @@ Artisan::command('inspire', function () {
 Schedule::command('app:heartbeat --dispatch')->everyMinute();
 
 Artisan::command('cases:send-deadline-alerts', function (): void {
-    app(CaseAlertDispatcher::class)->run();
+    try {
+        app(CaseAlertDispatcher::class)->run();
+        app(HealthPing::class)->success('deadline_alerts');
+    } catch (Throwable $error) {
+        app(HealthPing::class)->failure('deadline_alerts', 'Deadline alert dispatch failed');
+        throw $error;
+    }
 })->purpose('Send case deadline alerts');
 
 Artisan::command('cases:archive-expired-appeals', function (): void {
@@ -38,6 +45,17 @@ Artisan::command('cases:archive-expired-appeals', function (): void {
 
 Schedule::command('cases:send-deadline-alerts')->hourly();
 Schedule::command('cases:archive-expired-appeals')->hourly();
+
+Schedule::command('backup:run')->dailyAt('01:00')->timezone('Asia/Baghdad')
+    ->when(fn () => config('displanery.backups.enabled'))->withoutOverlapping();
+Schedule::command('backup:clean')->dailyAt('02:30')->timezone('Asia/Baghdad')
+    ->when(fn () => config('displanery.backups.enabled'))->withoutOverlapping();
+Schedule::command('backup:monitor')->hourly()->timezone('Asia/Baghdad')
+    ->when(fn () => config('displanery.backups.enabled'))->withoutOverlapping();
+Schedule::command('backup:restore-drill')->monthlyOn(1, '03:30')->timezone('Asia/Baghdad')
+    ->when(fn () => config('displanery.backups.enabled'))->withoutOverlapping();
+Schedule::command('ops:check-failures')->hourly()->timezone('Asia/Baghdad')
+    ->when(fn () => filled(config('displanery.healthchecks.queue_failures')))->withoutOverlapping();
 
 Artisan::command('legal-library:reconcile', function (): void {
     foreach (Storage::disk('local')->directories('legal-library/previews') as $directory) {

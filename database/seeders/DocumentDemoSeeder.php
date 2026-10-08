@@ -34,6 +34,9 @@ class DocumentDemoSeeder extends Seeder
 {
     public function run(): void
     {
+        if (app()->isProduction()) {
+            throw new \RuntimeException('Demo seeders cannot run in production.');
+        }
         // Demo data only: a re-seed recreates documents with the same ids, and the once-only PDF
         // protocol rightly refuses to overwrite a different file left by the previous seed.
         if (app()->environment(['local', 'testing'])) {

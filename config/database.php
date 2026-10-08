@@ -32,6 +32,20 @@ return [
 
     'connections' => [
 
+        'restore_drill' => [
+            'driver' => 'mysql',
+            'host' => env('DB_DRILL_HOST') ?: env('DB_HOST', '127.0.0.1'),
+            'port' => env('DB_DRILL_PORT') ?: env('DB_PORT', '3306'),
+            'database' => env('DB_DRILL_DATABASE') ?: env('DB_DATABASE', 'laravel').'_restore_drill',
+            'username' => env('DB_DRILL_USERNAME') ?: env('DB_USERNAME', 'root'),
+            'password' => env('DB_DRILL_PASSWORD') ?: env('DB_PASSWORD', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'strict' => true,
+            'engine' => null,
+        ],
+
         'sqlite' => [
             'driver' => 'sqlite',
             'url' => env('DB_URL'),
@@ -59,6 +73,11 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
+            'dump' => [
+                'useSingleTransaction' => true,
+                'addExtraOption' => '--no-tablespaces --routines --triggers',
+                'mysql_gtid_purged' => 'OFF',
+            ],
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 Mysql::ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],

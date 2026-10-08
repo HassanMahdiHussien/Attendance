@@ -18,6 +18,9 @@ class PilotCompanySeeder extends Seeder
 {
     public function run(): void
     {
+        if (app()->isProduction()) {
+            throw new \RuntimeException('Demo seeders cannot run in production.');
+        }
         DB::transaction(function (): void {
             $company = Company::create(['name' => 'شركة الواحة للمشروبات الغازية', 'enabled_languages' => ['ar', 'en']]);
 

@@ -1,6 +1,15 @@
 <?php
 
 return [
+    'backups' => ['enabled' => env('BACKUPS_ENABLED', false), 'notify_email' => env('BACKUP_NOTIFY_EMAIL')],
+    'restore_drill' => ['connection' => 'restore_drill', 'database' => env('DB_DRILL_DATABASE') ?: env('DB_DATABASE', 'laravel').'_restore_drill'],
+    'healthchecks' => [
+        'heartbeat' => env('HEALTHCHECK_HEARTBEAT_URL'),
+        'backup' => env('HEALTHCHECK_BACKUP_URL'),
+        'restore_drill' => env('HEALTHCHECK_RESTORE_DRILL_URL'),
+        'deadline_alerts' => env('HEALTHCHECK_DEADLINE_ALERTS_URL'),
+        'queue_failures' => env('HEALTHCHECK_QUEUE_FAILURES_URL'),
+    ],
     'ai' => ['legal_reading_model' => env('LEGAL_READING_MODEL', 'claude-opus-5-5'),
         'reading_model' => env('SCAN_READING_MODEL', 'claude-opus-5-5'),
         'drafting_model' => env('DRAFTING_MODEL', 'claude-opus-5-5'),
