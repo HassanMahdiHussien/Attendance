@@ -71,3 +71,5 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 - **Report downloads re-check the current owner's role and company access.** A previously generated file is revoked and deleted when the owner's access is withdrawn. (2026-10)
 - **A historical report's open count means open at the period end.** Dashboard open counts remain live; past reports describe their selected period. (2026-10)
 - **Every Excel text cell is an explicit string.** A name beginning with a formula character remains text to prevent spreadsheet formula injection. (2026-10)
+- **Empty optional employee CSV cells never erase stored email or gender.** Imports update known employees while preserving those values unless a replacement is supplied. (2026-10)
+- **Employee CSV accepts Windows-1256 as well as UTF-8.** Iraqi Excel exports may use this encoding and semicolon separators; the file is decoded before row validation. (2026-10)

@@ -30,9 +30,12 @@ use App\Livewire\Reports\Inbox;
 use App\Livewire\Reports\MyReports;
 use App\Livewire\Reports\SubmitReport;
 use App\Livewire\Statistics\Reports as StatisticsReports;
+use App\Models\Company;
+use Filament\Facades\Filament;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -42,6 +45,16 @@ Route::get('/', function () {
 Route::middleware('guest')->get('/login', Login::class)->name('login');
 
 Route::middleware('auth')->group(function (): void {
+    Route::get('/admin/{company}/employees/import/template', function (Company $company) {
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+        Filament::setTenant($company);
+        Gate::authorize('importEmployees', $company);
+
+        return response("\xEF\xBB\xBFالاسم,رقم الموظف,القسم,المنصب,تاريخ التعيين,الفرع,البريد,الجنس\r\n", 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="employees-template.csv"',
+        ]);
+    })->name('employees.import.template');
     Route::get('/legal-library/runs/{run}/pages/{page}', LegalPageImageController::class)
         ->middleware(SetTenantContext::class)->name('legal-library.pages.show');
     Route::post('/logout', function (Request $request): RedirectResponse {
