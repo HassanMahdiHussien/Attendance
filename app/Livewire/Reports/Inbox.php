@@ -4,8 +4,10 @@ namespace App\Livewire\Reports;
 
 use App\Enums\UserRole;
 use App\Services\Cases\CaseInsights;
+use App\Services\EmailIntake\EmailDraftService;
 use App\Services\Reports\ReportService;
 use App\Support\Access\CaseVisibility;
+use App\Support\Access\EmailDraftVisibility;
 use App\Support\Access\ViolationReportVisibility;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
@@ -15,6 +17,10 @@ class Inbox extends Component
     public array $reasons = [];
 
     public array $existingCaseIds = [];
+
+    public array $emailReasons = [];
+
+    public array $emailCaseIds = [];
 
     public function mount(): void
     {
@@ -48,9 +54,41 @@ class Inbox extends Component
     {
         $this->mount();
 
+        $reports = ViolationReportVisibility::inbox(auth()->user())->with(['reporter', 'attachments'])->latest()->get();
+        $emails = EmailDraftVisibility::inbox(auth()->user())->with(['sender', 'attachments'])->latest('received_at')->get();
+        $items = $reports->map(fn ($report) => ['type' => 'report', 'time' => $report->created_at, 'model' => $report])
+            ->concat($emails->map(fn ($email) => ['type' => 'email', 'time' => $email->received_at, 'model' => $email]))
+            ->sortByDesc('time')->values();
+
         return view('livewire.reports.inbox', [
-            'reports' => ViolationReportVisibility::inbox(auth()->user())->with(['reporter', 'attachments'])->latest()->get(),
+            'items' => $items,
             'insights' => app(CaseInsights::class),
         ])->layout('layouts.workspace');
+    }
+
+    public function dismissEmail(int $id, EmailDraftService $drafts): void
+    {
+        $this->mount();
+        $this->validate(["emailReasons.{$id}" => ['required', 'string', 'max:2000']]);
+        $drafts->dismiss(EmailDraftVisibility::inbox(auth()->user())->findOrFail($id), $this->emailReasons[$id], auth()->user());
+        unset($this->emailReasons[$id]);
+    }
+
+    public function convertEmail(int $id): void
+    {
+        $this->mount();
+        EmailDraftVisibility::inbox(auth()->user())->findOrFail($id);
+        $this->redirect('/cases/new?email='.$id, navigate: true);
+    }
+
+    public function linkEmail(int $id, EmailDraftService $drafts): void
+    {
+        $this->mount();
+        $draft = EmailDraftVisibility::inbox(auth()->user())->findOrFail($id);
+        $selected = $this->emailCaseIds[$id] ?? '';
+        abort_unless($selected !== '', 422);
+        $case = CaseVisibility::for(auth()->user())->findOrFail($selected);
+        $drafts->link($draft, $case, auth()->user());
+        $this->redirect('/cases/'.$case->id, navigate: true);
     }
 }

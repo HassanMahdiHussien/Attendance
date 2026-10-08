@@ -24,6 +24,7 @@ Set UptimeRobot to HTTPS https://DOMAIN/up at five-minute intervals. Create thes
 | Restore drill | HEALTHCHECK_RESTORE_DRILL_URL | 31 days | 1 day |
 | Deadline alerts | HEALTHCHECK_DEADLINE_ALERTS_URL | 1 hour | 15 minutes |
 | Failed queued jobs | HEALTHCHECK_QUEUE_FAILURES_URL | 1 hour | 15 minutes |
+| Forwarded email intake | HEALTHCHECK_EMAIL_INTAKE_URL | 5 minutes | 10 minutes |
 
 The app schedules a heartbeat dispatch every minute, deadline alerts hourly, backup:run at 01:00 Baghdad, backup:clean at 02:30, backup:monitor hourly, and backup:restore-drill on the first of each month at 03:30. ops:check-failures runs hourly. The backup monitor mails if the newest backup exceeds one day or storage exceeds 20 GB. Test alert recipients and failure notifications. The backup VPS vault copies working archives hourly; defaults retain daily copies for 35 days and monthly copies for 24 months.
 
@@ -42,3 +43,22 @@ Migrations must be expand-then-contract: add compatible fields, deploy code that
 5. Record the backup timestamp and result. Target RPO is at most 24 hours of work from the last nightly backup; target RTO is the same day. Both require a verified archive, saved decryption password and working provider access.
 
 The LUKS key and .env are on the root disk for automatic boot. LUKS protects a detached or recycled data volume and volume-only snapshots. It does not protect a running-server compromise or theft of both disks. Swap, MySQL temp, PHP upload temp and backup temp are on the encrypted volume. AI calls send selected case text to Anthropic outside the VPS; do not claim all data stays there.
+
+## Forwarded email intake
+
+Create one operator-controlled IMAP mailbox and set `INTAKE_IMAP_HOST`, `INTAKE_IMAP_PORT`,
+`INTAKE_IMAP_ENCRYPTION` (`ssl` or `tls`), `INTAKE_IMAP_USERNAME`, `INTAKE_IMAP_PASSWORD`,
+and `INTAKE_IMAP_FOLDER` in the server environment. Keep the credentials with operators only.
+The receiving mail host must prepend its own `Authentication-Results` header. Hosts that do not
+add that header cannot be used. Send a test message and read its raw headers at the mail host;
+set `INTAKE_TRUSTED_AUTHSERV_ID` to the topmost header's authserv-id. Run
+`php artisan email-intake:inspect-latest` from `/srv/displanery/current` to check
+that topmost id and the DMARC/SPF/DKIM verdict without printing mail content. Send a deliberately
+forged message with a lower, same-id `Authentication-Results` header and verify that it is discarded.
+
+Create or allow the app to create `Processed` and `Discarded` folders (override with
+`INTAKE_PROCESSED_FOLDER` and `INTAKE_DISCARDED_FOLDER`). Set `INTAKE_ENABLED=true` only after
+the test succeeds. The scheduler polls every five minutes. Processed messages are deleted after
+`INTAKE_PROCESSED_DAYS` (default 30), discarded messages after `INTAKE_DISCARDED_DAYS` (default 7).
+Set `HEALTHCHECK_EMAIL_INTAKE_URL` for the intake ping. A failed ping contains counts only;
+inspect the application log for connection, read or move failure categories.
