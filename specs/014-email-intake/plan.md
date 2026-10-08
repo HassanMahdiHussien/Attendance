@@ -85,6 +85,61 @@ app/Livewire/Cases/CreateCase.php + view · config/displanery.php · .env.exampl
 tests/Feature/EmailIntake/*.php
 ```
 
+## R9 Plan review resolutions (Codex review, 2026-10-08) — override R1–R8 where they differ
+
+### Blockers
+- **A1 Trusted verdict = the topmost header only.** The receiving host prepends its own `Authentication-Results`
+  above anything the sender supplied, so the verifier reads the raw header block preserving every instance and order
+  (not webklex `Header::get()`, which merges duplicates) and uses **only the topmost** `Authentication-Results`
+  header; its authserv-id must equal `INTAKE_TRUSTED_AUTHSERV_ID`, else reject `auth_failed`. A forged header with the
+  right id sits below the host's real one and is never read. Runbook: the mail host **must** add its own header
+  (Gmail/Google Workspace, Microsoft 365, Fastmail and similar do; a host that does not cannot be used), and a
+  verification step: `php artisan email-intake:inspect-latest` prints, for the newest INBOX message, the topmost
+  authserv-id and verdict only (no addresses/subject), plus a deliberate forged-header test message that must be
+  rejected.
+- **A2 Tenant context**: after the sender resolves to a company, all draft/attachment work for that message runs in
+  `TenantContext::runForCompany($company, …)`; rejection rows and UID bookkeeping are platform rows outside it.
+  Tests: a message from a company-B user never creates or exposes anything in company A (fetcher and UI).
+- **A3 Branch rule**: a sender with exactly one `branch_user` branch → that branch; zero or several → `branch_id`
+  null (company-level draft) and HR must choose the branch on the case form. Tests for single, multi and none.
+- **A4 Attachments**: `EmailDraft` added to the attachment morph map and `Attachment::booted` allowed parents;
+  `AttachmentService` gains an email-draft store path (same sniffing/limits as today: **PDF/JPEG/PNG, 10 MB** — no
+  HEIC/DOCX) and an authorised download for drafts (HR inbox visibility only). Conversion/linking copies files then
+  rows inside the transaction; a failure deletes the files copied so far (try/catch around the transaction). Case
+  attachment kind for copied files: the existing report-evidence kind (Codex: add it to the case-allowed kinds if
+  missing). Tests: draft download authorised/denied cross-tenant, conversion and linking copy, rollback leaves no
+  orphan files.
+- **A5 Idempotency by IMAP identity**: platform table `email_intake_messages` (`mailbox`, `uidvalidity`, `uid`,
+  `outcome` accepted|rejected|failed, `attempts`, `email_draft_id` nullable, timestamps; unique
+  mailbox+uidvalidity+uid). Fetch reads the oldest 50 INBOX messages by UID with `leaveUnread()` (never relies on
+  `\Seen`); a recorded UID is not processed again, only its move is retried. The outcome row is written in the same
+  transaction as the draft. Message-ID (when present) still deduplicates drafts per company; a missing Message-ID
+  falls back to UID identity only. A message that fails 3 times is moved to `Discarded` with outcome `failed`
+  (counted in the health ping), so it cannot starve later mail. Tests: stored-then-move-fails-then-refetched →
+  one draft; missing Message-ID; parse failure ×3 → discarded.
+
+### Should-fix
+- **B1** Accept when the trusted verdict has `dmarc=pass`, **or** (`spf=pass` aligned) **or** (`dkim=pass` aligned),
+  alignment relaxed (same domain or a subdomain of the From domain). Upstream ARC / other `Authentication-Results`
+  headers are ignored. No usable trusted header → reject and count it as a configuration warning in the health ping.
+- **B2** Visibility: HR staff / company admin senders see their own email drafts in the HR inbox (they are HR);
+  reporters and department managers see theirs in `MyReports` with the bare status. Same split as reports.
+- **B3** Email drafts never count in dashboards, hotspots, employee pages or duplicate checks. "Link to existing
+  case" is its own authorised action (HR picks a visible case). The 48-hour duplicate check runs in `CreateCase`
+  once HR has entered the employee and time (existing behaviour).
+- **B4** Limits: message ≤ 25 MB total (larger → rejected `too_large`, moved to Discarded without parsing parts),
+  ≤ 5 attachments kept, body decode capped at 50,000 chars; attachment names are display metadata only — content is
+  written through `AttachmentService`, never `Attachment::save()` with a vendor path.
+- **B5** IMAP connect/read timeout 30 s; health ping: success only when the run had no connection error and no
+  per-message failure; failure body states counts only.
+- **B6** Mailbox retention: the fetch deletes messages from `Processed` older than 30 days and from `Discarded` older
+  than 7 days (config `INTAKE_PROCESSED_DAYS`, `INTAKE_DISCARDED_DAYS`); runbook says the mailbox credentials are
+  operator-only. Exceptions, logs and ping bodies never contain addresses, subjects, headers, attachment names or
+  credentials.
+- **B7** Tests list in T005 expanded accordingly.
+- **Nits**: retries are not rejections (no `duplicate` reason — the UID table covers them); `received_at` = the IMAP
+  internal date (server receipt time), not the sender's `Date` header.
+
 ## Delegation
 Codex plan review → run X (all tasks) → my gates + a real IMAP end-to-end against a local mail-server container
 (GreenMail) with a forwarded message → browser walkthrough of inbox → case → PR.
