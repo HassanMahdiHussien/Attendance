@@ -142,3 +142,77 @@ deploy/templates/{nginx-site.conf, php-fpm-pool.conf, php.ini, mysql.cnf, superv
 ## Delegation
 Codex plan review → run V (application side) → my gates + local SFTP end-to-end → run W (server side) → shellcheck
 + container smoke run → PR.
+
+## R15 Plan review resolutions (Codex review, 2026-10-08) — override R1–R14 where they differ
+
+### Blockers
+- **A1 Isolated drill account**: the drill uses its own connection `restore_drill` (`DB_DRILL_USERNAME`,
+  `DB_DRILL_PASSWORD`, `DB_DRILL_DATABASE`), a MySQL user that has privileges **only** on the scratch database
+  (provision grants `ALL ON displanery_restore_drill.*` and nothing else). The database name must match
+  `/^[a-z0-9_]+_restore_drill$/` and differ from the live one. Preflight: `SHOW GRANTS` of the drill account must not
+  mention the live database or `*.*` — enforced when `app()->isProduction()` (tests run as the shared `testing%` user
+  and skip it, said in WEIRDNESS). The drill creates the database plus a marker table `_restore_drill_marker`; at
+  start an existing scratch database is dropped only if it holds that marker, otherwise the drill refuses. Provision
+  self-checks that the drill account is denied on the live database.
+- **A2 Checks against the restored data itself, not timestamps** (`audit_logs` is the real table name):
+  (a) every live table exists in the restored database and the restored `migrations` rows are a prefix of live's;
+  (b) the triggers present on live exist in the restored database (by name) and a forbidden `UPDATE`/`DELETE` on one
+  append-only table and on an issued document row is rejected there; (c) append-only tables (`case_events`,
+  `audit_logs`, `ai_generation_logs`): with M = max restored id, the live count of rows with id ≤ M equals the
+  restored count (append-only ⇒ exact); (d) **files**: every durable file path referenced by the restored database —
+  document PDFs, case attachments/scans, legal law source files and page images, letterhead/logo images,
+  internal-regulation uploads (Codex lists the columns from the migrations) — exists in the archive and matches the
+  stored sha256 where a hash column exists; (e) other tables: counts reported for information only. DB-first ordering
+  is guaranteed by spatie (`BackupJob::createBackupManifest` dumps databases before listing files) and the app writes
+  files before the row that references them, so (d) holds for any consistent backup; the drill catches violations.
+- **A3 Dump/restore privileges and DEFINER**: the backup dumps with the app account (it has `ALL` on the live
+  database, which includes `TRIGGER`, `SHOW VIEW`, `LOCK TABLES`); dump options `--single-transaction
+  --no-tablespaces --routines --triggers --set-gtid-purged=OFF`. The drill streams the dump through a filter that
+  removes `DEFINER=…` clauses before import, so restored triggers belong to the importing account;
+  `log_bin_trust_function_creators=1` stays in `mysql.cnf`. The runbook's full-server restore imports as the app
+  account with the same filter. (b) proves the triggers work after restore.
+- **A4 Migrations are not reversible by switching code**: deploy checks `migrate:status --pending`. No pending
+  migrations → no maintenance window: switch, reload, `queue:restart`. Pending migrations → `down`, `supervisorctl
+  stop displanery-worker` (supervisor `stopwaitsecs=960` lets the running job finish), migrate with the new release,
+  switch, reload, start worker, `up`. A failed migration leaves the site **in maintenance** with a message: fix forward
+  or restore from backup (runbook); it never reopens old code against a changed schema. Migrations must be
+  expand-then-contract (runbook + WEIRDNESS). `rollback.sh` refuses when the database has migrations the previous
+  release does not know, unless `--force` with a warning.
+- **A5 Format guard**: formatting requires all of: `DATA_DEVICE` given as a `/dev/disk/by-id/` path; the resolved
+  device is `TYPE=disk` with no partitions/children, not mounted, not swap, not in the root filesystem's device chain,
+  no signature (`wipefs -n` empty, no LUKS header); `CONFIRM_FORMAT_DEVICE` equals the by-id path **and**
+  `CONFIRM_FORMAT_SERIAL` equals `lsblk -dno SERIAL` (the script prints size/model/serial). Any check that cannot be
+  evaluated → stop. An existing LUKS device our key opens → reuse; one it cannot open → stop.
+
+### Should-fix
+- **B1** consistency: covered by A2. Deploy refuses to migrate while the backup's schedule mutex is held; backups run
+  at 01:00.
+- **B2** `encryption => 'aes256'` explicitly; outside local/testing the backup refuses a password shorter than 32
+  characters; tests prove a real entry cannot be extracted without the password and can with it. Runbook: entry names
+  inside the zip are not secret (storage paths, no names of people); `APP_KEY` and the archive password are both kept
+  off-server (password manager).
+- **B3** honest boundary in WEIRDNESS/runbook: the LUKS key and `.env` are on the root disk, so the protection is for
+  the data volume obtained without the root disk (detached/recycled volume, volume snapshot). Swap file **on the
+  encrypted volume**; MySQL `tmpdir`, PHP `upload_tmp_dir`, Laravel/backup temp dirs on the volume (`/srv/data/tmp`).
+- **B4** MySQL data via a **bind mount** `/srv/data/mysql → /var/lib/mysql` (fstab,
+  `x-systemd.requires-mounts-for=/srv/data`) instead of moving `datadir` — no AppArmor or config change; created
+  before MySQL is installed so data lives on the volume from the first start. Drop-ins `RequiresMountsFor=` for mysql,
+  php8.4-fpm, supervisor; the scheduler cron line is wrapped in `mountpoint -q /srv/data &&`. Missing volume → these
+  fail closed. The smoke run boots once without the volume to show it.
+- **B5** deploy uses `trap` before the switch; after the switch a health check (`curl --resolve $DOMAIN:443:127.0.0.1
+  https://$DOMAIN/up`); failure keeps maintenance on and prints the recovery procedure.
+- **B6** extra Healthchecks checks: `deadline_alerts` (success after each hourly `cases:send-deadline-alerts`, failure
+  ping on exception) and `queue_failures` (hourly `ops:check-failures`: success when no job failed in the last hour,
+  failure ping with the count and job class names otherwise — never payloads). Mail: runbook requires an SMTP
+  provider with SPF/DKIM/DMARC and `php artisan ops:test-mail <address>` sends a plain test message.
+- **B7** one rule: Healthchecks backup period 24 h + grace 2 h (alert at 26 h); `backup:monitor` hourly with
+  `maximum_age_in_days = 1` as the second line (mail). Spec updated.
+- **B8** application log files `daily`, 30 days (not the legal record — `audit_logs`/`case_events` live in the
+  database and in every backup). Time: `systemd-timesyncd` enabled; provision fails if `NTPSynchronized` is not `yes`
+  within 60 s. **Deletion protection**: the backup server keeps a root-owned `vault` the SFTP user cannot reach; a root
+  cron copies each new archive there and prunes by its own rule (daily 35 days, monthly 24 months — default, set in
+  the backup-server settings). The production credential can delete only its working copies.
+- **Nits**: spec story 1 says provision **plus** first deploy; runbook has an exact preflight + first-deploy sequence;
+  `backup:run` 01:00 then `backup:clean` 02:30.
+- **Product-owner questions (defaults taken, reported)**: recovery point = last nightly backup (≤ 24 h of lost work);
+  recovery time = same day (rebuild by script + restore).

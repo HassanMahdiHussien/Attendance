@@ -34,7 +34,8 @@ file, and runs one script as root. The script installs and configures everything
 that is already right. The developer then runs the deploy script to put the application live over HTTPS.
 
 **Acceptance Scenarios**:
-1. **Given** a fresh server with the settings file filled, **When** the provision script runs, **Then** the site
+1. **Given** a fresh server with the settings file filled, **When** the provision script and the first deploy run,
+   **Then** the site
    answers over HTTPS with a valid certificate, HTTP redirects to HTTPS, the queue worker and the scheduler run, and the
    health URL reports OK.
 2. **Given** an already provisioned server, **When** the script runs again, **Then** it finishes without errors and
@@ -68,7 +69,8 @@ it, loads it into a scratch database and compares it with the live data; success
    no success ping is sent (Healthchecks alerts after its grace period).
 3. **Given** the restore drill, **Then** it reports table row counts and file counts matching the live system at the
    time of the backup (within rows created since), drops the scratch database, and pings Healthchecks only on success.
-4. **Given** a backup older than 26 hours as the newest one, **Then** the daily backup monitor reports it unhealthy.
+4. **Given** no successful backup for 26 hours, **Then** Healthchecks alerts (period 24 h + grace 2 h) and the
+   hourly backup monitor mails that the newest backup is older than one day.
 
 ### User Story 4 - Know when something is down (Priority: P1)
 
@@ -111,6 +113,9 @@ it, loads it into a scratch database and compares it with the live data; success
 - **FR-009**: Heartbeat, backup and restore-drill success are pinged to configurable Healthchecks URLs; an unset URL
   disables the ping.
 - **FR-010**: A script prepares the backup server: an SFTP-only, chrooted user with key login, firewall, nothing else.
+- **FR-012**: The backup server keeps a second copy of every archive where the production credential cannot reach or
+  delete it, with its own retention.
+- **FR-013**: The hourly deadline-alert run and failed queued jobs (including mail) are monitored by Healthchecks.
 - **FR-011**: A runbook documents the developer's steps (accounts, DNS, keys, settings, first deploy, UptimeRobot and
   Healthchecks setup, restore procedure, rollback).
 

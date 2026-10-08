@@ -8,14 +8,16 @@ plan.md review resolutions (when added) override earlier sections.
 ## Run V — application side
 - [ ] T001 Install `spatie/laravel-backup` + `league/flysystem-sftp-v3` (orchestrator runs composer); publish and trim
   `config/backup.php` per R1; `backup-sftp` disk per R2; `.env.example` keys (empty values)
-- [ ] T002 `HealthPing` + heartbeat/backup event pings (R3)
-- [ ] T003 `backup:restore-drill` command (R4) + schedule entries (R5)
+- [ ] T002 `HealthPing` + heartbeat/backup/deadline-alert pings, `ops:check-failures`, `ops:test-mail` (R3, R15 B6)
+- [ ] T003 `backup:restore-drill` command (R4 as amended by R15 A1–A3) + schedule entries (R5, R15 B7/nits)
 - [ ] T004 `app:create-platform-admin` + production guard on demo seeders (R6)
 - [ ] T005 Tests: backup refuses without password outside local/testing; archive is encrypted (cannot be opened
   without the password); pings (unset URL → no request; timeout/500 swallowed; URL never logged; heartbeat job pings;
   backup success/failure events ping); restore drill end to end against a real `backup:run` on a local disk
-  (success; missing table → fail; missing document file → fail; wrong password → fail; refuses when the drill
-  database equals the live one; scratch database always dropped); schedule registered only when backups enabled;
+  (success; missing table → fail; missing or altered referenced file → fail; append-only rows missing → fail;
+  restored triggers present and rejecting updates; DEFINER stripped; wrong password → fail; refuses a database name
+  equal to the live one or not ending `_restore_drill`; refuses an existing scratch database without the marker;
+  scratch database always dropped); `ops:check-failures` pings; schedule registered only when backups enabled;
   create-platform-admin (creates, refuses second without flag, password rules, audit has no password); demo seeders
   refuse in production
 
