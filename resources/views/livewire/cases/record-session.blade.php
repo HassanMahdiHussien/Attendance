@@ -2,7 +2,7 @@
     <x-ui.page-header :title="__('Committee session')" :subtitle="__('Select the attendees and each member’s vote. At least three members must attend, including a labor union representative. Vote again if there is no majority.')" back="/cases/{{ $case->id }}" />
     <x-ui.card class="space-y-5">
         @if($case->confirmedResponseText())<section class="rounded-2xl bg-gray-50 p-4"><h2 class="font-bold">{{ __('Transcribed text — the scan is the original') }}</h2><p class="whitespace-pre-wrap" dir="auto">{{ $case->confirmedResponseText() }}</p></section>@endif
-        @if($notice)<x-ui.alert tone="amber" role="status">{{ $notice }} @if($case->session_majority_reached && $case->status === \App\Enums\CaseStatus::CommitteeSessionHeld)<a href="/cases/{{ $case->id }}" class="ui-link underline">{{ __('Write recommendations') }}</a>@endif</x-ui.alert>@endif
+        @if($notice)<x-ui.alert tone="amber" role="status">{{ $notice }} @if($case->session_majority_reached && $case->status === \App\Enums\CaseStatus::CommitteeSessionHeld)<x-ui.button href="/cases/{{ $case->id }}" variant="secondary">{{ __('Write recommendations') }}</x-ui.button>@endif</x-ui.alert>@endif
         @error('notice')<x-ui.alert tone="red">{{ $message }}</x-ui.alert>@enderror
         <div class="space-y-2">
             @foreach($members as $member)

@@ -14,6 +14,6 @@
         <div class="flex items-center gap-2"><span class="grid h-9 w-9 place-items-center rounded-xl bg-primary font-extrabold text-white" aria-hidden="true">D</span><strong>{{ __('Displanery') }}</strong></div>
         <form method="POST" action="{{ route('locale.update') }}">@csrf<input type="hidden" name="locale" value="{{ app()->getLocale() === 'ar' ? 'en' : 'ar' }}"><button type="submit" class="ui-link inline-flex min-h-10 items-center gap-1 text-sm" lang="{{ app()->getLocale() === 'ar' ? 'en' : 'ar' }}"><x-ui.icon name="globe" class="h-4 w-4" />{{ app()->getLocale() === 'ar' ? __('English') : trans('messages.locale.arabic', [], 'ar') }}</button></form>
     </header>
-    <main class="mx-auto max-w-7xl px-4 py-8">{{ $slot }}</main>
+    <main class="mx-auto flex min-h-[calc(100vh-4rem)] max-w-7xl items-center justify-center px-4 py-8">{{ $slot }}</main>
 </body>
 </html>

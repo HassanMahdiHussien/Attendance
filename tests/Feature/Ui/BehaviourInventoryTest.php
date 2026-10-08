@@ -5,7 +5,10 @@ use Illuminate\Support\Facades\File;
 function uiInventoryMatches(string $pattern, string $source): array
 {
     preg_match_all($pattern, $source, $matches, PREG_SET_ORDER);
-    $values = array_map(fn (array $match): string|array => count($match) === 2 ? $match[1] : array_slice($match, 1), $matches);
+    // Patterns without a capture group return the whole match; one group returns it; more return the groups.
+    $values = array_map(fn (array $match): string|array => match (count($match)) {
+        1 => $match[0], 2 => $match[1], default => array_slice($match, 1)
+    }, $matches);
     $values = array_values(array_unique($values, SORT_REGULAR));
     sort($values);
 

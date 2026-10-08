@@ -21,6 +21,6 @@ plan.md R7 (review resolutions) overrides earlier sections.
 - [x] T006 Component + nav tests; markup-assertion updates per R7 B2
 
 ## Run D2
-- [ ] T007 Rebuild home, reports (inbox, my-reports, submit-report), employees (index, page), dashboard (hr-dashboard,
+- [x] T007 Rebuild home, reports (inbox, my-reports, submit-report), employees (index, page), dashboard (hr-dashboard,
   case-drilldown — HR and partner routes), statistics, login/guest
-- [ ] T008 Fixes from the screenshot matrix; WEIRDNESS line for any deliberate deviation from the mockup
+- [x] T008 Fixes from the screenshot matrix; WEIRDNESS line for any deliberate deviation from the mockup

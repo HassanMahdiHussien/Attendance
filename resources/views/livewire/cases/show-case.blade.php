@@ -40,7 +40,8 @@
 <div>
 <p class="font-mono text-gray-500 text-sm">{{ __('Case') }} <bdi>{{ \App\Support\Format\Ui::number(str_pad($record->case_number, 4, '0', STR_PAD_LEFT)) }}</bdi>
 </p>
-<h1 class="text-2xl font-black mt-2">@if($record->employee && app(\App\Policies\EmployeeProfilePolicy::class)->view(auth()->user(), $record->employee))<a class="text-primary underline" href="{{ route('employees.show', $record->employee) }}">{{ $record->employee->name }}</a>@else{{ $record->employee?->name }}@endif</h1>
+<h1 class="mt-2 text-2xl font-extrabold text-ink">{{ $record->employee?->name }}</h1>
+@if($record->employee && app(\App\Policies\EmployeeProfilePolicy::class)->view(auth()->user(), $record->employee))<a class="ui-link inline-block text-sm font-bold" href="{{ route('employees.show', $record->employee) }}">{{ __('Employee page') }}</a>@endif
 <p class="text-gray-500">{{ $record->violation_type }} — {{ $record->employee?->position }} / {{ $record->employee?->department }}</p>
 </div>
 <x-ui.badge :tone="\App\Support\Format\Tone::case($record->status)" class="self-start">{{ \App\Support\Format\Ui::stage($record->status) }}</x-ui.badge>
@@ -50,7 +51,7 @@
     @if($priors['count'])<section class="bg-amber-light rounded-2xl p-5">
 <h2 class="font-bold">{{ __('Prior record') }} — {{ \App\Support\Format\Ui::number($priors['count']) }}</h2>
 @foreach($priors['cases'] as $prior)<p class="text-sm mt-2 {{ $prior['same_type_repeat'] ? 'text-red font-bold' : '' }}">
-<a href="/cases/{{ $prior['case_id'] }}" class="underline">{{ \App\Support\Format\Ui::date($prior['date']) }} — {{ $prior['violation_type'] }} — {{ \App\Support\Format\Ui::outcome($prior['outcome'] ?? null) }}</a>@if($prior['same_type_repeat']) · {{ __('Same violation type repeated within 12 months') }}@endif</p>
+<a href="/cases/{{ $prior['case_id'] }}" class="ui-link">{{ \App\Support\Format\Ui::date($prior['date']) }} — {{ $prior['violation_type'] }} — {{ \App\Support\Format\Ui::outcome($prior['outcome'] ?? null) }}</a>@if($prior['same_type_repeat']) · {{ __('Same violation type repeated within 12 months') }}@endif</p>
 @endforeach</section>
 @endif
     @if($pattern['flagged'])<div class="bg-amber-light text-amber rounded-2xl p-5">{{ __('The alleged responsible person was named in :count other branch cases in the past year.', ['count' => \App\Support\Format\Ui::number($pattern['count'])]) }}</div>
@@ -70,7 +71,7 @@
 <h2 class="text-lg font-black mb-4">{{ __('Actions') }}</h2>
         @if($record->status !== \App\Enums\CaseStatus::ArchivedFinal && !$record->legal_review_requested_at && in_array(auth()->user()->primary_role, [\App\Enums\UserRole::CompanyAdmin, \App\Enums\UserRole::HrStaff, \App\Enums\UserRole::CommitteeMember], true))<x-ui.button variant="secondary" wire:click="requestConsultation" class="mb-4 border-amber-300 text-amber-700">{{ __('Request legal consultation') }}</x-ui.button>
 @endif
-        @if(auth()->user()->primary_role === \App\Enums\UserRole::ExternalLegalReviewer && $record->legal_review_requested_at)<a href="/cases/{{ $record->id }}/consultation" class="text-primary underline">{{ __('Review consultation') }}</a>@endif
+        @if(auth()->user()->primary_role === \App\Enums\UserRole::ExternalLegalReviewer && $record->legal_review_requested_at)<x-ui.button href="/cases/{{ $record->id }}/consultation" variant="secondary">{{ __('Review consultation') }}</x-ui.button>@endif
         @if($canManage)
             @if($record->status === \App\Enums\CaseStatus::SignedRecommendationsUploaded && $record->outcome?->value === 'recommendation_only')
                 @if($record->legal_review_requested_at && !$record->legal_review_completed_at && !$record->legal_review_cancelled_at && auth()->user()->primary_role === \App\Enums\UserRole::CompanyAdmin)<label class="block mt-3">{{ __('Reason to cancel consultation') }} <input wire:model="consultationCancelReason" class="ui-control rounded-xl border p-2">
@@ -81,19 +82,19 @@
                 @if(!$record->legal_review_requested_at || $record->legal_review_completed_at || $record->legal_review_cancelled_at)<x-ui.button variant="primary" wire:click="closeWithoutPenalty" class="bg-primary text-white rounded-2xl px-5 py-3">{{ __('Archive without a penalty') }}</x-ui.button>
 @endif
             @endif
-            @if($record->status === \App\Enums\CaseStatus::SignedRecommendationsUploaded && in_array($record->outcome?->value, ['warning', 'termination'], true))<a href="/cases/{{ $record->id }}/decision" class="bg-primary text-white rounded-2xl px-5 py-3 inline-block">{{ __('Write decision letter') }}</a>@endif
-            @if(in_array($record->status, [\App\Enums\CaseStatus::AwaitingExternalLegalConsultation, \App\Enums\CaseStatus::DecisionLetterReadyForReview], true))<a href="/cases/{{ $record->id }}/documents/{{ $record->documents->where('document_type', \App\Enums\DocumentType::DecisionLetter)->last()?->id }}/confirm" class="text-primary underline">{{ __('Confirm decision letter') }}</a>@endif
-            @if(in_array($record->status, [\App\Enums\CaseStatus::AwaitingAppealWindow, \App\Enums\CaseStatus::AppealPending], true))<a href="/cases/{{ $record->id }}/appeal" class="text-primary underline">{{ __('Record appeal and outcome') }}</a>@endif
-            @if(in_array($record->status, [\App\Enums\CaseStatus::AwaitingEmployeeResponse, \App\Enums\CaseStatus::ResponseReceived, \App\Enums\CaseStatus::ResponseRefusedToSign, \App\Enums\CaseStatus::ResponseDeliveryRefused, \App\Enums\CaseStatus::ResponseScannedUploaded, \App\Enums\CaseStatus::AiIngestedResponse, \App\Enums\CaseStatus::CommitteeSessionHeld], true))<a href="/cases/{{ $record->id }}/session" class="text-primary underline ms-4">{{ __('Record committee session') }}</a>@endif
-            @if(in_array($record->status, [\App\Enums\CaseStatus::CommitteeSessionHeld, \App\Enums\CaseStatus::RecommendationsCitationCheck, \App\Enums\CaseStatus::RecommendationsAwaitingApprovals, \App\Enums\CaseStatus::RecommendationsConfirmed], true) && $record->session_majority_reached)<a href="/cases/{{ $record->id }}/recommendations" class="text-primary underline ms-4">{{ __('Write recommendations') }}</a>@endif
-            @if(in_array($record->status, [\App\Enums\CaseStatus::RecommendationsAwaitingApprovals, \App\Enums\CaseStatus::RecommendationsConfirmed], true))<a href="/cases/{{ $record->id }}/documents/{{ $record->documents->where('document_type', \App\Enums\DocumentType::Recommendations)->last()?->id }}/confirm" class="bg-primary text-white rounded-2xl px-5 py-3 inline-block">{{ __('Review recommendation approvals') }}</a>@endif
-            @if(in_array($record->status, [\App\Enums\CaseStatus::AwaitingCommitteeSignatures, \App\Enums\CaseStatus::SignedRecommendationsUploaded], true))<a href="/cases/{{ $record->id }}/signed-scan" class="text-primary underline ms-4">{{ __('Recommendations and signatures scan') }}</a>@endif
-            @if($record->status === \App\Enums\CaseStatus::Draft)<a href="/cases/new?draft={{ $record->id }}" class="text-primary underline ms-4">{{ __('Edit facts') }}</a>
+            @if($record->status === \App\Enums\CaseStatus::SignedRecommendationsUploaded && in_array($record->outcome?->value, ['warning', 'termination'], true))<x-ui.button href="/cases/{{ $record->id }}/decision">{{ __('Write decision letter') }}</x-ui.button>@endif
+            @if(in_array($record->status, [\App\Enums\CaseStatus::AwaitingExternalLegalConsultation, \App\Enums\CaseStatus::DecisionLetterReadyForReview], true))<x-ui.button href="/cases/{{ $record->id }}/documents/{{ $record->documents->where('document_type', \App\Enums\DocumentType::DecisionLetter)->last()?->id }}/confirm" variant="secondary">{{ __('Confirm decision letter') }}</x-ui.button>@endif
+            @if(in_array($record->status, [\App\Enums\CaseStatus::AwaitingAppealWindow, \App\Enums\CaseStatus::AppealPending], true))<x-ui.button href="/cases/{{ $record->id }}/appeal" variant="secondary">{{ __('Record appeal and outcome') }}</x-ui.button>@endif
+            @if(in_array($record->status, [\App\Enums\CaseStatus::AwaitingEmployeeResponse, \App\Enums\CaseStatus::ResponseReceived, \App\Enums\CaseStatus::ResponseRefusedToSign, \App\Enums\CaseStatus::ResponseDeliveryRefused, \App\Enums\CaseStatus::ResponseScannedUploaded, \App\Enums\CaseStatus::AiIngestedResponse, \App\Enums\CaseStatus::CommitteeSessionHeld], true))<x-ui.button href="/cases/{{ $record->id }}/session" variant="secondary">{{ __('Record committee session') }}</x-ui.button>@endif
+            @if(in_array($record->status, [\App\Enums\CaseStatus::CommitteeSessionHeld, \App\Enums\CaseStatus::RecommendationsCitationCheck, \App\Enums\CaseStatus::RecommendationsAwaitingApprovals, \App\Enums\CaseStatus::RecommendationsConfirmed], true) && $record->session_majority_reached)<x-ui.button href="/cases/{{ $record->id }}/recommendations" variant="secondary">{{ __('Write recommendations') }}</x-ui.button>@endif
+            @if(in_array($record->status, [\App\Enums\CaseStatus::RecommendationsAwaitingApprovals, \App\Enums\CaseStatus::RecommendationsConfirmed], true))<x-ui.button href="/cases/{{ $record->id }}/documents/{{ $record->documents->where('document_type', \App\Enums\DocumentType::Recommendations)->last()?->id }}/confirm">{{ __('Review recommendation approvals') }}</x-ui.button>@endif
+            @if(in_array($record->status, [\App\Enums\CaseStatus::AwaitingCommitteeSignatures, \App\Enums\CaseStatus::SignedRecommendationsUploaded], true))<x-ui.button href="/cases/{{ $record->id }}/signed-scan" variant="secondary">{{ __('Recommendations and signatures scan') }}</x-ui.button>@endif
+            @if($record->status === \App\Enums\CaseStatus::Draft)<x-ui.button href="/cases/new?draft={{ $record->id }}" variant="secondary">{{ __('Edit facts') }}</x-ui.button>
 <x-ui.button variant="primary" wire:click="open" class="bg-primary text-white rounded-2xl px-5 py-2">{{ __('Open case') }}</x-ui.button>
 @endif
-            @if($record->status === \App\Enums\CaseStatus::Open)<a href="/cases/{{ $record->id }}/documents/{{ $record->documents->where('document_type', \App\Enums\DocumentType::DefenseLetter)->where('status', \App\Enums\DocumentStatus::Draft)->last()?->id ?? 'new' }}/edit" class="bg-primary text-white rounded-2xl px-5 py-3 inline-block">{{ __('Write defense request letter') }}</a>@endif
-            @if($record->status === \App\Enums\CaseStatus::DefenseLetterCitationCheck)<a href="/cases/{{ $record->id }}/documents/{{ $record->documents->where('document_type', \App\Enums\DocumentType::DefenseLetter)->last()?->id }}/edit" class="text-primary underline">{{ __('Return to editing and check citations') }}</a>@endif
-            @if($record->status === \App\Enums\CaseStatus::DefenseLetterReadyForReview)<a href="/cases/{{ $record->id }}/documents/{{ $record->documents->where('document_type', \App\Enums\DocumentType::DefenseLetter)->last()?->id }}/confirm" class="bg-primary text-white rounded-2xl px-5 py-3 inline-block">{{ __('Confirm document') }}</a>@endif
+            @if($record->status === \App\Enums\CaseStatus::Open)<x-ui.button href="/cases/{{ $record->id }}/documents/{{ $record->documents->where('document_type', \App\Enums\DocumentType::DefenseLetter)->where('status', \App\Enums\DocumentStatus::Draft)->last()?->id ?? 'new' }}/edit">{{ __('Write defense request letter') }}</x-ui.button>@endif
+            @if($record->status === \App\Enums\CaseStatus::DefenseLetterCitationCheck)<x-ui.button href="/cases/{{ $record->id }}/documents/{{ $record->documents->where('document_type', \App\Enums\DocumentType::DefenseLetter)->last()?->id }}/edit" variant="secondary">{{ __('Return to editing and check citations') }}</x-ui.button>@endif
+            @if($record->status === \App\Enums\CaseStatus::DefenseLetterReadyForReview)<x-ui.button href="/cases/{{ $record->id }}/documents/{{ $record->documents->where('document_type', \App\Enums\DocumentType::DefenseLetter)->last()?->id }}/confirm">{{ __('Confirm document') }}</x-ui.button>@endif
             @if($record->status === \App\Enums\CaseStatus::AwaitingEmployeeResponse)
                 <h3 class="font-bold mt-5 mb-2">{{ __('Record paper handoff') }}</h3>
 <div class="flex flex-wrap gap-2">
@@ -131,7 +132,7 @@
 <label class="block">{{ __('Union representative') }} <x-ui.select wire:model="decisionSignaturePresence.union" class="rounded-xl border p-2"><option value="filled">{{ __('Box filled') }}</option><option value="empty">{{ __('Box appears empty') }}</option>
 </x-ui.select>
 </label>
-<x-ui.button variant="secondary" wire:click="recordDecisionSignatures" class="text-primary underline">{{ __('Record box states') }}</x-ui.button>
+<x-ui.button variant="secondary" wire:click="recordDecisionSignatures">{{ __('Record box states') }}</x-ui.button>
 </div>
                 <h3 class="font-bold mt-5 mb-2">{{ __('Paper decision letter receipt') }}</h3>
 @foreach($signatures->where('purpose', \App\Enums\SignaturePurpose::DecisionLetterReceipt) as $receipt)<p class="text-sm text-green mb-2">{{ __('Delivery attempt recorded: :status', ['status' => ['signed' => __('Signed'), 'refused_to_sign' => __('Received and refused to sign'), 'delivery_refused' => __('Refused delivery')][$receipt->status->value] ?? '']) }} — {{ \App\Support\Format\Ui::date($receipt->created_at) }}</p>
@@ -175,7 +176,7 @@
                         <label>{{ __('Reason for text correction') }} <x-ui.textarea wire:model="responseCorrectionReason" class="block w-full rounded-xl border p-3">
 </x-ui.textarea>
 </label>
-                        <x-ui.button variant="secondary" wire:click="correctResponse" class="text-primary underline">{{ __('Correct text') }}</x-ui.button>
+                        <x-ui.button variant="secondary" wire:click="correctResponse">{{ __('Correct text') }}</x-ui.button>
                         @error('responseCorrectionReason')<p class="text-red">{{ $message }}</p>
 @enderror
                     @endif
@@ -196,7 +197,7 @@
                         <div>
 <p class="text-sm text-gray-500">{{ __('The scanned image is the original') }}</p>
 <object data="{{ route('attachments.download', $responseScanAttachment) }}?preview=1" type="{{ $responseScanAttachment->mime_type }}" class="w-full h-96 border rounded-xl">
-<a class="text-primary underline" href="{{ route('attachments.download', $responseScanAttachment) }}">{{ __('Open scan for review') }}</a>
+<a class="ui-link" href="{{ route('attachments.download', $responseScanAttachment) }}">{{ __('Open scan for review') }}</a>
 </object>
 </div>
                         <div>
@@ -229,8 +230,8 @@
 <div class="flex-1">
 <strong>{{ $documentTypes[$document->document_type->value] ?? __('Document') }} — {{ __('Version') }} {{ \App\Support\Format\Ui::number($document->version) }}</strong> @if($document->drafted_by === \App\Enums\DraftedBy::Ai)<span class="rounded-full bg-primary-light text-primary px-2 py-1 text-xs font-bold">AI</span>@endif <p class="text-sm text-gray-500">{{ $documentStatuses[$document->status->value] ?? __('Document') }} · {{ ! $document->is_locked ? __('PDF after issuance') : ($document->pdf_status === 'ready' ? __('PDF ready') : ($document->pdf_status === 'failed' ? __('Could not prepare PDF') : __('PDF preparing'))) }}</p>
 </div>
-@if($document->pdf_status === 'ready')<a href="{{ route('documents.pdf', $document) }}" class="text-primary underline">{{ __('Download PDF') }}</a>@endif @if($canManage && $document->is_locked)<input wire:model="correctionReason" placeholder="{{ __('Correction reason') }}" class="ui-control rounded-xl border p-2">
-<x-ui.button variant="secondary" wire:click="startCorrection({{ $document->id }})" class="text-primary underline">{{ __('Start correction') }}</x-ui.button>
+@if($document->pdf_status === 'ready')<x-ui.button href="{{ route('documents.pdf', $document) }}" variant="secondary">{{ __('Download PDF') }}</x-ui.button>@endif @if($canManage && $document->is_locked)<input wire:model="correctionReason" placeholder="{{ __('Correction reason') }}" class="ui-control rounded-xl border p-2">
+<x-ui.button variant="secondary" wire:click="startCorrection({{ $document->id }})">{{ __('Start correction') }}</x-ui.button>
 @endif</div>
 @empty<p class="text-gray-500">{{ __('No documents.') }}</p>
 @endforelse @error('correctionReason')<p class="text-red">{{ $message }}</p>
@@ -239,7 +240,7 @@
 <h2 class="text-lg font-black mb-4">{{ __('Attachments') }}</h2>
 @forelse($attachments as $attachment)<div class="border-t py-3 flex justify-between gap-3">
 <span>{{ $attachment->original_name }} — {{ $attachment->kind->value }}</span>
-<a href="{{ route('attachments.download', $attachment) }}" class="text-primary underline">{{ __('Download') }}</a>
+<a href="{{ route('attachments.download', $attachment) }}" class="ui-link">{{ __('Download') }}</a>
 </div>
 @empty<p class="text-gray-500">{{ __('No attachments.') }}</p>
 @endforelse</section>
@@ -256,10 +257,11 @@
                         'minutes_typed_by' => !empty($payload['minutes_typed_by_pool_member_id']) ? \App\Models\CommitteePoolMember::query()->find($payload['minutes_typed_by_pool_member_id'])?->person_name : null,
                     ];
                 @endphp
-                <li class="border-e-2 border-primary pe-4">
+                <li class="relative border-s-2 border-primary ps-4">
+                    <span class="ui-timeline-dot" aria-hidden="true"></span>
                     <strong>{{ \App\Support\Format\CaseTimeline::format($event->event_type, $payload, $context) }}</strong>
                     <p class="text-xs text-gray-500">{{ \App\Support\Format\Ui::date($event->created_at) }} · {{ $event->actorUser?->name }}</p>
-                    @if($signature?->witnessScanAttachment)<a href="{{ route('attachments.download', $signature->witnessScanAttachment) }}" class="text-primary underline text-sm">{{ __('Download paper signed by both witnesses') }}</a>@endif
+                    @if($signature?->witnessScanAttachment)<a href="{{ route('attachments.download', $signature->witnessScanAttachment) }}" class="ui-link text-sm">{{ __('Download paper signed by both witnesses') }}</a>@endif
                     @if($event->notes)<p class="text-sm">{{ $event->notes }}</p>
 @endif
                 </li>

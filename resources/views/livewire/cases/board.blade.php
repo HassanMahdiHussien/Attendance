@@ -1,6 +1,6 @@
-<div>
+<div class="min-w-0 max-w-full">
     <x-ui.page-header :title="__('Case board')" :subtitle="__('Cases that need your attention')">
-        <x-slot:actions><x-ui.button href="/cases/new"><x-ui.icon name="plus" class="h-4 w-4" />{{ __('+ Open new case') }}</x-ui.button></x-slot:actions>
+        <x-slot:actions><x-ui.button href="/cases/new"><x-ui.icon name="plus" class="h-4 w-4" />{{ __('Open new case') }}</x-ui.button></x-slot:actions>
     </x-ui.page-header>
 
     @if($urgentCount > 0)
@@ -25,7 +25,7 @@
     </x-ui.card>
 
     @if($cases->count() === 0)
-        <x-ui.card><x-ui.empty :title="__('No matching cases.')" icon="folder"><x-slot:action><x-ui.button href="/cases/new">{{ __('+ Open new case') }}</x-ui.button></x-slot:action></x-ui.empty></x-ui.card>
+        <x-ui.card><x-ui.empty :title="__('No matching cases.')" icon="folder"><x-slot:action><x-ui.button href="/cases/new">{{ __('Open new case') }}</x-ui.button></x-slot:action></x-ui.empty></x-ui.card>
     @else
         <x-ui.table>
             <thead><tr><th>{{ __('Case') }}</th><th>{{ __('Employee') }}</th><th>{{ __('Progress') }}</th><th>{{ __('Status') }}</th></tr></thead>

@@ -28,9 +28,14 @@ test('shared controls keep Livewire attributes on their actual elements', functi
 });
 
 test('badge tones, responsive table labels, and nested field errors render', function (): void {
+    expect(Blade::render('<x-ui.field label="Reference" error="reference"><x-ui.input wire:model="reference" /></x-ui.field>'))
+        ->toContain('wire:model="reference"');
+
     $errors = new ViewErrorBag;
     $errors->put('default', new MessageBag(['presence.7' => 'Choose a state']));
-    $html = Blade::render('<x-ui.badge tone="red">Urgent</x-ui.badge><x-ui.table><tbody><tr><x-ui.td label="Case">42</x-ui.td></tr></tbody></x-ui.table><x-ui.field label="Presence" error="presence.7"><x-ui.select wire:model="presence.7"></x-ui.select></x-ui.field>', ['errors' => $errors]);
+    // Pages receive the error bag as shared view data; components read it from there.
+    view()->share('errors', $errors);
+    $html = Blade::render('<x-ui.badge tone="red">Urgent</x-ui.badge><x-ui.table><tbody><tr><x-ui.td label="Case">42</x-ui.td></tr></tbody></x-ui.table><x-ui.field label="Presence" error="presence.7"><x-ui.select wire:model="presence.7"></x-ui.select></x-ui.field>');
 
     expect($html)->toContain('ui-badge-red', 'data-label="Case"', 'wire:model="presence.7"', 'Choose a state');
     expect(Tone::deadline(1))->toBe('red')

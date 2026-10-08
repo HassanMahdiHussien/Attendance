@@ -11,7 +11,7 @@
 </head>
 <body class="min-h-screen bg-bg font-tajawal text-ink">
     @php($nav = \App\Support\Access\Nav::items(auth()->user()))
-    <div class="flex min-h-screen">
+    <div class="flex min-h-screen w-full max-w-full overflow-x-clip">
         <aside class="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-e border-[#EEF0F4] bg-white p-4 lg:flex" aria-label="{{ __('Main navigation') }}">
             <a href="{{ \App\Support\Access\Landing::for(auth()->user()) }}" class="mb-6 flex items-center gap-2 rounded-xl px-2 pt-1 focus-visible:outline-2 focus-visible:outline-primary">
                 <span class="grid h-9 w-9 place-items-center rounded-xl bg-primary font-extrabold text-white" aria-hidden="true">D</span>
@@ -39,7 +39,7 @@
                 </div>
             </div>
         </aside>
-        <div class="min-w-0 flex-1">
+        <div class="min-w-0 max-w-full flex-1">
             <header class="sticky top-0 z-30 flex min-h-14 items-center justify-between gap-3 border-b border-[#EEF0F4] bg-bg/95 px-4 backdrop-blur sm:px-8">
                 <a href="{{ \App\Support\Access\Landing::for(auth()->user()) }}" class="flex items-center gap-2 font-extrabold lg:hidden"><span class="grid h-7 w-7 place-items-center rounded-lg bg-primary text-sm text-white" aria-hidden="true">D</span>{{ __('Displanery') }}</a>
                 <span class="hidden text-sm font-bold text-gray-600 lg:block">{{ auth()->user()->company?->name ?? auth()->user()->name }}</span>

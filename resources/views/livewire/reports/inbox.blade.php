@@ -1,36 +1,48 @@
-<div><h1 class="text-2xl font-black mb-6">{{ __('Reports inbox') }}</h1><div class="space-y-4">
-@forelse($items as $item)
-@if($item['type'] === 'email')
-@php($email = $item['model'])
-<section wire:key="email-{{ $email->id }}" class="bg-white rounded-2xl p-5 shadow-sm">
-    <div class="flex flex-wrap justify-between gap-2"><div><span class="inline-block rounded-full bg-primary-light text-primary text-xs font-bold px-3 py-1">{{ __('Forwarded email') }}</span><h2 class="font-bold mt-2">{{ $email->subject }}</h2></div><span class="text-sm text-gray-500">{{ $email->sender?->name }} · {{ $email->sender?->email }} · {{ \App\Support\Format\Ui::date($email->received_at, 'Y-m-d H:i') }}</span></div>
-    <p class="text-sm text-gray-600 my-3 whitespace-pre-line">{{ $email->body_text }}</p>
-    @if($email->body_truncated)<p class="text-xs text-gray-500">{{ __('The email body was shortened.') }}</p>@endif
-    @foreach($email->attachments as $attachment)<a class="text-sm text-primary underline me-3" href="/attachments/{{ $attachment->id }}">{{ $attachment->original_name }}</a>@endforeach
-    @foreach($email->excluded_attachments ?? [] as $name)<p class="text-xs text-gray-500">{{ __('Excluded attachment: :name', ['name' => $name]) }}</p>@endforeach
-    <div class="flex flex-wrap gap-3 items-end mt-4">
-        <button wire:click="convertEmail({{ $email->id }})" class="bg-primary text-white px-4 py-2 rounded-2xl shadow-lg shadow-indigo-200 text-sm font-bold">{{ __('Create case') }}</button>
-        <label class="text-xs">{{ __('Link to an existing case') }}<select wire:model="emailCaseIds.{{ $email->id }}" class="block border border-gray-200 rounded-xl p-2 mt-1"><option value="">{{ __('New case') }}</option>@foreach(\App\Support\Access\CaseVisibility::for(auth()->user())->latest()->get() as $case)<option value="{{ $case->id }}">{{ \App\Support\Format\Ui::number($case->case_number) }}</option>@endforeach</select></label>
-        <button wire:click="linkEmail({{ $email->id }})" class="text-primary text-sm font-bold px-3 py-2 rounded-xl border border-primary">{{ __('Link to case') }}</button>
-        <label class="text-xs">{{ __('Dismissal reason') }}<input wire:model="emailReasons.{{ $email->id }}" class="block border border-gray-200 rounded-xl p-2 mt-1"></label>
-        <button wire:click="dismissEmail({{ $email->id }})" class="text-red text-sm font-bold px-3 py-2 rounded-xl border border-red-light">{{ __('Dismiss') }}</button>
+<div class="space-y-5">
+    <x-ui.page-header :title="__('Reports inbox')" />
+    <div class="space-y-4">
+        @forelse($items as $item)
+            @if($item['type'] === 'email')
+                @php($email = $item['model'])
+                <x-ui.card wire:key="email-{{ $email->id }}" class="space-y-4">
+                    <div class="flex flex-wrap items-start justify-between gap-2">
+                        <div><x-ui.badge tone="indigo">{{ __('Forwarded email') }}</x-ui.badge><h2 dir="auto" class="mt-2 font-bold text-ink">{{ $email->subject }}</h2></div>
+                        <span class="text-sm text-gray-500">{{ $email->sender?->name }} · {{ $email->sender?->email }} · {{ \App\Support\Format\Ui::date($email->received_at, 'Y-m-d H:i') }}</span>
+                    </div>
+                    <p dir="auto" class="whitespace-pre-line text-sm text-gray-600">{{ $email->body_text }}</p>
+                    @if($email->body_truncated)<p class="text-xs text-gray-500">{{ __('The email body was shortened.') }}</p>@endif
+                    <div class="flex flex-wrap gap-3">@foreach($email->attachments as $attachment)<a class="ui-link text-sm" href="/attachments/{{ $attachment->id }}">{{ $attachment->original_name }}</a>@endforeach</div>
+                    @foreach($email->excluded_attachments ?? [] as $name)<p class="text-xs text-gray-500">{{ __('Excluded attachment: :name', ['name' => $name]) }}</p>@endforeach
+                    <div class="flex flex-wrap items-end gap-3">
+                        <x-ui.button wire:click="convertEmail({{ $email->id }})">{{ __('Create case') }}</x-ui.button>
+                        <x-ui.field :label="__('Link to an existing case')" for="email-case-{{ $email->id }}" class="min-w-44">
+                            <select id="email-case-{{ $email->id }}" wire:model="emailCaseIds.{{ $email->id }}" class="ui-control"><option value="">{{ __('New case') }}</option>@foreach(\App\Support\Access\CaseVisibility::for(auth()->user())->latest()->get() as $case)<option value="{{ $case->id }}">{{ \App\Support\Format\Ui::number($case->case_number) }}</option>@endforeach</select>
+                        </x-ui.field>
+                        <x-ui.button variant="secondary" wire:click="linkEmail({{ $email->id }})">{{ __('Link to case') }}</x-ui.button>
+                        <x-ui.field :label="__('Dismissal reason')" for="email-reason-{{ $email->id }}"><x-ui.input id="email-reason-{{ $email->id }}" wire:model="emailReasons.{{ $email->id }}" /></x-ui.field>
+                        <x-ui.button variant="secondary" wire:click="dismissEmail({{ $email->id }})">{{ __('Dismiss') }}</x-ui.button>
+                    </div>
+                    @error('emailReasons.'.$email->id)<p class="text-sm text-red-700" role="alert">{{ $message }}</p>@enderror
+                </x-ui.card>
+            @else
+                @php($report = $item['model'])
+                <x-ui.card wire:key="report-{{ $report->id }}" class="space-y-4">
+                    <div class="flex flex-wrap justify-between gap-2"><h2 class="font-bold text-ink">{{ $report->violation_type }}</h2><span class="text-sm text-gray-500">{{ $report->reporter?->name }}</span></div>
+                    <p dir="auto" class="text-sm text-gray-600">{{ $report->description }}</p>
+                    <div class="flex flex-wrap gap-3">@foreach($report->attachments as $attachment)<a class="ui-link text-sm" href="/attachments/{{ $attachment->id }}">{{ $attachment->original_name }}</a>@endforeach</div>
+                    <div class="flex flex-wrap items-end gap-3">
+                        <x-ui.button wire:click="convert({{ $report->id }})">{{ __('Convert to case') }}</x-ui.button>
+                        <x-ui.field :label="__('Link to a duplicate case')" for="report-case-{{ $report->id }}" class="min-w-44">
+                            <select id="report-case-{{ $report->id }}" wire:model="existingCaseIds.{{ $report->id }}" class="ui-control"><option value="">{{ __('New case') }}</option>@foreach($insights->duplicateCandidates($report)['cases'] as $case)@if(\App\Support\Access\CaseVisibility::for(auth()->user())->whereKey($case->id)->exists())<option value="{{ $case->id }}">{{ \App\Support\Format\Ui::number($case->case_number) }}</option>@endif@endforeach</select>
+                        </x-ui.field>
+                        <x-ui.field :label="__('Dismissal reason')" for="report-reason-{{ $report->id }}"><x-ui.input id="report-reason-{{ $report->id }}" wire:model="reasons.{{ $report->id }}" /></x-ui.field>
+                        <x-ui.button variant="secondary" wire:click="dismiss({{ $report->id }})">{{ __('Dismiss') }}</x-ui.button>
+                    </div>
+                    @error('reasons.'.$report->id)<p class="text-sm text-red-700" role="alert">{{ $message }}</p>@enderror
+                </x-ui.card>
+            @endif
+        @empty
+            <x-ui.card><x-ui.empty :title="__('No new reports.')" /></x-ui.card>
+        @endforelse
     </div>
-    @error('emailReasons.'.$email->id)<p class="text-red text-sm mt-2">{{ $message }}</p>@enderror
-</section>
-@else
-@php($report = $item['model'])
-<section wire:key="report-{{ $report->id }}" class="bg-white rounded-2xl p-5 shadow-sm">
-    <div class="flex justify-between"><h2 class="font-bold">{{ $report->violation_type }}</h2><span class="text-sm text-gray-500">{{ $report->reporter?->name }}</span></div>
-    <p class="text-sm text-gray-600 my-3">{{ $report->description }}</p>
-    @foreach($report->attachments as $attachment)<a class="text-sm text-primary underline me-3" href="/attachments/{{ $attachment->id }}">{{ $attachment->original_name }}</a>@endforeach
-    <div class="flex flex-wrap gap-3 items-end">
-        <button wire:click="convert({{ $report->id }})" class="bg-primary text-white px-4 py-2 rounded-2xl shadow-lg shadow-indigo-200 text-sm font-bold">{{ __('Convert to case') }}</button>
-        <label class="text-xs">{{ __('Link to a duplicate case') }}<select wire:model="existingCaseIds.{{ $report->id }}" class="block border border-gray-200 rounded-xl p-2 mt-1"><option value="">{{ __('New case') }}</option>@foreach($insights->duplicateCandidates($report)['cases'] as $case)@if(\App\Support\Access\CaseVisibility::for(auth()->user())->whereKey($case->id)->exists())<option value="{{ $case->id }}">{{ \App\Support\Format\Ui::number($case->case_number) }}</option>@endif@endforeach</select></label>
-        <label class="text-xs">{{ __('Dismissal reason') }}<input wire:model="reasons.{{ $report->id }}" class="block border border-gray-200 rounded-xl p-2 mt-1"></label>
-        <button wire:click="dismiss({{ $report->id }})" class="text-red text-sm font-bold px-3 py-2 rounded-xl border border-red-light">{{ __('Dismiss') }}</button>
-    </div>
-    @error('reasons.'.$report->id)<p class="text-red text-sm mt-2">{{ $message }}</p>@enderror
-</section>
-@endif
-@empty<p class="bg-white rounded-2xl p-8 text-center text-gray-500">{{ __('No new reports.') }}</p>@endforelse
-</div></div>
+</div>

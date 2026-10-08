@@ -15,7 +15,7 @@
                 <x-ui.field :label="__('Person responsible for follow-up')" for="assigned-hr"><x-ui.select id="assigned-hr" wire:model="assignedHrUserId"><option value="">{{ __('Me') }}</option>@foreach($hrUsers as $hr)<option value="{{ $hr->id }}">{{ $hr->name }}</option>@endforeach</x-ui.select></x-ui.field>
                 <x-ui.field :label="__('Witnesses, separated by commas')" for="witnesses"><x-ui.input id="witnesses" wire:model="witnessNames" /></x-ui.field>
             </div>
-            <x-ui.field :label="__('Incident description')" for="description"><x-ui.textarea id="description" wire:model="description" rows="5" /></x-ui.field>
+            <x-ui.field :label="__('Incident description')" for="description"><x-ui.textarea id="description" wire:model="description" rows="5" dir="auto" /></x-ui.field>
             <label class="flex items-start gap-2 text-sm"><input type="checkbox" wire:model="includePriorRecord" class="mt-1">{{ __('Include prior record in the defense letter') }}</label>
             <div class="flex flex-wrap gap-3"><x-ui.button variant="secondary" wire:click="save">{{ __('Save draft') }}</x-ui.button><x-ui.button wire:click="checkDuplicates">{{ __('Check for duplicates') }}</x-ui.button></div>
             @if($checkedDuplicates)
@@ -32,9 +32,9 @@
     @if($email)
         <x-ui.card class="self-start" aria-label="{{ __('Forwarded email') }}">
             <x-ui.badge tone="indigo">{{ __('Forwarded email') }}</x-ui.badge>
-            <h2 class="mt-4 font-bold">{{ $email->subject }}</h2>
+            <h2 dir="auto" class="mt-4 font-bold">{{ $email->subject }}</h2>
             <p class="mt-1 text-sm text-gray-500">{{ $email->sender?->name }} · {{ $email->sender?->email }} · {{ \App\Support\Format\Ui::date($email->received_at, 'Y-m-d H:i') }}</p>
-            <p class="my-4 whitespace-pre-line text-sm text-gray-700">{{ $email->body_text }}</p>
+            <p dir="auto" class="my-4 whitespace-pre-line text-sm text-gray-700">{{ $email->body_text }}</p>
             @foreach($email->attachments as $attachment)<p><a class="ui-link text-sm" href="/attachments/{{ $attachment->id }}">{{ $attachment->original_name }}</a></p>@endforeach
         </x-ui.card>
     @endif

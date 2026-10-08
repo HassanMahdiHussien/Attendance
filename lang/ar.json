@@ -136,7 +136,7 @@
     "Write findings and recommendations in every enabled language. Arabic is authoritative.": "اكتب النتائج والتوصيات بكل لغة مفعلة. العربية هي النص المعتمد.",
     "Write the reasons for the committee’s decision. The outcome and penalty are printed from the case record.": "اكتب أسباب القرار الذي اتخذته اللجنة. تُطبع النتيجة ونوع العقوبة من سجل الحالة.",
     "You can use Markdown headings, lists, and emphasis.": "يمكن استخدام العناوين والقوائم والتأكيد بصيغة Markdown.",
-    "+ Open new case": "+ فتح حالة جديدة",
+    "Open new case": "فتح حالة جديدة",
     ":count cases approach the 15-day legal deadline": ":count حالات قاربت مهلة الـ١٥ يوم القانونية",
     ":days days remaining": "باقي :days أيام",
     "A decision is needed soon": "يلزم اتخاذ قرار قريباً",
