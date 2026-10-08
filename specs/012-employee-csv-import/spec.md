@@ -18,6 +18,8 @@ auto-generate EMP-0001…; never leave it blank."
   saved until the whole file is valid.
 - Q: Existing employee number? → A: Update that employee (product owner): the row's fields replace the stored ones and
   the preview marks it "سيُحدَّث".
+- Q: Branch move for an employee with an open case / inactive employee number? → A: Both allowed and shown in the
+  preview (open case stays in its branch; inactive stays inactive) — plan R6 B3.
 - Q: Extra columns? → A: `gender` (optional: male/female, ذكر/أنثى) because documents cannot be issued for an employee
   with unspecified gender (feature 004); the general-manager flag is never set by import.
 

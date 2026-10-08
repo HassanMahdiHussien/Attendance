@@ -51,3 +51,37 @@ routes (template download) · tests/Feature/Employees/EmployeeImportTest.php · 
 ## Delegation
 Codex plan review → run U (all tasks) → orchestrator gates, browser walkthrough with a UTF-8 and a Windows-1256 file,
 PR.
+
+## R6 Plan review resolutions (Codex review, 2026-10-08) — override R1–R5 where they differ
+- **A1 Authorisation**: a dedicated gate `importEmployees` (company admin of the tenant, or Platform Admin within the
+  selected tenant); HR staff, reporters, other tenants refused at page access, preview, confirm and template download.
+  `EmployeePolicy` create/update is not used for this.
+- **A2 Confirm in one locked transaction**: confirm opens a transaction, locks the company row (`SELECT … FOR UPDATE`
+  as the import mutex) and the matching employee rows, re-runs validation inside it, writes, and commits; any
+  validation change or unique-constraint violation rolls everything back and returns a refreshed preview with errors.
+  Generated codes come from `SequenceService` inside the same transaction and skip codes already present (also
+  manually entered `EMP-####`).
+- **A3 Audit without personal values**: one `employees.imported` entry with actor, company, file sha256 (no file
+  name), counts and, per updated employee, the record id and the changed field names only. Ordinary model updates still
+  emit the existing employee audit entries exactly as a manual edit does (unchanged system behaviour; changing the
+  audit design is out of scope).
+- **B1 Structural CSV detection**: try `,` and `;` with `fgetcsv` quoting rules on the first record; choose the one that
+  maps all required headers unambiguously; CRLF/LF handled by `fgetcsv`; malformed quoting → file error. UTF-8
+  validated with `mb_check_encoding`; otherwise converted from Windows-1256 with `iconv('CP1256', 'UTF-8//IGNORE')`
+  refused if the result is still invalid (the container has iconv CP1256; mbstring does not list it). Duplicate header
+  aliases (e.g. both "name" and "الاسم") → file error; unknown columns ignored and listed as a notice; empty headers
+  ignored.
+- **B2 Matching**: branch by normalised name (trim, collapsed spaces, lower-case); if two branches of the company
+  normalise to the same name → row error "اسم الفرع غير مميز". Employee numbers compared trimmed and
+  case-insensitively (as the MySQL collation does), both within the file and against the database.
+- **B3 Update effects**: `is_active` and `is_general_manager` are never changed by an import; an inactive employee
+  number updates the record and leaves it inactive (preview "سيُحدَّث (غير نشط)"); a branch change is highlighted in
+  the diff, with a warning when the employee has an open case ("الحالة المفتوحة تبقى في فرعها") or a linked user
+  ("صلاحيات المستخدم المرتبط لا تتغير").
+- **B4 Confirm bound to the preview**: the preview stores the uploaded file's sha256; confirm recomputes it and requires
+  the same file (else "أعد المعاينة"); authorisation and tenant re-checked at confirm.
+- **B5 Filament flow tests**: direct page access / preview / confirm denied to HR staff, another tenant, reporters;
+  a replaced upload cannot be confirmed; errors stay visible after a failed confirm.
+- **Nits**: the template has headers only (instructions and an example are shown on the page, not in the file);
+  formula-looking text is only stored as text here — spreadsheet exports already write text cells (011); timing
+  targets are measured manually.

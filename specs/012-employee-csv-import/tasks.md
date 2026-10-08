@@ -3,6 +3,8 @@
 **Tests**: REQUIRED (Pest + Livewire/Filament). Gates (as sail): `docker compose exec -T -u sail laravel.test php artisan
 test` · `… ./vendor/bin/pint --test`. Never run two test processes at once.
 
+plan.md R6 (plan review resolutions) overrides earlier sections.
+
 ## Run U
 - [ ] T001 CsvReader (encoding + delimiter detection, header mapping Arabic/English, limits) (R1)
 - [ ] T002 EmployeeImport::preview + ImportPreview (validation, branch resolution, dates, gender, in-file duplicates, update diffs) (R2)
