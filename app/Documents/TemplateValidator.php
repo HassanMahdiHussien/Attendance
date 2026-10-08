@@ -18,7 +18,7 @@ class TemplateValidator
     {
         foreach (self::REQUIRED[$type] ?? [] as $key) {
             if (blank($blocks[$key] ?? null)) {
-                throw ValidationException::withMessages([$key => "Required template block: {$key}."]);
+                throw ValidationException::withMessages([$key => "يلزم إدخال قسم القالب: {$key}."]);
             }
         }
         $requiredTokens = ['salutation' => ['employee_first_name'], 'opening' => ['hire_date', 'position'],
@@ -26,23 +26,23 @@ class TemplateValidator
             'decision_sentence' => ['penalty'], 'outcome_sentence' => ['outcome'], 'gm_title' => ['gm_name'], 'union_title' => ['union_rep_name']];
         foreach ($blocks as $key => $block) {
             if (! is_string($block)) {
-                throw ValidationException::withMessages([$key => 'Template block must be text.']);
+                throw ValidationException::withMessages([$key => 'يجب أن يكون قسم القالب نصاً.']);
             }
             $withoutGender = preg_replace_callback('/\{m:([^{}|]+)\|f:([^{}|]+)\}/u', fn () => '', $block);
             preg_match_all('/\{([^{}]+)\}/u', $withoutGender, $matches);
             foreach ($matches[1] as $token) {
                 if (! in_array($token, self::PLACEHOLDERS, true)) {
-                    throw ValidationException::withMessages([$key => "Unknown placeholder {$token}. Valid: ".implode(', ', self::PLACEHOLDERS)]);
+                    throw ValidationException::withMessages([$key => "خانة القالب {$token} غير معروفة. الخانات المتاحة: ".implode(', ', self::PLACEHOLDERS)]);
                 }
             }
             // Known placeholders were validated above; anything brace-like left after removing them is malformed.
             $leftover = preg_replace('/\{[^{}]+\}/u', '', $withoutGender);
             if (str_contains($leftover, '{') || str_contains($leftover, '}')) {
-                throw ValidationException::withMessages([$key => 'Unbalanced or malformed placeholder.']);
+                throw ValidationException::withMessages([$key => 'صيغة خانة القالب غير صحيحة أو الأقواس غير متطابقة.']);
             }
             foreach ($requiredTokens[$key] ?? [] as $token) {
                 if (! str_contains($block, '{'.$token.'}')) {
-                    throw ValidationException::withMessages([$key => 'Required placeholder {'.$token.'} is missing.']);
+                    throw ValidationException::withMessages([$key => 'خانة القالب المطلوبة {'.$token.'} غير موجودة.']);
                 }
             }
         }
@@ -52,14 +52,14 @@ class TemplateValidator
     {
         foreach (array_keys($options) as $key) {
             if (! in_array($key, ['show_footer', 'header_mode'], true)) {
-                throw ValidationException::withMessages([$key => "Unknown template option {$key}."]);
+                throw ValidationException::withMessages([$key => "خيار القالب {$key} غير معروف."]);
             }
         }
         if (isset($options['show_footer']) && ! is_bool($options['show_footer'])) {
-            throw ValidationException::withMessages(['show_footer' => 'Footer option must be true or false.']);
+            throw ValidationException::withMessages(['show_footer' => 'يجب تحديد خيار التذييل بنعم أو لا.']);
         }
         if (isset($options['header_mode']) && ! in_array($options['header_mode'], ['logo_text', 'image'], true)) {
-            throw ValidationException::withMessages(['header_mode' => 'Header mode must be logo_text or image.']);
+            throw ValidationException::withMessages(['header_mode' => 'يجب أن يكون وضع الترويسة logo_text أو image.']);
         }
     }
 }

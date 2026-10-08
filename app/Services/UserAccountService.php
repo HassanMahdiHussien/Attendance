@@ -84,7 +84,7 @@ class UserAccountService
         $role = $user->primary_role;
         $allowed = $this->allowedAddons($role);
         if (array_diff($names, $allowed)) {
-            throw ValidationException::withMessages(['addons' => 'Invalid add-on for this role.']);
+            throw ValidationException::withMessages(['addons' => 'الإضافة غير متاحة لهذا الدور.']);
         }
         $before = $user->getPermissionNames()->all();
         $user->syncPermissions($names);
@@ -97,11 +97,11 @@ class UserAccountService
     {
         abort_unless($actor->can('update', $user), 403);
         if (! in_array($user->primary_role, [UserRole::Reporter, UserRole::DeptManager], true) && $branchIds !== []) {
-            throw ValidationException::withMessages(['branches' => 'Branch scope is unavailable for this role.']);
+            throw ValidationException::withMessages(['branches' => 'نطاق الفروع غير متاح لهذا الدور.']);
         }
         foreach ($branchIds as $id) {
             if (! DB::table('branches')->where('id', $id)->where('company_id', $user->company_id)->exists()) {
-                throw ValidationException::withMessages(['branches' => 'Branch belongs to another company.']);
+                throw ValidationException::withMessages(['branches' => 'الفرع يتبع شركة أخرى.']);
             }
         }
         DB::transaction(function () use ($user, $branchIds, $actor): void {
@@ -124,7 +124,7 @@ class UserAccountService
     {
         if ($user->primary_role === UserRole::CompanyAdmin && $user->is_active && ! User::inCompany($user->company_id)
             ->where('primary_role', UserRole::CompanyAdmin->value)->where('is_active', true)->whereKeyNot($user->id)->exists()) {
-            throw ValidationException::withMessages(['primary_role' => 'The last active company admin cannot be removed.']);
+            throw ValidationException::withMessages(['primary_role' => 'لا يمكن إزالة آخر مسؤول شركة نشط.']);
         }
     }
 

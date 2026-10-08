@@ -27,7 +27,7 @@ class CaseClosure
                 || $case->outcome !== Outcome::RecommendationOnly
                 || ($case->legal_review_requested_at && ! $case->legal_review_completed_at && ! $case->legal_review_cancelled_at)
                 || ! $case->documents()->where('document_type', DocumentType::Recommendations->value)->where('is_locked', true)->exists()) {
-                throw new TransitionBlocked('Signed recommendations and completed consultation are required to close without penalty.');
+                throw new TransitionBlocked('يلزم توقيع التوصيات وإكمال الاستشارة لإغلاق الحالة دون عقوبة.');
             }
 
             return $this->workflow->transition($case, CaseStatus::ArchivedFinal, $hr, 'Closed without penalty');

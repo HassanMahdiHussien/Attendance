@@ -31,7 +31,7 @@ class CaseWorkflow
         return DB::transaction(function () use ($case, $to, $actor, $reason, $payload): DisciplinaryCase {
             $locked = DisciplinaryCase::query()->lockForUpdate()->findOrFail($case->id);
             if ($actor !== null && ! CaseVisibility::for($actor)->whereKey($locked->id)->exists()) {
-                throw new TransitionBlocked('Actor cannot access this case.');
+                throw new TransitionBlocked('لا تملك صلاحية الوصول إلى هذه الحالة.');
             }
             if (! CaseTransitions::allows($locked->status, $to)) {
                 throw new IllegalTransition("{$locked->status->value} cannot move to {$to->value}.");
@@ -67,19 +67,19 @@ class CaseWorkflow
         if ($to === S::Open) {
             foreach (['employee_id', 'branch_id', 'violation_type', 'violation_time'] as $field) {
                 if (blank($case->{$field})) {
-                    throw new TransitionBlocked("Missing {$field}.");
+                    throw new TransitionBlocked("الحقل {$field} مطلوب.");
                 }
             }
             if ($case->location_id === null && blank($case->violation_place_freetext)) {
-                throw new TransitionBlocked('A violation location is required.');
+                throw new TransitionBlocked('يلزم تحديد مكان المخالفة.');
             }
             if ($case->law_version_id === null) {
-                throw new TransitionBlocked('An applicable labor law is required.');
+                throw new TransitionBlocked('يلزم تحديد قانون العمل المعمول به.');
             }
         }
         if ($case->status === S::Open && $to === S::DefenseLetterCitationCheck
             && ! $case->documents()->where('document_type', DocumentType::DefenseLetter->value)->where('is_locked', false)->exists()) {
-            throw new TransitionBlocked('A defense-letter draft is required.');
+            throw new TransitionBlocked('يلزم إعداد مسودة كتاب الدفاع.');
         }
         if (in_array($to, [S::DefenseLetterReadyForReview, S::RecommendationsAwaitingApprovals, S::DecisionLetterReadyForReview], true)) {
             $type = match ($to) {
@@ -90,7 +90,7 @@ class CaseWorkflow
             $draft = $case->documents()->where('document_type', $type->value)
                 ->whereIn('status', ['draft', 'ready_for_review'])->orderByDesc('version')->first();
             if (! $draft) {
-                throw new TransitionBlocked('A current document draft is required for citation review.');
+                throw new TransitionBlocked('يلزم وجود مسودة حالية لفحص الاستشهادات.');
             }
             try {
                 app(CitationGate::class)->assertIssuable($draft);
@@ -100,12 +100,12 @@ class CaseWorkflow
         }
         if (in_array($to, [S::AiDraftingRecommendations, S::RecommendationsCitationCheck], true)
             && $case->status === S::CommitteeSessionHeld && ! $case->session_majority_reached) {
-            throw new TransitionBlocked('Committee majority is required.');
+            throw new TransitionBlocked('يلزم تحقق أغلبية اللجنة.');
         }
         if ($to === S::RecommendationsConfirmed && $case->documents()->where('document_type', DocumentType::Recommendations->value)
             ->whereIn('status', ['draft', 'ready_for_review'])->orderByDesc('version')->first()?->approvals()
             ->where('decision', 'approved')->whereNull('invalidated_at')->distinct()->count('role_category') !== 3) {
-            throw new TransitionBlocked('Three approval categories are required.');
+            throw new TransitionBlocked('يلزم اعتماد فئات الموافقة الثلاث.');
         }
         $issuanceTypes = [
             S::DefenseLetterIssued->value => DocumentType::DefenseLetter->value,
@@ -114,33 +114,33 @@ class CaseWorkflow
         ];
         if (isset($issuanceTypes[$to->value]) && ! $case->documents()
             ->where('document_type', $issuanceTypes[$to->value])->where('version', 1)->where('status', 'issued')->exists()) {
-            throw new TransitionBlocked('The corresponding document must be issued first.');
+            throw new TransitionBlocked('يلزم إصدار المستند المعني أولاً.');
         }
         if ($to === S::CommitteeSessionHeld && $case->status === S::AwaitingEmployeeResponse) {
             $due = app(Deadlines::class)->responseDue($case);
             if ($due === null || now('Asia/Baghdad')->startOfDay()->lte($due)) {
-                throw new TransitionBlocked('The response deadline has not passed.');
+                throw new TransitionBlocked('لم تنقضِ مهلة الرد.');
             }
         }
         if ($to === S::AwaitingExternalLegalConsultation && ($case->legal_review_requested_at === null || $case->legal_review_completed_at !== null)) {
-            throw new TransitionBlocked('No consultation is pending.');
+            throw new TransitionBlocked('لا توجد استشارة قيد الانتظار.');
         }
         if ($to === S::DecisionLetterReadyForReview && $case->legal_review_requested_at !== null && $case->legal_review_completed_at === null) {
-            throw new TransitionBlocked('Consultation is pending.');
+            throw new TransitionBlocked('الاستشارة قيد الانتظار.');
         }
         if ($to === S::ArchivedFinal && in_array($case->status, [S::SignedRecommendationsUploaded, S::AiVerifyAndClose], true)
             && $case->outcome?->value !== 'recommendation_only') {
-            throw new TransitionBlocked('Only a recommendation without penalty can close here.');
+            throw new TransitionBlocked('لا يمكن الإغلاق هنا إلا بتوصية دون عقوبة.');
         }
         if ($to === S::ArchivedFinal && in_array($case->status, [S::SignedRecommendationsUploaded, S::AiVerifyAndClose], true)
             && $case->legal_review_requested_at !== null && $case->legal_review_completed_at === null
             && $case->legal_review_cancelled_at === null) {
-            throw new TransitionBlocked('The requested consultation must be completed or cancelled before closure.');
+            throw new TransitionBlocked('يلزم إكمال الاستشارة المطلوبة أو إلغاؤها قبل الإغلاق.');
         }
         if ($to === S::ArchivedFinal && $case->status === S::AwaitingAppealWindow) {
             $end = app(Deadlines::class)->appealEnd($case);
             if ($end === null || now('Asia/Baghdad')->toDateString() <= $end->toDateString()) {
-                throw new TransitionBlocked('Appeal window has not ended.');
+                throw new TransitionBlocked('لم تنتهِ مهلة الطعن.');
             }
         }
     }

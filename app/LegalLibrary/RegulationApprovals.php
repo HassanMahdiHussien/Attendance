@@ -20,7 +20,7 @@ class RegulationApprovals
         if ($unit->law->kind->value !== 'internal_regulation'
             || ! in_array($unit->status->value, ['verified_auto', 'verified_human', 'verified_text'], true)
             || $unit->superseded_by_id !== null) {
-            throw ValidationException::withMessages(['unit' => 'This regulation unit cannot be approved.']);
+            throw ValidationException::withMessages(['unit' => 'لا يمكن اعتماد هذه المادة من النظام الداخلي.']);
         }
 
         return DB::transaction(function () use ($unit, $actor): LegalUnitApproval {

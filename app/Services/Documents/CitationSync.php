@@ -30,7 +30,7 @@ class CitationSync
     public function sync(Document $document): void
     {
         if ($document->is_locked) {
-            throw new IssuanceBlocked('Locked document citations cannot be changed.');
+            throw new IssuanceBlocked('لا يمكن تغيير استشهادات مستند مقفل.');
         }
         $arabic = $document->contents()->where('language_code', 'ar')->first()?->body ?? '';
         if ($document->document_type->value === 'recommendations') {
@@ -39,7 +39,7 @@ class CitationSync
         $claims = collect(self::claims($arabic))->unique(fn (array $claim) => $claim['legal_unit_id'].':'.$claim['claim_hash']);
         $ids = $claims->pluck('legal_unit_id')->unique()->all();
         if ($ids && LegalUnit::query()->citableFor($document->disciplinaryCase)->whereKey($ids)->count() !== count($ids)) {
-            throw new IssuanceBlocked('A cited unit is not citable for this case.');
+            throw new IssuanceBlocked('المادة المستشهد بها غير صالحة لهذه الحالة.');
         }
         $keys = $claims->map(fn (array $claim) => $claim['legal_unit_id'].':'.$claim['claim_hash'])->all();
         foreach ($document->citations()->get() as $citation) {

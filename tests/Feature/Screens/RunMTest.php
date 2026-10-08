@@ -1,6 +1,7 @@
 <?php
 
 use App\Documents\DocumentRenderer;
+use App\Enums\AttachmentKind;
 use App\Enums\CaseStatus;
 use App\Enums\DefenseAcceptance;
 use App\Enums\DocumentType;
@@ -160,9 +161,15 @@ test('the service penalty path waits for consultation, records refused receipt a
         app(CaseDocumentIssuance::class)->issue($decision, $hr);
         $case = $case->fresh();
         app(SignaturePresence::class)->recordDecisionSignatures($decision, ['general_manager' => 'filled', 'union' => 'empty'], $hr);
-        app(HandOffService::class)->record($case, SignaturePurpose::DecisionLetterReceipt, SignatureStatus::DeliveryRefused,
+        expect(fn () => app(HandOffService::class)->record($case, SignaturePurpose::DecisionLetterReceipt,
+            SignatureStatus::DeliveryRefused, ['witness_1_name' => 'First witness', 'witness_2_name' => 'Second witness',
+                'attempted_at' => now(), 'attempt_location' => 'Gate', 'attempted_by_name' => 'HR'], $hr))
+            ->toThrow(TransitionBlocked::class);
+        $receipt = app(HandOffService::class)->record($case, SignaturePurpose::DecisionLetterReceipt, SignatureStatus::DeliveryRefused,
             ['witness_1_name' => 'First witness', 'witness_2_name' => 'Second witness',
-                'attempted_at' => now(), 'attempt_location' => 'Gate', 'attempted_by_name' => 'HR'], $hr);
+                'attempted_at' => now(), 'attempt_location' => 'Gate', 'attempted_by_name' => 'HR',
+                'witness_scan' => UploadedFile::fake()->createWithContent('witnesses.pdf', "%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF")], $hr);
+        expect($receipt->witnessScanAttachment->kind)->toBe(AttachmentKind::DeliveryProof);
         app(AppealService::class)->logFiled($case, $hr, '2026-06-20');
         app(AppealService::class)->logOutcome($case, $hr, 'Court decision recorded');
         expect($case->fresh()->status)->toBe(CaseStatus::ArchivedFinal);

@@ -16,7 +16,7 @@ class MismatchResolver
     {
         abort_unless($actor->can('review', $unit->law), 403);
         if ($unit->status->value !== 'mismatch' || ! in_array($choice, ['a', 'b', 'edit'], true)) {
-            throw ValidationException::withMessages(['unit' => 'Choose a mismatch reading or edit it.']);
+            throw ValidationException::withMessages(['unit' => 'اختر إحدى القراءتين المختلفتين أو حرر النص.']);
         }
         $chosen = match ($choice) {
             'a' => $unit->extraction_a,
@@ -24,7 +24,7 @@ class MismatchResolver
             'edit' => $text,
         };
         if (blank($chosen)) {
-            throw ValidationException::withMessages(['text' => 'Verified text is required.']);
+            throw ValidationException::withMessages(['text' => 'يلزم إدخال النص المتحقق منه.']);
         }
 
         return DB::transaction(function () use ($unit, $actor, $choice, $chosen): LegalUnit {
@@ -46,7 +46,7 @@ class MismatchResolver
     {
         abort_unless($actor->can('review', $unit->law), 403);
         if (! in_array($unit->status->value, ['mismatch', 'unverified'], true) || blank($reason)) {
-            throw ValidationException::withMessages(['reason' => 'An unverified unit and reason are required.']);
+            throw ValidationException::withMessages(['reason' => 'يلزم وجود مادة غير متحقَّق منها وبيان سبب استبعادها.']);
         }
         DB::transaction(function () use ($unit, $actor, $reason): void {
             $unit->update(['status' => 'excluded', 'tags' => [...($unit->tags ?? []), 'excluded_reason' => $reason]]);

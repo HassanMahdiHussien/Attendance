@@ -14,7 +14,7 @@ class CitationRenderer
         return preg_replace_callback('/\[\[cite:(\d+)\]\]/', function ($match) use ($citations, $language): string {
             $unit = $citations->get((int) $match[1])?->first()?->legalUnit;
             if (! $unit) {
-                throw new IssuanceBlocked("Unknown citation {$match[1]}.");
+                throw new IssuanceBlocked("الاستشهاد {$match[1]} غير معروف.");
             }
             $law = $language === 'en' ? ($unit->law->name_en ?: $unit->law->name) : $unit->law->name;
             $clause = $unit->clause_path;

@@ -20,7 +20,7 @@ class TemplateService
     {
         $this->authorize($company, $actor);
         if (! DocumentType::tryFrom($type) || ! in_array($language, $company->enabled_languages, true)) {
-            throw ValidationException::withMessages(['language' => 'Choose an enabled language and document type.']);
+            throw ValidationException::withMessages(['language' => 'اختر لغة مفعلة ونوع المستند.']);
         }
         $this->validator->validate($type, $blocks);
         $this->validator->validateOptions($options);

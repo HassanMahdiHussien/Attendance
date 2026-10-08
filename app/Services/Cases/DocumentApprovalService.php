@@ -40,30 +40,30 @@ class DocumentApprovalService
                 || ($document->version === 1 && $case->status !== CaseStatus::RecommendationsAwaitingApprovals)
                 || ($document->version > 1 && $case->status === CaseStatus::Draft)
                 || ! CaseVisibility::for($user)->whereKey($case->id)->exists()) {
-                throw new TransitionBlocked('An accessible recommendations draft awaiting approvals is required.');
+                throw new TransitionBlocked('يلزم وجود مسودة توصيات متاحة تنتظر الموافقات.');
             }
             if ($decision === ApprovalDecision::Rejected && blank($comment)) {
-                throw new TransitionBlocked('A rejection comment is required.');
+                throw new TransitionBlocked('يلزم تعليق يوضح سبب الرفض.');
             }
             $eligible = $this->eligibility->forDocument($document)->filter(fn (array $row) => $row['user']->id === $user->id);
             if ($eligible->isEmpty()) {
-                throw new TransitionBlocked('The user is not in the eligible committee pool.');
+                throw new TransitionBlocked('المستخدم ليس ضمن أعضاء اللجنة المؤهلين.');
             }
             if ($category === null && $eligible->pluck('category')->unique()->count() !== 1) {
-                throw new TransitionBlocked('Choose a role category for this approval.');
+                throw new TransitionBlocked('اختر فئة الدور لهذه الموافقة.');
             }
             $category ??= $eligible->first()['category'];
             $member = $eligible->first(fn (array $row) => $row['category'] === $category)['member'] ?? null;
             if ($member === null) {
-                throw new TransitionBlocked('The user is not eligible for this category.');
+                throw new TransitionBlocked('المستخدم غير مؤهل للموافقة عن هذه الفئة.');
             }
             $valid = $document->approvals()->whereNull('invalidated_at');
             if ($valid->where('approver_user_id', $user->id)->exists()) {
-                throw new TransitionBlocked('One user cannot fill two categories.');
+                throw new TransitionBlocked('لا يمكن لمستخدم واحد تمثيل فئتين.');
             }
             if ($decision === ApprovalDecision::Approved && $document->approvals()->whereNull('invalidated_at')
                 ->where('role_category', $category->value)->where('decision', ApprovalDecision::Approved->value)->exists()) {
-                throw new TransitionBlocked('This category is already approved.');
+                throw new TransitionBlocked('تمت الموافقة عن هذه الفئة سابقاً.');
             }
             $approval = $document->approvals()->create([
                 'company_id' => $document->company_id, 'committee_pool_member_id' => $member->id,

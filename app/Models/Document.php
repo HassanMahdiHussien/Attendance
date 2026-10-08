@@ -31,7 +31,7 @@ class Document extends Model
         static::saving(function (self $document): void {
             if (! ($document->exists && $document->getRawOriginal('is_locked'))
                 && $document->previous_version_id !== null && blank($document->correction_reason)) {
-                throw ValidationException::withMessages(['correction_reason' => 'A correction reason is required.']);
+                throw ValidationException::withMessages(['correction_reason' => 'يلزم بيان سبب التصحيح.']);
             }
         });
         static::updating(function (self $document): void {

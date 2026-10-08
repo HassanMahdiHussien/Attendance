@@ -37,7 +37,7 @@ class ResponseService
                 Gate::forUser($actor)->authorize('uploadAttachment', $case);
                 if (! in_array($case->status, [CaseStatus::AwaitingEmployeeResponse, CaseStatus::ResponseReceived,
                     CaseStatus::ResponseRefusedToSign, CaseStatus::ResponseDeliveryRefused], true)) {
-                    throw new TransitionBlocked('The case changed, reload.');
+                    throw new TransitionBlocked('تغيرت الحالة، أعد التحميل.');
                 }
                 $attachment = $this->attachments->store($case, AttachmentKind::EmployeeResponseScan, $file, $actor);
                 $stored = $attachment;
@@ -63,7 +63,7 @@ class ResponseService
             if ($case->status !== CaseStatus::AwaitingEmployeeResponse || $due === null
                 || now('Asia/Baghdad')->startOfDay()->lte($due)
                 || $case->events()->where('event_type', 'response_not_received')->exists()) {
-                throw new TransitionBlocked('No response can be recorded only after the deadline.');
+                throw new TransitionBlocked('لا يمكن تسجيل عدم ورود رد إلا بعد انتهاء المهلة.');
             }
             $this->events->log($case, 'response_not_received', ['due_date' => $due->toDateString()], actor: $actor);
         });

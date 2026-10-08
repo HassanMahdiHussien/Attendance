@@ -36,19 +36,19 @@ class AiDrafting
                 DocumentType::DecisionLetter => CaseStatus::AiVerifyAndClose,
             };
             if ($case->status !== $from || $case->ai_request_id !== null) {
-                throw new TransitionBlocked('AI drafting is unavailable at this stage.');
+                throw new TransitionBlocked('صياغة AI غير متاحة في هذه المرحلة.');
             }
             if ($type === DocumentType::Recommendations && (blank($case->committee_session_notes)
                 || ! $case->session_majority_reached || $case->outcome === null)) {
-                throw new TransitionBlocked('Committee minutes, majority and outcome are required.');
+                throw new TransitionBlocked('يلزم محضر اللجنة والأغلبية والنتيجة.');
             }
             if ($type === DocumentType::DecisionLetter && (! in_array($case->outcome, [Outcome::Warning, Outcome::Termination], true)
                 || ! $case->documents()->where('document_type', DocumentType::Recommendations->value)->where('status', 'issued')->exists())) {
-                throw new TransitionBlocked('Issued recommendations with a penalty are required.');
+                throw new TransitionBlocked('يلزم إصدار توصيات تتضمن عقوبة.');
             }
             $draft = $case->documents()->where('document_type', $type->value)->where('is_locked', false)->first();
             if ($draft && ($draft->version !== 1 || ! $replaceConfirmed)) {
-                throw new TransitionBlocked('Replacing the current draft requires confirmation.');
+                throw new TransitionBlocked('يلزم تأكيد استبدال المسودة الحالية.');
             }
             $token = (string) Str::uuid();
             $this->workflow->transition($case, $to, $actor, 'AI draft requested');

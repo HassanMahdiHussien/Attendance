@@ -20,12 +20,12 @@ class CitationRefresh
         DB::transaction(function () use ($draft, $old, $actor): void {
             $draft = Document::query()->lockForUpdate()->findOrFail($draft->id);
             if ($draft->is_locked) {
-                throw new IssuanceBlocked('A current citable version is required.');
+                throw new IssuanceBlocked('يلزم وجود نسخة حالية صالحة للاستشهاد.');
             }
             $ids = $draft->contents->flatMap(fn ($content) => collect(CitationSync::claims(
                 $content->body."\n".($content->secondary_body ?? '')))->pluck('legal_unit_id'))->unique();
             if (! $ids->contains($old->id)) {
-                throw new IssuanceBlocked('The document does not cite this unit.');
+                throw new IssuanceBlocked('لا يستشهد المستند بهذه المادة.');
             }
             $replacements = [];
             foreach ($ids as $id) {
@@ -40,12 +40,12 @@ class CitationRefresh
                     $new = $new->supersededBy;
                 }
                 if (! $new || ! LegalUnit::query()->citableFor($draft->disciplinaryCase)->whereKey($new->id)->exists()) {
-                    throw new IssuanceBlocked('A current citable version is required.');
+                    throw new IssuanceBlocked('يلزم وجود نسخة حالية صالحة للاستشهاد.');
                 }
                 $replacements['[[cite:'.$id.']]'] = '[[cite:'.$new->id.']]';
             }
             if (! isset($replacements['[[cite:'.$old->id.']]'])) {
-                throw new IssuanceBlocked('The cited unit is already current.');
+                throw new IssuanceBlocked('المادة المستشهد بها حالية بالفعل.');
             }
             $contents = $draft->contents->mapWithKeys(function ($content) use ($replacements): array {
                 $replace = fn (?string $body) => $body === null ? null : strtr($body, $replacements);

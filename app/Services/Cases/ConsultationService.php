@@ -29,7 +29,7 @@ class ConsultationService
                 || ! in_array($actor->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff, UserRole::CommitteeMember], true)
                 || ! CaseVisibility::for($actor)->whereKey($case->id)->exists()
                 || $case->legal_review_requested_at !== null) {
-                throw new TransitionBlocked('An eligible actor must request consultation once on an open case.');
+                throw new TransitionBlocked('يلزم طلب الاستشارة من مستخدم مخوّل ولحالة مفتوحة لم يُطلب لها استشارة.');
             }
             $case->forceFill(['legal_review_requested_by' => $actor->id, 'legal_review_requested_at' => now(), 'is_sensitive' => true])->save();
             $this->events->log($case, 'legal_consultation_requested', [], actor: $actor);
@@ -48,7 +48,7 @@ class ConsultationService
     public function complete(DisciplinaryCase $case, User $reviewer, string $note): DisciplinaryCase
     {
         if (! CaseVisibility::for($reviewer)->whereKey($case->id)->exists()) {
-            throw new TransitionBlocked('A partnered external reviewer and pending visible consultation are required.');
+            throw new TransitionBlocked('يلزم مراجع قانوني خارجي شريك واستشارة ظاهرة قيد الانتظار.');
         }
 
         return app(TenantContext::class)->runForCompany($case->company, fn (): DisciplinaryCase => DB::transaction(function () use ($case, $reviewer, $note): DisciplinaryCase {
@@ -58,7 +58,7 @@ class ConsultationService
                 || $case->legal_review_requested_at === null || $case->legal_review_completed_at !== null
                 || $case->legal_review_cancelled_at !== null || $case->status === CaseStatus::ArchivedFinal
                 || ! CaseVisibility::for($reviewer)->whereKey($case->id)->exists()) {
-                throw new TransitionBlocked('A partnered external reviewer and pending visible consultation are required.');
+                throw new TransitionBlocked('يلزم مراجع قانوني خارجي شريك واستشارة ظاهرة قيد الانتظار.');
             }
             $case->forceFill(['legal_review_completed_by' => $reviewer->id, 'legal_review_completed_at' => now(), 'legal_review_note' => $note])->save();
             $this->events->log($case, 'legal_consultation_completed', [], actor: $reviewer);
@@ -83,7 +83,7 @@ class ConsultationService
                 || $case->outcome !== Outcome::RecommendationOnly
                 || $case->legal_review_requested_at === null
                 || $case->legal_review_completed_at !== null || $case->legal_review_cancelled_at !== null) {
-                throw new TransitionBlocked('An administrator and pending consultation are required.');
+                throw new TransitionBlocked('يلزم مسؤول شركة واستشارة قيد الانتظار.');
             }
             $case->forceFill(['legal_review_cancelled_at' => now(), 'legal_review_cancelled_by' => $admin->id,
                 'legal_review_cancel_reason' => $reason])->save();

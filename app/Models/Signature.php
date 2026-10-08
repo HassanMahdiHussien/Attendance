@@ -32,7 +32,11 @@ class Signature extends Model
             }
             if (in_array($signature->status?->value, ['refused_to_sign', 'delivery_refused'], true)
                 && (blank($signature->witness_1_name) || blank($signature->witness_2_name))) {
-                throw ValidationException::withMessages(['status' => 'Two witnesses are required for refusal.']);
+                throw ValidationException::withMessages(['status' => 'يلزم شاهدان عند رفض التسليم أو التوقيع.']);
+            }
+            if ($signature->isDirty('status') && in_array($signature->status?->value, ['refused_to_sign', 'delivery_refused'], true)
+                && ! $signature->witness_scan_attachment_id) {
+                throw ValidationException::withMessages(['status' => 'يجب رفع مسح الورقة الموقعة من الشاهدين.']);
             }
         });
         static::deleting(fn () => throw new ImmutableRecordException('Signatures cannot be deleted.'));
@@ -75,6 +79,11 @@ class Signature extends Model
     public function attachment(): BelongsTo
     {
         return $this->belongsTo(Attachment::class);
+    }
+
+    public function witnessScanAttachment(): BelongsTo
+    {
+        return $this->belongsTo(Attachment::class, 'witness_scan_attachment_id');
     }
 
     public function presenceSuggestion(): BelongsTo

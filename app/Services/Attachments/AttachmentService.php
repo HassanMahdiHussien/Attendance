@@ -13,6 +13,7 @@ use App\Models\ViolationReport;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class AttachmentService
@@ -49,7 +50,7 @@ class AttachmentService
         }
         $digest = hash_file('sha256', $file->getRealPath());
         $path = $parent instanceof EmailDraft
-            ? 'attachments/'.$parent->company_id.'/email-drafts/'.$parent->id.'/'.(string) \Illuminate\Support\Str::uuid().'.'.$extension
+            ? 'attachments/'.$parent->company_id.'/email-drafts/'.$parent->id.'/'.(string) Str::uuid().'.'.$extension
             : 'attachments/'.$parent->company_id.'/'.$digest.'.'.$extension;
         $disk = Storage::disk('local');
         $createdFile = ! $disk->exists($path);
@@ -93,7 +94,7 @@ class AttachmentService
     {
         abort_unless((int) $source->company_id === (int) $case->company_id, 404);
         $disk = Storage::disk('local');
-        $path = 'attachments/'.$case->company_id.'/cases/'.$case->id.'/'.(string) \Illuminate\Support\Str::uuid().'.'.pathinfo($source->path, PATHINFO_EXTENSION);
+        $path = 'attachments/'.$case->company_id.'/cases/'.$case->id.'/'.(string) Str::uuid().'.'.pathinfo($source->path, PATHINFO_EXTENSION);
         $copiedPaths[] = $path;
         if (! $disk->copy($source->path, $path)) {
             throw new \RuntimeException('Attachment copy failed');

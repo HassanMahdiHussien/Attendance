@@ -87,24 +87,24 @@ class DocumentRenderer
         }
         $disk = Storage::disk('local');
         if (! $disk->exists($path)) {
-            throw new IssuanceBlocked("Missing letterhead image {$path}.");
+            throw new IssuanceBlocked("صورة الترويسة {$path} غير موجودة.");
         }
         $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
         $mime = match ($extension) {
             'png' => 'image/png', 'jpg', 'jpeg' => 'image/jpeg', default => null
         };
         if (! $mime) {
-            throw new IssuanceBlocked('Letterhead image must be PNG or JPG.');
+            throw new IssuanceBlocked('يجب أن تكون صورة الترويسة بصيغة PNG أو JPG.');
         }
 
         $bytes = $disk->get($path);
         if (strlen($bytes) > 2 * 1024 * 1024
             || ($mime === 'image/png' && ! str_starts_with($bytes, "\x89PNG\r\n\x1a\n"))
             || ($mime === 'image/jpeg' && ! str_starts_with($bytes, "\xFF\xD8"))) {
-            throw new IssuanceBlocked("Invalid letterhead image: {$path}.");
+            throw new IssuanceBlocked("صورة الترويسة {$path} غير صحيحة.");
         }
         if (! $expectedSha || hash('sha256', $bytes) !== $expectedSha) {
-            throw new IssuanceBlocked("Letterhead image hash mismatch: {$path}.");
+            throw new IssuanceBlocked("بصمة صورة الترويسة {$path} غير مطابقة.");
         }
 
         return 'data:'.$mime.';base64,'.base64_encode($bytes);

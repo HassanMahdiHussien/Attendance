@@ -3,8 +3,8 @@
 namespace App\Livewire\Reports;
 
 use App\Enums\UserRole;
-use App\Support\Access\ViolationReportVisibility;
 use App\Support\Access\EmailDraftVisibility;
+use App\Support\Access\ViolationReportVisibility;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 

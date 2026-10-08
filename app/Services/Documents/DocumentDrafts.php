@@ -32,7 +32,7 @@ class DocumentDrafts
             Gate::forUser($actor)->authorize('manageDocuments', $case);
             if ($type !== DocumentType::DefenseLetter || ($draft?->version === 1
                 && ! in_array($case->status, [CaseStatus::Open, CaseStatus::DefenseLetterCitationCheck, CaseStatus::DefenseLetterReadyForReview], true))) {
-                throw new TransitionBlocked('The document cannot be edited at this stage.');
+                throw new TransitionBlocked('لا يمكن تحرير المستند في هذه المرحلة.');
             }
             if ($draft !== null) {
                 $draft = Document::query()->lockForUpdate()->where('case_id', $case->id)->findOrFail($draft->id);
@@ -40,7 +40,7 @@ class DocumentDrafts
                 $draft = $case->documents()->where('document_type', $type->value)->whereIn('status', ['draft', 'ready_for_review'])->orderByDesc('version')->lockForUpdate()->first();
             }
             if ($draft?->is_locked || ($draft !== null && $draft->document_type !== $type)) {
-                throw new TransitionBlocked('Issued documents cannot be edited.');
+                throw new TransitionBlocked('لا يمكن تحرير المستندات الصادرة.');
             }
             $languages = app(DraftLanguages::class)->for($case->company, $type);
             if (array_diff($languages, array_keys($bodies)) || array_diff(array_keys($bodies), $languages)) {
@@ -53,7 +53,7 @@ class DocumentDrafts
             }
             if ($draft === null) {
                 if ($case->status !== CaseStatus::Open) {
-                    throw new TransitionBlocked('The case changed, reload.');
+                    throw new TransitionBlocked('تغيرت الحالة، أعد التحميل.');
                 }
                 $draft = Document::create([
                     'company_id' => $case->company_id, 'case_id' => $case->id, 'document_type' => $type,
@@ -94,7 +94,7 @@ class DocumentDrafts
                 && ! in_array($case->status, [CaseStatus::SignedRecommendationsUploaded, CaseStatus::DecisionLetterCitationCheck], true)
                 || ! in_array($case->outcome, [Outcome::Warning, Outcome::Termination], true)
                 || ! CaseVisibility::for($actor)->whereKey($case->id)->exists()) {
-                throw new TransitionBlocked('A signed recommendation with a penalty is required.');
+                throw new TransitionBlocked('يلزم توصية موقعة تتضمن عقوبة.');
             }
             $languages = app(DraftLanguages::class)->for($case->company, DocumentType::DecisionLetter);
             if (array_diff($languages, array_keys($bodies)) || array_diff(array_keys($bodies), $languages)) {
@@ -108,7 +108,7 @@ class DocumentDrafts
             $document = $draft ? $case->documents()->lockForUpdate()->findOrFail($draft->id)
                 : $case->documents()->where('document_type', DocumentType::DecisionLetter->value)->where('is_locked', false)->lockForUpdate()->first();
             if ($document && ($document->is_locked || $document->document_type !== DocumentType::DecisionLetter)) {
-                throw new TransitionBlocked('Issued documents cannot be edited.');
+                throw new TransitionBlocked('لا يمكن تحرير المستندات الصادرة.');
             }
             if (! $document) {
                 $document = Document::create(['company_id' => $case->company_id, 'case_id' => $case->id,
@@ -138,7 +138,7 @@ class DocumentDrafts
             if ($document->document_type !== DocumentType::DecisionLetter || $document->is_locked
                 || $document->version !== 1 || ! in_array($case->status, [CaseStatus::SignedRecommendationsUploaded, CaseStatus::DecisionLetterCitationCheck], true)
                 || $case->outcome?->value !== $document->penalty_type?->value) {
-                throw new TransitionBlocked('The decision draft cannot be submitted at this stage.');
+                throw new TransitionBlocked('لا يمكن تقديم مسودة القرار في هذه المرحلة.');
             }
             if ($case->status === CaseStatus::SignedRecommendationsUploaded) {
                 $case = $this->workflow->transition($case, CaseStatus::DecisionLetterCitationCheck, $actor, 'Decision draft submitted');
@@ -162,7 +162,7 @@ class DocumentDrafts
             Gate::forUser($actor)->authorize('manageDocuments', $case);
             if ($document->document_type !== DocumentType::DecisionLetter || $document->is_locked
                 || $case->status !== CaseStatus::DecisionLetterReadyForReview) {
-                throw new TransitionBlocked('The decision cannot be returned to editing.');
+                throw new TransitionBlocked('لا يمكن إعادة القرار إلى التحرير.');
             }
             $this->workflow->transition($case, CaseStatus::DecisionLetterCitationCheck, $actor, 'Decision returned to edit');
             $document->forceFill(['status' => DocumentStatus::Draft, 'second_reviewed_by' => null,
@@ -177,7 +177,7 @@ class DocumentDrafts
         Gate::forUser($actor)->authorize('manageDocuments', $case);
         $document = $case->documents()->findOrFail($document->id);
         if ($document->is_locked || $document->document_type !== DocumentType::DefenseLetter) {
-            throw new TransitionBlocked('The document cannot be submitted.');
+            throw new TransitionBlocked('لا يمكن تقديم المستند.');
         }
         if ($document->version > 1) {
             app(CitationGate::class)->assertIssuable($document);
@@ -193,7 +193,7 @@ class DocumentDrafts
             $case = $this->workflow->transition($case, CaseStatus::DefenseLetterCitationCheck, $actor, 'Defense draft submitted');
         }
         if ($case->status !== CaseStatus::DefenseLetterCitationCheck) {
-            throw new TransitionBlocked('The case changed, reload.');
+            throw new TransitionBlocked('تغيرت الحالة، أعد التحميل.');
         }
         DB::transaction(function () use ($case, $document, $actor): void {
             $this->workflow->transition($case, CaseStatus::DefenseLetterReadyForReview, $actor, 'Citation check passed');
@@ -216,7 +216,7 @@ class DocumentDrafts
                 return;
             }
             if (! in_array($case->status, [CaseStatus::DefenseLetterCitationCheck, CaseStatus::DefenseLetterReadyForReview], true)) {
-                throw new TransitionBlocked('The case changed, reload.');
+                throw new TransitionBlocked('تغيرت الحالة، أعد التحميل.');
             }
             $this->workflow->transition($case, CaseStatus::Open, $actor, 'Document sent back to edit');
             $document->status = DocumentStatus::Draft;
