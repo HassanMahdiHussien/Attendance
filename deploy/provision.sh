@@ -71,7 +71,7 @@ printf 'deb [signed-by=/etc/apt/keyrings/mysql.gpg] https://repo.mysql.com/apt/u
 # apt verifies signatures as the unprivileged _apt user; the script's umask 077 would hide these from it.
 chmod 0644 /etc/apt/keyrings/mysql.gpg /etc/apt/sources.list.d/mysql.list
 apt-get update
-apt-get install -y --no-install-recommends ca-certificates curl gnupg lsb-release software-properties-common cryptsetup e2fsprogs util-linux ufw fail2ban unattended-upgrades nginx certbot supervisor git unzip zip fontconfig openssh-server systemd-timesyncd sudo openssl
+apt-get install -y --no-install-recommends ca-certificates curl gnupg lsb-release software-properties-common cryptsetup e2fsprogs util-linux ufw fail2ban unattended-upgrades nginx certbot supervisor git unzip zip fontconfig openssh-server systemd-timesyncd sudo openssl cron
 if cryptsetup isLuks "$device"; then
     cryptsetup open --test-passphrase --key-file "$luks_key" "$device" || { echo "Existing LUKS volume does not open with local key"; exit 1; }
 fi
@@ -307,6 +307,7 @@ cat > /etc/cron.d/displanery <<'EOF'
 * * * * * deploy mountpoint -q /srv/data && cd /srv/displanery/current && /usr/bin/php artisan schedule:run >> /srv/data/storage/logs/scheduler.log 2>&1
 EOF
 chmod 0644 /etc/cron.d/displanery
+systemctl enable --now cron
 step "Provision complete. Add GitHub deploy key and backup key below, fill shared .env, then run deploy.sh."
 step "Copy /root/.displanery/secrets and /root/.luks/displanery.key off-server into a password manager; no secrets are printed."
 cat /home/deploy/.ssh/github_deploy.pub

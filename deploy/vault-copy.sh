@@ -19,7 +19,7 @@ month="$(date -u +%Y-%m)"
 if [[ ! -d /srv/backup-vault/monthly/$month ]]; then
     cp -a -- "$daily" "/srv/backup-vault/monthly/$month"
 else
-    cp -an -- "$daily/." "/srv/backup-vault/monthly/$month/"
+    cp -a --update=none -- "$daily/." "/srv/backup-vault/monthly/$month/"
 fi
 find /srv/backup-vault/daily -mindepth 1 -maxdepth 1 -type d -mtime "+$VAULT_DAILY_DAYS" -exec rm -rf -- {} +
 find /srv/backup-vault/monthly -mindepth 1 -maxdepth 1 -type d -mtime "+$((VAULT_MONTHLY_MONTHS * 31))" -exec rm -rf -- {} +

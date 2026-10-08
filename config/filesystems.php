@@ -33,7 +33,7 @@ return [
         'backup-sftp' => [
             'driver' => 'sftp',
             'host' => env('BACKUP_SFTP_HOST'),
-            'port' => env('BACKUP_SFTP_PORT', 22),
+            'port' => (int) env('BACKUP_SFTP_PORT', 22),
             'username' => env('BACKUP_SFTP_USERNAME'),
             'privateKey' => env('BACKUP_SFTP_PRIVATE_KEY'),
             'root' => env('BACKUP_SFTP_ROOT', '/displanery'),
