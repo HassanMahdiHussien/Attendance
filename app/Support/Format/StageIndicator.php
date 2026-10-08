@@ -29,8 +29,8 @@ class StageIndicator
     public static function stageLabel(int $stage): string
     {
         return match ($stage) {
-            1 => 'فتح الحالة', 2 => 'خطاب الدفاع', 3 => 'رد الموظف',
-            4 => 'اللجنة', 5 => 'القرار',
+            1 => __('Case opened'), 2 => __('Defense letter'), 3 => __('Employee response'),
+            4 => __('Committee'), 5 => __('Decision'),
         };
     }
 
@@ -45,10 +45,10 @@ class StageIndicator
     public static function remaining(int $days): string
     {
         return match ($days) {
-            0 => 'باقي اليوم',
-            1 => 'باقي يوم',
-            2 => 'باقي يومان',
-            default => 'باقي '.ArabicDigits::convert($days).' أيام',
+            0 => __('Due today'),
+            1 => __('One day remaining'),
+            2 => __('Two days remaining'),
+            default => __(':days days remaining', ['days' => Ui::number($days)]),
         };
     }
 }

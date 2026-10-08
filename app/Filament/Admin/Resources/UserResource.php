@@ -26,9 +26,15 @@ class UserResource extends Resource
 {
     protected static ?string $model = User::class;
 
-    protected static ?string $modelLabel = 'مستخدم الشركة';
+    public static function getModelLabel(): string
+    {
+        return __('Company user');
+    }
 
-    protected static ?string $pluralModelLabel = 'مستخدمو الشركة';
+    public static function getPluralModelLabel(): string
+    {
+        return __('Company users');
+    }
 
     protected static bool $isGloballySearchable = false;
 
@@ -48,14 +54,14 @@ class UserResource extends Resource
     public static function allowedRoles(): array
     {
         $roles = [
-            UserRole::Reporter->value => 'مبلّغ',
-            UserRole::DeptManager->value => 'مدير قسم',
+            UserRole::Reporter->value => __('Reporter'),
+            UserRole::DeptManager->value => __('Department manager'),
         ];
         if (auth()->user()->primary_role !== UserRole::HrStaff) {
             $roles = [
-                UserRole::CompanyAdmin->value => 'مدير الشركة',
-                UserRole::HrStaff->value => 'موظف الموارد البشرية',
-                UserRole::CommitteeMember->value => 'عضو اللجنة',
+                UserRole::CompanyAdmin->value => __('Company administrator'),
+                UserRole::HrStaff->value => __('HR employee'),
+                UserRole::CommitteeMember->value => __('Committee member'),
                 ...$roles,
             ];
         }
@@ -66,20 +72,20 @@ class UserResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
-            TextInput::make('name')->label('الاسم')->required(),
-            TextInput::make('email')->label('البريد الإلكتروني')->email()->required(),
-            TextInput::make('password')->label('كلمة المرور')->password()
+            TextInput::make('name')->label(__('Name'))->required(),
+            TextInput::make('email')->label(__('Email address'))->email()->required(),
+            TextInput::make('password')->label(__('Password'))->password()
                 ->required(fn (string $operation): bool => $operation === 'create')
                 ->dehydrated(fn (?string $state): bool => filled($state)),
-            Select::make('primary_role')->label('الدور')->options(fn (): array => self::allowedRoles())->required()->live(),
-            Select::make('employee_id')->label('الموظف المرتبط')->options(fn (): array => Employee::query()->pluck('name', 'id')->all())->searchable(),
-            Select::make('branch_ids')->label('نطاق الفروع')->multiple()
+            Select::make('primary_role')->label(__('Role'))->options(fn (): array => self::allowedRoles())->required()->live(),
+            Select::make('employee_id')->label(__('Linked employee'))->options(fn (): array => Employee::query()->pluck('name', 'id')->all())->searchable(),
+            Select::make('branch_ids')->label(__('Branch scope'))->multiple()
                 ->options(fn (): array => Branch::query()->pluck('name', 'id')->all())
                 ->visible(fn ($get): bool => in_array($get('primary_role'), [UserRole::Reporter->value, UserRole::DeptManager->value], true)),
-            CheckboxList::make('addons')->label('الصلاحيات الإضافية')
+            CheckboxList::make('addons')->label(__('Additional permissions'))
                 ->options(fn ($get): array => [
-                    'review_internal_regulation' => 'مراجعة اللائحة الداخلية',
-                    ...($get('primary_role') === UserRole::HrStaff->value ? ['view_all_company_cases' => 'عرض كل قضايا الشركة'] : []),
+                    'review_internal_regulation' => __('Internal regulation review'),
+                    ...($get('primary_role') === UserRole::HrStaff->value ? ['view_all_company_cases' => __('View all company cases')] : []),
                 ])->visible(fn (): bool => auth()->user()->primary_role !== UserRole::HrStaff),
         ]);
     }
@@ -87,20 +93,20 @@ class UserResource extends Resource
     public static function table(Table $table): Table
     {
         return $table->columns([
-            TextColumn::make('name')->label('الاسم'),
-            TextColumn::make('email')->label('البريد'),
-            TextColumn::make('primary_role')->label('الدور')
+            TextColumn::make('name')->label(__('Name')),
+            TextColumn::make('email')->label(__('Email')),
+            TextColumn::make('primary_role')->label(__('Role'))
                 ->formatStateUsing(fn ($state): string => [
-                    UserRole::CompanyAdmin->value => 'مدير الشركة',
-                    UserRole::HrStaff->value => 'موظف الموارد البشرية',
-                    UserRole::CommitteeMember->value => 'عضو اللجنة',
-                    UserRole::Reporter->value => 'مبلّغ',
-                    UserRole::DeptManager->value => 'مدير قسم',
+                    UserRole::CompanyAdmin->value => __('Company administrator'),
+                    UserRole::HrStaff->value => __('HR employee'),
+                    UserRole::CommitteeMember->value => __('Committee member'),
+                    UserRole::Reporter->value => __('Reporter'),
+                    UserRole::DeptManager->value => __('Department manager'),
                 ][$state instanceof \BackedEnum ? $state->value : $state]),
-            TextColumn::make('is_active')->label('الحالة')->formatStateUsing(fn (bool $state): string => $state ? 'نشط' : 'معطل'),
+            TextColumn::make('is_active')->label(__('Status'))->formatStateUsing(fn (bool $state): string => $state ? __('Active') : __('Inactive')),
         ])->recordActions([
             EditAction::make(),
-            Action::make('toggleActive')->label(fn (User $record): string => $record->is_active ? 'تعطيل' : 'تفعيل')
+            Action::make('toggleActive')->label(fn (User $record): string => $record->is_active ? __('Deactivate') : __('Activate'))
                 ->requiresConfirmation()
                 ->action(function (User $record): void {
                     try {

@@ -18,9 +18,15 @@ use Illuminate\Support\Facades\DB;
 
 class CompanySettings extends Page
 {
-    protected static ?string $navigationLabel = 'إعدادات الشركة';
+    public static function getNavigationLabel(): string
+    {
+        return __('Company settings');
+    }
 
-    protected static ?string $title = 'إعدادات الشركة';
+    public function getTitle(): string
+    {
+        return __('Company settings');
+    }
 
     protected string $view = 'filament.admin.pages.company-settings';
 
@@ -55,24 +61,24 @@ class CompanySettings extends Page
     public function form(Schema $schema): Schema
     {
         $fields = [
-            Checkbox::make('kurdish_enabled')->label('إضافة الكردية (اختياري)'),
-            Checkbox::make('requires_second_review')->label('مراجعة ثانية قبل الإصدار'),
-            TextInput::make('hotspot_min_cases')->label('الحد الأدنى لتنبيه التكرار')->numeric()->integer()->required()->minValue(2)->maxValue(50),
-            TextInput::make('hotspot_window_days')->label('نافذة تنبيه التكرار بالأيام')->numeric()->integer()->required()->minValue(7)->maxValue(365),
+            Checkbox::make('kurdish_enabled')->label(__('Enable Kurdish (optional)')),
+            Checkbox::make('requires_second_review')->label(__('Second review before issuance')),
+            TextInput::make('hotspot_min_cases')->label(__('Repeat alert threshold'))->numeric()->integer()->required()->minValue(2)->maxValue(50),
+            TextInput::make('hotspot_window_days')->label(__('Repeat alert window in days'))->numeric()->integer()->required()->minValue(7)->maxValue(365),
         ];
         foreach (Filament::getTenant()?->enabled_languages ?? ['ar', 'en'] as $language) {
             $prefix = $language.'.';
             $fields[] = Section::make(strtoupper($language))->schema([
-                TextInput::make($prefix.'name')->label("اسم الشركة ({$language})")->required(),
-                Textarea::make($prefix.'address_lines')->label("العنوان ({$language})"),
-                TextInput::make($prefix.'phone')->label("الهاتف ({$language})"),
-                TextInput::make($prefix.'email')->label("البريد ({$language})")->email(),
-                TextInput::make($prefix.'footer_text')->label("التذييل ({$language})")->required(),
-                Select::make($prefix.'header_mode')->label("نوع الترويسة ({$language})")
-                    ->options(['logo_text' => 'شعار ونص', 'image' => 'صورة'])->required(),
-                FileUpload::make($prefix.'logo')->label("الشعار ({$language})")
+                TextInput::make($prefix.'name')->label(__('Company name (:language)', ['language' => $language]))->required(),
+                Textarea::make($prefix.'address_lines')->label(__('Address (:language)', ['language' => $language])),
+                TextInput::make($prefix.'phone')->label(__('Phone (:language)', ['language' => $language])),
+                TextInput::make($prefix.'email')->label(__('Email (:language)', ['language' => $language]))->email(),
+                TextInput::make($prefix.'footer_text')->label(__('Footer (:language)', ['language' => $language]))->required(),
+                Select::make($prefix.'header_mode')->label(__('Header mode (:language)', ['language' => $language]))
+                    ->options(['logo_text' => __('Logo and text'), 'image' => __('Image')])->required(),
+                FileUpload::make($prefix.'logo')->label(__('Logo (:language)', ['language' => $language]))
                     ->acceptedFileTypes(['image/png', 'image/jpeg'])->maxSize(2048)->storeFiles(false),
-                FileUpload::make($prefix.'header_image')->label("صورة الترويسة ({$language})")
+                FileUpload::make($prefix.'header_image')->label(__('Header image (:language)', ['language' => $language]))
                     ->acceptedFileTypes(['image/png', 'image/jpeg'])->maxSize(2048)->storeFiles(false),
             ]);
         }

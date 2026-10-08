@@ -18,29 +18,35 @@ class LocationResource extends Resource
 {
     protected static ?string $model = Location::class;
 
-    protected static ?string $modelLabel = 'موقع';
+    public static function getModelLabel(): string
+    {
+        return __('Location');
+    }
 
-    protected static ?string $pluralModelLabel = 'المواقع';
+    public static function getPluralModelLabel(): string
+    {
+        return __('Locations');
+    }
 
     protected static bool $isGloballySearchable = false;
 
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
-            TextInput::make('name')->label('اسم الموقع')->required(),
-            Select::make('branch_id')->label('الفرع')->options(fn (): array => Branch::query()->where('is_active', true)->pluck('name', 'id')->all())->required()->searchable(),
+            TextInput::make('name')->label(__('Location name'))->required(),
+            Select::make('branch_id')->label(__('Branch'))->options(fn (): array => Branch::query()->where('is_active', true)->pluck('name', 'id')->all())->required()->searchable(),
         ]);
     }
 
     public static function table(Table $table): Table
     {
         return $table->columns([
-            TextColumn::make('name')->label('الموقع'),
-            TextColumn::make('branch.name')->label('الفرع'),
-            TextColumn::make('is_active')->label('الحالة')->formatStateUsing(fn (bool $state): string => $state ? 'نشط' : 'معطل'),
+            TextColumn::make('name')->label(__('Location')),
+            TextColumn::make('branch.name')->label(__('Branch')),
+            TextColumn::make('is_active')->label(__('Status'))->formatStateUsing(fn (bool $state): string => $state ? __('Active') : __('Inactive')),
         ])->recordActions([
             EditAction::make(),
-            Action::make('deactivate')->label('تعطيل')->color('danger')->requiresConfirmation()
+            Action::make('deactivate')->label(__('Deactivate'))->color('danger')->requiresConfirmation()
                 ->visible(fn (Location $record): bool => $record->is_active && auth()->user()->can('update', $record))
                 ->action(fn (Location $record) => $record->update(['is_active' => false])),
         ]);

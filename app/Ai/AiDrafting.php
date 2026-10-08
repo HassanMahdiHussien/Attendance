@@ -36,19 +36,19 @@ class AiDrafting
                 DocumentType::DecisionLetter => CaseStatus::AiVerifyAndClose,
             };
             if ($case->status !== $from || $case->ai_request_id !== null) {
-                throw new TransitionBlocked('صياغة AI غير متاحة في هذه المرحلة.');
+                throw new TransitionBlocked(__('messages.ai.drafting_unavailable'));
             }
             if ($type === DocumentType::Recommendations && (blank($case->committee_session_notes)
                 || ! $case->session_majority_reached || $case->outcome === null)) {
-                throw new TransitionBlocked('يلزم محضر اللجنة والأغلبية والنتيجة.');
+                throw new TransitionBlocked(__('messages.ai.session_outcome_required'));
             }
             if ($type === DocumentType::DecisionLetter && (! in_array($case->outcome, [Outcome::Warning, Outcome::Termination], true)
                 || ! $case->documents()->where('document_type', DocumentType::Recommendations->value)->where('status', 'issued')->exists())) {
-                throw new TransitionBlocked('يلزم إصدار توصيات تتضمن عقوبة.');
+                throw new TransitionBlocked(__('messages.ai.penalty_recommendations_required'));
             }
             $draft = $case->documents()->where('document_type', $type->value)->where('is_locked', false)->first();
             if ($draft && ($draft->version !== 1 || ! $replaceConfirmed)) {
-                throw new TransitionBlocked('يلزم تأكيد استبدال المسودة الحالية.');
+                throw new TransitionBlocked(__('messages.ai.replace_draft_confirmation_required'));
             }
             $token = (string) Str::uuid();
             $this->workflow->transition($case, $to, $actor, 'AI draft requested');

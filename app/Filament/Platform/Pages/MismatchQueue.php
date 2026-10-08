@@ -12,9 +12,15 @@ class MismatchQueue extends Page
 {
     use ReviewsLegalMismatch;
 
-    protected static ?string $navigationLabel = 'اختلافات القوانين';
+    public static function getNavigationLabel(): string
+    {
+        return __('Law mismatches');
+    }
 
-    protected static ?string $title = 'مراجعة اختلافات القوانين';
+    public function getTitle(): string
+    {
+        return __('Review law mismatches');
+    }
 
     protected string $view = 'filament.platform.pages.mismatch-queue';
 

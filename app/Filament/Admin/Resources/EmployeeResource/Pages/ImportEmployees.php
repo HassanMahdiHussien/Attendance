@@ -18,7 +18,10 @@ class ImportEmployees extends Page
 
     protected static string $resource = EmployeeResource::class;
 
-    protected static ?string $title = 'استيراد الموظفين من CSV';
+    public function getTitle(): string
+    {
+        return __('Import employees from CSV');
+    }
 
     protected string $view = 'filament.admin.resources.employee-resource.pages.import-employees';
 
@@ -72,7 +75,7 @@ class ImportEmployees extends Page
         $this->notices = $result['preview']->notices;
         $this->previewHash = $result['preview']->hash;
         if (! $result['committed']) {
-            Notification::make()->title('تغيّرت البيانات. راجع المعاينة من جديد.')->danger()->send();
+            Notification::make()->title(__('The data changed. Review the preview again.'))->danger()->send();
 
             return;
         }
@@ -80,7 +83,7 @@ class ImportEmployees extends Page
         $this->sourceFile = null;
         $this->previewRows = null;
         $this->previewHash = null;
-        Notification::make()->title('اكتمل استيراد الموظفين')->success()->send();
+        Notification::make()->title(__('Employee import completed'))->success()->send();
     }
 
     private function company(): Company

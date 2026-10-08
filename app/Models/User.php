@@ -9,6 +9,7 @@ use Filament\Facades\Filament;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Models\Contracts\HasTenants;
 use Filament\Panel;
+use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Builder;
@@ -22,12 +23,17 @@ use Spatie\Permission\Traits\HasRoles;
 
 #[Hidden(['password', 'remember_token'])]
 #[Fillable(['name', 'email', 'password'])]
-class User extends Authenticatable implements FilamentUser, HasTenants
+class User extends Authenticatable implements FilamentUser, HasLocalePreference, HasTenants
 {
     /** @use HasFactory<UserFactory> */
     use Concerns\Audited, HasFactory, HasRoles, Notifiable;
 
     protected string $guard_name = 'web';
+
+    public function preferredLocale(): string
+    {
+        return in_array($this->locale, ['en', 'ar'], true) ? $this->locale : 'en';
+    }
 
     protected $attributes = ['is_active' => true, 'locale' => 'en'];
 

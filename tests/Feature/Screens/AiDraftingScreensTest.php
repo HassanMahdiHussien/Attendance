@@ -165,6 +165,9 @@ test('platform law editing exposes English name and statute topics only to platf
     $this->actingAs($platform);
     Filament::setCurrentPanel(Filament::getPanel('platform'));
     $this->get(LawResource::getUrl('edit', ['record' => $law], panel: 'platform'))
+        ->assertOk()->assertSee('English law name');
+    $platform->forceFill(['locale' => 'ar'])->save();
+    $this->get(LawResource::getUrl('edit', ['record' => $law], panel: 'platform'))
         ->assertOk()->assertSee('اسم القانون بالإنجليزية');
     app(LawManagement::class)->update($law, $platform, ['name_en' => 'Labour Law']);
     app(LawManagement::class)->setUnitTopics($unit, $platform, ['discipline', 'leave']);

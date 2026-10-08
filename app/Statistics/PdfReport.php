@@ -13,7 +13,7 @@ class PdfReport
     public function render(array $report): string
     {
         $letterhead = $report['company'] ? CompanyLetterhead::query()
-            ->where('company_id', $report['company']->id)->where('language_code', 'ar')
+            ->where('company_id', $report['company']->id)->where('language_code', app()->getLocale())
             ->orderByDesc('version')->first() : null;
         $logo = $this->image($letterhead?->logo_path, $letterhead?->logo_sha256);
         $headerImage = $letterhead?->header_mode === 'image'

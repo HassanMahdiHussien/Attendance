@@ -29,6 +29,6 @@
         </div>
     @endif
     @if($document && ($notes = $document->aiDraftNotes()->latest('id')->first()))
-        <aside class="rounded-2xl bg-gray-50 p-4"><h2 class="font-bold">{{ __('Drafting notes') }}</h2><ul class="list-disc ps-5">@foreach($notes->notes ?? [] as $note)<li>{{ $note }}</li>@endforeach</ul></aside>
+        <aside class="rounded-2xl bg-gray-50 p-4"><h2 class="font-bold">{{ __('Drafting notes') }}</h2><ul class="list-disc ps-5">@foreach($notes->notes ?? [] as $note)<li>{{ is_array($note) ? __($note['key'], $note['params'] ?? []) : $note }}</li>@endforeach</ul></aside>
     @endif
 </div>

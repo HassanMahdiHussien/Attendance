@@ -2,7 +2,6 @@
 
 namespace App\Support\Format;
 
-use App\Documents\IraqiDate;
 use Carbon\CarbonInterface;
 
 class LegalLibraryLabels
@@ -10,61 +9,61 @@ class LegalLibraryLabels
     public static function category(string $value): string
     {
         return match ($value) {
-            'labor' => 'عمل', 'social_security' => 'ضمان اجتماعي',
-            'regulation' => 'نظام داخلي', 'other' => 'أخرى', default => 'تصنيف غير معروف',
+            'labor' => __('Labor'), 'social_security' => __('Social security'),
+            'regulation' => __('Internal regulation'), 'other' => __('Other'), default => __('Unknown category'),
         };
     }
 
     public static function jurisdiction(string $value): string
     {
         return match ($value) {
-            'federal_iraq' => 'العراق الاتحادي', 'kurdistan_region' => 'إقليم كوردستان',
-            default => 'نطاق غير معروف',
+            'federal_iraq' => __('Federal Iraq'), 'kurdistan_region' => __('Kurdistan Region'),
+            default => __('Unknown jurisdiction'),
         };
     }
 
     public static function unitStatus(string $value): string
     {
         return match ($value) {
-            'unverified' => 'غير موثقة', 'mismatch' => 'بحاجة لمراجعة',
-            'verified_auto' => 'موثقة تلقائياً', 'verified_human' => 'موثقة بمراجعة',
-            'verified_text' => 'من نص المصدر', 'excluded' => 'مستبعدة', default => 'حالة غير معروفة',
+            'unverified' => __('Unverified'), 'mismatch' => __('Needs review'),
+            'verified_auto' => __('Verified automatically'), 'verified_human' => __('Verified by review'),
+            'verified_text' => __('Verified from source text'), 'excluded' => __('Excluded'), default => __('Unknown status'),
         };
     }
 
     public static function runState(string $value): string
     {
         return match ($value) {
-            'queued' => 'بالانتظار', 'reading' => 'قيد القراءة',
-            'ai_pending' => 'بانتظار قراءة الذكاء الاصطناعي', 'splitting' => 'قيد التقسيم',
-            'completed' => 'مكتملة', 'failed' => 'فشلت', 'cancelled' => 'ملغاة',
-            default => 'حالة غير معروفة',
+            'queued' => __('Queued'), 'reading' => __('Reading'),
+            'ai_pending' => __('Waiting for AI reading'), 'splitting' => __('Splitting'),
+            'completed' => __('Completed'), 'failed' => __('Failed'), 'cancelled' => __('Cancelled'),
+            default => __('Unknown status'),
         };
     }
 
     public static function pageStatus(string $value): string
     {
         return match ($value) {
-            'pending' => 'بالانتظار', 'done' => 'تمت', 'failed' => 'فشلت',
-            'unavailable' => 'غير متاحة', default => 'حالة غير معروفة',
+            'pending' => __('Queued'), 'done' => __('Done'), 'failed' => __('Failed'),
+            'unavailable' => __('Unavailable'), default => __('Unknown status'),
         };
     }
 
     public static function textMethod(string $value): string
     {
         return match ($value) {
-            'text' => 'طبقة النص', 'ocr' => 'OCR', default => 'طريقة غير معروفة',
+            'text' => __('Text layer'), 'ocr' => 'OCR', default => __('Unknown method'),
         };
     }
 
     public static function mismatchReason(string $value): string
     {
         return match ($value) {
-            'text_differs' => 'اختلاف في النص', 'structure_differs' => 'اختلاف في البنود',
-            'one_reading_only' => 'ظهرت في قراءة واحدة فقط',
-            'duplicate_heading' => 'عنوان مكرر — قد يكون نصاً معدلاً',
-            'page_failed' => 'تعذرت قراءة صفحة', 'illegible' => 'نص غير مقروء',
-            default => 'اختلاف القراءتين',
+            'text_differs' => __('Text differs'), 'structure_differs' => __('Structure differs'),
+            'one_reading_only' => __('Found in only one reading'),
+            'duplicate_heading' => __('Duplicate heading — possibly amended text'),
+            'page_failed' => __('Page reading failed'), 'illegible' => __('Illegible text'),
+            default => __('Reading mismatch'),
         };
     }
 
@@ -84,11 +83,11 @@ class LegalLibraryLabels
         }
 
         $parts = [];
-        foreach (['pages' => 'صفحات', 'units' => 'وحدات', 'verified_auto' => 'موثقة تلقائياً',
-            'verified_human' => 'موثقة بمراجعة', 'verified_text' => 'من نص المصدر',
-            'mismatch' => 'بحاجة لمراجعة', 'unverified' => 'غير موثقة', 'excluded' => 'مستبعدة'] as $key => $label) {
+        foreach (['pages' => __('Pages'), 'units' => __('Units'), 'verified_auto' => __('Verified automatically'),
+            'verified_human' => __('Verified by review'), 'verified_text' => __('Verified from source text'),
+            'mismatch' => __('Needs review'), 'unverified' => __('Unverified'), 'excluded' => __('Excluded')] as $key => $label) {
             if (array_key_exists($key, $counts)) {
-                $parts[] = ArabicDigits::convert((int) $counts[$key]).' '.$label;
+                $parts[] = Ui::number((int) $counts[$key]).' '.$label;
             }
         }
 
@@ -97,6 +96,7 @@ class LegalLibraryLabels
 
     public static function dateTime(?CarbonInterface $date): string
     {
-        return $date ? ArabicDigits::convert(IraqiDate::format($date, 'ar').'، '.$date->format('H:i')) : '—';
+        return $date ? Ui::date($date).__(', ')
+            .Ui::number($date->copy()->setTimezone('Asia/Baghdad')->format('H:i')) : '—';
     }
 }

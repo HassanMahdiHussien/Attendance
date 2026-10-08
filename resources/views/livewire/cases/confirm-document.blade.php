@@ -11,7 +11,7 @@
         @if($document->drafted_by === \App\Enums\DraftedBy::Ai)
             <p class="rounded-2xl bg-amber-light text-amber p-4 mb-5">{{ __('Check AI wording and references before issuance. The outcome keyword check is a review flag, not a guarantee of a correct decision.') }}</p>
             @if($notes = $document->aiDraftNotes()->latest('id')->first())
-                <aside class="rounded-2xl bg-gray-50 p-4 mb-5"><h2 class="font-bold">{{ __('Drafting notes') }}</h2><ul class="list-disc ps-5">@foreach($notes->notes ?? [] as $note)<li>{{ $note }}</li>@endforeach</ul></aside>
+                <aside class="rounded-2xl bg-gray-50 p-4 mb-5"><h2 class="font-bold">{{ __('Drafting notes') }}</h2><ul class="list-disc ps-5">@foreach($notes->notes ?? [] as $note)<li>{{ is_array($note) ? __($note['key'], $note['params'] ?? []) : $note }}</li>@endforeach</ul></aside>
             @endif
         @endif
         <div class="bg-gray-50 rounded-2xl p-4 md:p-6 mb-5" style="font-family: Amiri, serif">

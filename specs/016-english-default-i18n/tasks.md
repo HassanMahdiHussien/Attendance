@@ -13,6 +13,6 @@ plan.md review resolutions (when added) override earlier sections.
 - [x] T004 TranslationCoverageTest replacing ArabicMessagesTest; update affected tests (R6, R8)
 
 ## Run Z2 — panels, outbound, remaining
-- [ ] T005 Filament admin + platform panels (labels, navigation, notifications, login switch) (R3)
-- [ ] T006 Mail/notifications locale, statistical export locale (R7)
-- [ ] T007 Remaining strings found by the coverage test; WEIRDNESS line; tests (R8, R9)
+- [x] T005 Filament admin + platform panels (labels, navigation, notifications, login switch) (R3)
+- [x] T006 Mail/notifications locale, statistical export locale (R7)
+- [x] T007 Remaining strings found by the coverage test; WEIRDNESS line; tests (R8, R9)

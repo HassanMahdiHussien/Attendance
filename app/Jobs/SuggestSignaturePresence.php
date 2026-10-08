@@ -66,7 +66,7 @@ class SuggestSignaturePresence implements ShouldQueue
             }
             $results = [];
             foreach ($attendees as $attendance) {
-                $results[$attendance->id] = ['result' => 'unclear', 'reason' => 'لم تتضح الخانة'];
+                $results[$attendance->id] = ['result' => 'unclear', 'reason' => 'messages.ai.signature_box_unclear'];
             }
             foreach ($response['results'] as $item) {
                 if (! is_array($item)) {

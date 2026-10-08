@@ -21,36 +21,42 @@ class HrPartnerResource extends Resource
 {
     protected static ?string $model = HrPartner::class;
 
-    protected static ?string $modelLabel = 'شريك موارد بشرية';
+    public static function getModelLabel(): string
+    {
+        return __('HR partner');
+    }
 
-    protected static ?string $pluralModelLabel = 'شركاء الموارد البشرية';
+    public static function getPluralModelLabel(): string
+    {
+        return __('HR partners');
+    }
 
     protected static bool $isGloballySearchable = false;
 
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
-            TextInput::make('name')->label('الاسم')->required()->maxLength(255),
-            TextInput::make('contact_email')->label('البريد الإلكتروني')->email()->required(),
+            TextInput::make('name')->label(__('Name'))->required()->maxLength(255),
+            TextInput::make('contact_email')->label(__('Email address'))->email()->required(),
         ]);
     }
 
     public static function table(Table $table): Table
     {
         return $table->columns([
-            TextColumn::make('name')->label('الاسم'),
-            TextColumn::make('contact_email')->label('البريد الإلكتروني'),
+            TextColumn::make('name')->label(__('Name')),
+            TextColumn::make('contact_email')->label(__('Email address')),
         ])->recordActions([
             EditAction::make(),
-            Action::make('attachCompany')->label('ربط شركة')->schema([
-                Select::make('company_id')->label('الشركة')->options(fn (): array => Company::query()->pluck('name', 'id')->all())->searchable()->required(),
-                Checkbox::make('full_case_access')->label('الوصول الكامل للقضايا'),
+            Action::make('attachCompany')->label(__('Link company'))->schema([
+                Select::make('company_id')->label(__('Company'))->options(fn (): array => Company::query()->pluck('name', 'id')->all())->searchable()->required(),
+                Checkbox::make('full_case_access')->label(__('Full case access')),
             ])->action(function (HrPartner $record, array $data): void {
                 $company = Company::findOrFail($data['company_id']);
                 app(PartnershipService::class)->hrPartner($company, $record->id, (bool) ($data['full_case_access'] ?? false), auth()->user());
             }),
-            Action::make('detachCompany')->label('إلغاء ربط شركة')->color('danger')->schema([
-                Select::make('company_id')->label('الشركة')->options(fn (HrPartner $record): array => Company::query()
+            Action::make('detachCompany')->label(__('Unlink company'))->color('danger')->schema([
+                Select::make('company_id')->label(__('Company'))->options(fn (HrPartner $record): array => Company::query()
                     ->whereIn('id', DB::table('company_hr_partner')->where('hr_partner_id', $record->id)->select('company_id'))
                     ->pluck('name', 'id')->all())->required(),
             ])->requiresConfirmation()->action(function (HrPartner $record, array $data): void {

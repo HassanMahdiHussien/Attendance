@@ -24,7 +24,7 @@ class LawImportService
     {
         abort_unless($actor->can('import', $law), 403);
         if ($law->requires_page_range && ($pageFrom === null || $pageTo === null)) {
-            throw ValidationException::withMessages(['page_from' => 'يلزم تحديد نطاق الصفحات لهذا القانون.']);
+            throw ValidationException::withMessages(['page_from' => __('messages.legal.page_range_required')]);
         }
         if ($source === null) {
             $source = is_file(base_path($law->source_file_path))
@@ -32,18 +32,18 @@ class LawImportService
         }
         $path = $source instanceof UploadedFile ? $source->getRealPath() : $source;
         if (! is_file($path) || filesize($path) > (int) config('displanery.legal_library.max_file_mb', 50) * 1024 * 1024) {
-            throw ValidationException::withMessages(['source' => 'ملف المصدر غير موجود أو يتجاوز الحد المسموح للحجم.']);
+            throw ValidationException::withMessages(['source' => __('messages.legal.source_missing_or_large')]);
         }
         $extension = strtolower($source instanceof UploadedFile ? $source->getClientOriginalExtension() : pathinfo($path, PATHINFO_EXTENSION));
         if (! in_array($extension, ['pdf', 'txt', 'docx'], true) || ($law->kind->value === 'statute' && $extension !== 'pdf')) {
-            throw ValidationException::withMessages(['source' => 'صيغة ملف المصدر غير مدعومة.']);
+            throw ValidationException::withMessages(['source' => __('messages.legal.source_type_unsupported')]);
         }
         $sha = hash_file('sha256', $path);
         $relative = "legal-library/sources/{$sha}.{$extension}";
         if (! Storage::disk('local')->exists($relative)) {
             Storage::disk('local')->put($relative, file_get_contents($path));
         } elseif (hash_file('sha256', Storage::disk('local')->path($relative)) !== $sha) {
-            throw ValidationException::withMessages(['source' => 'بصمة ملف المصدر المخزن غير مطابقة.']);
+            throw ValidationException::withMessages(['source' => __('messages.legal.source_hash_mismatch')]);
         }
         try {
             $count = $extension === 'pdf' ? $this->pdf->count(Storage::disk('local')->path($relative)) : null;
@@ -52,7 +52,7 @@ class LawImportService
                 Law::withoutGlobalScopes()->whereKey($law->id)->lockForUpdate()->firstOrFail();
                 if (LegalImportRun::withoutGlobalScopes()->where('law_id', $law->id)
                     ->whereIn('state', ['queued', 'reading', 'ai_pending', 'splitting'])->exists()) {
-                    throw ValidationException::withMessages(['law' => 'توجد عملية استيراد نشطة لهذا القانون.']);
+                    throw ValidationException::withMessages(['law' => __('messages.legal.law_import_active')]);
                 }
                 $run = LegalImportRun::create(['law_id' => $law->id, 'company_id' => $law->company_id,
                     'source_path' => $relative, 'source_sha256' => $sha, 'page_from' => $pageFrom,
@@ -69,14 +69,14 @@ class LawImportService
             $pageTo ??= $count;
         }
         if ($count !== null && ($pageFrom === null || $pageTo === null || $pageFrom < 1 || $pageTo < $pageFrom || $pageTo > $count || $pageTo - $pageFrom + 1 > (int) config('displanery.legal_library.max_pages', 300))) {
-            throw ValidationException::withMessages(['page_from' => 'اختر نطاق صفحات صحيحاً ضمن حد الاستيراد.']);
+            throw ValidationException::withMessages(['page_from' => __('messages.legal.page_range_limit')]);
         }
 
         return DB::transaction(function () use ($law, $actor, $relative, $sha, $pageFrom, $pageTo, $mode, $extension): LegalImportRun {
             Law::withoutGlobalScopes()->whereKey($law->id)->lockForUpdate()->firstOrFail();
             if (LegalImportRun::withoutGlobalScopes()->where('law_id', $law->id)
                 ->whereIn('state', ['queued', 'reading', 'ai_pending', 'splitting'])->exists()) {
-                throw ValidationException::withMessages(['law' => 'توجد عملية استيراد نشطة لهذا القانون.']);
+                throw ValidationException::withMessages(['law' => __('messages.legal.law_import_active')]);
             }
             $run = LegalImportRun::create(['law_id' => $law->id, 'company_id' => $law->company_id,
                 'source_path' => $relative, 'source_sha256' => $sha, 'page_from' => $pageFrom,
@@ -96,15 +96,15 @@ class LawImportService
         DB::transaction(function () use ($run, $actor): void {
             $locked = LegalImportRun::query()->lockForUpdate()->findOrFail($run->id);
             if (! in_array($locked->state, ['ai_pending', 'completed'], true)) {
-                throw ValidationException::withMessages(['run' => 'عملية الاستيراد هذه ما زالت نشطة.']);
+                throw ValidationException::withMessages(['run' => __('messages.legal.import_still_active')]);
             }
             if (LegalImportRun::withoutGlobalScopes()->where('law_id', $locked->law_id)
                 ->where('id', '!=', $locked->id)->whereIn('state', ['queued', 'reading', 'ai_pending', 'splitting'])->exists()) {
-                throw ValidationException::withMessages(['run' => 'توجد عملية استيراد أخرى نشطة لهذا القانون.']);
+                throw ValidationException::withMessages(['run' => __('messages.legal.another_import_active')]);
             }
             $pages = $locked->pages()->whereIn('ai_status', ['failed', 'unavailable'])->get();
             if ($pages->isEmpty()) {
-                throw ValidationException::withMessages(['run' => 'لا توجد صفحات AI لإعادة قراءتها.']);
+                throw ValidationException::withMessages(['run' => __('messages.legal.no_ai_pages_to_reread')]);
             }
             $locked->update(['state' => 'reading', 'finished_at' => null]);
             foreach ($pages as $page) {
@@ -119,12 +119,12 @@ class LawImportService
     {
         abort_unless($actor->can('import', $run->law), 403);
         if (blank($reason)) {
-            throw ValidationException::withMessages(['reason' => 'يلزم بيان سبب الإلغاء.']);
+            throw ValidationException::withMessages(['reason' => __('messages.legal.cancellation_reason_required')]);
         }
         DB::transaction(function () use ($run, $actor, $reason): void {
             $locked = LegalImportRun::query()->lockForUpdate()->findOrFail($run->id);
             if (in_array($locked->state, ['completed', 'failed', 'cancelled'], true)) {
-                throw ValidationException::withMessages(['run' => 'انتهت عملية الاستيراد هذه بالفعل.']);
+                throw ValidationException::withMessages(['run' => __('messages.legal.import_already_finished')]);
             }
             $locked->update(['state' => 'cancelled', 'finished_at' => now()]);
             $this->audit->log('legal_import.cancelled', $locked, ['reason' => $reason], $actor);
@@ -142,11 +142,11 @@ class LawImportService
         $extension = $source instanceof UploadedFile ? $source->getClientOriginalExtension() : pathinfo($path, PATHINFO_EXTENSION);
         if (! is_file($path) || strtolower($extension) !== 'pdf'
             || filesize($path) > (int) config('displanery.legal_library.max_file_mb', 50) * 1024 * 1024) {
-            throw ValidationException::withMessages(['source' => 'اختر ملف PDF ضمن الحد المسموح للحجم.']);
+            throw ValidationException::withMessages(['source' => __('messages.legal.pdf_size_invalid')]);
         }
         $count = $this->pdf->count($path);
         if ($from < 1 || $to < $from || $to > $count || $to - $from + 1 > (int) config('displanery.legal_library.max_pages', 300)) {
-            throw ValidationException::withMessages(['page_from' => 'اختر نطاق صفحات صحيحاً.']);
+            throw ValidationException::withMessages(['page_from' => __('messages.legal.page_range_invalid')]);
         }
         $directory = 'legal-library/previews/'.Str::uuid();
         Storage::disk('local')->makeDirectory($directory);

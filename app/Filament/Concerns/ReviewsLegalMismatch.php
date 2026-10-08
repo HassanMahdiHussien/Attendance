@@ -51,7 +51,7 @@ trait ReviewsLegalMismatch
         abort_unless($unit && auth()->user()->can('review', $unit->law), 403);
         app(MismatchResolver::class)->resolve($unit, auth()->user(), $choice, $choice === 'edit' ? $this->editedText : null);
         $this->selectedUnitId = null;
-        Notification::make()->title($choice === 'edit' ? 'تم اعتماد النص المصحح' : 'تم اعتماد القراءة')->success()->send();
+        Notification::make()->title($choice === 'edit' ? __('Corrected text approved') : __('Reading approved'))->success()->send();
     }
 
     public function excludeUnit(): void
@@ -60,6 +60,6 @@ trait ReviewsLegalMismatch
         abort_unless($unit && auth()->user()->can('review', $unit->law), 403);
         app(MismatchResolver::class)->exclude($unit, auth()->user(), $this->excludeReason);
         $this->selectedUnitId = null;
-        Notification::make()->title('تم استبعاد الوحدة')->success()->send();
+        Notification::make()->title(__('Unit excluded'))->success()->send();
     }
 }

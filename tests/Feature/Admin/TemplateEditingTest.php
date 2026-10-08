@@ -35,7 +35,7 @@ test('template form fills code defaults and refills when document type or langua
 
     Livewire::test(DocumentTemplates::class)
         ->assertSet('data.blocks.title', $arabicDefense['title'])
-        ->assertSee('الفقرة الافتتاحية')
+        ->assertSee('Opening paragraph')
         ->assertSee('opening')
         ->set('language', 'en')
         ->assertSet('data.blocks.title', $englishDefense['title'])
@@ -67,8 +67,8 @@ test('Kurdish without a company template has empty blocks and a wording notice',
     Livewire::test(DocumentTemplates::class)->set('language', 'ku')
         ->assertSet('data.blocks.title', '')
         ->assertSet('data.blocks.opening', '')
-        ->assertSee('يجب على الشركة توفير نص القالب')
-        ->assertSee('کوردی');
+        ->assertSee('The company must provide template text')
+        ->assertSee('Kurdish');
 });
 
 test('a new template version keeps the old version and an issued document frozen', function (): void {

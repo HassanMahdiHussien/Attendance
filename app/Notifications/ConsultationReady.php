@@ -23,11 +23,13 @@ class ConsultationReady extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage)->subject('استشارة قانونية بانتظارك')->line('توجد استشارة قانونية متاحة للمراجعة في النظام.');
+        return (new MailMessage)->subject(__('messages.notifications.consultation_ready_subject'))
+            ->line(__('messages.notifications.consultation_ready_body'));
     }
 
     public function toArray(object $notifiable): array
     {
-        return ['case_id' => $this->caseId, 'kind' => 'consultation_ready'];
+        return ['case_id' => $this->caseId, 'kind' => 'consultation_ready',
+            'message_key' => 'messages.notifications.consultation_ready_body', 'message_params' => []];
     }
 }

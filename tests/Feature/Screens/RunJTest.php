@@ -30,7 +30,6 @@ use App\Services\Reports\ReportService;
 use App\Support\Access\CaseVisibility;
 use App\Support\Access\Landing;
 use App\Support\Access\ViolationReportVisibility;
-use App\Support\Format\ArabicDigits;
 use App\Support\Format\StageIndicator;
 use App\Support\Tenancy\TenantContext;
 use Filament\Facades\Filament;
@@ -242,8 +241,15 @@ test('HR can convert a report into a prefilled case draft', function (): void {
 });
 
 test('board labels render Arabic day counts and five stage positions', function (): void {
-    expect(StageIndicator::remaining(1))->toBe('باقي يوم');
-    expect(StageIndicator::remaining(2))->toBe('باقي يومان');
+    expect(StageIndicator::remaining(1))->toBe('One day remaining');
+    $previousLocale = app()->getLocale();
+    app()->setLocale('ar');
+    try {
+        expect(StageIndicator::remaining(1))->toBe('باقي يوم');
+        expect(StageIndicator::remaining(2))->toBe('باقي يومان');
+    } finally {
+        app()->setLocale($previousLocale);
+    }
     expect(StageIndicator::step(CaseStatus::Draft))->toBe(1);
     expect(StageIndicator::step(CaseStatus::ArchivedFinal))->toBe(5);
 });

@@ -16,19 +16,19 @@ class ScanBlocks
         $path = Storage::disk($attachment->disk)->path($attachment->path);
         $size = filesize($path);
         if ($size === false || $size > 10 * 1024 * 1024) {
-            throw ValidationException::withMessages(['scan' => 'حجم المسح يتجاوز 10 ميغابايت.']);
+            throw ValidationException::withMessages(['scan' => __('messages.ai.scan_too_large')]);
         }
         $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($path);
         if ($mime === 'application/pdf') {
             if ($this->pages->count($path) > 20) {
-                throw ValidationException::withMessages(['scan' => 'لا يمكن قراءة ملف PDF يزيد على 20 صفحة.']);
+                throw ValidationException::withMessages(['scan' => __('messages.ai.scan_too_many_pages')]);
             }
             $bytes = file_get_contents($path);
 
             return ['type' => 'document', 'source' => ['type' => 'base64', 'mediaType' => 'application/pdf', 'data' => base64_encode($bytes)]];
         }
         if (! in_array($mime, ['image/png', 'image/jpeg'], true)) {
-            throw ValidationException::withMessages(['scan' => 'يُسمح بصور PNG وJPEG وملفات PDF فقط.']);
+            throw ValidationException::withMessages(['scan' => __('messages.ai.scan_type_invalid')]);
         }
         try {
             $image = $mime === 'image/png' ? imagecreatefrompng($path) : imagecreatefromjpeg($path);
@@ -37,7 +37,7 @@ class ScanBlocks
             $image = false;
         }
         if ($image === false) {
-            throw ValidationException::withMessages(['scan' => 'تعذرت قراءة الصورة.']);
+            throw ValidationException::withMessages(['scan' => __('messages.ai.scan_image_unreadable')]);
         }
         $edge = max(imagesx($image), imagesy($image));
         if ($edge > 2000) {
