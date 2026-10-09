@@ -38,6 +38,11 @@ class CitationSync
         }
         $claims = collect(self::claims($arabic))->unique(fn (array $claim) => $claim['legal_unit_id'].':'.$claim['claim_hash']);
         $ids = $claims->pluck('legal_unit_id')->unique()->all();
+        $exclusions = app(RegulationExclusions::class);
+        $blocked = array_intersect($ids, $exclusions->for($document));
+        if ($blocked) {
+            throw new IssuanceBlocked(__($exclusions->refusalKey($document, (int) reset($blocked))));
+        }
         if ($ids && LegalUnit::query()->citableFor($document->disciplinaryCase)->whereKey($ids)->count() !== count($ids)) {
             throw new IssuanceBlocked(__('messages.citation.sync_invalid_for_case'));
         }

@@ -3,6 +3,7 @@
 namespace App\Livewire\Cases\Concerns;
 
 use App\Ai\AiDrafting;
+use App\Ai\RegulationComparisons;
 use App\Enums\CaseStatus;
 use App\Enums\DocumentType;
 use App\Enums\Outcome;
@@ -10,6 +11,8 @@ use App\Exceptions\TransitionBlocked;
 use App\Models\DisciplinaryCase;
 use App\Models\Document;
 use App\Models\LegalUnit;
+use App\Models\RegulationComparison;
+use App\Services\Documents\RegulationExclusions;
 use App\Support\Access\CaseVisibility;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
@@ -23,6 +26,16 @@ trait DraftsWithAi
     public bool $citationPickerOpen = false;
 
     public string $citationSearch = '';
+
+    public array $comparisonVerdicts = [];
+
+    public ?int $comparisonLawId = null;
+
+    public ?int $comparisonRegulationId = null;
+
+    public string $comparisonManualVerdict = 'consistent';
+
+    public string $comparisonSkipReason = '';
 
     abstract protected function aiDocumentType(): DocumentType;
 
@@ -61,6 +74,10 @@ trait DraftsWithAi
         }
         $draft = $case->documents()->where('document_type', $this->aiDocumentType()->value)->where('is_locked', false)->first();
         if ($draft && $draft->version !== 1) {
+            return false;
+        }
+        $comparison = $this->activeComparison($case);
+        if ($comparison && ! in_array($comparison->status, ['confirmed', 'skipped'], true)) {
             return false;
         }
 
@@ -102,14 +119,85 @@ trait DraftsWithAi
             return;
         }
         $this->confirmAiReplacement = false;
-        $this->expectedStatus = $this->aiBusyStage()->value;
+        $this->expectedStatus = $case->fresh()->status->value;
         $this->notice = '';
+    }
+
+    protected function activeComparison(DisciplinaryCase $case): ?RegulationComparison
+    {
+        if ($this->documentId) {
+            $document = $case->documents()->find($this->documentId);
+            $supplement = $document?->supplementaryComparison;
+            if ($supplement) {
+                return $supplement;
+            }
+            if ($document?->regulationComparison) {
+                return $document->regulationComparison;
+            }
+        }
+
+        if ($this->aiDocumentType() === DocumentType::DecisionLetter) {
+            $inherited = $case->documents()->where('document_type', DocumentType::Recommendations->value)
+                ->where('status', 'issued')->latest('version')->first()?->regulationComparison;
+            if ($inherited) {
+                return $inherited;
+            }
+        }
+
+        return app(RegulationComparisons::class)->pending($case, $this->aiDocumentType());
+    }
+
+    public function startSupplementaryComparison(RegulationComparisons $comparisons): void
+    {
+        $case = $this->aiCase();
+        abort_unless($this->aiDocumentType() === DocumentType::DecisionLetter && $this->documentId, 403);
+        $comparisons->startSupplementary($case->documents()->findOrFail($this->documentId), auth()->user());
+    }
+
+    public function startDocumentComparison(RegulationComparisons $comparisons): void
+    {
+        $case = $this->aiCase();
+        abort_unless($this->documentId, 403);
+        $comparisons->startForDocument($case->documents()->findOrFail($this->documentId), auth()->user());
+    }
+
+    public function startManualComparison(RegulationComparisons $comparisons): void
+    {
+        $case = $this->aiCase();
+        abort_if($this->documentId, 403);
+        $comparisons->startManual($case, $this->aiDocumentType(), auth()->user());
+    }
+
+    public function addComparisonPair(RegulationComparisons $comparisons): void
+    {
+        $case = $this->aiCase();
+        $comparison = $this->activeComparison($case);
+        abort_unless($comparison && $this->comparisonLawId && $this->comparisonRegulationId, 403);
+        $comparisons->addPair($comparison, $this->comparisonLawId, $this->comparisonRegulationId,
+            $this->comparisonManualVerdict, auth()->user());
+        $this->comparisonLawId = $this->comparisonRegulationId = null;
+    }
+
+    public function confirmComparison(RegulationComparisons $comparisons): void
+    {
+        $comparison = $this->activeComparison($this->aiCase());
+        abort_unless($comparison, 404);
+        $comparisons->confirm($comparison, auth()->user(), $this->comparisonVerdicts);
+        $this->notice = __('messages.regulation.confirmed');
+    }
+
+    public function skipComparison(RegulationComparisons $comparisons): void
+    {
+        $comparison = $this->activeComparison($this->aiCase());
+        abort_unless($comparison, 404);
+        $comparisons->skip($comparison, auth()->user(), $this->comparisonSkipReason);
+        $this->notice = __('messages.regulation.skipped');
     }
 
     public function pollAiDraft(): void
     {
         $case = $this->aiCase();
-        if ($case->status === $this->aiBusyStage() && $case->ai_request_id !== null) {
+        if ($case->ai_request_id !== null) {
             return;
         }
         $this->expectedStatus = $case->status->value;
@@ -145,7 +233,11 @@ trait DraftsWithAi
         }
         $search = trim($this->citationSearch);
 
-        return LegalUnit::query()->citableFor($case)->with('law')->where(function ($query) use ($search): void {
+        $document = $this->documentId ? $case->documents()->find($this->documentId) : null;
+        $excluded = $document ? app(RegulationExclusions::class)->for($document)
+            : app(RegulationExclusions::class)->forPending($case, $this->aiDocumentType());
+
+        return LegalUnit::query()->citableFor($case)->whereNotIn('legal_units.id', $excluded)->with('law')->where(function ($query) use ($search): void {
             if ($search !== '') {
                 $query->where('article_number', 'like', '%'.$search.'%')
                     ->orWhere('clause_path', 'like', '%'.$search.'%')
@@ -158,7 +250,17 @@ trait DraftsWithAi
     public function selectCitation(int $unitId): void
     {
         $case = $this->aiCase();
+        $document = $this->documentId ? $case->documents()->find($this->documentId) : null;
+        $excluded = $document ? app(RegulationExclusions::class)->for($document)
+            : app(RegulationExclusions::class)->forPending($case, $this->aiDocumentType());
         abort_unless($this->citationPickerOpen && LegalUnit::query()->citableFor($case)->whereKey($unitId)->exists(), 404);
+        if (in_array($unitId, $excluded, true)) {
+            $this->notice = __($document
+                ? app(RegulationExclusions::class)->refusalKey($document, $unitId)
+                : 'messages.regulation.compare_before_citing');
+
+            return;
+        }
         $this->dispatch('citation-selected', marker: '[[cite:'.$unitId.']]');
         $this->citationPickerOpen = false;
     }

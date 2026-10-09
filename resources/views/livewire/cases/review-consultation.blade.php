@@ -6,6 +6,7 @@
         <section><h2 class="font-bold">{{ __('Committee session minutes') }}</h2><p class="whitespace-pre-wrap">{{ $case->committee_session_notes }}</p></section>
         @foreach($case->documents as $document)
             <section class="border-t border-[#EEF0F4] pt-4">
+                @include('livewire.cases.partials.regulation-comparison-note')
                 <h2 class="font-bold">{{ ['defense_letter' => __('Defense request letter'), 'recommendations' => __('Committee recommendations'), 'decision_letter' => __('Decision letter')][$document->document_type->value] }}</h2>
                 @if($document->pdf_status === 'ready')<a href="{{ route('documents.pdf', $document) }}" class="ui-link">{{ __('Download issued document') }}</a>@endif
                 @foreach($document->contents as $content)

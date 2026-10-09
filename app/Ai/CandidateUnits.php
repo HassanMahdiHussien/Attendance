@@ -11,10 +11,10 @@ class CandidateUnits
 {
     public function __construct(private TextNormalizer $normalizer) {}
 
-    public function for(DisciplinaryCase $case, string $context): Collection
+    public function for(DisciplinaryCase $case, string $context, array $excludedIds = []): Collection
     {
         $words = $this->words($case->violation_type.' '.$case->description.' '.$context);
-        $units = LegalUnit::query()->citableFor($case)->with(['law', 'topics'])->get();
+        $units = LegalUnit::query()->citableFor($case)->whereNotIn('legal_units.id', $excludedIds)->with(['law', 'topics'])->get();
         $ranked = $units->sortByDesc(function (LegalUnit $unit) use ($words): int {
             $topics = $unit->topics->contains('topic', 'discipline') ? 100000 : 0;
 

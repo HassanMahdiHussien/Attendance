@@ -27,6 +27,10 @@ class CitationOverride
             if ($document->is_locked || $actor->company_id !== $document->company_id) {
                 abort(403);
             }
+            if (in_array($citation->legal_unit_id, app(RegulationExclusions::class)->for($document), true)) {
+                throw ValidationException::withMessages(['citation' => __(app(RegulationExclusions::class)
+                    ->refusalKey($document, $citation->legal_unit_id))]);
+            }
             $flagged = $citation->relevance_check?->value;
             $citation->forceFill(['overridden' => true, 'overridden_by' => $actor->id,
                 'overridden_at' => now(), 'override_reason' => trim($reason)])->save();

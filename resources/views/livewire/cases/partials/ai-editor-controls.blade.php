@@ -1,4 +1,14 @@
 <div class="space-y-4" x-data="{ active: null, insert(marker) { if (!this.active) return; let el = this.active; let start = el.selectionStart; let value = el.value.slice(0, start) + marker + el.value.slice(el.selectionEnd); $wire.set(el.getAttribute('wire:model'), value); this.$nextTick(() => { el.focus(); el.setSelectionRange(start + marker.length, start + marker.length); }); } }" @focusin.window="if ($event.target.tagName === 'TEXTAREA' && ['bodies', 'findings', 'recommendations', 'reasons'].some(key => ($event.target.getAttribute('wire:model') || '').startsWith(key + '.'))) active = $event.target" @citation-selected.window="insert($event.detail.marker)">
+    @include('livewire.cases.partials.regulation-comparison-editor')
+    @if($document && $document->document_type === \App\Enums\DocumentType::DecisionLetter && $document->regulation_comparison_id && ! $document->supplementary_comparison_id)
+        <x-ui.button type="button" variant="secondary" wire:click="startSupplementaryComparison">{{ __('messages.regulation.add_supplement') }}</x-ui.button>
+    @endif
+    @if($document && ! $document->regulation_comparison_id && app(\App\Ai\RegulationComparisons::class)->required($document->disciplinaryCase))
+        <x-ui.button type="button" variant="secondary" wire:click="startDocumentComparison">{{ __('messages.regulation.start_manual') }}</x-ui.button>
+    @endif
+    @if(! $document && ! $comparison && app(\App\Ai\RegulationComparisons::class)->required($case))
+        <x-ui.button type="button" variant="secondary" wire:click="startManualComparison">{{ __('messages.regulation.start_manual') }}</x-ui.button>
+    @endif
     @if($aiFailed)<x-ui.alert tone="amber">{{ __('AI drafting failed — you can write manually or try again') }}</x-ui.alert>@endif
     @if($aiBusy)
         <p role="status" wire:poll.3s="pollAiDraft" class="rounded-2xl bg-primary-light p-4 text-indigo-700">{{ __('Drafting…') }}</p>

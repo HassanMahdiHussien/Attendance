@@ -52,6 +52,8 @@ class DocumentCorrector
                 'correction_reason' => $reason,
                 'created_by' => $actor->id,
                 'last_edited_by' => $actor->id,
+                'regulation_comparison_id' => $source->regulation_comparison_id,
+                'supplementary_comparison_id' => $source->supplementary_comparison_id,
             ]);
             $markerIds = $source->contents->flatMap(fn ($content) => collect(CitationSync::claims(
                 $content->body."\n".($content->secondary_body ?? '')))->pluck('legal_unit_id'))->unique()->all();

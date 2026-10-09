@@ -1,6 +1,30 @@
 <?php
 
 return [
+    'regulation' => [
+        'title' => 'Law vs internal regulation', 'suggesting' => 'Preparing suggested pairs…',
+        'ai_unavailable' => 'The suggestion is unavailable. Add pairs manually or skip with a reason.',
+        'retrieved_only' => 'AI paired only retrieved candidates. Add any other citable pair that matters.',
+        'law' => 'Labour law', 'internal' => 'Internal regulation', 'suggestion' => 'AI suggestion',
+        'verdict' => 'HR verdict', 'consistent' => 'Consistent', 'conflict' => 'Conflict — the law applies',
+        'more_favourable' => 'Regulation gives the worker more', 'not_relevant' => 'Not relevant',
+        'add_pair' => 'Add pair', 'confirm' => 'Confirm comparison', 'confirmed' => 'Comparison confirmed. Press Draft with AI again.',
+        'skip' => 'Skip comparison', 'skip_reason' => 'Reason for skipping',
+        'skipped' => 'Comparison skipped. Press Draft with AI again.',
+        'law_only' => 'Comparison skipped — only the labour law may be cited.',
+        'confirmed_by' => 'Confirmed by', 'invalid_pair' => 'Choose a citable law and company regulation pair.',
+        'invalid_verdict' => 'Choose a valid verdict.', 'in_progress' => 'Wait for the suggestion to finish.',
+        'confirm_first' => 'Confirm or skip the comparison before drafting.',
+        'compare_before_citing' => 'Compare the law and internal regulation, then confirm a non-conflict pair before citing this regulation unit.',
+        'reason_required' => 'Enter a reason for skipping.',
+        'excluded_citation' => 'This regulation unit is excluded by the confirmed comparison.',
+        'supplement_required' => 'Confirm a supplementary comparison before citing this regulation unit.',
+        'add_supplement' => 'Add supplementary comparison', 'supplement' => 'Supplementary comparison',
+        'start_manual' => 'Compare law and regulation manually',
+        'pair_required' => 'Add at least one citable pair, or skip with a reason.',
+        'source_page' => 'Source page',
+        'invalid_comparison' => 'The comparison belongs to another case.',
+    ],
     'setup' => [
         'title' => 'Finish setting up your company', 'letterhead' => 'Letterhead',
         'branches' => 'Branches and jurisdictions', 'committee' => 'Committee order and approvers',
