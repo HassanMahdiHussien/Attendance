@@ -1,6 +1,7 @@
 <div class="mx-auto max-w-6xl space-y-5">
     <x-ui.page-header :title="__('Review committee recommendations')" :subtitle="__('Your decision covers every language shown. The text is read only.')" back="/committee" />
     <x-ui.card class="space-y-5">
+        @include('livewire.cases.partials.regulation-comparison-note')
         @if($document->disciplinaryCase->confirmedResponseText())<section class="rounded-2xl bg-gray-50 p-4"><h2 class="font-bold">{{ __('Transcribed text — the scan is the original') }}</h2><p class="whitespace-pre-wrap" dir="auto">{{ $document->disciplinaryCase->confirmedResponseText() }}</p></section>@endif
         @if($notice)<x-ui.alert tone="red" role="status">{{ $notice }}</x-ui.alert>@endif
         @error('notice')<x-ui.alert tone="red">{{ $message }}</x-ui.alert>@enderror

@@ -88,6 +88,7 @@ class EditDocument extends Component
         $document = $this->documentId ? $case->documents()->findOrFail($this->documentId) : null;
 
         return view('livewire.cases.edit-document', ['record' => $case, 'document' => $document,
+            'comparison' => $this->activeComparison($case),
             'aiAvailable' => $this->canRequestAi($case), 'aiBusy' => $case->status === $this->aiBusyStage() && $case->ai_request_id !== null,
             'aiFailed' => $this->aiFailed($case),
             'units' => $this->citableUnits($case), 'languages' => array_unique(array_merge(['ar', 'en'], $case->company->enabled_languages))])

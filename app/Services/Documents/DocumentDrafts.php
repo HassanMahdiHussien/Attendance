@@ -13,6 +13,7 @@ use App\Enums\PenaltyType;
 use App\Exceptions\TransitionBlocked;
 use App\Models\DisciplinaryCase;
 use App\Models\Document;
+use App\Models\RegulationComparison;
 use App\Models\User;
 use App\Services\CaseEventLogger;
 use App\Services\Cases\CaseWorkflow;
@@ -25,9 +26,9 @@ class DocumentDrafts
 {
     public function __construct(private CaseWorkflow $workflow, private CaseEventLogger $events) {}
 
-    public function createOrUpdate(DisciplinaryCase $case, DocumentType $type, array $bodies, User $actor, ?Document $draft = null, DraftedBy $origin = DraftedBy::Human): Document
+    public function createOrUpdate(DisciplinaryCase $case, DocumentType $type, array $bodies, User $actor, ?Document $draft = null, DraftedBy $origin = DraftedBy::Human, ?int $comparisonId = null): Document
     {
-        return DB::transaction(function () use ($case, $type, $bodies, $actor, $draft, $origin): Document {
+        return DB::transaction(function () use ($case, $type, $bodies, $actor, $draft, $origin, $comparisonId): Document {
             $case = DisciplinaryCase::query()->lockForUpdate()->findOrFail($case->id);
             Gate::forUser($actor)->authorize('manageDocuments', $case);
             if ($type !== DocumentType::DefenseLetter || ($draft?->version === 1
@@ -55,11 +56,23 @@ class DocumentDrafts
                 if ($case->status !== CaseStatus::Open) {
                     throw new TransitionBlocked(__('messages.case.changed_reload_period'));
                 }
+                $comparisonId ??= RegulationComparison::query()->where('case_id', $case->id)
+                    ->where('document_type', $type->value)->whereIn('status', ['confirmed', 'skipped'])
+                    ->latest('id')->value('id');
                 $draft = Document::create([
                     'company_id' => $case->company_id, 'case_id' => $case->id, 'document_type' => $type,
                     'drafted_by' => $origin, 'status' => DocumentStatus::Draft,
-                    'version' => 1, 'created_by' => $actor->id,
+                    'version' => 1, 'created_by' => $actor->id, 'regulation_comparison_id' => $comparisonId,
                 ]);
+                if ($comparisonId) {
+                    $comparison = RegulationComparison::findOrFail($comparisonId);
+                    if ($comparison->consumed_at === null) {
+                        $comparison->forceFill(['consumed_at' => now()])->save();
+                    }
+                }
+            }
+            if ($comparisonId && $draft->regulation_comparison_id !== $comparisonId) {
+                $draft->forceFill(['regulation_comparison_id' => $comparisonId])->save();
             }
             $changed = false;
             foreach ($bodies as $language => $body) {
@@ -85,10 +98,18 @@ class DocumentDrafts
         });
     }
 
-    public function createOrUpdateDecision(DisciplinaryCase $case, array $bodies, User $actor, ?Document $draft = null, DraftedBy $origin = DraftedBy::Human): Document
+    public function createOrUpdateDecision(DisciplinaryCase $case, array $bodies, User $actor, ?Document $draft = null, DraftedBy $origin = DraftedBy::Human, ?int $comparisonId = null): Document
     {
-        return DB::transaction(function () use ($case, $bodies, $actor, $draft, $origin): Document {
+        return DB::transaction(function () use ($case, $bodies, $actor, $draft, $origin, $comparisonId): Document {
             $case = DisciplinaryCase::query()->lockForUpdate()->findOrFail($case->id);
+            $comparisonId ??= $draft?->regulation_comparison_id;
+            $comparisonId ??= $case->documents()->where('document_type', DocumentType::DecisionLetter->value)
+                ->where('is_locked', false)->value('regulation_comparison_id');
+            $comparisonId ??= $case->documents()->where('document_type', DocumentType::Recommendations->value)
+                ->where('status', DocumentStatus::Issued->value)->orderByDesc('version')->first()?->regulation_comparison_id;
+            $comparisonId ??= RegulationComparison::query()->where('case_id', $case->id)
+                ->where('document_type', DocumentType::DecisionLetter->value)
+                ->whereIn('status', ['confirmed', 'skipped'])->latest('id')->value('id');
             Gate::forUser($actor)->authorize('manageDocuments', $case);
             if (($draft === null || $draft->version === 1)
                 && ! in_array($case->status, [CaseStatus::SignedRecommendationsUploaded, CaseStatus::DecisionLetterCitationCheck], true)
@@ -114,7 +135,16 @@ class DocumentDrafts
                 $document = Document::create(['company_id' => $case->company_id, 'case_id' => $case->id,
                     'document_type' => DocumentType::DecisionLetter, 'penalty_type' => PenaltyType::from($case->outcome->value),
                     'drafted_by' => $origin, 'status' => DocumentStatus::Draft,
-                    'version' => 1, 'created_by' => $actor->id]);
+                    'version' => 1, 'created_by' => $actor->id, 'regulation_comparison_id' => $comparisonId]);
+                if ($comparisonId) {
+                    $comparison = RegulationComparison::findOrFail($comparisonId);
+                    if ($comparison->consumed_at === null) {
+                        $comparison->forceFill(['consumed_at' => now()])->save();
+                    }
+                }
+            }
+            if ($comparisonId && $document->regulation_comparison_id !== $comparisonId) {
+                $document->forceFill(['regulation_comparison_id' => $comparisonId])->save();
             }
             foreach ($bodies as $language => $body) {
                 $document->contents()->updateOrCreate(['language_code' => $language],

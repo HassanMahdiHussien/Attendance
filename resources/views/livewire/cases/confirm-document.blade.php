@@ -12,6 +12,7 @@
         @if($notice)<x-ui.alert tone="indigo" role="status" class="mb-5">{{ $notice }}</x-ui.alert>@endif
         @error('notice')<x-ui.alert tone="red" class="mb-5">{{ $message }}</x-ui.alert>@enderror
         @include('livewire.cases.partials.citation-review')
+        @include('livewire.cases.partials.regulation-comparison-note')
         @if($document->drafted_by === \App\Enums\DraftedBy::Ai)
             <x-ui.alert tone="amber" class="mb-5">{{ __('Check AI wording and references before issuance. The outcome keyword check is a review flag, not a guarantee of a correct decision.') }}</x-ui.alert>
             @if($notes = $document->aiDraftNotes()->latest('id')->first())

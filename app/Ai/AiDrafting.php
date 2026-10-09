@@ -7,7 +7,9 @@ use App\Enums\DocumentType;
 use App\Enums\Outcome;
 use App\Exceptions\TransitionBlocked;
 use App\Jobs\DraftDocumentWithAi;
+use App\Jobs\SuggestRegulationComparison;
 use App\Models\DisciplinaryCase;
+use App\Models\RegulationComparison;
 use App\Models\User;
 use App\Services\AuditLogger;
 use App\Services\CaseEventLogger;
@@ -18,7 +20,8 @@ use Illuminate\Support\Str;
 
 class AiDrafting
 {
-    public function __construct(private CaseWorkflow $workflow, private AuditLogger $audit, private CaseEventLogger $events) {}
+    public function __construct(private CaseWorkflow $workflow, private AuditLogger $audit,
+        private CaseEventLogger $events, private RegulationComparisons $comparisons) {}
 
     public function request(DisciplinaryCase $case, DocumentType $type, User $actor, bool $replaceConfirmed = false): void
     {
@@ -50,13 +53,45 @@ class AiDrafting
             if ($draft && ($draft->version !== 1 || ! $replaceConfirmed)) {
                 throw new TransitionBlocked(__('messages.ai.replace_draft_confirmation_required'));
             }
+            if ($type === DocumentType::DecisionLetter && $draft?->supplementaryComparison
+                && ! in_array($draft->supplementaryComparison->status, ['confirmed', 'skipped'], true)) {
+                throw new TransitionBlocked(__('messages.regulation.confirm_first'));
+            }
+            $comparison = null;
+            if ($type === DocumentType::DecisionLetter) {
+                $comparison = $case->documents()->where('document_type', DocumentType::Recommendations->value)
+                    ->where('status', 'issued')->orderByDesc('version')->first()?->regulationComparison;
+            }
+            if (! $comparison && $this->comparisons->required($case)) {
+                $comparison = $this->comparisons->pending($case, $type);
+                if (! $comparison || ! in_array($comparison->status, ['confirmed', 'skipped'], true)) {
+                    if ($comparison && in_array($comparison->status, ['suggesting', 'ready', 'failed'], true)) {
+                        throw new TransitionBlocked(__('messages.regulation.confirm_first'));
+                    }
+                    $token = (string) Str::uuid();
+                    $comparison = RegulationComparison::create(['company_id' => $case->company_id,
+                        'case_id' => $case->id, 'document_type' => $type->value, 'status' => 'suggesting',
+                        'origin' => 'ai', 'request_token' => $token]);
+                    $case->forceFill(['ai_request_id' => $token, 'ai_request_document_type' => 'regulation_comparison',
+                        'ai_request_from_status' => $from->value, 'ai_request_started_at' => now()])->save();
+                    $this->audit->log('regulation_comparison.requested', $comparison, ['document_type' => $type->value], $actor);
+                    DB::afterCommit(fn () => SuggestRegulationComparison::dispatch($comparison->id, $case->id,
+                        $case->company_id, $actor->id, $token));
+
+                    return;
+                }
+            }
             $token = (string) Str::uuid();
+            if ($comparison && $comparison->consumed_at === null) {
+                $comparison->forceFill(['consumed_at' => now()])->save();
+            }
             $this->workflow->transition($case, $to, $actor, 'AI draft requested');
             $case->forceFill(['ai_request_id' => $token, 'ai_request_document_type' => $type->value,
                 'ai_request_from_status' => $from->value, 'ai_request_started_at' => now()])->save();
             $this->audit->log('ai.draft_requested', $case, ['document_type' => $type->value], $actor);
             $this->events->log($case, 'ai_draft_requested', ['document_type' => $type->value], actor: $actor);
-            DB::afterCommit(fn () => DraftDocumentWithAi::dispatch($case->id, $case->company_id, $actor->id, $type, $token));
+            DB::afterCommit(fn () => DraftDocumentWithAi::dispatch($case->id, $case->company_id, $actor->id, $type, $token,
+                $comparison?->id));
         });
     }
 }

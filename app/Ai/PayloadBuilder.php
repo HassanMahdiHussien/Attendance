@@ -16,6 +16,21 @@ class PayloadBuilder
 {
     private array $restoration = [];
 
+    public function comparison(DisciplinaryCase $case, Collection $units): array
+    {
+        $this->restoration = [];
+        $this->names($case);
+
+        return [
+            'violation_type' => $this->minimize($case->violation_type ?? ''),
+            'incident_description' => $this->minimize($case->description ?? ''),
+            'candidate_units' => $units->map(fn ($unit) => [
+                'id' => $unit->id, 'kind' => $unit->law->kind->value,
+                'official_text' => $unit->official_text,
+            ])->all(),
+        ];
+    }
+
     public function build(DisciplinaryCase $case, DocumentType $type, Collection $units): array
     {
         $this->restoration = [];

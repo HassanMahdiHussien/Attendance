@@ -13,6 +13,7 @@ use App\Exceptions\TransitionBlocked;
 use App\Models\DisciplinaryCase;
 use App\Models\Document;
 use App\Models\DocumentContent;
+use App\Models\RegulationComparison;
 use App\Models\User;
 use App\Notifications\ApprovalNeeded;
 use App\Services\CaseEventLogger;
@@ -32,9 +33,9 @@ class RecommendationsEditor
         return self::$writing;
     }
 
-    public function create(DisciplinaryCase $case, array $contents, User $hrUser, DraftedBy $origin = DraftedBy::Human): Document
+    public function create(DisciplinaryCase $case, array $contents, User $hrUser, DraftedBy $origin = DraftedBy::Human, ?int $comparisonId = null): Document
     {
-        return DB::transaction(function () use ($case, $contents, $hrUser, $origin): Document {
+        return DB::transaction(function () use ($case, $contents, $hrUser, $origin, $comparisonId): Document {
             $case = DisciplinaryCase::query()->lockForUpdate()->findOrFail($case->id);
             if ($case->status !== CaseStatus::CommitteeSessionHeld || ! $case->session_majority_reached
                 || ! $hrUser->is_active || ! $case->company->is_active
@@ -43,9 +44,19 @@ class RecommendationsEditor
                 || $case->documents()->where('document_type', DocumentType::Recommendations->value)->exists()) {
                 throw new TransitionBlocked(__('messages.recommendations.hr_and_majority_required'));
             }
+            $comparisonId ??= RegulationComparison::query()->where('case_id', $case->id)
+                ->where('document_type', DocumentType::Recommendations->value)
+                ->whereIn('status', ['confirmed', 'skipped'])->latest('id')->value('id');
             $document = Document::create(['company_id' => $case->company_id, 'case_id' => $case->id,
                 'document_type' => DocumentType::Recommendations, 'drafted_by' => $origin,
-                'status' => DocumentStatus::Draft, 'version' => 1, 'created_by' => $hrUser->id]);
+                'status' => DocumentStatus::Draft, 'version' => 1, 'created_by' => $hrUser->id,
+                'regulation_comparison_id' => $comparisonId]);
+            if ($comparisonId) {
+                $comparison = RegulationComparison::findOrFail($comparisonId);
+                if ($comparison->consumed_at === null) {
+                    $comparison->forceFill(['consumed_at' => now()])->save();
+                }
+            }
             $this->update($document, $contents, $hrUser, $origin);
             $this->events->log($case, 'recommendations_draft_created', ['document_id' => $document->id], actor: $hrUser);
 

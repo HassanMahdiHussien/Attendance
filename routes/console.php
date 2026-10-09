@@ -10,6 +10,7 @@ use App\Models\Company;
 use App\Models\DisciplinaryCase;
 use App\Models\Document;
 use App\Models\LegalImportRun;
+use App\Models\RegulationComparison;
 use App\Models\ReportExport;
 use App\Services\CaseEventLogger;
 use App\Services\Cases\CaseAlertDispatcher;
@@ -152,10 +153,34 @@ Artisan::command('ai:reconcile-drafting', function (): void {
                             app(CaseWorkflow::class)->transition($case, $from, null, 'AI drafting timed out');
                         }
                         $operation = $case->ai_request_document_type;
+                        if ($operation === 'regulation_comparison') {
+                            RegulationComparison::query()->where('case_id', $case->id)
+                                ->where('request_token', $case->ai_request_id)->where('status', 'suggesting')
+                                ->update(['status' => 'failed']);
+                        }
                         $case->forceFill(['ai_request_id' => null, 'ai_request_document_type' => null,
                             'ai_request_from_status' => null, 'ai_request_attachment_id' => null, 'ai_request_started_at' => null])->save();
-                        app(CaseEventLogger::class)->log($case, in_array($operation, ['response_transcription', 'signature_presence'], true)
+                        app(CaseEventLogger::class)->log($case, in_array($operation, ['response_transcription', 'signature_presence', 'regulation_comparison'], true)
                             ? 'ai_request_expired' : 'ai_draft_failed', ['operation' => $operation, 'reason' => 'AI unavailable — write it manually or try again']);
+                    });
+                });
+            }
+        });
+    RegulationComparison::withoutGlobalScopes()->where('status', 'suggesting')
+        ->where('created_at', '<=', now()->subMinutes(20))->chunkById(100, function ($comparisons): void {
+            foreach ($comparisons as $stale) {
+                app(TenantContext::class)->runForCompany($stale->company_id, function () use ($stale): void {
+                    DB::transaction(function () use ($stale): void {
+                        $comparison = RegulationComparison::query()->lockForUpdate()->find($stale->id);
+                        if (! $comparison || $comparison->status !== 'suggesting' || $comparison->created_at->gt(now()->subMinutes(20))) {
+                            return;
+                        }
+                        $case = DisciplinaryCase::query()->find($comparison->case_id);
+                        if ($case?->ai_request_id === $comparison->request_token
+                            && $case->ai_request_started_at?->gt(now()->subMinutes(20))) {
+                            return;
+                        }
+                        $comparison->forceFill(['status' => 'failed'])->save();
                     });
                 });
             }

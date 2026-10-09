@@ -31,6 +31,8 @@ use App\Models\LegalImportRun;
 use App\Models\LegalUnit;
 use App\Models\LegalUnitApproval;
 use App\Models\Location;
+use App\Models\RegulationComparison;
+use App\Models\RegulationComparisonPair;
 use App\Models\ReportWitness;
 use App\Models\ResponseTranscription;
 use App\Models\Signature;
@@ -65,6 +67,8 @@ test('every tenant foreign key rejects a row from another company through models
         'signature_presence_suggestions' => SignaturePresenceSuggestion::class,
         'ai_generation_logs' => AiGenerationLog::class,
         'email_drafts' => EmailDraft::class,
+        'regulation_comparisons' => RegulationComparison::class,
+        'regulation_comparison_pairs' => RegulationComparisonPair::class,
     ];
     $keys = DB::select("SELECT TABLE_NAME AS source_table, CONSTRAINT_NAME AS constraint_name, REFERENCED_TABLE_NAME AS target_table, MAX(CASE WHEN COLUMN_NAME <> 'company_id' THEN COLUMN_NAME END) AS foreign_column FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = DATABASE() AND REFERENCED_TABLE_NAME IS NOT NULL GROUP BY TABLE_NAME, CONSTRAINT_NAME, REFERENCED_TABLE_NAME HAVING COUNT(*) = 2 AND SUM(COLUMN_NAME = 'company_id') = 1");
     expect(count($keys))->toBeGreaterThan(25);

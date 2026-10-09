@@ -87,6 +87,7 @@ class EditRecommendations extends Component
         Gate::authorize('manageDocuments', $case);
 
         return view('livewire.cases.edit-recommendations', ['case' => $case, 'units' => $this->citableUnits($case),
+            'comparison' => $this->activeComparison($case),
             'aiAvailable' => $this->canRequestAi($case), 'aiBusy' => $case->status === $this->aiBusyStage() && $case->ai_request_id !== null,
             'aiFailed' => $this->aiFailed($case),
             'languages' => array_unique(array_merge(['ar', 'en'], $case->company->enabled_languages)),

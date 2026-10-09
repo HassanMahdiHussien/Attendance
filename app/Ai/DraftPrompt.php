@@ -22,7 +22,7 @@ class DraftPrompt
         ], 'required' => ['languages', 'notes'], 'additionalProperties' => false];
     }
 
-    public function messages(array $payload, array $languages, DocumentType $type, array $reasons = []): array
+    public function messages(array $payload, array $languages, DocumentType $type, array $reasons = [], array $comparisonPairs = []): array
     {
         $instruction = 'Draft only the case-specific prose in '.implode(', ', $languages).
             '. Arabic is authoritative; every other language renders the same claims. Use citations only as [[cite:<id>]] markers from candidate_units. '
@@ -38,6 +38,12 @@ class DraftPrompt
         }
         if ($reasons) {
             $instruction .= ' Correct these validation failures: '.implode('; ', $reasons);
+        }
+        if ($comparisonPairs) {
+            $instruction .= ' HR confirmed these law/regulation pairs: '.json_encode($comparisonPairs).'. For conflict pairs cite the statute only. Never cite an excluded regulation unit.';
+        }
+        if (($payload['regulation_comparison'] ?? null) === 'skipped_law_only') {
+            $instruction .= ' HR skipped the comparison. Cite labour law only; cite no internal regulation.';
         }
 
         return [['role' => 'user', 'content' => $instruction."\n".json_encode($payload, JSON_UNESCAPED_UNICODE)]];

@@ -39,7 +39,15 @@ function uiInventoryFor(string $source): array
 test('refreshed screens retain their original behavior surface', function (): void {
     $baseline = json_decode(File::get(base_path('tests/fixtures/ui-inventory.json')), true, flags: JSON_THROW_ON_ERROR);
     // New UI controls may be listed here with a reason once their behavior is reviewed.
-    $allowedAdditions = [];
+    $allowedAdditions = [
+        'resources/views/livewire/cases/partials/ai-editor-controls.blade.php' => [
+            'wire' => [
+                ['wire:click', 'startSupplementaryComparison'],
+                ['wire:click', 'startDocumentComparison'],
+                ['wire:click', 'startManualComparison'],
+            ],
+        ],
+    ];
 
     foreach ($baseline as $path => $expected) {
         $actual = uiInventoryFor(File::get(base_path($path)));

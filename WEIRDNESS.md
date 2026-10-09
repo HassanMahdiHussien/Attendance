@@ -58,6 +58,7 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 - **Signature presence is recorded by HR from the scan.** AI may suggest a box state, but HR records the observation; a filled box is never proof of signer identity. (2026-10-06)
 - **The legal-library AI transcribes page images only; our splitter identifies articles and clauses.** AI output is an independent reading, never the source of unit boundaries or legal decisions. (2026-10-07)
 - **Text and Word regulations are verified from their exact source text but still need company lawyer approval.** Source fidelity and company authorization are separate gates. (2026-10-07)
+- AI law-versus-regulation comparisons are review aids: HR confirms or changes them before AI drafting, and their quoted note stays on internal review screens, never in an issued letter or PDF. Manual drafts also need a confirmed non-conflict pair before citing each regulation unit; without one, or after a skip, only the labour law may be cited. (2026-10-09)
 - **A `verified_auto` unit stores the AI reading's clean spacing as its official text.** The normalized comparison establishes equivalence while the published text remains readable. (2026-10-07)
 - **PDF text layers with spaces inside words fall back to OCR.** Such layers can appear selectable while corrupting Arabic word boundaries. (2026-10-07)
 - **The drafting AI never receives names or personal IDs.** Known names in free text are masked as whole words and restored after drafting; long numbers, phones, and emails remain masked. (2026-10-08)

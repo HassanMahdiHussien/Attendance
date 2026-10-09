@@ -7,6 +7,7 @@ use App\Enums\DocumentType;
 use App\Enums\DraftedBy;
 use App\Enums\PenaltyType;
 use App\Exceptions\ImmutableRecordException;
+use App\Exceptions\TenantMismatch;
 use App\Models\Concerns\BelongsToCompany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -29,6 +30,17 @@ class Document extends Model
     protected static function booted(): void
     {
         static::saving(function (self $document): void {
+            foreach (['regulation_comparison_id', 'supplementary_comparison_id'] as $key) {
+                if ($document->{$key} !== null) {
+                    $comparison = RegulationComparison::withoutGlobalScopes()->find($document->{$key});
+                    if ($comparison && (int) $comparison->company_id !== (int) $document->company_id) {
+                        throw new TenantMismatch('Comparison belongs to another company.');
+                    }
+                    if (! $comparison || (int) $comparison->case_id !== (int) $document->case_id) {
+                        throw ValidationException::withMessages([$key => __('messages.regulation.invalid_comparison')]);
+                    }
+                }
+            }
             if (! ($document->exists && $document->getRawOriginal('is_locked'))
                 && $document->previous_version_id !== null && blank($document->correction_reason)) {
                 throw ValidationException::withMessages(['correction_reason' => __('messages.document.correction_reason_required')]);
@@ -99,6 +111,16 @@ class Document extends Model
     public function disciplinaryCase(): BelongsTo
     {
         return $this->belongsTo(DisciplinaryCase::class, 'case_id');
+    }
+
+    public function regulationComparison(): BelongsTo
+    {
+        return $this->belongsTo(RegulationComparison::class, 'regulation_comparison_id');
+    }
+
+    public function supplementaryComparison(): BelongsTo
+    {
+        return $this->belongsTo(RegulationComparison::class, 'supplementary_comparison_id');
     }
 
     public function previousVersion(): BelongsTo
