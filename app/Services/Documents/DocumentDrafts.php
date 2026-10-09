@@ -18,6 +18,7 @@ use App\Models\User;
 use App\Services\CaseEventLogger;
 use App\Services\Cases\CaseWorkflow;
 use App\Support\Access\CaseVisibility;
+use App\Support\Text\ArabicText;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
@@ -76,6 +77,7 @@ class DocumentDrafts
             }
             $changed = false;
             foreach ($bodies as $language => $body) {
+                $body = ArabicText::westernDigits($body);
                 $content = $draft->contents()->firstOrNew(['language_code' => $language]);
                 if (! $content->exists || $content->body !== $body) {
                     $content->fill(['company_id' => $case->company_id, 'body' => $body, 'is_authoritative' => $language === 'ar']);
@@ -147,6 +149,7 @@ class DocumentDrafts
                 $document->forceFill(['regulation_comparison_id' => $comparisonId])->save();
             }
             foreach ($bodies as $language => $body) {
+                $body = ArabicText::westernDigits($body);
                 $document->contents()->updateOrCreate(['language_code' => $language],
                     ['company_id' => $case->company_id, 'body' => $body, 'is_authoritative' => $language === 'ar']);
             }

@@ -9,6 +9,7 @@ use App\Models\DisciplinaryCase;
 use App\Models\Employee;
 use App\Models\Location;
 use App\Models\User;
+use App\Models\ViolationType;
 use App\Services\Cases\CaseDrafts;
 use App\Services\Cases\CaseInsights;
 use App\Services\Cases\CaseOpening;
@@ -38,6 +39,8 @@ class CreateCase extends Component
     public string $violationTime = '';
 
     public string $violationType = '';
+
+    public string $violationTypeId = '';
 
     public string $description = '';
 
@@ -79,6 +82,7 @@ class CreateCase extends Component
             $this->place = (string) $draft->violation_place_freetext;
             $this->violationTime = Carbon::parse($draft->violation_time)->format('Y-m-d\TH:i');
             $this->violationType = (string) $draft->violation_type;
+            $this->violationTypeId = (string) $draft->violation_type_id;
             $this->description = (string) $draft->description;
             $this->responsibleEmployeeId = (string) $draft->alleged_responsible_employee_id;
             $this->responsibleName = (string) $draft->alleged_responsible_person_freetext;
@@ -104,6 +108,7 @@ class CreateCase extends Component
             $this->place = (string) $report->place_freetext;
             $this->violationTime = Carbon::parse($report->occurred_at)->format('Y-m-d\TH:i');
             $this->violationType = $report->violation_type;
+            $this->violationTypeId = (string) $report->violation_type_id;
             $this->description = $report->description;
             $this->responsibleEmployeeId = (string) $report->alleged_responsible_employee_id;
             $this->responsibleName = (string) $report->alleged_responsible_person_freetext;
@@ -168,6 +173,9 @@ class CreateCase extends Component
             'responsibleEmployees' => $this->branchId ? Employee::query()->where('branch_id', $this->branchId)->where('is_active', true)
                 ->when($this->responsibleSearch !== '', fn ($q) => $q->where('name', 'like', '%'.$this->responsibleSearch.'%'))->get() : collect(),
             'locations' => $this->branchId ? Location::query()->where('branch_id', $this->branchId)->where('is_active', true)->get() : collect(),
+            'violationTypes' => ViolationType::query()->where(fn ($query) => $query->where('is_active', true)
+                ->when($this->violationTypeId !== '', fn ($query) => $query->orWhereKey($this->violationTypeId)))
+                ->orderBy('sort_order')->get(),
             'hrUsers' => User::query()->where('company_id', auth()->user()->company_id)->where('is_active', true)->whereIn('primary_role', [UserRole::HrStaff->value, UserRole::CompanyAdmin->value])->get(),
         ])->layout('layouts.workspace');
     }
@@ -177,7 +185,8 @@ class CreateCase extends Component
         $data = $this->validate([
             'branchId' => ['required', 'integer'], 'employeeId' => ['required', 'integer'],
             'locationId' => ['nullable', 'integer'], 'place' => ['nullable', 'string', 'max:255'],
-            'violationTime' => ['required', 'date'], 'violationType' => ['required', 'string', 'max:255'],
+            'violationTime' => ['required', 'date'], 'violationType' => ['nullable', 'string', 'max:255'],
+            'violationTypeId' => ['nullable', 'integer'],
             'description' => ['nullable', 'string'], 'responsibleEmployeeId' => ['nullable', 'integer'],
             'responsibleName' => ['nullable', 'string', 'max:255'], 'witnessNames' => ['nullable', 'string'],
             'assignedHrUserId' => ['nullable', 'integer'],
@@ -186,11 +195,15 @@ class CreateCase extends Component
             $this->addError('place', __('messages.report.location_or_place_required'));
             throw ValidationException::withMessages(['place' => __('messages.report.location_or_place_required')]);
         }
+        if (blank($data['violationTypeId']) && blank($data['violationType'])) {
+            throw ValidationException::withMessages(['violationType' => __('Choose a violation type or describe another')]);
+        }
 
         return [
             'branch_id' => $data['branchId'], 'employee_id' => $data['employeeId'],
             'location_id' => $data['locationId'] ?: null, 'violation_place_freetext' => $data['place'] ?: null,
             'violation_time' => $data['violationTime'], 'violation_type' => $data['violationType'],
+            'violation_type_id' => $data['violationTypeId'] ?: null,
             'description' => $data['description'], 'alleged_responsible_employee_id' => $data['responsibleEmployeeId'] ?: null,
             'alleged_responsible_person_freetext' => $data['responsibleName'] ?: null,
             'assigned_hr_user_id' => $data['assignedHrUserId'] ?: auth()->id(),

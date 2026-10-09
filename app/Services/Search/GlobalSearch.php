@@ -9,6 +9,7 @@ use App\Support\Access\CaseVisibility;
 use App\Support\Access\EmailDraftVisibility;
 use App\Support\Access\ViolationReportVisibility;
 use App\Support\Format\Ui;
+use App\Support\Format\Violation;
 use App\Support\Search\SearchText;
 
 class GlobalSearch
@@ -37,7 +38,12 @@ class GlobalSearch
             })
             ->where(function ($scope) use ($like, $prefix, $number): void {
                 $scope->where('search_employees.search_name', 'like', $like)
-                    ->orWhere('search_employees.employee_code', 'like', $prefix);
+                    ->orWhere('search_employees.employee_code', 'like', $prefix)
+                    ->orWhere('cases.violation_type', 'like', $like)
+                    ->orWhereExists(fn ($types) => $types->selectRaw('1')->from('violation_types as search_types')
+                        ->whereColumn('search_types.id', 'cases.violation_type_id')
+                        ->whereColumn('search_types.company_id', 'cases.company_id')
+                        ->whereRaw('LOWER(CAST(search_types.names AS CHAR)) LIKE ?', [$like]));
                 if ($number !== null) {
                     $scope->orWhere('search_employees.employee_code', 'like', 'EMP-'.$prefix)
                         ->orWhere('cases.case_number', $number)
@@ -49,7 +55,7 @@ class GlobalSearch
             ->orderByDesc('cases.created_at')->limit(8)->get();
         $groups['cases'] = $cases->map(fn ($case) => [
             'label' => '#'.str_pad((string) $case->case_number, 4, '0', STR_PAD_LEFT).' · '.$case->employee_name,
-            'detail' => Ui::stage($case->status), 'url' => route('cases.show', $case->id),
+            'detail' => Violation::name($case).' · '.Ui::stage($case->status), 'url' => route('cases.show', $case->id),
         ])->all();
 
         $policy = app(EmployeeProfilePolicy::class);
@@ -71,9 +77,14 @@ class GlobalSearch
         }
 
         if (in_array($viewer->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)) {
-            $reports = ViolationReportVisibility::inbox($viewer)->where('search_text', 'like', $like)
+            $reports = ViolationReportVisibility::inbox($viewer)->where(fn ($scope) => $scope
+                ->where('search_text', 'like', $like)
+                ->orWhereExists(fn ($types) => $types->selectRaw('1')->from('violation_types as search_types')
+                    ->whereColumn('search_types.id', 'violation_reports.violation_type_id')
+                    ->whereColumn('search_types.company_id', 'violation_reports.company_id')
+                    ->whereRaw('LOWER(CAST(search_types.names AS CHAR)) LIKE ?', [$like])))
                 ->latest()->limit(8)->get()->map(fn ($report) => [
-                    'label' => $report->violation_type, 'detail' => $report->place_freetext ?? '',
+                    'label' => Violation::name($report), 'detail' => $report->place_freetext ?? '',
                     'url' => route('reports.inbox'), 'time' => $report->created_at,
                 ]);
             $drafts = EmailDraftVisibility::inbox($viewer)->where('search_subject', 'like', $like)

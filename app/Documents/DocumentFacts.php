@@ -12,6 +12,7 @@ use App\Models\Document;
 use App\Models\Employee;
 use App\Services\Documents\DocumentIssuer;
 use App\Support\Format\OutcomeLabel;
+use App\Support\Format\Violation;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
@@ -108,7 +109,7 @@ class DocumentFacts
             $prior = DisciplinaryCase::query()->whereIn('id', $links)->get();
             foreach ($prior as $old) {
                 $extra['prior_cases'][] = IraqiDate::format($this->date($old->violation_time, 'prior_case_date'), $language)
-                    .' — '.$this->required($old->violation_type, 'prior_case_type')
+                    .' — '.$this->required(Violation::name($old, $language), 'prior_case_type')
                     .' — '.($language === 'ar'
                         ? OutcomeLabel::arabic($old->outcome)
                         : match ($old->outcome?->value) {

@@ -5,6 +5,7 @@ namespace App\Support\Format;
 use App\Documents\IraqiDate;
 use App\Enums\CaseStatus;
 use App\Enums\Outcome;
+use App\Support\Text\ArabicText;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 
@@ -12,7 +13,7 @@ class Ui
 {
     public static function number(string|int|float $value): string
     {
-        return app()->getLocale() === 'ar' ? ArabicDigits::convert((string) $value) : (string) $value;
+        return ArabicText::westernDigits((string) $value);
     }
 
     public static function date(CarbonInterface|string|null $date, ?string $format = null): string
@@ -28,7 +29,7 @@ class Ui
         }
 
         return app()->getLocale() === 'ar'
-            ? ArabicDigits::convert(IraqiDate::format($local, 'ar'))
+            ? IraqiDate::format($local, 'ar')
             : $local->format('j M Y');
     }
 

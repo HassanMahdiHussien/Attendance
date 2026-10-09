@@ -12,6 +12,7 @@ use App\Models\LegalUnit;
 use App\Models\User;
 use App\Services\CaseEventLogger;
 use App\Services\Cases\RecommendationsEditor;
+use App\Support\Text\ArabicText;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
@@ -67,8 +68,8 @@ class DocumentCorrector
                     $correction->contents()->create([
                         'company_id' => $source->company_id,
                         'language_code' => $content->language_code,
-                        'body' => $content->body,
-                        'secondary_body' => $content->secondary_body,
+                        'body' => ArabicText::westernDigits($content->body),
+                        'secondary_body' => $content->secondary_body === null ? null : ArabicText::westernDigits($content->secondary_body),
                         'is_authoritative' => $content->is_authoritative,
                     ]);
                 }

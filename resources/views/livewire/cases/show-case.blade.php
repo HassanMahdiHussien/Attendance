@@ -42,12 +42,19 @@
 </p>
 <h1 class="mt-2 text-2xl font-extrabold text-ink">{{ $record->employee?->name }}</h1>
 @if($record->employee && app(\App\Policies\EmployeeProfilePolicy::class)->view(auth()->user(), $record->employee))<a class="ui-link inline-block text-sm font-bold" href="{{ route('employees.show', $record->employee) }}">{{ __('Employee page') }}</a>@endif
-<p class="text-gray-500">{{ $record->violation_type }} — {{ $record->employee?->position }} / {{ $record->employee?->department }}</p>
+<p class="text-gray-500">{{ \App\Support\Format\Violation::name($record) }} — {{ $record->employee?->position }} / {{ $record->employee?->department }}</p>
 </div>
 <x-ui.badge :tone="\App\Support\Format\Tone::case($record->status)" class="self-start">{{ \App\Support\Format\Ui::stage($record->status) }}</x-ui.badge>
 </div>
 <x-ui.stepper :step="$step" class="mt-5" />
 </header>
+    @if($canMapViolationType && $record->violation_type_id === null && $violationTypes->isNotEmpty())
+        <x-ui.card class="flex flex-wrap items-end gap-3">
+            <x-ui.field :label="__('Map to a violation type')" for="map-violation-type"><x-ui.select id="map-violation-type" wire:model="mapViolationTypeId"><option value="">{{ __('Choose a violation type') }}</option>@foreach($violationTypes as $type)<option value="{{ $type->id }}">{{ $type->name() }}</option>@endforeach</x-ui.select></x-ui.field>
+            <x-ui.button wire:click="mapViolationType">{{ __('Map violation type') }}</x-ui.button>
+            @error('mapViolationTypeId')<span class="text-sm text-red-700">{{ $message }}</span>@enderror
+        </x-ui.card>
+    @endif
     @if($nextAction)
         @php
             $nextActorLabel = match ($nextAction->actor) {
@@ -90,7 +97,7 @@
                     <a class="ui-link font-bold" href="/cases/{{ $other->id }}">{{ __('messages.related.case_number', ['number' => \App\Support\Format\Ui::number($other->case_number)]) }} — {{ $other->employee?->name }}</a>
                     <x-ui.badge tone="gray">{{ \App\Support\Format\Ui::outcome($other->outcome?->value) }}</x-ui.badge>
                 </div>
-                <p class="mt-1 text-sm text-gray-600">{{ \App\Support\Format\Ui::date($other->violation_time) }} · {{ $other->violation_type }}</p>
+                <p class="mt-1 text-sm text-gray-600">{{ \App\Support\Format\Ui::date($other->violation_time) }} · {{ \App\Support\Format\Violation::name($other) }}</p>
                 @if($related['link']->reason)<p class="mt-1 text-sm">{{ $related['link']->reason }}</p>@endif
                 @if($related['in_error'])
                     <p class="mt-2 text-sm text-red-700">{{ __('messages.related.in_error', ['reason' => $related['in_error']->reason]) }}</p>

@@ -13,6 +13,7 @@ use App\Services\Dashboards\DashboardFilters;
 use App\Services\Employees\EmployeeProfile;
 use App\Support\Access\CaseVisibility;
 use App\Support\Format\Ui;
+use App\Support\Format\Violation;
 use App\Support\Tenancy\TenantContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
@@ -120,7 +121,7 @@ class ReportBuilder
                 __('Last 12 months') => $profile['counts']['last_year']];
             $report['sections'][] = $this->section(__('Disciplinary record'), [__('Case number'), __('Employee'), __('Incident date'), 'ISO', __('Violation'), __('Outcome'), __('Documents')],
                 $profile['history']->map(fn ($case) => [$case->case_number, $employee->name,
-                    $this->date($case->violation_time), $this->iso($case->violation_time), $case->violation_type,
+                    $this->date($case->violation_time), $this->iso($case->violation_time), Violation::name($case),
                     Ui::outcome($case->outcome), $case->documents->map(fn ($document): string => match ($document->document_type->value) {
                         'defense_letter' => __('Defense request letter'),
                         'recommendations' => __('Committee recommendations'),
@@ -166,7 +167,7 @@ class ReportBuilder
                 foreach ($this->cases($viewer, $filters, $params['company_id'])->with('employee')
                     ->orderBy('cases.id')->lazy(500) as $case) {
                     $rows[] = [$case->case_number, $case->employee?->name, $this->date($case->violation_time),
-                        $this->iso($case->violation_time), $case->violation_type,
+                        $this->iso($case->violation_time), Violation::name($case),
                         Ui::outcome($case->outcome)];
                     if ($limit !== null && count($rows) > $limit) {
                         break;

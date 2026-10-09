@@ -16,7 +16,7 @@
                     <span class="min-w-0 flex-1">
                         <span class="font-bold text-ink">{{ $name }}</span>
                         <bdi class="ms-2 text-xs text-gray-500">{{ \App\Support\Format\Ui::number($case->case_number) }}</bdi>
-                        <span class="mt-1 block text-xs text-gray-500">{{ $position }} — {{ $department }} · {{ $case->violation_type }} · {{ __('Incident') }} {{ \App\Support\Format\Ui::date($case->violation_time) }}</span>
+                        <span class="mt-1 block text-xs text-gray-500">{{ $position }} — {{ $department }} · {{ \App\Support\Format\Violation::name($case) }} · {{ __('Incident') }} {{ \App\Support\Format\Ui::date($case->violation_time) }}</span>
                         @if($case->defense_letter_issued_at)<span class="mt-1 block text-xs text-gray-500">{{ __('Defense letter') }} {{ \App\Support\Format\Ui::date($case->defense_letter_issued_at) }}</span>@endif
                         @if($case->decision_issued_at)<span class="mt-1 block text-xs text-gray-500">{{ __('Decision') }} {{ \App\Support\Format\Ui::date($case->decision_issued_at) }}</span>@elseif($case->closed_at)<span class="mt-1 block text-xs text-gray-500">{{ __('Closure') }} {{ \App\Support\Format\Ui::date($case->closed_at) }}</span>@endif
                     </span>

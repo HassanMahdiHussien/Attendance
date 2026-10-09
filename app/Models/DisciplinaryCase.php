@@ -30,7 +30,7 @@ class DisciplinaryCase extends Model
     protected array $companyUserKeys = ['opened_by_user_id', 'assigned_hr_user_id', 'legal_review_requested_by',
         'legal_review_cancelled_by', 'employee_response_checked_by'];
 
-    protected array $companyParents = ['branch'];
+    protected array $companyParents = ['branch', 'violationType'];
 
     protected static function booted(): void
     {
@@ -101,6 +101,11 @@ class DisciplinaryCase extends Model
     public function violationReport(): BelongsTo
     {
         return $this->belongsTo(ViolationReport::class, 'violation_report_id');
+    }
+
+    public function violationType(): BelongsTo
+    {
+        return $this->belongsTo(ViolationType::class, 'violation_type_id');
     }
 
     public function lawVersion(): BelongsTo

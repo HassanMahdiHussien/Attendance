@@ -10,6 +10,7 @@ use App\Models\CommitteePoolMember;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\Location;
+use App\Models\ViolationType;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -47,6 +48,18 @@ class PilotCompanySeeder extends Seeder
 
                 foreach (['خط الإنتاج 1', 'خط الإنتاج 2', 'المخزن', 'البوابة الرئيسية'] as $name) {
                     Location::create(['company_id' => $company->id, 'branch_id' => $branch->id, 'name' => $name]);
+                }
+
+                foreach ([
+                    ['شجار', 'Fight'], ['تأخر عن الدوام', 'Lateness'],
+                    ['غياب بدون إذن', 'Absence without leave'], ['مخالفة تعليمات السلامة', 'Safety rule breach'],
+                    ['إساءة استخدام ممتلكات الشركة', 'Misuse of company property'],
+                    ['عدم الامتثال للتعليمات', 'Insubordination'], ['أخرى', 'Other'],
+                    ['تأخر في تسليم سجل المخزن', 'Late warehouse record'],
+                    ['حاجة إلى تدريب على إجراءات المخزن', 'Warehouse procedure training need'],
+                ] as $order => [$arabic, $english]) {
+                    ViolationType::create(['company_id' => $company->id,
+                        'names' => ['ar' => $arabic, 'en' => $english], 'sort_order' => $order]);
                 }
 
                 $people = [

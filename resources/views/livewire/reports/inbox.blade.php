@@ -27,7 +27,11 @@
             @else
                 @php($report = $item['model'])
                 <x-ui.card wire:key="report-{{ $report->id }}" class="space-y-4">
-                    <div class="flex flex-wrap justify-between gap-2"><h2 class="font-bold text-ink">{{ $report->violation_type }}</h2><span class="text-sm text-gray-500">{{ $report->reporter?->name }}</span></div>
+                    <div class="flex flex-wrap justify-between gap-2"><h2 class="font-bold text-ink">{{ \App\Support\Format\Violation::name($report) }}</h2><span class="text-sm text-gray-500">{{ $report->reporter?->name }}</span></div>
+                    @if($report->violation_type_id === null && $violationTypes->isNotEmpty())
+                        <div class="flex flex-wrap items-end gap-3"><x-ui.field :label="__('Map to a violation type')" for="report-type-{{ $report->id }}"><x-ui.select id="report-type-{{ $report->id }}" wire:model="mapViolationTypeIds.{{ $report->id }}"><option value="">{{ __('Choose a violation type') }}</option>@foreach($violationTypes as $type)<option value="{{ $type->id }}">{{ $type->name() }}</option>@endforeach</x-ui.select></x-ui.field><x-ui.button variant="secondary" wire:click="mapViolationType({{ $report->id }})">{{ __('Map violation type') }}</x-ui.button></div>
+                        @error('mapViolationTypeIds.'.$report->id)<p class="text-sm text-red-700">{{ $message }}</p>@enderror
+                    @endif
                     <p dir="auto" class="text-sm text-gray-600">{{ $report->description }}</p>
                     <div class="flex flex-wrap gap-3">@foreach($report->attachments as $attachment)<a class="ui-link text-sm" href="/attachments/{{ $attachment->id }}">{{ $attachment->original_name }}</a>@endforeach</div>
                     <div class="flex flex-wrap items-end gap-3">

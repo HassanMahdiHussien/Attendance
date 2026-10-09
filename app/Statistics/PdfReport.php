@@ -4,6 +4,7 @@ namespace App\Statistics;
 
 use App\Documents\PdfGenerator;
 use App\Models\CompanyLetterhead;
+use App\Support\Text\ArabicText;
 use Illuminate\Support\Facades\Storage;
 
 class PdfReport
@@ -18,7 +19,7 @@ class PdfReport
         $logo = $this->image($letterhead?->logo_path, $letterhead?->logo_sha256);
         $headerImage = $letterhead?->header_mode === 'image'
             ? $this->image($letterhead->header_image_path, $letterhead->header_image_sha256) : null;
-        $html = view('reports.pdf', compact('report', 'letterhead', 'logo', 'headerImage'))->render();
+        $html = ArabicText::westernDigits(view('reports.pdf', compact('report', 'letterhead', 'logo', 'headerImage'))->render());
 
         return $this->pdf->generate($html, 'landscape');
     }

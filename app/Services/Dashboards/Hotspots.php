@@ -4,12 +4,13 @@ namespace App\Services\Dashboards;
 
 use App\Models\User;
 use App\Support\Access\CaseVisibility;
+use App\Support\Format\Violation;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 
 class Hotspots
 {
-    public const TYPE = "LOWER(TRIM(REGEXP_REPLACE(cases.violation_type, '[[:space:]]+', ' ')))";
+    public const TYPE = "CASE WHEN cases.violation_type_id IS NOT NULL THEN CONCAT('vt:', cases.violation_type_id) ELSE CONCAT('txt:', LOWER(TRIM(REGEXP_REPLACE(cases.violation_type, '[[:space:]]+', ' ')))) END";
 
     private const KEYS = [
         'branch' => 'cases.branch_id',
@@ -67,9 +68,12 @@ class Hotspots
                 ->selectRaw(self::TYPE." as violation_key, {$expression} as group_key, COUNT(*) as total")
                 ->groupByRaw(self::TYPE.", {$expression}")->havingRaw('COUNT(*) >= ?', [$minimum])->orderByDesc('total')->get();
             $labels = $this->labels($group, $rows->pluck('group_key')->all());
+            $violations = $this->labels('violation', $rows->pluck('violation_key')->all());
             foreach ($rows as $row) {
                 $results[] = ['group' => $group, 'key' => (string) $row->group_key,
-                    'violation' => (string) $row->violation_key, 'label' => $labels[(string) $row->group_key] ?? __('messages.dashboard.unspecified'),
+                    'violation' => (string) $row->violation_key,
+                    'violation_label' => $violations[(string) $row->violation_key] ?? __('messages.dashboard.unspecified'),
+                    'label' => $labels[(string) $row->group_key] ?? __('messages.dashboard.unspecified'),
                     'count' => (int) $row->total];
             }
         }
@@ -106,7 +110,18 @@ class Hotspots
 
     private function labels(string $group, array $keys): array
     {
-        if (in_array($group, ['department', 'violation'], true)) {
+        if ($group === 'violation') {
+            $ids = array_map(fn ($key) => (int) substr((string) $key, 3), array_filter($keys, fn ($key) => str_starts_with((string) $key, 'vt:')));
+            $names = DB::table('violation_types')->whereIn('id', $ids)->pluck('names', 'id')->all();
+
+            return collect($keys)->mapWithKeys(function ($key) use ($names): array {
+                $key = (string) $key;
+                $translations = str_starts_with($key, 'vt:') ? json_decode($names[(int) substr($key, 3)] ?? '{}', true) ?? [] : [];
+
+                return [$key => (Violation::labelForKey($key, $translations) ?: __('messages.dashboard.unspecified'))];
+            })->all();
+        }
+        if ($group === 'department') {
             return array_combine(array_map('strval', $keys), array_map(fn ($key) => (string) $key ?: __('messages.dashboard.unspecified'), $keys)) ?: [];
         }
         if ($group === 'responsible') {

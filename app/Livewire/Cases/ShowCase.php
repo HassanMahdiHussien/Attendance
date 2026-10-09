@@ -15,11 +15,13 @@ use App\Models\Employee;
 use App\Models\ResponseTranscription;
 use App\Models\Signature;
 use App\Models\User;
+use App\Models\ViolationType;
 use App\Services\Cases\CaseAssignment;
 use App\Services\Cases\CaseClosure;
 use App\Services\Cases\CaseInsights;
 use App\Services\Cases\CaseLinks;
 use App\Services\Cases\CaseOpening;
+use App\Services\Cases\CaseViolationTypes;
 use App\Services\Cases\ConflictClearance;
 use App\Services\Cases\ConsultationService;
 use App\Services\Cases\Deadlines;
@@ -93,6 +95,8 @@ class ShowCase extends Component
 
     public string $relatedReason = '';
 
+    public string $mapViolationTypeId = '';
+
     public array $relatedErrorReasons = [];
 
     public array $decisionSignaturePresence = ['general_manager' => 'filled', 'union' => 'filled'];
@@ -104,6 +108,16 @@ class ShowCase extends Component
         $this->caseId = $record->id;
         $this->expectedStatus = $record->status->value;
         $this->assigneeId = (string) $record->assigned_hr_user_id;
+    }
+
+    public function mapViolationType(CaseViolationTypes $types): void
+    {
+        $case = CaseVisibility::for(auth()->user())->findOrFail($this->caseId);
+        Gate::authorize('view', $case);
+        $this->validate(['mapViolationTypeId' => ['required', 'integer']]);
+        $types->mapCase($case, (int) $this->mapViolationTypeId, auth()->user());
+        $this->mapViolationTypeId = '';
+        $this->notice = __('Violation type mapped');
     }
 
     public function assign(CaseAssignment $assignments): void
@@ -393,6 +407,10 @@ class ShowCase extends Component
             })->orderByDesc('created_at')->get(),
             'hrUsers' => User::query()->where('company_id', $record->company_id)->where('is_active', true)
                 ->whereIn('primary_role', [UserRole::HrStaff->value, UserRole::CompanyAdmin->value])->get(),
+            'violationTypes' => in_array(auth()->user()->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)
+                ? ViolationType::query()->where('company_id', $record->company_id)->where('is_active', true)->orderBy('sort_order')->get()
+                : collect(),
+            'canMapViolationType' => in_array(auth()->user()->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true),
         ])->layout('layouts.workspace');
     }
 

@@ -10,6 +10,7 @@ use App\Models\Employee;
 use App\Models\ReportWitness;
 use App\Models\User;
 use App\Services\Cases\CaseLinks;
+use App\Support\Format\Violation;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -24,7 +25,7 @@ class PayloadBuilder
         $this->names($case);
 
         return [
-            'violation_type' => $this->minimize($case->violation_type ?? ''),
+            'violation_type' => $this->minimize(Violation::name($case, 'ar')),
             'incident_description' => $this->minimize($case->description ?? ''),
             'candidate_units' => $units->map(fn ($unit) => [
                 'id' => $unit->id, 'kind' => $unit->law->kind->value,
@@ -45,7 +46,7 @@ class PayloadBuilder
             ])->all()];
         if ($type !== DocumentType::DecisionLetter) {
             $payload['incident'] = [
-                'violation_type' => $this->minimize($case->violation_type),
+                'violation_type' => $this->minimize(Violation::name($case, 'ar')),
                 'place' => $this->minimize($case->location?->name ?? $case->violation_place_freetext ?? ''),
                 'time' => $case->violation_time,
                 'description' => $this->minimize($case->description ?? ''),
@@ -57,7 +58,7 @@ class PayloadBuilder
                 ->filter(fn (array $row) => $row['in_error'] === null)->take(10)
                 ->map(fn (array $row) => [
                     'date' => CarbonImmutable::parse($row['case']->violation_time)->toDateString(),
-                    'violation_type' => $this->minimize($row['case']->violation_type ?? ''),
+                    'violation_type' => $this->minimize(Violation::name($row['case'], 'ar')),
                     'outcome' => $row['case']->outcome?->value,
                 ])->values()->all();
         }
@@ -69,7 +70,7 @@ class PayloadBuilder
             $payload['majority_reached'] = (bool) $case->session_majority_reached;
             $links = DB::table('case_links')->where('case_id', $case->id)->where('link_type', 'prior_record')->pluck('linked_case_id');
             $payload['prior_record_context_only'] = DisciplinaryCase::query()->whereIn('id', $links)->get()
-                ->map(fn ($prior) => ['type' => $this->minimize($prior->violation_type),
+                ->map(fn ($prior) => ['type' => $this->minimize(Violation::name($prior, 'ar')),
                     'date' => $prior->violation_time, 'outcome' => $prior->outcome?->value])->all();
         }
         if ($type === DocumentType::DecisionLetter) {

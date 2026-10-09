@@ -6,6 +6,8 @@ use App\Enums\CaseLinkType;
 use App\Models\CaseLink;
 use App\Models\DisciplinaryCase;
 use App\Models\ViolationReport;
+use App\Support\Format\Violation;
+use App\Support\Text\ArabicText;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 
@@ -59,8 +61,11 @@ class CaseInsights
 
         return ['count' => $prior->count(), 'cases' => $prior->map(fn (DisciplinaryCase $row) => [
             'case_id' => $row->id, 'date' => CarbonImmutable::parse($row->created_at)->toDateString(),
-            'violation_type' => $row->violation_type, 'outcome' => $row->outcome?->value,
-            'same_type_repeat' => $row->violation_type === $case->violation_type && CarbonImmutable::parse($row->created_at)->gte($cutoff),
+            'violation_type' => Violation::name($row), 'outcome' => $row->outcome?->value,
+            'same_type_repeat' => ($row->violation_type_id !== null && $case->violation_type_id !== null
+                ? $row->violation_type_id === $case->violation_type_id
+                : ArabicText::normalize($row->violation_type) === ArabicText::normalize($case->violation_type))
+                && CarbonImmutable::parse($row->created_at)->gte($cutoff),
         ])->all()];
     }
 

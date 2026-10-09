@@ -43,6 +43,14 @@ test('draft validator rejects invented numbers, unequal citation occurrences and
     expect($validator->validate($output, ['ar', 'en'], DocumentType::DefenseLetter, [12], []))->toContain('Wrong script in en.');
 });
 
+test('draft validator compares Western output against Arabic-Indic input facts', function (): void {
+    $output = validAiBodies();
+    $output['languages']['ar']['body'] .= ' الواقعة 12.';
+    $output['languages']['en']['body'] .= ' Incident 12.';
+    expect((new DraftValidator)->validate($output, ['ar', 'en'], DocumentType::DefenseLetter, [12],
+        ['incident_number' => '١٢', 'candidate_units' => [['id' => 12]]]))->toBe([]);
+});
+
 test('outcome keyword detector flags conflicting penalty only', function (): void {
     $flag = new OutcomeKeywordFlag;
     expect($flag->flagged(['ar' => ['body' => 'إنهاء الخدمة'], 'en' => ['body' => 'Dismissal is recommended']], 'warning'))->toBeTrue();

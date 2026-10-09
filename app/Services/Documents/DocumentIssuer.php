@@ -17,6 +17,7 @@ use App\Models\Document;
 use App\Models\User;
 use App\Services\CaseEventLogger;
 use App\Services\SequenceService;
+use App\Support\Text\ArabicText;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -104,7 +105,7 @@ class DocumentIssuer
                 'issued_at' => now(),
                 'issued_by' => $actor->id,
             ]);
-            $html = $this->renderer->render($document);
+            $html = ArabicText::westernDigits($this->renderer->render($document));
             $document->forceFill([
                 'rendered_html' => $html,
                 'render_snapshot' => $this->renderer->snapshot(),

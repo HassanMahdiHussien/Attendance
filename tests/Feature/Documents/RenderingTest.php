@@ -8,10 +8,13 @@ use App\Documents\TemplateValidator;
 use App\Enums\EmployeeGender;
 use App\Exceptions\ImmutableRecordException;
 use App\Exceptions\IssuanceBlocked;
+use App\Models\Citation;
 use App\Models\Company;
 use App\Models\CompanyLetterhead;
 use App\Models\Document;
 use App\Models\DocumentTemplate;
+use App\Models\Law;
+use App\Models\LegalUnit;
 use App\Models\User;
 use App\Services\Documents\DocumentIssuer;
 use App\Support\Tenancy\TenantContext;
@@ -86,6 +89,35 @@ test('interface locale does not change document rendering or frozen issued conte
     app()->setLocale('en');
     expect($issued->fresh()->rendered_html)->toBe($frozen)
         ->and($frozen)->toContain('lang="ar"', 'lang="en"');
+});
+
+test('new frozen HTML uses Western digits while issued source content stays immutable', function (): void {
+    Queue::fake();
+    [, $actor, $document] = renderingFixture();
+    foreach ($document->contents as $content) {
+        $content->update(['body' => 'Incident ١٢ and ۳۴.']);
+    }
+    $issued = app(DocumentIssuer::class)->issue($document, $actor, '٥٦');
+    expect($issued->reference_number)->toBe('٥٦')
+        ->and($issued->rendered_html)->toContain('56', '12 and 34', 'lang="ar"', 'lang="en"')
+        ->and(preg_match('/[٠-٩۰-۹]/u', $issued->rendered_html))->toBe(0)
+        ->and($issued->contents()->first()->body)->toBe('Incident ١٢ and ۳۴.');
+});
+
+test('new frozen citation renderings use Western article digits', function (): void {
+    Queue::fake();
+    [, $actor, $document] = renderingFixture();
+    $law = Law::factory()->create(['kind' => 'statute', 'category' => 'social_security', 'approval_status' => 'approved']);
+    $law->jurisdictions()->create(['jurisdiction' => 'federal_iraq']);
+    $unit = LegalUnit::factory()->create(['law_id' => $law->id, 'article_number' => '٤٣']);
+    foreach ($document->contents as $content) {
+        $content->update(['body' => "See [[cite:{$unit->id}]]."]);
+    }
+    Citation::factory()->create(['document_id' => $document->id, 'legal_unit_id' => $unit->id,
+        'claim_hash' => hash('sha256', "See [[cite:{$unit->id}]]."), 'relevance_check' => 'supports']);
+    $issued = app(DocumentIssuer::class)->issue($document, $actor);
+    expect($issued->rendered_html)->toContain('43')
+        ->and(preg_match('/[٠-٩۰-۹]/u', $issued->rendered_html))->toBe(0);
 });
 
 test('female grammar is selected and unspecified gender blocks issuance', function (): void {

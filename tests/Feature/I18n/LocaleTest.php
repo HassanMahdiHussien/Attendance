@@ -56,8 +56,8 @@ test('UI numbers and dates follow the active locale in Baghdad time', function (
     expect(Ui::date('2026-10-08 22:00:00 UTC'))->toBe('9 Oct 2026');
 
     app()->setLocale('ar');
-    expect(Ui::number(123))->toBe('١٢٣');
-    expect(Ui::date('2026-10-08 22:00:00 UTC'))->toBe('٩ – تشرين الأول – ٢٠٢٦');
+    expect(Ui::number(123))->toBe('123');
+    expect(Ui::date('2026-10-08 22:00:00 UTC'))->toBe('9 – تشرين الأول – 2026');
 });
 
 test('changing the UI locale leaves document wording and AI language instructions intact', function (): void {

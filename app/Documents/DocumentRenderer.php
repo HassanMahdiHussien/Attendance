@@ -6,6 +6,7 @@ use App\Enums\DocumentType;
 use App\Exceptions\IssuanceBlocked;
 use App\Models\CompanyLetterhead;
 use App\Models\Document;
+use App\Support\Text\ArabicText;
 use Illuminate\Support\Facades\Storage;
 
 class DocumentRenderer
@@ -77,7 +78,7 @@ class DocumentRenderer
             $this->snapshot['logo_sha256'][$language] = $letterhead->logo_sha256;
         }
 
-        return view('documents.layout', ['pages' => $pages, 'draft' => $draft])->render();
+        return ArabicText::westernDigits(view('documents.layout', ['pages' => $pages, 'draft' => $draft])->render());
     }
 
     private function dataUri(?string $path, ?string $expectedSha): ?string
