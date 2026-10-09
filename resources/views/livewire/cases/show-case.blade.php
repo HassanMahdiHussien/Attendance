@@ -48,6 +48,29 @@
 </div>
 <x-ui.stepper :step="$step" class="mt-5" />
 </header>
+    @if($nextAction)
+        @php
+            $nextActorLabel = match ($nextAction->actor) {
+                'hr' => __('messages.search.actor_hr'),
+                'committee' => __('messages.search.actor_committee'),
+                'reviewer' => __('messages.search.actor_reviewer'),
+                'optional' => __('messages.search.actor_optional'),
+                default => __('messages.search.actor_waiting'),
+            };
+        @endphp
+        <x-ui.card class="border border-primary/30 bg-primary-light/30 p-5" aria-label="{{ __('messages.search.next_step') }}">
+            <p class="text-xs font-black uppercase tracking-wide text-primary">{{ __('messages.search.next_step') }}</p>
+            <h2 class="mt-2 text-lg font-black">{{ $nextAction->label }}</h2>
+            <p class="mt-1 text-sm text-gray-600">{{ $nextActorLabel }}</p>
+            @if($nextAction->due)
+                <div class="mt-3 flex items-center gap-2 text-sm"><span>{{ __('messages.search.due') }} {{ \App\Support\Format\Ui::date($nextAction->due) }}</span>
+                    @if($nextAction->deadlineAlert)<x-ui.badge :tone="$nextAction->deadlineAlert">{{ $nextAction->deadlineAlert === 'red' ? __('Overdue') : __('Approaching') }}</x-ui.badge>@endif
+                </div>
+            @endif
+            @if($nextAction->target)<x-ui.button :href="$nextAction->target" class="mt-4">{{ __('messages.search.open_step') }}</x-ui.button>@endif
+            @if($nextAction->key === 'waiting_response')<x-ui.button href="#next-handoff" variant="secondary" class="mt-4">{{ __('messages.home.record_response') }}</x-ui.button>@endif
+        </x-ui.card>
+    @endif
     @if($priors['count'])<section class="bg-amber-light rounded-2xl p-5">
 <h2 class="font-bold">{{ __('Prior record') }} — {{ \App\Support\Format\Ui::number($priors['count']) }}</h2>
 @foreach($priors['cases'] as $prior)<p class="text-sm mt-2 {{ $prior['same_type_repeat'] ? 'text-red font-bold' : '' }}">
@@ -67,9 +90,9 @@
     @if(in_array($deadlines->procedureStatus($record), ['approaching','overdue'], true))<div role="alert" class="bg-red-light text-red rounded-2xl p-5 font-bold">{{ __('Alert: the 15-day procedure deadline :state.', ['state' => $deadlines->procedureStatus($record) === 'overdue' ? __('has passed') : __('is approaching')]) }}</div>
 @endif
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-<section class="ui-card p-5 lg:col-span-2">
+<section id="next-actions" class="ui-card scroll-mt-20 p-5 lg:col-span-2">
 <h2 class="text-lg font-black mb-4">{{ __('Actions') }}</h2>
-        @if($record->status !== \App\Enums\CaseStatus::ArchivedFinal && !$record->legal_review_requested_at && in_array(auth()->user()->primary_role, [\App\Enums\UserRole::CompanyAdmin, \App\Enums\UserRole::HrStaff, \App\Enums\UserRole::CommitteeMember], true))<x-ui.button variant="secondary" wire:click="requestConsultation" class="mb-4 border-amber-300 text-amber-700">{{ __('Request legal consultation') }}</x-ui.button>
+        @if($record->status !== \App\Enums\CaseStatus::ArchivedFinal && !$record->legal_review_requested_at && in_array(auth()->user()->primary_role, [\App\Enums\UserRole::CompanyAdmin, \App\Enums\UserRole::HrStaff, \App\Enums\UserRole::CommitteeMember], true))<span id="next-consultation" class="scroll-mt-20"></span><x-ui.button variant="secondary" wire:click="requestConsultation" class="mb-4 border-amber-300 text-amber-700">{{ __('Request legal consultation') }}</x-ui.button>
 @endif
         @if(auth()->user()->primary_role === \App\Enums\UserRole::ExternalLegalReviewer && $record->legal_review_requested_at)<x-ui.button href="/cases/{{ $record->id }}/consultation" variant="secondary">{{ __('Review consultation') }}</x-ui.button>@endif
         @if($canManage)
@@ -84,7 +107,7 @@
             @endif
             @if($record->status === \App\Enums\CaseStatus::SignedRecommendationsUploaded && in_array($record->outcome?->value, ['warning', 'termination'], true))<x-ui.button href="/cases/{{ $record->id }}/decision">{{ __('Write decision letter') }}</x-ui.button>@endif
             @if(in_array($record->status, [\App\Enums\CaseStatus::AwaitingExternalLegalConsultation, \App\Enums\CaseStatus::DecisionLetterReadyForReview], true))<x-ui.button href="/cases/{{ $record->id }}/documents/{{ $record->documents->where('document_type', \App\Enums\DocumentType::DecisionLetter)->last()?->id }}/confirm" variant="secondary">{{ __('Confirm decision letter') }}</x-ui.button>@endif
-            @if(in_array($record->status, [\App\Enums\CaseStatus::AwaitingAppealWindow, \App\Enums\CaseStatus::AppealPending], true))<x-ui.button href="/cases/{{ $record->id }}/appeal" variant="secondary">{{ __('Record appeal and outcome') }}</x-ui.button>@endif
+            @if(in_array($record->status, [\App\Enums\CaseStatus::AwaitingAppealWindow, \App\Enums\CaseStatus::AppealPending], true))<span id="next-appeal" class="scroll-mt-20"></span><x-ui.button href="/cases/{{ $record->id }}/appeal" variant="secondary">{{ __('Record appeal and outcome') }}</x-ui.button>@endif
             @if(in_array($record->status, [\App\Enums\CaseStatus::AwaitingEmployeeResponse, \App\Enums\CaseStatus::ResponseReceived, \App\Enums\CaseStatus::ResponseRefusedToSign, \App\Enums\CaseStatus::ResponseDeliveryRefused, \App\Enums\CaseStatus::ResponseScannedUploaded, \App\Enums\CaseStatus::AiIngestedResponse, \App\Enums\CaseStatus::CommitteeSessionHeld], true))<x-ui.button href="/cases/{{ $record->id }}/session" variant="secondary">{{ __('Record committee session') }}</x-ui.button>@endif
             @if(in_array($record->status, [\App\Enums\CaseStatus::CommitteeSessionHeld, \App\Enums\CaseStatus::RecommendationsCitationCheck, \App\Enums\CaseStatus::RecommendationsAwaitingApprovals, \App\Enums\CaseStatus::RecommendationsConfirmed], true) && $record->session_majority_reached)<x-ui.button href="/cases/{{ $record->id }}/recommendations" variant="secondary">{{ __('Write recommendations') }}</x-ui.button>@endif
             @if(in_array($record->status, [\App\Enums\CaseStatus::RecommendationsAwaitingApprovals, \App\Enums\CaseStatus::RecommendationsConfirmed], true))<x-ui.button href="/cases/{{ $record->id }}/documents/{{ $record->documents->where('document_type', \App\Enums\DocumentType::Recommendations)->last()?->id }}/confirm">{{ __('Review recommendation approvals') }}</x-ui.button>@endif
@@ -96,7 +119,7 @@
             @if($record->status === \App\Enums\CaseStatus::DefenseLetterCitationCheck)<x-ui.button href="/cases/{{ $record->id }}/documents/{{ $record->documents->where('document_type', \App\Enums\DocumentType::DefenseLetter)->last()?->id }}/edit" variant="secondary">{{ __('Return to editing and check citations') }}</x-ui.button>@endif
             @if($record->status === \App\Enums\CaseStatus::DefenseLetterReadyForReview)<x-ui.button href="/cases/{{ $record->id }}/documents/{{ $record->documents->where('document_type', \App\Enums\DocumentType::DefenseLetter)->last()?->id }}/confirm">{{ __('Confirm document') }}</x-ui.button>@endif
             @if($record->status === \App\Enums\CaseStatus::AwaitingEmployeeResponse)
-                <h3 class="font-bold mt-5 mb-2">{{ __('Record paper handoff') }}</h3>
+                <h3 id="next-handoff" class="scroll-mt-20 font-bold mt-5 mb-2">{{ __('Record paper handoff') }}</h3>
 <div class="flex flex-wrap gap-2">
 <x-ui.select wire:model="handoffPurpose" class="rounded-xl border p-2"><option value="defense_letter_receipt">{{ __('Defense letter receipt') }}</option><option value="response_submission">{{ __('Response submission') }}</option>
 </x-ui.select>
@@ -124,7 +147,7 @@
 @endif
             @endif
             @if(in_array($record->status, [\App\Enums\CaseStatus::AwaitingAppealWindow, \App\Enums\CaseStatus::AppealPending], true))
-                <div class="mt-5 border-t pt-4">
+                <div id="next-decision-signatures" class="scroll-mt-20 mt-5 border-t pt-4">
 <h3 class="font-bold">{{ __('General Manager and union representative signature presence (optional)') }}</h3>
 <label class="block">{{ __('General Manager') }} <x-ui.select wire:model="decisionSignaturePresence.general_manager" class="rounded-xl border p-2"><option value="filled">{{ __('Box filled') }}</option><option value="empty">{{ __('Box appears empty') }}</option>
 </x-ui.select>
@@ -134,7 +157,7 @@
 </label>
 <x-ui.button variant="secondary" wire:click="recordDecisionSignatures">{{ __('Record box states') }}</x-ui.button>
 </div>
-                <h3 class="font-bold mt-5 mb-2">{{ __('Paper decision letter receipt') }}</h3>
+                <h3 id="next-handoff" class="scroll-mt-20 font-bold mt-5 mb-2">{{ __('Paper decision letter receipt') }}</h3>
 @foreach($signatures->where('purpose', \App\Enums\SignaturePurpose::DecisionLetterReceipt) as $receipt)<p class="text-sm text-green mb-2">{{ __('Delivery attempt recorded: :status', ['status' => ['signed' => __('Signed'), 'refused_to_sign' => __('Received and refused to sign'), 'delivery_refused' => __('Refused delivery')][$receipt->status->value] ?? '']) }} — {{ \App\Support\Format\Ui::date($receipt->created_at) }}</p>
 @endforeach<x-ui.select wire:model.live="handoffStatus" class="rounded-xl border p-2"><option value="signed">{{ __('Signed') }}</option><option value="refused_to_sign">{{ __('Received and refused to sign') }}</option><option value="delivery_refused">{{ __('Refused delivery') }}</option>
 </x-ui.select>
@@ -149,7 +172,7 @@
                 @foreach(['signedAt','attemptedAt','attemptLocation','attemptedBy','witnessOne','witnessTwo','witnessScan'] as $field)@error($field)<p role="alert" class="text-red text-sm">{{ $message }}</p>
 @enderror@endforeach
             @endif
-            @if(in_array($record->status, [\App\Enums\CaseStatus::AwaitingEmployeeResponse,\App\Enums\CaseStatus::ResponseReceived,\App\Enums\CaseStatus::ResponseRefusedToSign,\App\Enums\CaseStatus::ResponseDeliveryRefused], true))<div class="mt-5">
+            @if(in_array($record->status, [\App\Enums\CaseStatus::AwaitingEmployeeResponse,\App\Enums\CaseStatus::ResponseReceived,\App\Enums\CaseStatus::ResponseRefusedToSign,\App\Enums\CaseStatus::ResponseDeliveryRefused], true))<div id="next-response-scan" class="scroll-mt-20 mt-5">
 <label class="block font-bold mb-2">{{ __('Employee response scan') }}</label>
 <input type="file" wire:model="responseScan" accept=".pdf,.jpg,.jpeg,.png" class="ui-control block mb-2">
 <x-ui.button variant="secondary" wire:click="uploadResponse" class="border border-primary text-primary rounded-2xl px-5 py-2">{{ __('Upload scan') }}</x-ui.button>
@@ -166,7 +189,7 @@
         @else<p class="text-gray-500">{{ __('This case is read only.') }}</p>
 @endif
         @if(in_array($record->status, [\App\Enums\CaseStatus::ResponseScannedUploaded, \App\Enums\CaseStatus::AiIngestedResponse], true) && ($responseScanAttachment || $record->confirmedResponseText()))
-            <div class="mt-6 border-t pt-4 space-y-4">
+            <div id="next-response-scan" class="scroll-mt-20 mt-6 border-t pt-4 space-y-4">
                 <h3 class="font-bold">{{ __('Employee response') }}</h3>
                 @if($record->confirmedResponseText())
                     <p class="text-sm text-gray-500">{{ __('Transcribed text — the scanned image is the original') }}</p>
@@ -224,7 +247,7 @@
 </div>
 @endforeach</section>
 </div>
-    <section class="ui-card p-5">
+    <section id="next-documents" class="ui-card scroll-mt-20 p-5">
 <h2 class="text-lg font-black mb-4">{{ __('Documents and versions') }}</h2>
 @forelse($record->documents->sortByDesc('created_at') as $document)<div class="border-t py-4 flex flex-wrap items-center gap-3">
 <div class="flex-1">

@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\ReportSource;
 use App\Enums\ReportStatus;
 use App\Models\Concerns\BelongsToCompany;
+use App\Support\Search\SearchText;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -22,6 +23,13 @@ class ViolationReport extends Model
     protected array $companyUserKeys = ['reporter_user_id'];
 
     protected array $companyParents = ['branch'];
+
+    protected static function booted(): void
+    {
+        static::saving(function (self $report): void {
+            $report->search_text = SearchText::normalize((string) $report->violation_type.' '.(string) $report->place_freetext);
+        });
+    }
 
     protected function casts(): array
     {

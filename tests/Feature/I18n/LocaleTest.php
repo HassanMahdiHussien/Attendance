@@ -8,6 +8,7 @@ use App\Enums\DocumentType;
 use App\Enums\UserRole;
 use App\Filament\Admin\Resources\BranchResource;
 use App\Filament\Admin\Resources\BranchResource\Pages\ListBranchs;
+use App\Filament\Auth\Login;
 use App\Livewire\Cases\ConfirmDocument;
 use App\Livewire\Reports\SubmitReport;
 use App\Models\Branch;
@@ -105,9 +106,7 @@ test('an Arabic user keeps the locale through a real Livewire update and transla
 test('an Arabic guest keeps the locale through a Filament login action', function (): void {
     $this->withSession(['locale' => 'ar']);
     $html = $this->get('/admin/login')->assertOk()->assertSee('البريد الإلكتروني')->getContent();
-    preg_match('/wire:snapshot="([^"]+)"/', $html, $match);
-    expect($match)->toHaveCount(2);
-    $snapshot = html_entity_decode($match[1], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $snapshot = livewireSnapshotForComponent($html, Login::class);
 
     app()->setLocale('en');
     $response = $this->withHeader('X-Livewire', 'true')->postJson(app(HandleRequests::class)->getUpdateUri(), [

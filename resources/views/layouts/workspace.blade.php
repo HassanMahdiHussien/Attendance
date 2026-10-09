@@ -40,9 +40,10 @@
             </div>
         </aside>
         <div class="min-w-0 max-w-full flex-1">
-            <header class="sticky top-0 z-30 flex min-h-14 items-center justify-between gap-3 border-b border-[#EEF0F4] bg-bg/95 px-4 backdrop-blur sm:px-8">
+            <header class="sticky top-0 z-50 flex min-h-14 items-center justify-between gap-3 border-b border-[#EEF0F4] bg-bg/95 px-4 sm:px-8">
                 <a href="{{ \App\Support\Access\Landing::for(auth()->user()) }}" class="flex items-center gap-2 font-extrabold lg:hidden"><span class="grid h-7 w-7 place-items-center rounded-lg bg-primary text-sm text-white" aria-hidden="true">D</span>{{ __('Displanery') }}</a>
                 <span class="hidden text-sm font-bold text-gray-600 lg:block">{{ auth()->user()->company?->name ?? auth()->user()->name }}</span>
+                @if(app(\App\Services\Search\GlobalSearch::class)->allowed(auth()->user()))<livewire:global-search />@endif
                 <form method="POST" action="{{ route('locale.update') }}" class="ms-auto lg:hidden">@csrf<input type="hidden" name="locale" value="{{ app()->getLocale() === 'ar' ? 'en' : 'ar' }}"><button type="submit" class="ui-link inline-flex min-h-10 items-center gap-1 text-sm" lang="{{ app()->getLocale() === 'ar' ? 'en' : 'ar' }}"><x-ui.icon name="globe" class="h-4 w-4" />{{ app()->getLocale() === 'ar' ? __('English') : trans('messages.locale.arabic', [], 'ar') }}</button></form>
             </header>
             <main class="mx-auto w-full max-w-7xl min-w-0 px-4 pb-28 pt-6 sm:px-8 lg:pb-8">{{ $slot }}</main>

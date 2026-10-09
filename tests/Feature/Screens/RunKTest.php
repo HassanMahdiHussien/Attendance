@@ -43,9 +43,8 @@ function runKCase(): array
 function runKSnapshot(TestCase $test, DisciplinaryCase $case): string
 {
     $html = $test->get('/cases/'.$case->id)->assertOk()->getContent();
-    preg_match('/wire:snapshot="([^"]+)"/', $html, $match);
 
-    return html_entity_decode($match[1], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    return livewireSnapshotForComponent($html, ShowCase::class);
 }
 
 function runKUpdate(TestCase $test, string $snapshot, string $method, array $updates = []): TestResponse

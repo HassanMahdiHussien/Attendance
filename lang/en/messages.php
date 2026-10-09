@@ -1,6 +1,16 @@
 <?php
 
 return [
+    'search' => [
+        'open_search' => 'Search workspace', 'placeholder' => 'Search cases, employees, reports', 'shortcut' => 'Ctrl K',
+        'cases' => 'Cases', 'employees' => 'Employees', 'reports' => 'Reports',
+        'email_draft' => 'Email draft', 'no_results' => 'No matching results.',
+        'active_filters' => 'Active filters', 'clear_filters' => 'Clear filters',
+        'next_step' => 'Next step', 'due' => 'Due', 'open_step' => 'Open step',
+        'actor_hr' => 'HR action', 'actor_committee' => 'Committee action',
+        'actor_reviewer' => 'Legal reviewer action', 'actor_waiting' => 'Waiting on others',
+        'actor_optional' => 'Optional action',
+    ],
     'home' => [
         'greeting' => 'Good morning, :name', 'greeting_afternoon' => 'Good afternoon, :name', 'greeting_evening' => 'Good evening, :name', 'open_cases' => 'Open cases', 'due_48h' => '15-day deadline within 48 hours',
         'waiting_committee' => 'Waiting on committee', 'closed_within_15' => 'Closed within 15 days',
@@ -21,7 +31,7 @@ return [
         'upload_or_session' => 'Upload the response scan or hold the committee session',
         'read_response' => 'Read the scan with AI or confirm it manually', 'hold_session' => 'Hold the committee session',
         'draft_recommendations' => 'Draft the recommendations', 'approve_recommendations' => 'Approve the recommendations',
-        'waiting_approvals' => 'Waiting for committee approvals', 'print_recommendations' => 'Print the recommendations',
+        'waiting_approvals' => 'Waiting for committee approvals', 'waiting_approvals_count' => 'Waiting for approvals (:count of 3)', 'print_recommendations' => 'Print the recommendations',
         'signature_collection_opening' => 'Opening signature collection',
         'upload_signed' => 'Upload the signed recommendations', 'prepare_decision' => 'Prepare the decision letter',
         'give_opinion' => 'Give your legal opinion', 'waiting_lawyer' => 'Waiting for the lawyer',

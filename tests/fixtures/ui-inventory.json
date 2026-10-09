@@ -30,11 +30,27 @@
     "wire": [
       [
         "wire:click",
+        "clearFilters"
+      ],
+      [
+        "wire:click",
         "nextPage"
       ],
       [
         "wire:click",
         "previousPage"
+      ],
+      [
+        "wire:click",
+        "removeBranchFilter"
+      ],
+      [
+        "wire:click",
+        "removeSearchFilter"
+      ],
+      [
+        "wire:click",
+        "removeStageFilter"
       ],
       [
         "wire:key",
@@ -760,6 +776,15 @@
       "$canManage && $document->is_locked",
       "$canManage && $record->status === \\App\\Enums\\CaseStatus::AiIngestedResponse",
       "$responseScanAttachment && $record->status === \\App\\Enums\\CaseStatus::ResponseScannedUploaded && $canManage"
+    ],
+    "anchors": [
+      "next-actions",
+      "next-appeal",
+      "next-consultation",
+      "next-decision-signatures",
+      "next-documents",
+      "next-handoff",
+      "next-response-scan"
     ]
   },
   "resources/views/livewire/cases/signed-scan.blade.php": {

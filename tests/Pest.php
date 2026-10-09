@@ -46,3 +46,17 @@ function moveCaseToCommitteeStage(DisciplinaryCase $case): void
         DB::statement('SET @displanery_workflow_transition = NULL');
     }
 }
+
+function livewireSnapshotForComponent(string $html, string $componentClass): string
+{
+    preg_match_all('/wire:snapshot="([^"]+)"/', $html, $matches);
+    foreach ($matches[1] as $encoded) {
+        $snapshot = html_entity_decode($encoded, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $name = json_decode($snapshot, true, flags: JSON_THROW_ON_ERROR)['memo']['name'] ?? null;
+        if ($name !== null && app('livewire.factory')->resolveComponentClass($name) === $componentClass) {
+            return $snapshot;
+        }
+    }
+
+    throw new RuntimeException("Snapshot for {$componentClass} was not rendered.");
+}

@@ -9,6 +9,7 @@ use App\Models\Company;
 use App\Models\Employee;
 use App\Models\User;
 use App\Services\Employees\EmployeeImport;
+use App\Support\Search\SearchText;
 use App\Support\Tenancy\TenantContext;
 use Filament\Facades\Filament;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -111,7 +112,8 @@ test('updates keep empty optional cells and inactive status, with field names in
         ->and($employee->fresh()->email)->toBe('kept@example.com')
         ->and($employee->fresh()->gender->value)->toBe('female')
         ->and($employee->fresh()->is_active)->toBeFalse()
-        ->and($employee->fresh()->is_general_manager)->toBeTrue();
+        ->and($employee->fresh()->is_general_manager)->toBeTrue()
+        ->and($employee->fresh()->search_name)->toBe(SearchText::normalize($employee->fresh()->name));
     $audit = AuditLog::query()->where('action', 'employees.imported')->latest('id')->firstOrFail();
     expect($audit->metadata['sha256'])->toBe($preview->hash)
         ->and($audit->metadata['changed'][0]['fields'])->toContain('name')

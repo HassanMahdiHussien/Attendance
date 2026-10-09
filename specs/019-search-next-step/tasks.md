@@ -6,9 +6,9 @@
 plan.md R8 (review resolutions) overrides earlier sections.
 
 ## Run S
-- [ ] T001 SearchText normaliser; migration with search columns, preferences, indexes, backfill; model hooks (R1, R2)
-- [ ] T002 GlobalSearch service with role-scoped providers (R3)
-- [ ] T003 GlobalSearch Livewire component in the top bar + phone sheet, keyboard/ARIA (R4)
-- [ ] T004 Remembered board filters with chips and clear (R5)
-- [ ] T005 Case page Next-step card + section anchors (R6)
-- [ ] T006 Tests (R7); behaviour inventory updated
+- [x] T001 SearchText normaliser; migration with search columns, preferences, indexes, backfill; model hooks (R1, R2)
+- [x] T002 GlobalSearch service with role-scoped providers (R3)
+- [x] T003 GlobalSearch Livewire component in the top bar + phone sheet, keyboard/ARIA (R4)
+- [x] T004 Remembered board filters with chips and clear (R5)
+- [x] T005 Case page Next-step card + section anchors (R6)
+- [x] T006 Tests (R7); behaviour inventory updated

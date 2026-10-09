@@ -27,6 +27,7 @@ use App\Services\EmailIntake\EmailSenderVerifier;
 use App\Services\EmailIntake\IntakeMailbox;
 use App\Services\EmailIntake\IntakeMessage;
 use App\Support\Access\EmailDraftVisibility;
+use App\Support\Search\SearchText;
 use App\Support\Tenancy\TenantContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
@@ -88,7 +89,8 @@ test('accepted manager mail creates one branch-scoped draft and UID move retry s
     $this->mailbox->failMove = true;
     expect(intakeRun($this->mailbox)['accepted'])->toBe(1);
     $draft = EmailDraft::firstOrFail();
-    expect($draft->branch_id)->toBe($branch->id);
+    expect($draft->branch_id)->toBe($branch->id)
+        ->and($draft->search_subject)->toBe(SearchText::normalize($draft->subject));
     expect(EmailIntakeMessage::firstOrFail()->outcome)->toBe('accepted');
     $this->mailbox->failMove = false;
     intakeRun($this->mailbox);

@@ -139,8 +139,7 @@ test('new editor actions reauthorize Livewire update requests after the account 
     $citation = $document->citations()->firstOrFail();
     $this->actingAs($f['admin']);
     $html = $this->get('/cases/'.$f['case']->id.'/documents/'.$document->id.'/edit')->assertOk()->getContent();
-    preg_match('/wire:snapshot="([^"]+)"/', $html, $match);
-    $snapshot = html_entity_decode($match[1], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $snapshot = livewireSnapshotForComponent($html, EditDocument::class);
     $reporter = User::factory()->create(['company_id' => $f['company']->id, 'primary_role' => 'reporter']);
     $this->actingAs($reporter);
     foreach ([

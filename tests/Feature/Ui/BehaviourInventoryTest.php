@@ -32,6 +32,7 @@ function uiInventoryFor(string $source): array
         'file_bindings' => $fileBindings,
         'routes' => uiInventoryMatches('/\broute\(\s*["\']([^"\']+)["\']/s', $source),
         'links' => uiInventoryMatches('/\b(?:href|action|back)\s*=\s*["\'](\/[^"\']*)["\']/s', $source),
+        'anchors' => uiInventoryMatches('/\bid\s*=\s*["\'](next-[^"\']+)["\']/s', $source),
     ];
 }
 
