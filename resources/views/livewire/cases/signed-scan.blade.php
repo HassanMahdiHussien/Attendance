@@ -6,7 +6,7 @@
         @if($case->status === \App\Enums\CaseStatus::AwaitingCommitteeSignatures)
             @if($case->ai_request_document_type === 'signature_presence')<div wire:poll.3s><p role="status">{{ __('Reading the scan…') }}</p></div>@endif
             @if($case->events()->where('event_type', 'signature_presence_failed')->exists())<x-ui.alert tone="amber">{{ __('AI reading failed — you can record the boxes manually') }}</x-ui.alert>@endif
-            @if($latestScan)<object data="{{ route('attachments.download', $latestScan) }}?preview=1" type="{{ $latestScan->mime_type }}" class="h-96 w-full rounded-xl border"><a href="{{ route('attachments.download', $latestScan) }}" class="ui-link">{{ __('Open scan for review') }}</a></object>@endif
+            @if($latestScan)<object data="{{ route('attachments.download', $latestScan) }}?preview=1" type="{{ $latestScan->mime_type }}" class="h-96 w-full rounded-xl border"><a href="{{ route('attachments.download', $latestScan) }}" class="ui-link">{{ __('Open scan for review') }}</a></object><x-ui.file-action :item="\App\Support\Files\FileItem::forAttachment($latestScan)" />@endif
             <p class="text-gray-500">{{ __('Record what appears in each signature box on the paper scan.') }}</p>
             @error('notice')<p role="alert" class="font-bold text-red-700">{{ $message }}</p>@enderror
             @foreach($attendees as $attendee)

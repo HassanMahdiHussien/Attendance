@@ -282,6 +282,7 @@
 <object data="{{ route('attachments.download', $responseScanAttachment) }}?preview=1" type="{{ $responseScanAttachment->mime_type }}" class="w-full h-96 border rounded-xl">
 <a class="ui-link" href="{{ route('attachments.download', $responseScanAttachment) }}">{{ __('Open scan for review') }}</a>
 </object>
+<x-ui.file-action :item="\App\Support\Files\FileItem::forAttachment($responseScanAttachment)" class="mt-2" />
 </div>
                         <div>
 <label>{{ __('Transcribed text') }} <x-ui.textarea wire:model="responseText" rows="12" class="block w-full rounded-xl border p-3">
@@ -309,11 +310,12 @@
 </div>
     <section id="next-documents" class="ui-card scroll-mt-20 p-5">
 <h2 class="text-lg font-black mb-4">{{ __('Documents and versions') }}</h2>
-@forelse($record->documents->sortByDesc('created_at') as $document)<div class="border-t py-4 flex flex-wrap items-center gap-3">
+@php $documentItems = $record->documents->sortByDesc('created_at')->values()->map(fn ($row) => \App\Support\Files\FileItem::forDocument($row))->all(); @endphp
+@forelse($record->documents->sortByDesc('created_at')->values() as $document)<div class="border-t py-4 flex flex-wrap items-center gap-3">
 <div class="flex-1">
 <strong>{{ $documentTypes[$document->document_type->value] ?? __('Document') }} — {{ __('Version') }} {{ \App\Support\Format\Ui::number($document->version) }}</strong> @if($document->drafted_by === \App\Enums\DraftedBy::Ai)<span class="rounded-full bg-primary-light text-primary px-2 py-1 text-xs font-bold">AI</span>@endif <p class="text-sm text-gray-500">{{ $documentStatuses[$document->status->value] ?? __('Document') }} · {{ ! $document->is_locked ? __('PDF after issuance') : ($document->pdf_status === 'ready' ? __('PDF ready') : ($document->pdf_status === 'failed' ? __('Could not prepare PDF') : __('PDF preparing'))) }}</p>
 </div>
-@if($document->pdf_status === 'ready')<x-ui.button href="{{ route('documents.pdf', $document) }}" variant="secondary">{{ __('Download PDF') }}</x-ui.button>@endif @if($canManage && $document->is_locked)<input wire:model="correctionReason" placeholder="{{ __('Correction reason') }}" class="ui-control rounded-xl border p-2">
+@if($document->pdf_status === 'ready')<x-ui.button href="{{ route('documents.pdf', $document) }}" variant="secondary">{{ __('Download PDF') }}</x-ui.button>@endif <x-ui.file-action :item="$documentItems[$loop->index]" :items="$documentItems" :index="$loop->index" :show-download="false" /> @if($canManage && $document->is_locked)<input wire:model="correctionReason" placeholder="{{ __('Correction reason') }}" class="ui-control rounded-xl border p-2">
 <x-ui.button variant="secondary" wire:click="startCorrection({{ $document->id }})">{{ __('Start correction') }}</x-ui.button>
 @endif</div>
 @empty<p class="text-gray-500">{{ __('No documents.') }}</p>
@@ -321,12 +323,15 @@
 @enderror</section>
     <section class="ui-card p-5">
 <h2 class="text-lg font-black mb-4">{{ __('Attachments') }}</h2>
-@forelse($attachments as $attachment)<div class="border-t py-3 flex justify-between gap-3">
+@php $attachmentItems = $attachments->values()->map(fn ($row) => \App\Support\Files\FileItem::forAttachment($row))->all(); @endphp
+<div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+@forelse($attachments as $attachment)<div class="min-w-0 rounded-xl border border-line p-3">
+@if($attachmentItems[$loop->index]['kind'] === 'image')<button type="button" data-file-list="{{ json_encode($attachmentItems) }}" x-on:click="$dispatch('open-file', { items: JSON.parse($el.dataset.fileList), index: {{ $loop->index }} })" class="mb-2 block w-full overflow-hidden rounded-lg focus-visible:outline-2 focus-visible:outline-primary"><img src="{{ $attachmentItems[$loop->index]['view_url'] }}" alt="{{ $attachment->original_name }}" loading="lazy" class="h-28 w-full object-cover"></button>@endif
 <span>{{ $attachment->original_name }} — {{ $attachment->kind->value }}</span>
-<a href="{{ route('attachments.download', $attachment) }}" class="ui-link">{{ __('Download') }}</a>
+<a href="{{ route('attachments.download', $attachment) }}" class="ui-link">{{ __('Download') }}</a><x-ui.file-action :item="$attachmentItems[$loop->index]" :items="$attachmentItems" :index="$loop->index" :show-download="false" class="mt-2" />
 </div>
 @empty<p class="text-gray-500">{{ __('No attachments.') }}</p>
-@endforelse</section>
+@endforelse</div></section>
     <section class="ui-card p-5">
         <h2 class="text-lg font-black mb-4">{{ __('Event timeline') }}</h2>
         <ol class="space-y-4">
@@ -344,7 +349,7 @@
                     <span class="ui-timeline-dot" aria-hidden="true"></span>
                     <strong>{{ \App\Support\Format\CaseTimeline::format($event->event_type, $payload, $context) }}</strong>
                     <p class="text-xs text-gray-500">{{ \App\Support\Format\Ui::date($event->created_at) }} · {{ $event->actorUser?->name }}</p>
-                    @if($signature?->witnessScanAttachment)<a href="{{ route('attachments.download', $signature->witnessScanAttachment) }}" class="ui-link text-sm">{{ __('Download paper signed by both witnesses') }}</a>@endif
+                    @if($signature?->witnessScanAttachment)<a href="{{ route('attachments.download', $signature->witnessScanAttachment) }}" class="ui-link text-sm">{{ __('Download paper signed by both witnesses') }}</a><x-ui.file-action :item="\App\Support\Files\FileItem::forAttachment($signature->witnessScanAttachment)" :show-download="false" />@endif
                     @if($event->notes)<p class="text-sm">{{ $event->notes }}</p>
 @endif
                 </li>

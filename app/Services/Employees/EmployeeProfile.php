@@ -41,19 +41,19 @@ class EmployeeProfile
         abort_unless($this->policy->view($viewer, $employee), 404);
         $cases = CaseVisibility::for($viewer)->where('cases.company_id', $employee->company_id)
             ->where('cases.employee_id', $employee->id)->where('cases.status', '!=', CaseStatus::Draft->value)
-            ->with(['documents' => fn ($query) => $query->where('is_locked', true)->where('pdf_status', 'ready')])
+            ->with(['violationType', 'location', 'documents' => fn ($query) => $query->where('is_locked', true)->where('pdf_status', 'ready')])
             ->orderByDesc('cases.violation_time')->get();
         $open = $cases->first(fn ($case) => $case->status !== CaseStatus::ArchivedFinal);
         $history = $cases->filter(fn ($case) => $open === null || $case->id !== $open->id)->values();
         foreach ($cases as $case) {
-            $case->setRelation('documents', $case->documents->sortByDesc('version')
-                ->unique(fn ($document) => $document->document_type->value)->values());
+            $case->setRelation('documents', $case->documents->sortByDesc('version')->values());
         }
 
         return [
             'employee' => $employee->loadMissing(['branch', 'company']),
             'open' => $open,
             'history' => $history,
+            'cases' => $cases,
             'counts' => [
                 'total' => $cases->count(),
                 'warnings' => $cases->where('outcome', Outcome::Warning)->count(),

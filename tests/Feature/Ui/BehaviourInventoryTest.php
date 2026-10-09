@@ -33,6 +33,7 @@ function uiInventoryFor(string $source): array
         'routes' => uiInventoryMatches('/\broute\(\s*["\']([^"\']+)["\']/s', $source),
         'links' => uiInventoryMatches('/\b(?:href|action|back)\s*=\s*["\'](\/[^"\']*)["\']/s', $source),
         'anchors' => uiInventoryMatches('/\bid\s*=\s*["\'](next-[^"\']+)["\']/s', $source),
+        'viewer_controls' => uiInventoryMatches('/(<x-ui\.file-action\b|data-file-list=)/s', $source),
     ];
 }
 

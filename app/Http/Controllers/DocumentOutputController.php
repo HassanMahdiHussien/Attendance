@@ -29,10 +29,23 @@ class DocumentOutputController extends Controller
         }
 
         return response($html, $status)->header('Content-Type', 'text/html; charset=UTF-8')
-            ->header('Content-Security-Policy', "default-src 'none'; img-src data:; style-src 'unsafe-inline'; font-src data:; sandbox");
+            ->header('Content-Security-Policy', "default-src 'none'; img-src data:; style-src 'unsafe-inline'; font-src data:; sandbox; frame-ancestors 'self'")
+            ->header('X-Frame-Options', 'SAMEORIGIN')
+            ->header('X-Content-Type-Options', 'nosniff')
+            ->header('Cache-Control', 'private, no-store');
     }
 
     public function pdf(Request $request, string $document)
+    {
+        return $this->storedPdf($request, $document, false);
+    }
+
+    public function view(Request $request, string $document)
+    {
+        return $this->storedPdf($request, $document, true);
+    }
+
+    private function storedPdf(Request $request, string $document, bool $inline)
     {
         $document = Document::withoutGlobalScopes()->findOrFail($document);
         abort_unless($request->user()->can('view', $document),
@@ -44,6 +57,16 @@ class DocumentOutputController extends Controller
             && $disk->exists($path)
             && hash_file('sha256', $disk->path($path)) === $document->pdf_sha256, 409,
             __('messages.document.pdf_integrity_failed'));
+
+        if ($inline) {
+            return response()->file($disk->path($path), [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="'.basename($path).'"',
+                'X-Content-Type-Options' => 'nosniff',
+                'X-Frame-Options' => 'SAMEORIGIN',
+                'Content-Security-Policy' => "default-src 'none'; frame-ancestors 'self'",
+            ])->setCache(['no_store' => true, 'private' => true]);
+        }
 
         return $disk->download($path, basename($path), ['Content-Type' => 'application/pdf']);
     }

@@ -70,5 +70,6 @@
         </div>
     </div>
     <x-ui.toast />
+    <x-ui.file-viewer />
 </body>
 </html>

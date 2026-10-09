@@ -23,10 +23,11 @@
             <div class="font-amiri text-lg">
                 @if($document->is_locked)
                     <p class="mb-3">{{ __('Reference number') }}: <bdi class="font-mono">{{ \App\Support\Format\Ui::number($document->reference_number) }}</bdi></p>
-                    @if($document->pdf_status === 'ready')<a href="{{ route('documents.pdf', $document) }}" class="ui-link font-bold">{{ __('Download PDF') }}</a>
+                    @if($document->pdf_status === 'ready')<a href="{{ route('documents.pdf', $document) }}" class="ui-link font-bold">{{ __('Download PDF') }}</a><x-ui.file-action :item="\App\Support\Files\FileItem::forDocument($document)" :show-download="false" />
                     @elseif($document->pdf_status === 'failed')<p class="text-red-700">{{ __('PDF preparation failed.') }}</p>
                     @else<p class="text-amber-700">{{ __('PDF is being prepared.') }}</p>@endif
                 @else
+                    <x-ui.file-action :item="\App\Support\Files\FileItem::forDocument($document)" :show-download="false" />
                     <iframe title="{{ __('Document preview') }}" sandbox="" src="{{ route('documents.preview', $document) }}" class="h-[650px] w-full rounded-xl border border-gray-200 bg-white"></iframe>
                 @endif
             </div>
