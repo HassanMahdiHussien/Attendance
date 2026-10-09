@@ -45,6 +45,43 @@ drafting state) · no packages; one migration only if `case_links` lacks reason/
   annotation hides from AI payload but stays visible, events on both cases, tenant FK registration for any new
   table.
 
+## R8 Plan review resolutions (Codex review + product owner, 2026-10-09) — override R1–R7 where they differ
+
+### Blockers
+- **A1 Read-time visibility**: the "Related cases" card, the banner count and every link render only linked cases
+  visible to the *current viewer* through `CaseVisibility::for($viewer)` (checked at each render, not only at link
+  creation); hidden ones are not counted or mentioned. The AI payload likewise includes only cases visible to the
+  requesting HR user. Tests: access lost after linking hides the row and count; a committee member seeing only one
+  case sees no trace of the other.
+- **A2 Not printed** (product owner, 2026-10-09): related cases stay internal — case page banner/card and AI context
+  only, never printed in documents — because a related case is often another employee's case. Recorded in WEIRDNESS
+  as a deliberate exception to CLAUDE.md §24.4's "referenced the same way".
+
+### Should-fix
+- **B1 Schema (concrete)**: migration adds to `case_links`: `reason` (varchar 500, nullable), `created_by_user_id`
+  (FK users, nullable for legacy rows). Canonical pair for `related`: `case_id` = lower id, `linked_case_id` = higher
+  id (existing directional unique key then prevents duplicates). Annotations in a new append-only table
+  `case_link_annotations` (company_id, case_link_id, kind `linked_in_error`, reason, created_by_user_id, created_at;
+  unique (case_link_id, kind) → at most one "in error" annotation; update/delete triggers block changes). Composite
+  tenant FKs; registered in the tenant FK test with factories.
+- **B2 Auto-draft non-success paths**: `recordPresence` already clears the presence-suggestion token before the
+  transition; auto-draft runs after that. Request-time refusal (`TransitionBlocked` etc.) → event
+  `ai_draft_auto_skipped` with reason key, no retry (HR uses the existing "Draft with AI" or manual path; NextAction
+  shows the decision-letter step as usual). AI outage happens later in the job and uses the existing failure path
+  (status restored, "write it manually or try again") — tested separately. A test covers the presence path with a
+  held suggestion token and the override path.
+- **B3 Case-page state**: while the auto request runs, the case page (not only the editor) shows "Drafting the
+  decision letter…" via `NextAction` mapping `ai_verify_and_close` + decision-letter operation to that label, and the
+  editor's existing polling continues to work.
+- **B4 Picker contract**: a dedicated `CaseLinks::candidates(User $actor, DisciplinaryCase $case, string $q)` returning
+  selectable case ids from `CaseVisibility::for($actor)` in the same company (excluding itself and already linked),
+  reusing `SearchText` normalisation; only HR roles (company admin / HR staff) may use it or link; capped at 10.
+- **B5 Tests** add: consultation pending (draft allowed, issuance waits), termination leave-confirmation still required
+  at issuance, inherited Doc A comparison and a pending supplementary comparison via the auto entry point.
+- **Nits**: AI payload includes at most 10 related cases with date, violation type (through the existing
+  masking/minimisation path) and outcome — no case number, no employee name; penalty source named explicitly:
+  `cases.outcome` in {warning, termination} and an issued recommendations document exists.
+
 ## Constitution Check
 | Principle | Status | How |
 |---|---|---|

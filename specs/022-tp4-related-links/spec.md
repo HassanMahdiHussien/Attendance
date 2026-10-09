@@ -28,8 +28,11 @@ and referenced the same way").
   records (no deletion), like other case records; a mistaken link can be annotated "linked in error" with a reason,
   which hides it from AI context but keeps it visible with that note.
 - Q: "Referenced the same way" as prior cases? → A: Related cases appear in a banner like prior cases and are passed
-  to the AI as context at touchpoints 1 and 3 (case number, date, violation type, outcome — from the database, never
-  AI wording). They are not printed in documents.
+  to the AI as context at touchpoints 1 and 3 (date, violation type, outcome — from the database, never AI wording).
+  They are NOT printed in documents (product owner, 2026-10-09: a related case is often another employee's case) —
+  a deliberate exception to CLAUDE.md §24.4, recorded in WEIRDNESS.
+- Q: Who sees a related case? → A: Only viewers who can already see that case; links never reveal a case to someone
+  who cannot open it.
 
 ## User Scenarios & Testing *(mandatory)*
 
