@@ -84,6 +84,7 @@
     "permission_conditions": []
   },
   "resources/views/livewire/cases/confirm-document.blade.php": {
+    "viewer_controls": ["<x-ui.file-action"],
     "wire": [
       [
         "wire:click",
@@ -129,6 +130,7 @@
     "permission_conditions": []
   },
   "resources/views/livewire/cases/create-case.blade.php": {
+    "viewer_controls": ["<x-ui.file-action"],
     "wire": [
       [
         "wire:click",
@@ -259,6 +261,7 @@
     "permission_conditions": []
   },
   "resources/views/livewire/cases/edit-document.blade.php": {
+    "viewer_controls": ["<x-ui.file-action"],
     "wire": [
       [
         "wire:click",
@@ -297,6 +300,7 @@
     "permission_conditions": []
   },
   "resources/views/livewire/cases/edit-recommendations.blade.php": {
+    "viewer_controls": ["<x-ui.file-action"],
     "wire": [
       [
         "wire:click",
@@ -552,6 +556,7 @@
     "permission_conditions": []
   },
   "resources/views/livewire/cases/review-consultation.blade.php": {
+    "viewer_controls": ["<x-ui.file-action"],
     "wire": [
       [
         "wire:click",
@@ -580,6 +585,7 @@
     "permission_conditions": []
   },
   "resources/views/livewire/cases/show-case.blade.php": {
+    "viewer_controls": ["<x-ui.file-action", "data-file-list="],
     "wire": [
       [
         "wire:click",
@@ -788,6 +794,7 @@
     ]
   },
   "resources/views/livewire/cases/signed-scan.blade.php": {
+    "viewer_controls": ["<x-ui.file-action"],
     "wire": [
       [
         "wire:click",
@@ -918,6 +925,7 @@
     "permission_conditions": []
   },
   "resources/views/livewire/employees/employee-page.blade.php": {
+    "viewer_controls": ["<x-ui.file-action"],
     "wire": [],
     "errors": [],
     "can": [],
@@ -953,6 +961,7 @@
     "permission_conditions": []
   },
   "resources/views/livewire/reports/inbox.blade.php": {
+    "viewer_controls": ["<x-ui.file-action"],
     "wire": [
       [
         "wire:click",

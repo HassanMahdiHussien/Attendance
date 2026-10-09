@@ -11,7 +11,8 @@
                     </div>
                     <p dir="auto" class="whitespace-pre-line text-sm text-gray-600">{{ $email->body_text }}</p>
                     @if($email->body_truncated)<p class="text-xs text-gray-500">{{ __('The email body was shortened.') }}</p>@endif
-                    <div class="flex flex-wrap gap-3">@foreach($email->attachments as $attachment)<a class="ui-link text-sm" href="/attachments/{{ $attachment->id }}">{{ $attachment->original_name }}</a>@endforeach</div>
+                    @php($emailItems = $email->attachments->values()->map(fn ($row) => \App\Support\Files\FileItem::forAttachment($row))->all())
+                    <div class="flex flex-wrap gap-3">@foreach($email->attachments as $attachment)<span class="text-sm"><a class="ui-link text-sm" href="/attachments/{{ $attachment->id }}">{{ $attachment->original_name }}</a> <x-ui.file-action :item="$emailItems[$loop->index]" :items="$emailItems" :index="$loop->index" :show-download="false" /></span>@endforeach</div>
                     @foreach($email->excluded_attachments ?? [] as $name)<p class="text-xs text-gray-500">{{ __('Excluded attachment: :name', ['name' => $name]) }}</p>@endforeach
                     <div class="flex flex-wrap items-end gap-3">
                         <x-ui.button wire:click="convertEmail({{ $email->id }})">{{ __('Create case') }}</x-ui.button>
@@ -33,7 +34,8 @@
                         @error('mapViolationTypeIds.'.$report->id)<p class="text-sm text-red-700">{{ $message }}</p>@enderror
                     @endif
                     <p dir="auto" class="text-sm text-gray-600">{{ $report->description }}</p>
-                    <div class="flex flex-wrap gap-3">@foreach($report->attachments as $attachment)<a class="ui-link text-sm" href="/attachments/{{ $attachment->id }}">{{ $attachment->original_name }}</a>@endforeach</div>
+                    @php($reportItems = $report->attachments->values()->map(fn ($row) => \App\Support\Files\FileItem::forAttachment($row))->all())
+                    <div class="flex flex-wrap gap-3">@foreach($report->attachments as $attachment)<span class="text-sm"><a class="ui-link text-sm" href="/attachments/{{ $attachment->id }}">{{ $attachment->original_name }}</a> <x-ui.file-action :item="$reportItems[$loop->index]" :items="$reportItems" :index="$loop->index" :show-download="false" /></span>@endforeach</div>
                     <div class="flex flex-wrap items-end gap-3">
                         <x-ui.button wire:click="convert({{ $report->id }})">{{ __('Convert to case') }}</x-ui.button>
                         <x-ui.field :label="__('Link to a duplicate case')" for="report-case-{{ $report->id }}" class="min-w-44">

@@ -13,6 +13,6 @@
             </div>
         @endforeach
         <div class="flex flex-wrap gap-3"><x-ui.button variant="secondary" wire:click="save">{{ __('Save') }}</x-ui.button><x-ui.button wire:click="submit">{{ __('Submit for approvals') }}</x-ui.button></div>
-        @if($document)<a href="{{ route('documents.preview', $document) }}" target="_blank" rel="noopener" class="ui-link">{{ __('Document preview') }}</a>@endif
+        @if($document)<a href="{{ route('documents.preview', $document) }}" target="_blank" rel="noopener" class="ui-link">{{ __('Document preview') }}</a><x-ui.file-action :item="\App\Support\Files\FileItem::forDocument($document)" :show-download="false" />@endif
     </x-ui.card>
 </div>

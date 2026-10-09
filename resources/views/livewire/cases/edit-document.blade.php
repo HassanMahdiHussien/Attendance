@@ -22,6 +22,7 @@
         </x-ui.card>
         <x-ui.card :title="__('Document preview')" class="bg-gray-50">
             @if($documentId)
+                <x-ui.file-action :item="\App\Support\Files\FileItem::forDocument($document)" :show-download="false" />
                 <iframe title="{{ __('Document preview') }}" sandbox="" src="{{ route('documents.preview', $documentId) }}" class="h-[700px] w-full rounded-2xl border border-gray-200 bg-white"></iframe>
                 <p class="mt-2 text-xs text-gray-500">{{ __('Save the draft to update the preview.') }}</p>
             @else

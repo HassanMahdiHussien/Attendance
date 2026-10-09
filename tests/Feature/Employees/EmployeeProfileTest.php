@@ -8,6 +8,7 @@ use App\Models\Employee;
 use App\Models\HrPartner;
 use App\Models\Law;
 use App\Models\User;
+use App\Models\ViolationType;
 use App\Services\Employees\EmployeeProfile;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Support\Facades\DB;
@@ -76,4 +77,26 @@ test('history links only issued documents with a ready PDF', function (): void {
     $draft = Document::factory()->create(['case_id' => $case->id, 'document_type' => 'recommendations']);
     $this->actingAs($viewer)->get('/employees/'.$employee->id)->assertOk()
         ->assertSee(route('documents.pdf', $issued))->assertDontSee(route('documents.pdf', $draft));
+});
+
+test('employee page shows every visible open and closed case as a brief card', function (): void {
+    $company = Company::factory()->create();
+    app(TenantContext::class)->setCompany($company);
+    $viewer = User::factory()->create(['company_id' => $company->id, 'primary_role' => 'company_admin']);
+    $employee = Employee::factory()->create();
+    $law = Law::factory()->create();
+    $type = ViolationType::factory()->create(['names' => ['ar' => 'مخالفة المستودع', 'en' => 'Warehouse violation']]);
+    $open = DisciplinaryCase::factory()->create(['employee_id' => $employee->id,
+        'law_version_id' => $law->id, 'status' => CaseStatus::Open,
+        'violation_type_id' => $type->id,
+        'description' => 'A brief incident description', 'violation_place_freetext' => 'Warehouse']);
+    $closed = DisciplinaryCase::factory()->create(['employee_id' => $employee->id,
+        'law_version_id' => $law->id, 'status' => CaseStatus::ArchivedFinal,
+        'outcome' => 'warning', 'closed_at' => now()]);
+
+    $profile = app(EmployeeProfile::class)->build($viewer, $employee);
+    expect($profile['cases']->pluck('id')->all())->toContain($open->id, $closed->id);
+    $this->actingAs($viewer)->get(route('employees.show', $employee))->assertOk()
+        ->assertSee(route('cases.show', $open))->assertSee(route('cases.show', $closed))
+        ->assertSee('A brief incident description')->assertSee('Warehouse violation');
 });

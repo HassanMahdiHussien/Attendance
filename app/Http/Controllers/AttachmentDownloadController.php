@@ -45,7 +45,10 @@ class AttachmentDownloadController extends Controller
         if ($request->boolean('preview') && in_array($attachment->mime_type, ['image/png', 'image/jpeg', 'application/pdf'], true)) {
             return response()->file(Storage::disk($attachment->disk)->path($attachment->path),
                 ['Content-Type' => $attachment->mime_type, 'X-Content-Type-Options' => 'nosniff',
-                    'Content-Security-Policy' => "default-src 'none'; style-src 'unsafe-inline'", 'Cache-Control' => 'private, no-store']);
+                    'Content-Security-Policy' => "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'self'",
+                    'X-Frame-Options' => 'SAMEORIGIN'])
+                // BinaryFileResponse defaults to public caching; case files must never sit in a shared cache.
+                ->setCache(['no_store' => true, 'private' => true]);
         }
 
         return response()->download(Storage::disk($attachment->disk)->path($attachment->path), $attachment->original_name,

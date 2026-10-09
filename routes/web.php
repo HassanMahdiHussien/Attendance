@@ -99,4 +99,5 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/attachments/{attachment}', AttachmentDownloadController::class)->name('attachments.download');
     Route::get('/documents/{document}/preview', [DocumentOutputController::class, 'preview'])->name('documents.preview');
     Route::get('/documents/{document}/pdf', [DocumentOutputController::class, 'pdf'])->name('documents.pdf');
+    Route::get('/documents/{document}/view', [DocumentOutputController::class, 'view'])->name('documents.view');
 });
