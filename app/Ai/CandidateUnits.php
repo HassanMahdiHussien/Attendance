@@ -5,6 +5,7 @@ namespace App\Ai;
 use App\LegalLibrary\TextNormalizer;
 use App\Models\DisciplinaryCase;
 use App\Models\LegalUnit;
+use App\Support\Format\Violation;
 use Illuminate\Support\Collection;
 
 class CandidateUnits
@@ -13,7 +14,7 @@ class CandidateUnits
 
     public function for(DisciplinaryCase $case, string $context, array $excludedIds = []): Collection
     {
-        $words = $this->words($case->violation_type.' '.$case->description.' '.$context);
+        $words = $this->words(Violation::name($case, 'ar').' '.$case->description.' '.$context);
         $units = LegalUnit::query()->citableFor($case)->whereNotIn('legal_units.id', $excludedIds)->with(['law', 'topics'])->get();
         $ranked = $units->sortByDesc(function (LegalUnit $unit) use ($words): int {
             $topics = $unit->topics->contains('topic', 'discipline') ? 100000 : 0;

@@ -16,6 +16,7 @@ use App\Services\Dashboards\DashboardFilters;
 use App\Support\Access\CaseVisibility;
 use App\Support\Access\EmailDraftVisibility;
 use App\Support\Access\ViolationReportVisibility;
+use App\Support\Format\Violation;
 use Illuminate\Support\Facades\DB;
 
 class MyWork
@@ -44,7 +45,7 @@ class MyWork
         $actions = $cases->map(fn ($case) => ['case' => $case, 'action' => $mapped->get($case->id)])
             ->filter(fn (array $row) => in_array($row['action']?->actor, ['hr', 'committee'], true));
         foreach (ViolationReportVisibility::inbox($user)->latest()->get() as $report) {
-            $actions->push(['report' => $report, 'label' => __('messages.home.new_report'), 'summary' => $report->violation_type, 'url' => '/reports/inbox', 'tone' => 'indigo']);
+            $actions->push(['report' => $report, 'label' => __('messages.home.new_report'), 'summary' => Violation::name($report), 'url' => '/reports/inbox', 'tone' => 'indigo']);
         }
         foreach (EmailDraftVisibility::inbox($user)->latest()->get() as $draft) {
             $actions->push(['email' => $draft, 'label' => __('messages.home.new_email'), 'summary' => $draft->subject, 'url' => '/reports/inbox', 'tone' => 'indigo']);

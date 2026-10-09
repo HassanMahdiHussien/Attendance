@@ -122,6 +122,17 @@ test('a rejected approval does not satisfy the recommendations gate', function (
     expect(fn () => app(DocumentIssuer::class)->issue($document, $actor))->toThrow(IssuanceBlocked::class, 'legal');
 });
 
+test('human recommendations save both sections with Western digits', function (): void {
+    [, $actor, $document] = documentFixture(type: 'recommendations');
+    moveCaseToCommitteeStage($document->disciplinaryCase);
+    app(RecommendationsEditor::class)->update($document, [
+        'ar' => ['body' => 'واقعة ١٢', 'secondary_body' => 'سبب ۳۴'],
+        'en' => ['body' => 'Incident ١٢', 'secondary_body' => 'Reason ۳۴'],
+    ], $actor);
+    expect($document->contents()->where('language_code', 'ar')->first()->body)->toBe('واقعة 12')
+        ->and($document->contents()->where('language_code', 'ar')->first()->secondary_body)->toBe('سبب 34');
+});
+
 test('a correction copies content, leaves the original valid, and supersedes it only on issuance', function (): void {
     [, $actor, $document] = documentFixture();
     addContents($document);

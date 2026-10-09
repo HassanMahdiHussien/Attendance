@@ -92,6 +92,15 @@ test('document draft service rejects reporter, committee and foreign HR even whe
     }
 });
 
+test('human defense drafts store Western digits before review', function (): void {
+    [, $hr, $case] = runKCase();
+    $case = runKOpen($case, $hr);
+    $document = app(DocumentDrafts::class)->createOrUpdate($case, DocumentType::DefenseLetter,
+        ['ar' => 'واقعة ١٢', 'en' => 'Incident ۳۴'], $hr);
+    expect($document->contents()->where('language_code', 'ar')->value('body'))->toBe('واقعة 12')
+        ->and($document->contents()->where('language_code', 'en')->value('body'))->toBe('Incident 34');
+});
+
 test('document edit and confirmation reject a document from another case', function (): void {
     [$company, $hr, $case] = runKCase();
     $other = DisciplinaryCase::factory()->create(['company_id' => $company->id, 'opened_by_user_id' => $hr->id]);

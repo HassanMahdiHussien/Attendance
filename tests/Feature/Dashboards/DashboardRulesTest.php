@@ -39,12 +39,13 @@ test('incident grouping normalises violation types and preserves the exact drill
         'violation_type' => 'تأخير', 'violation_time' => '2026-02-01 12:00:00']);
     $filters = DashboardFilters::fromInput($admin, ['period' => '6']);
     $metrics = app(CaseMetrics::class);
-    $type = collect($metrics->hotspots($admin, $filters)['violation'])->firstWhere('key', 'تأخير');
+    $key = 'txt:تأخير';
+    $type = collect($metrics->hotspots($admin, $filters)['violation'])->firstWhere('key', $key);
     expect($type['count'])->toBe(3)->and($type['previous'])->toBe(1)->and($type['delta'])->toBe(2)
-        ->and($metrics->hotspotQuery($admin, $filters, 'violation', 'تأخير')->count())->toBe(3);
+        ->and($metrics->hotspotQuery($admin, $filters, 'violation', $key)->count())->toBe(3);
     $department = collect($metrics->thresholds($admin, $filters, 3, 90))->firstWhere('group', 'department');
     expect($department['count'])->toBe(3)
-        ->and($metrics->thresholdQuery($admin, $filters, 'department', $department['key'], 'تأخير', 90)->count())->toBe(3);
+        ->and($metrics->thresholdQuery($admin, $filters, 'department', $department['key'], $key, 90)->count())->toBe(3);
     expect(collect($metrics->hotspots($admin, $filters)['location'])->firstWhere('key', '')['label'])->toBe('Location unspecified')
         ->and(collect($metrics->thresholds($admin, $filters, 3, 90))->where('group', 'location')->count())->toBe(0);
     $company->update(['hotspot_min_cases' => 4, 'hotspot_window_days' => 30]);
@@ -272,8 +273,8 @@ test('custom incident periods use Baghdad half-open date bounds', function (): v
     }
     $filters = DashboardFilters::fromInput($admin, ['period' => 'custom', 'from' => '2026-10-01', 'to' => '2026-10-01']);
     $metrics = app(CaseMetrics::class);
-    expect(collect($metrics->hotspots($admin, $filters)['violation'])->firstWhere('key', 'تأخير')['count'])->toBe(1)
-        ->and($metrics->hotspotQuery($admin, $filters, 'violation', 'تأخير')->count())->toBe(1);
+    expect(collect($metrics->hotspots($admin, $filters)['violation'])->firstWhere('key', 'txt:تأخير')['count'])->toBe(1)
+        ->and($metrics->hotspotQuery($admin, $filters, 'violation', 'txt:تأخير')->count())->toBe(1);
 });
 
 test('branch filtering applies to counters, hotspots, and current alerts', function (): void {

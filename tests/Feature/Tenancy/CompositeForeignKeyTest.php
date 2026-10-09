@@ -40,6 +40,7 @@ use App\Models\Signature;
 use App\Models\SignaturePresenceSuggestion;
 use App\Models\User;
 use App\Models\ViolationReport;
+use App\Models\ViolationType;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -47,7 +48,7 @@ use Illuminate\Validation\ValidationException;
 
 test('every tenant foreign key rejects a row from another company through models and raw inserts', function (): void {
     $models = [
-        'branches' => Branch::class, 'locations' => Location::class, 'employees' => Employee::class,
+        'branches' => Branch::class, 'locations' => Location::class, 'violation_types' => ViolationType::class, 'employees' => Employee::class,
         'branch_user' => BranchUser::class, 'committee_mandates' => CommitteeMandate::class,
         'committee_pool_members' => CommitteePoolMember::class, 'violation_reports' => ViolationReport::class,
         'report_witnesses' => ReportWitness::class, 'cases' => DisciplinaryCase::class,

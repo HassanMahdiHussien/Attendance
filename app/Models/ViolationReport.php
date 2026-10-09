@@ -22,12 +22,13 @@ class ViolationReport extends Model
 
     protected array $companyUserKeys = ['reporter_user_id'];
 
-    protected array $companyParents = ['branch'];
+    protected array $companyParents = ['branch', 'violationType'];
 
     protected static function booted(): void
     {
         static::saving(function (self $report): void {
-            $report->search_text = SearchText::normalize((string) $report->violation_type.' '.(string) $report->place_freetext);
+            $names = $report->violation_type_id ? ViolationType::query()->find($report->violation_type_id)?->names ?? [] : [];
+            $report->search_text = SearchText::normalize((string) $report->violation_type.' '.implode(' ', $names).' '.(string) $report->place_freetext);
         });
     }
 
@@ -62,6 +63,11 @@ class ViolationReport extends Model
     public function location(): BelongsTo
     {
         return $this->belongsTo(Location::class, 'location_id');
+    }
+
+    public function violationType(): BelongsTo
+    {
+        return $this->belongsTo(ViolationType::class, 'violation_type_id');
     }
 
     public function allegedResponsibleEmployee(): BelongsTo

@@ -2,7 +2,7 @@
     <x-ui.page-header :title="__('Legal consultation').' — '.__('Case').' '.\App\Support\Format\Ui::number($case->case_number)" back="/my-cases" />
     <x-ui.card class="space-y-5">
         @if($case->confirmedResponseText())<section class="rounded-2xl bg-gray-50 p-4"><h2 class="font-bold">{{ __('Transcribed text — the scan is the original') }}</h2><p class="whitespace-pre-wrap" dir="auto">{{ $case->confirmedResponseText() }}</p></section>@endif
-        <p>{{ $case->employee?->name }} — {{ $case->violation_type }}</p>
+        <p>{{ $case->employee?->name }} — {{ \App\Support\Format\Violation::name($case) }}</p>
         <section><h2 class="font-bold">{{ __('Committee session minutes') }}</h2><p class="whitespace-pre-wrap">{{ $case->committee_session_notes }}</p></section>
         @foreach($case->documents as $document)
             <section class="border-t border-[#EEF0F4] pt-4">

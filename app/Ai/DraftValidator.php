@@ -3,6 +3,7 @@
 namespace App\Ai;
 
 use App\Enums\DocumentType;
+use App\Support\Text\ArabicText;
 
 class DraftValidator
 {
@@ -14,7 +15,7 @@ class DraftValidator
             return ['Missing or unexpected language.'];
         }
         $arabicIds = null;
-        $input = json_encode($payload, JSON_UNESCAPED_UNICODE);
+        $input = ArabicText::westernDigits(json_encode($payload, JSON_UNESCAPED_UNICODE));
         preg_match_all('/[\p{N}]+/u', $input, $inputNumbers);
         $allowedNumbers = array_unique($inputNumbers[0]);
         foreach ($languages as $language) {

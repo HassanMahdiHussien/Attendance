@@ -11,6 +11,7 @@ use App\Models\HrPartner;
 use App\Models\Law;
 use App\Models\ReportExport;
 use App\Models\User;
+use App\Models\ViolationType;
 use App\Services\Dashboards\CaseMetrics;
 use App\Services\Dashboards\DashboardFilters;
 use App\Services\Statistics\ReportBuilder;
@@ -89,6 +90,26 @@ test('live period report outcome figures use dashboard metric definitions', func
     expect($report['summary']['Open at period end'])->toBe($metrics['open'])
         ->and($report['summary']['Warning'])->toBe($metrics['warning'])
         ->and($report['summary']['Termination'])->toBe($metrics['termination']);
+});
+
+test('case lists and hotspot reports use the export language for managed violation names', function (): void {
+    $company = Company::factory()->create();
+    app(TenantContext::class)->setCompany($company);
+    $viewer = User::factory()->create(['company_id' => $company->id, 'primary_role' => 'company_admin']);
+    $type = ViolationType::factory()->create(['names' => ['ar' => 'شجار', 'en' => 'Fight']]);
+    DisciplinaryCase::factory()->create(['law_version_id' => Law::factory()->create()->id,
+        'status' => CaseStatus::Open, 'violation_type' => 'شجار', 'violation_type_id' => $type->id,
+        'violation_time' => now()->subDay()]);
+    $params = ['period' => 'custom', 'from' => now()->subDays(7)->toDateString(), 'to' => now()->toDateString()];
+    $rows = function () use ($viewer, $params): array {
+        $report = app(ReportBuilder::class)->build($viewer, 'periodic', $params);
+
+        return collect($report['sections'])->firstWhere('title', __('Case list'))['rows'];
+    };
+    app()->setLocale('en');
+    expect($rows()[0][4])->toBe('Fight');
+    app()->setLocale('ar');
+    expect($rows()[0][4])->toBe('شجار');
 });
 
 test('export job publishes once, downloads for owner, and expires only ready rows', function (): void {
@@ -307,8 +328,8 @@ test('Excel uses RTL sheets and stores formula-looking names as string cells', f
     app()->setLocale('ar');
     try {
         app(ExcelReport::class)->render(['summary' => [], 'sections' => [[
-            'title' => 'السجل', 'headers' => ['الموظف', 'ISO'],
-            'rows' => [['=HYPERLINK("x")', '2026-01-01']],
+            'title' => 'السجل', 'headers' => ['الموظف', 'ISO', 'Legacy'],
+            'rows' => [['=HYPERLINK("x")', '2026-01-01', 'Case ١٢']],
         ]]], $path);
         $reader = new Reader;
         $reader->open($path);
@@ -317,6 +338,7 @@ test('Excel uses RTL sheets and stores formula-looking names as string cells', f
         // OpenSpout's reader turns any text starting with "=" back into a FormulaCell, so the stored XML is the proof:
         // the value is an inline string and the sheet contains no formula element.
         expect($rows[2]->getCells()[0]->getValue())->toBe('=HYPERLINK("x")');
+        expect($rows[2]->getCells()[2]->getValue())->toBe('Case 12');
         $reader->close();
         $zip = new ZipArchive;
         $zip->open($path);

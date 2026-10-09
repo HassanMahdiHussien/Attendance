@@ -25,6 +25,7 @@ use App\Services\Cases\RecommendationsEditor;
 use App\Services\Documents\DocumentDrafts;
 use App\Services\Documents\RegulationExclusions;
 use App\Support\Tenancy\TenantContext;
+use App\Support\Text\ArabicText;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Cache;
@@ -94,6 +95,16 @@ class DraftDocumentWithAi implements ShouldQueue
                 $this->fail($exception);
 
                 return;
+            }
+            foreach ($response['languages'] ?? [] as $language => $sections) {
+                if (! is_array($sections)) {
+                    continue;
+                }
+                foreach (['body', 'secondary_body'] as $section) {
+                    if (isset($sections[$section]) && is_string($sections[$section])) {
+                        $response['languages'][$language][$section] = ArabicText::westernDigits($sections[$section]);
+                    }
+                }
             }
             $errors = $validator->validate($response, $languages, $this->type, $units->pluck('id')->all(), $payload);
             if ($errors) {

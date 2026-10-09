@@ -35,7 +35,7 @@
     <section class="space-y-3">
         <h2 class="text-lg font-extrabold text-ink">{{ __('Repeat alerts') }}</h2>
         @forelse($thresholds as $row)
-            <a class="block rounded-2xl border border-amber-100 bg-amber-light p-4 font-semibold text-amber-900" href="/dashboard/cases?{{ http_build_query($filterQuery + ['metric' => 'threshold', 'group' => $row['group'], 'key' => $row['key'], 'violation' => $row['violation']]) }}">{{ $row['violation'] }} · {{ $row['label'] }} · <bdi>{{ \App\Support\Format\Ui::number($row['count']) }}</bdi></a>
+            <a class="block rounded-2xl border border-amber-100 bg-amber-light p-4 font-semibold text-amber-900" href="/dashboard/cases?{{ http_build_query($filterQuery + ['metric' => 'threshold', 'group' => $row['group'], 'key' => $row['key'], 'violation' => $row['violation']]) }}">{{ $row['violation_label'] }} · {{ $row['label'] }} · <bdi>{{ \App\Support\Format\Ui::number($row['count']) }}</bdi></a>
         @empty
             <x-ui.card><x-ui.empty :title="__('No patterns exceeded the configured threshold.')" /></x-ui.card>
         @endforelse

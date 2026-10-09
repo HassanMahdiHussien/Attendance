@@ -19,6 +19,7 @@ use App\Notifications\ApprovalNeeded;
 use App\Services\CaseEventLogger;
 use App\Services\Documents\CitationSync;
 use App\Support\Access\CaseVisibility;
+use App\Support\Text\ArabicText;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 
@@ -138,6 +139,8 @@ class RecommendationsEditor
                     if (blank($body)) {
                         throw new TransitionBlocked(__('messages.recommendations.findings_required_in_language', ['language' => $language]));
                     }
+                    $body = ArabicText::westernDigits($body);
+                    $secondary = $secondary === null ? null : ArabicText::westernDigits($secondary);
                     DocumentContent::updateOrCreate(
                         ['document_id' => $document->id, 'language_code' => $language],
                         ['company_id' => $document->company_id, 'body' => $body, 'secondary_body' => $secondary,

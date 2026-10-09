@@ -16,6 +16,7 @@ use App\Models\DisciplinaryCase;
 use App\Models\Document;
 use App\Models\Employee;
 use App\Models\User;
+use App\Models\ViolationType;
 use App\Services\Cases\CaseDocumentIssuance;
 use App\Services\Cases\CaseOpening;
 use App\Services\Cases\CaseWorkflow;
@@ -89,10 +90,12 @@ class DocumentDemoSeeder extends Seeder
 
     private function case(Company $company, User $admin, Employee $employee, array $members, Outcome $outcome): void
     {
+        $violation = $outcome === Outcome::Warning ? 'تأخر في تسليم سجل المخزن' : 'حاجة إلى تدريب على إجراءات المخزن';
+        $type = ViolationType::query()->where('names->ar', $violation)->firstOrFail();
         $case = DisciplinaryCase::create([
             'company_id' => $company->id, 'branch_id' => $employee->branch_id,
             'employee_id' => $employee->id, 'opened_by_user_id' => $admin->id,
-            'violation_type' => $outcome === Outcome::Warning ? 'تأخر في تسليم سجل المخزن' : 'حاجة إلى تدريب على إجراءات المخزن',
+            'violation_type' => $violation, 'violation_type_id' => $type->id,
             'violation_time' => now()->subDays(4), 'violation_place_freetext' => 'Demo warehouse',
         ]);
         $case = app(CaseOpening::class)->open($case, $admin);

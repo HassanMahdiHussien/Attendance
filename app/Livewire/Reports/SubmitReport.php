@@ -6,6 +6,7 @@ use App\Enums\UserRole;
 use App\Models\Branch;
 use App\Models\Employee;
 use App\Models\Location;
+use App\Models\ViolationType;
 use App\Services\Reports\ReportService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\DB;
@@ -30,6 +31,8 @@ class SubmitReport extends Component
 
     public string $violationType = '';
 
+    public string $violationTypeId = '';
+
     public string $responsibleEmployeeId = '';
 
     public string $responsibleSearch = '';
@@ -53,7 +56,8 @@ class SubmitReport extends Component
         $data = $this->validate([
             'branchId' => ['required', 'integer'], 'employeeId' => ['nullable', 'integer'],
             'locationId' => ['nullable', 'integer'], 'place' => ['nullable', 'string', 'max:255'],
-            'occurredAt' => ['required', 'date'], 'violationType' => ['required', 'string', 'max:255'],
+            'occurredAt' => ['required', 'date'], 'violationType' => ['nullable', 'string', 'max:255'],
+            'violationTypeId' => ['nullable', 'integer'],
             'responsibleEmployeeId' => ['nullable', 'integer'], 'responsibleName' => ['nullable', 'string', 'max:255'],
             'witnessNames' => ['nullable', 'string'], 'description' => ['required', 'string'],
             'attachments' => ['array'], 'attachments.*' => ['file', 'max:10240'],
@@ -67,6 +71,7 @@ class SubmitReport extends Component
             'branch_id' => $data['branchId'], 'employee_id' => $data['employeeId'] ?: null,
             'location_id' => $data['locationId'] ?: null, 'place_freetext' => $data['place'] ?: null,
             'occurred_at' => $data['occurredAt'], 'violation_type' => $data['violationType'],
+            'violation_type_id' => $data['violationTypeId'] ?: null,
             'alleged_responsible_employee_id' => $data['responsibleEmployeeId'] ?: null,
             'alleged_responsible_person_freetext' => $data['responsibleName'] ?: null,
             'description' => $data['description'],
@@ -84,6 +89,7 @@ class SubmitReport extends Component
         return view('livewire.reports.submit-report', [
             'branches' => Branch::query()->whereIn('id', $branchIds)->get(),
             'locations' => $this->branchId ? Location::query()->where('branch_id', $this->branchId)->where('is_active', true)->get() : collect(),
+            'violationTypes' => ViolationType::query()->where('is_active', true)->orderBy('sort_order')->get(),
             'employees' => $this->branchId ? Employee::query()->where('branch_id', $this->branchId)->where('is_active', true)
                 ->when($this->employeeSearch !== '', fn ($q) => $q->where('name', 'like', '%'.$this->employeeSearch.'%'))->get() : collect(),
             'responsibleEmployees' => $this->branchId ? Employee::query()->where('branch_id', $this->branchId)->where('is_active', true)

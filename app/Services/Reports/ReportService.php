@@ -16,6 +16,7 @@ use App\Services\AuditLogger;
 use App\Services\CaseEventLogger;
 use App\Services\Cases\CaseDrafts;
 use App\Services\Cases\CaseInsights;
+use App\Services\Cases\CaseViolationTypes;
 use App\Support\Access\ViolationReportVisibility;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -37,10 +38,13 @@ class ReportService
                 Employee::query()->where('company_id', $actor->company_id)->where('branch_id', $branchId)->findOrFail($data[$key]);
             }
         }
+        $data = array_replace($data, app(CaseViolationTypes::class)->selected(
+            isset($data['violation_type_id']) ? (int) $data['violation_type_id'] : null,
+            $data['violation_type'] ?? null, (int) $actor->company_id));
 
         return DB::transaction(function () use ($data, $actor, $branchId): ViolationReport {
             $report = ViolationReport::create(array_intersect_key($data, array_flip([
-                'employee_id', 'location_id', 'place_freetext', 'occurred_at', 'violation_type',
+                'employee_id', 'location_id', 'place_freetext', 'occurred_at', 'violation_type', 'violation_type_id',
                 'alleged_responsible_employee_id', 'alleged_responsible_person_freetext', 'description',
             ])) + [
                 'company_id' => $actor->company_id, 'branch_id' => $branchId,
@@ -91,6 +95,7 @@ class ReportService
                     'branch_id' => $report->branch_id, 'employee_id' => $report->employee_id,
                     'location_id' => $report->location_id, 'violation_place_freetext' => $report->place_freetext,
                     'violation_time' => $report->occurred_at, 'violation_type' => $report->violation_type,
+                    'violation_type_id' => $report->violation_type_id,
                     'description' => $report->description,
                     'alleged_responsible_employee_id' => $report->alleged_responsible_employee_id,
                     'alleged_responsible_person_freetext' => $report->alleged_responsible_person_freetext,

@@ -19,8 +19,9 @@
             <x-ui.field :label="__('Incident date and time')" error="occurredAt" for="report-occurred-at">
                 <x-ui.input id="report-occurred-at" type="datetime-local" wire:model="occurredAt" />@error('occurredAt')<span class="sr-only">{{ $message }}</span>@enderror
             </x-ui.field>
-            <x-ui.field :label="__('Violation type')" error="violationType" for="report-violation-type">
-                <x-ui.input id="report-violation-type" wire:model="violationType" />@error('violationType')<span class="sr-only">{{ $message }}</span>@enderror
+            <x-ui.field :label="__('Violation type')" error="violationType" for="report-violation-type-id">
+                <x-ui.select id="report-violation-type-id" wire:model="violationTypeId"><option value="">{{ __('Other — describe below') }}</option>@foreach($violationTypes as $type)<option value="{{ $type->id }}">{{ $type->name() }}</option>@endforeach</x-ui.select>
+                <x-ui.input id="report-violation-type" wire:model="violationType" :placeholder="__('Violation if not listed')" class="mt-2" />@error('violationType')<span class="sr-only">{{ $message }}</span>@enderror
             </x-ui.field>
             <x-ui.field :label="__('Alleged responsible person')" for="report-responsible">
                 <x-ui.input wire:model.live.debounce.300ms="responsibleSearch" :placeholder="__('Search for an employee')" aria-label="{{ __('Search for an employee') }}" />

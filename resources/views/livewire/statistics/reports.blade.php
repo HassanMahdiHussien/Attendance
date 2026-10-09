@@ -36,14 +36,14 @@
             <p class="text-sm text-gray-500">{{ __('Through the end of the period') }} · {{ \App\Support\Format\Ui::date($preview['parameters']['from']) }} — {{ \App\Support\Format\Ui::date($preview['parameters']['to']) }}</p>
             @if($preview['partial'])<p class="rounded-xl bg-amber-50 p-3">{{ __('There may be other cases you cannot see') }}</p>@endif
             @if($preview['truncated'])<p class="rounded-xl bg-amber-50 p-3">{{ __('The first 1,000 rows are shown — use Excel for the full list') }}</p>@endif
-            <div class="grid gap-3 sm:grid-cols-3">@foreach($preview['summary'] as $label => $value)<x-ui.stat :label="$label" :value="is_numeric($value) ? \App\Support\Format\Ui::number($value) : ($value ?? '—')" />@endforeach</div>
+            <div class="grid gap-3 sm:grid-cols-3">@foreach($preview['summary'] as $label => $value)<x-ui.stat :label="\App\Support\Format\Ui::number($label)" :value="\App\Support\Format\Ui::number((string) ($value ?? '—'))" />@endforeach</div>
             @foreach($preview['sections'] as $section)
                 <h3 class="font-bold text-ink">{{ $section['title'] }}</h3>
                 <x-ui.table>
                     <thead><tr>@foreach($section['headers'] as $header)<th scope="col" class="ui-th">{{ $header }}</th>@endforeach</tr></thead>
                     <tbody>
                         @forelse($section['rows'] as $row)
-                            <tr>@foreach($row as $index => $cell)<x-ui.td :label="$section['headers'][$index] ?? ''">{{ is_numeric($cell) ? \App\Support\Format\Ui::number($cell) : ($cell ?? '—') }}</x-ui.td>@endforeach</tr>
+                            <tr>@foreach($row as $index => $cell)<x-ui.td :label="$section['headers'][$index] ?? ''">{{ \App\Support\Format\Ui::number((string) ($cell ?? '—')) }}</x-ui.td>@endforeach</tr>
                         @empty
                             <tr><td colspan="{{ count($section['headers']) }}" class="ui-td"><x-ui.empty :title="__('No data for this period.')" /></td></tr>
                         @endforelse

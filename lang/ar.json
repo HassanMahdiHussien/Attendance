@@ -732,5 +732,17 @@
     "Verified by review": "موثقة بمراجعة",
     "Verified from source text": "من نص المصدر",
     "Waiting for AI reading": "بانتظار قراءة الذكاء الاصطناعي",
-    "CONFIDENTIAL": "سري"
+    "CONFIDENTIAL": "سري",
+    "Other — describe below": "أخرى — اذكر التفاصيل أدناه",
+    "Violation if not listed": "المخالفة إذا لم تكن مدرجة",
+    "Choose a violation type or describe another": "اختر نوع المخالفة أو صف مخالفة أخرى",
+    "Choose a violation type": "اختر نوع المخالفة",
+    "Map to a violation type": "ربط بنوع مخالفة",
+    "Map violation type": "ربط نوع المخالفة",
+    "Violation type mapped": "تم ربط نوع المخالفة",
+    "Arabic name": "الاسم بالعربية",
+    "Name in :language": "الاسم بلغة :language",
+    "Sort order": "ترتيب العرض",
+    "Arabic and English names are required": "الاسمان بالعربية والإنجليزية مطلوبان",
+    "Names must be 255 characters or fewer": "يجب ألا يزيد الاسم عن 255 حرفاً"
 }

@@ -94,6 +94,9 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 
 # Provisioning boundaries
 
+- **A selected violation type keeps its Arabic name in the existing text column.** This is a historical snapshot for older guards and unmapped comparisons; current screens use the translated list name. (2026-10-09)
+- **New document HTML is digit-normalised when issued.** The frozen HTML includes facts, manually entered reference numbers and citations; previously issued HTML, contents and PDFs remain untouched. (2026-10-09)
+
 - Existing companies with cases inherit only the internal-regulation answer during setup migration; a new opening still needs current letterheads, branch coverage and a committee order. An uploaded regulation satisfies setup while lawyer approval is pending, but its units remain uncitable until approved. (2026-10)
 
 - Outside local and testing, a backup refuses an archive password shorter than 32 characters. The archive entries expose storage path names, but their contents require the password.

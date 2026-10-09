@@ -21,7 +21,7 @@
                 @forelse($history as $case)
                     <article class="border-b border-line py-3 last:border-0">
                         <a class="ui-link font-semibold" href="{{ route('cases.show', $case) }}">{{ __('Case') }} {{ \App\Support\Format\Ui::number($case->case_number) }}</a>
-                        <span class="text-sm text-gray-500">· {{ $case->violation_type }} · {{ \App\Support\Format\Ui::outcome($case->outcome) }} · {{ \App\Support\Format\Ui::date($case->violation_time) }}</span>
+                        <span class="text-sm text-gray-500">· {{ \App\Support\Format\Violation::name($case) }} · {{ \App\Support\Format\Ui::outcome($case->outcome) }} · {{ \App\Support\Format\Ui::date($case->violation_time) }}</span>
                         @foreach($case->documents as $document)
                             <a class="ui-link mt-1 block text-sm" href="{{ route('documents.pdf', $document) }}">{{ $document->document_type->value }} · PDF</a>
                         @endforeach

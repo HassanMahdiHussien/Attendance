@@ -38,7 +38,7 @@ test('all UI translation keys exist in both catalogue layers and UI code contain
             }
             $allowed = match ($relative) {
                 'app/Filament/Admin/Pages/DocumentTemplates.php' => str_contains($line, '$facts['),
-                'app/Support/Format/ArabicDigits.php', 'app/Support/Format/OutcomeLabel.php',
+                'app/Support/Format/OutcomeLabel.php',
                 'app/LegalLibrary/ArticleSplitter.php', 'app/LegalLibrary/ClaudePageReader.php',
                 'app/LegalLibrary/TextLayerProbe.php', 'app/LegalLibrary/TextNormalizer.php',
                 'app/LegalLibrary/UnitBuilder.php' => true,

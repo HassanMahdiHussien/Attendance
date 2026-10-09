@@ -10,6 +10,7 @@ use App\Models\Employee;
 use App\Models\Location;
 use App\Models\User;
 use App\Models\ViolationReport;
+use App\Models\ViolationType;
 use App\Services\CaseEventLogger;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -24,6 +25,9 @@ class CaseDrafts
         return DB::transaction(function () use ($data, $actor, $report): DisciplinaryCase {
             if ($report !== null && ((int) $report->company_id !== (int) $actor->company_id || $report->case_id !== null)) {
                 abort(403);
+            }
+            if (! empty($data['violation_type_id']) && (int) $data['violation_type_id'] !== (int) $report?->violation_type_id) {
+                $data = array_replace($data, app(CaseViolationTypes::class)->selected((int) $data['violation_type_id'], null, (int) $actor->company_id));
             }
             $this->checkFacts($data, $actor);
             $branch = Branch::query()->findOrFail($data['branch_id']);
@@ -53,6 +57,9 @@ class CaseDrafts
         }
 
         return DB::transaction(function () use ($case, $data, $actor): DisciplinaryCase {
+            if (! empty($data['violation_type_id']) && (int) $data['violation_type_id'] !== (int) $case->violation_type_id) {
+                $data = array_replace($data, app(CaseViolationTypes::class)->selected((int) $data['violation_type_id'], null, (int) $actor->company_id));
+            }
             $this->checkFacts($data, $actor);
             $case->update($this->facts($data));
             $case->witnesses()->delete();
@@ -75,6 +82,9 @@ class CaseDrafts
         if (! empty($data['location_id'])) {
             Location::query()->where('company_id', $actor->company_id)->where('branch_id', $branch->id)->findOrFail($data['location_id']);
         }
+        if (! empty($data['violation_type_id'])) {
+            ViolationType::query()->where('company_id', $actor->company_id)->findOrFail($data['violation_type_id']);
+        }
         if (! empty($data['assigned_hr_user_id'])) {
             $assignee = User::query()->where('company_id', $actor->company_id)->where('is_active', true)->findOrFail($data['assigned_hr_user_id']);
             if (! in_array($assignee->primary_role, [UserRole::HrStaff, UserRole::CompanyAdmin], true)) {
@@ -87,7 +97,7 @@ class CaseDrafts
     {
         return array_intersect_key($data, array_flip([
             'branch_id', 'employee_id', 'location_id', 'violation_place_freetext', 'violation_time',
-            'violation_type', 'description', 'alleged_responsible_employee_id',
+            'violation_type', 'violation_type_id', 'description', 'alleged_responsible_employee_id',
             'alleged_responsible_person_freetext', 'include_prior_record', 'is_sensitive',
         ]));
     }

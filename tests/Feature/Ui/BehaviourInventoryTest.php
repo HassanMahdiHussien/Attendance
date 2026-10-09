@@ -48,9 +48,21 @@ test('refreshed screens retain their original behavior surface', function (): vo
                 ['wire:model', 'relatedReason'],
                 ['wire:model', 'relatedErrorReasons.{{ $related['],
                 ['wire:model.live.debounce.300ms', 'relatedSearch'],
+                ['wire:model', 'mapViolationTypeId'],
+                ['wire:click', 'mapViolationType'],
             ],
-            'errors' => ['relatedCaseId', 'relatedReason'],
+            'errors' => ['relatedCaseId', 'relatedReason', 'mapViolationTypeId'],
             'links' => ['/cases/{{ $other->id }}'],
+        ],
+        'resources/views/livewire/cases/create-case.blade.php' => [
+            'wire' => [['wire:model', 'violationTypeId']],
+        ],
+        'resources/views/livewire/reports/submit-report.blade.php' => [
+            'wire' => [['wire:model', 'violationTypeId']],
+        ],
+        'resources/views/livewire/reports/inbox.blade.php' => [
+            'wire' => [['wire:model', 'mapViolationTypeIds.{{ $report->id }}'],
+                ['wire:click', 'mapViolationType({{ $report->id }})']],
         ],
         'resources/views/livewire/cases/partials/ai-editor-controls.blade.php' => [
             'wire' => [
