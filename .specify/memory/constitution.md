@@ -24,6 +24,10 @@ Rationale: shared-schema tenancy (ADR 0001) means one missed check is a real dat
 
 - The AI MUST only turn human-entered facts and human-made decisions into draft wording. It MUST
   NOT infer missing facts, suggest an outcome, or make any decision.
+- Exception for review aids (CLAUDE.md §23.3–23.4): the AI MAY offer non-binding legal review aids —
+  the citation relevance check and suggested law-vs-internal-regulation comparisons — that a human
+  confirms or changes before they take effect. A review aid never chooses the operative rule or the
+  disciplinary outcome, and never takes effect without that human step.
 - Every AI draft MUST pass a human confirmation screen before printing or issuance, and every
   drafting step MUST have a manual "write it yourself" path so an AI outage never blocks a case.
 - The AI MUST NOT type the text of a legal article. It cites verified `legal_units` by id
@@ -124,4 +128,5 @@ the governing law.
   materially expanded; PATCH = wording only.
 - Every plan's Constitution Check and every PR review MUST verify compliance with Principles I–VI.
 
-**Version**: 1.0.0 | **Ratified**: 2026-10-04 | **Last Amended**: 2026-10-04
+**Version**: 1.1.0 | **Ratified**: 2026-10-04 | **Last Amended**: 2026-10-09 (Principle II: review-aid
+exception, approved by the product owner for feature 021)

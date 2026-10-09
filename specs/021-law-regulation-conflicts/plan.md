@@ -55,11 +55,57 @@ one migration · no packages.
   allow citing; skip with reason then draft; reviewer panel visible to committee and lawyer, not in PDF/template;
   tenant isolation; audit entries; translations.
 
+## R9 Plan review resolutions (Codex review + product owner, 2026-10-09) — override R1–R8 where they differ
+
+### Blockers
+- **A1 Constitution**: Principle II amended (v1.1.0, product owner): non-binding review aids such as suggested
+  law-vs-regulation comparisons are allowed when a human confirms or changes them before they take effect; they never
+  choose the operative rule or the outcome. The Constitution Check row II cites v1.1.0.
+- **A2 Request identity**: the comparison uses the case's existing single AI request token. `AiDrafting::request`
+  (locked) either reserves `ai_request_id` for operation `regulation_comparison` (stores it on the comparison as
+  `request_token`, status `suggesting`, case status unchanged — no new case state) or, when a confirmed/skipped
+  comparison exists for this draft target with `consumed_at` null, reserves the token for the draft and marks the
+  comparison consumed by that draft (one comparison → at most one draft request; a second click or a new draft after
+  consumption needs a new comparison, except Doc B inheritance below). The suggestion job writes only if the case's
+  token still equals the comparison's token, then clears the token; late jobs/retries/second clicks are no-ops;
+  `ai:reconcile-drafting` treats operation `regulation_comparison` older than 20 minutes as expired → comparison
+  `failed` (manual path). Skip/confirm while a suggestion is in flight are refused until it finishes or expires.
+- **A3 Exclusion set is authoritative everywhere**: each document links its comparison (`documents.regulation_comparison_id`);
+  `RegulationExclusions::for(Document)` = regulation units in `conflict` pairs, or ALL regulation units when the
+  comparison was skipped (product owner: skip ⇒ law only). Enforced in: candidate retrieval, the prompt, the manual
+  citation picker (excluded units not offered), `CitationSync` (refuses to record them), `CitationGate` at issuance
+  (hard block, translated), and `CitationOverride` (a relevance override can never re-allow an excluded unit). Tests
+  for AI drafts, manual markers typed into edits, picker, and override attempts.
+- **A4 Doc B inherits** (product owner): the decision letter uses the comparison linked to the issued recommendations
+  version it derives from; its exclusion set applies; if Doc B would cite a regulation unit the comparison did not
+  cover in any pair, issuance is blocked until HR confirms a supplementary comparison (new comparison record linked to
+  Doc B covering the extra units). Doc A without a comparison (company had no regulation then) → Doc B behaves as
+  today unless the company now has citable regulation units, in which case Doc B requires its own comparison.
+
+### Should-fix
+- **B1 Versions**: `DocumentCorrector` copies `regulation_comparison_id` to the new version (same exclusions); a new
+  comparison for a correction is only created if HR redrafts with AI. The column is added to the document immutability
+  trigger's protected set for issued/locked rows.
+- **B2 Skip**: skip ⇒ law only (A3); the HR panel and reviewer panel state "Comparison skipped — only the labour law
+  may be cited" with the reason; skipped rows are immutable like confirmed ones.
+- **B3 Validation & FKs**: pair ids validated with `citableFor($case)` plus kind (statute vs internal_regulation) and
+  company at AI-output time AND at confirmation; `law_unit_id` / `regulation_unit_id` are plain FKs to `legal_units`
+  (statutes are platform rows with null company) with the company/kind rule enforced in the service and a model
+  guard; DB triggers block insert/update/delete of pairs whose comparison is `confirmed`/`skipped`, and block changes
+  to those comparison rows except `consumed_at` being set once.
+- **B4 Minimal payload**: a dedicated comparison payload — violation type, incident description (masked by the
+  existing name masking), and the candidate units (ids + official texts); no response, minutes, outcome or personal
+  data. Test what FakeClaudeClient receives.
+- **B5 Tests** add: stale/late job result, simultaneous requests, skip during in-flight suggestion, picker and manual
+  marker attempts, correction versions, Doc B inheritance + supplementary comparison, relevance override attempt.
+- **Nits**: the panel says the AI paired only retrieved candidates and HR can add other citable pairs; an empty AI
+  list is never presented as "no conflict"; status/field mutability rules as in B3.
+
 ## Constitution Check
 | Principle | Status | How |
 |---|---|---|
 | I. Tenancy | PASS | tenant tables with composite FKs; citable units only |
-| II. AI boundary | PASS | AI suggests; HR confirms; only library ids; official texts from the library |
+| II. AI boundary | PASS | v1.1.0 review-aid exception: AI suggests, HR confirms before effect; ids + official library texts only |
 | III. Immutable/audit | PASS | confirmed comparisons append-only; audit + ai_generation_logs |
 | IV. Tests | PASS | R8 |
 | V. Thin UI | PASS | services/jobs; panel renders |
