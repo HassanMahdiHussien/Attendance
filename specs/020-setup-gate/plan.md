@@ -36,6 +36,43 @@ Laravel 13 · Filament 5 (admin panel widget, CompanySettings page) · existing 
   translated message and opens when complete; backfill for companies with cases; HR staff notice vs admin
   checklist; tenant isolation (another company's mandate/branches never count); Arabic rendering of reasons.
 
+## R6 Plan review resolutions (Codex review + product owner, 2026-10-09) — override R1–R5 where they differ
+
+### Blockers
+- **A1 Invariant in the workflow**: the setup check lives in `CaseWorkflow`'s Draft → Open guard (so no code path can
+  open a case on an incomplete setup); `CaseOpening::open` calls the same `CompanySetup` first to produce the
+  user-facing message listing missing items. Test both paths.
+- **A2 Letterhead per enabled language** (product owner: every language reviewed): for each language in
+  `enabled_languages`, the latest letterhead version exists (same selection rule as `DocumentRenderer`), has the asset
+  its `header_mode` needs (logo for `logo_text`, header image for `image`) and company name text, and is not
+  `needs_review`. The reason names the language.
+- **A3 Approver accounts** (product owner: at least one account per role): the pool of the order in effect today must,
+  for every branch (company-wide + that branch's members), include in each of legal/hr/labor_union at least one member
+  linked to an active user account of this company whose role may approve (reuse `PoolEligibility`'s account rules,
+  e.g. reporters/department managers cannot be pool approvers); name-only members remain valid additional members.
+  Since the three roles each need an account, the quorum's three-member, union-present requirement is satisfiable.
+
+### Should-fix
+- **B1** Coverage is checked against the single mandate selected exactly as `CommitteeSessionService` selects it
+  (latest in effect today via `inEffectOn`), never mixing versions.
+- **B2 Seeds**: update `PilotCompanySeeder` (and `LocalUsersSeeder`/demo seeders as needed) so the dev company is
+  complete: letterheads reviewed with logos (generated placeholder images stored on the private disk), a regulation
+  answer `no`, and one active approver account per role linked in the pool. The production gate is not weakened.
+- **B3 Test blast radius**: a shared test helper `completeCompanySetup(Company $company): array` (letterheads,
+  branch, mandate, pool with approver accounts per role, regulation answer) used by every test that opens a case
+  through `CaseOpening` or the workflow (seven call sites incl. `aiOpenCase`, `EndToEndTest`'s ordering — mandate before
+  opening — and `IntakeChecksTest`); tests that factory-insert already-open cases are unaffected.
+- **B4** The spec's "existing companies keep working" is narrowed: only the regulation answer is derived; all other
+  items still apply to new openings. Test: a company with prior cases but no current mandate cannot open a new case.
+- **B5 Regulation evidence**: "yes" is complete when a regulation upload exists whose import is not `failed` or
+  `cancelled` (pending/in progress/completed/awaiting lawyer approval all count) — it has been routed to the lawyer's
+  approval queue by `RegulationUpload`; test a failed import → incomplete.
+- **B6 Platform Admin**: inside a company (Filament tenant) the dashboard widget shows; the workspace home stays as
+  today for Platform Admin (they land on the platform panel) — spec clarification narrowed accordingly.
+- **Nits**: branch jurisdiction and ar/en languages are kept as checklist items for legacy data visibility; fix links
+  are tenant-aware Filament URLs (settings, document templates/letterheads, branches, administrative orders, company
+  users, internal regulation) and are shown only to company admins / Platform Admin.
+
 ## Constitution Check
 | Principle | Status | How |
 |---|---|---|
