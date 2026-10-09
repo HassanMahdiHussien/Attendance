@@ -106,3 +106,4 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 - The LUKS data volume unlocks with a key stored on the root disk. This protects a detached volume or volume-only snapshot, not a running server or both disks together.
 - MySQL uses a bind mount from the encrypted volume to /var/lib/mysql, created before installation, so AppArmor's normal datadir path remains valid.
 - Production migrations are expand-then-contract. A failed migration leaves maintenance enabled; deploy never reopens old code against a possibly changed schema.
+- Local Sail mounts `docker/php/dev-opcache.ini` to turn on OPcache for `artisan serve` (CLI SAPI): the Windows drive mount makes each file check ~3 ms, so pages took 3-7 s. Edits can take up to 30 s to appear locally; production is unaffected.
