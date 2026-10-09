@@ -82,8 +82,11 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 - The 48-hour duplicate check stays at HR case intake. A reporter sees only the bare status of a submitted report and must not learn whether a case already exists. (2026-10)
 - Committee members use their own accounts for invitations and approvals; invitation links are deliberately deferred. (2026-10)
 
-- The workspace follows the approved mockup's layout and components, while its proposed global search and extra home actions wait for their own features. The design refresh does not add routes or change case behavior. (2026-10)
+- The workspace follows the approved mockup's layout and components. The design refresh itself did not add routes or change case behavior; global search arrived as a separate feature. (2026-10)
 - A case's next action favors one the viewer can take, then a pending corrected document, then a requested consultation, then its workflow stage; deadline alerts change the badge, never the actor. Product-owner default (2026-10-08).
+- Reporters and department managers have no global search; their own reports list is their only route to those records. Product-owner default (2026-10-09).
+- Before the response due day ends, the Next step card says it is waiting for the employee while still offering HR a secondary paper-response action. Product-owner default (2026-10-09).
+- Board branch and stage preferences are UI state and bypass user model events, so they do not create audit entries. Search terms are not stored. (2026-10-09)
 
 # Provisioning boundaries
 

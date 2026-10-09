@@ -22,6 +22,7 @@ use App\Services\Cases\ConflictClearance;
 use App\Services\Cases\ConsultationService;
 use App\Services\Cases\Deadlines;
 use App\Services\Cases\HandOffService;
+use App\Services\Cases\NextAction;
 use App\Services\Cases\ResponseReading;
 use App\Services\Cases\ResponseService;
 use App\Services\Cases\SignaturePresence;
@@ -284,7 +285,7 @@ class ShowCase extends Component
         }
         $record->setRelation('employee', Employee::withoutGlobalScopes()->find($record->employee_id));
 
-        $record->load(['documents.contents', 'events.actorUser', 'assignedHrUser', 'responseChecker']);
+        $record->load(['documents.contents', 'documents.approvals', 'signatures', 'events.actorUser', 'assignedHrUser', 'responseChecker']);
         $insights = app(CaseInsights::class);
         $deadlines = app(Deadlines::class);
         $assigneeIds = $record->events->where('event_type', 'case_assigned')
@@ -326,6 +327,7 @@ class ShowCase extends Component
             'pattern' => auth()->user()->primary_role === UserRole::ExternalLegalReviewer ? ['flagged' => false, 'count' => 0] : $insights->responsiblePersonPattern($record),
             'conflicts' => auth()->user()->primary_role === UserRole::ExternalLegalReviewer ? [] : app(ConflictClearance::class)->conflicts($record),
             'deadlines' => $deadlines,
+            'nextAction' => app(NextAction::class)->for($record, auth()->user()),
             'attachments' => Attachment::query()->where(function ($query) use ($record): void {
                 $query->where(fn ($caseAttachments) => $caseAttachments->where('attachable_type', $record->getMorphClass())->where('attachable_id', $record->id))
                     ->orWhere(fn ($documentAttachments) => $documentAttachments->where('attachable_type', 'document')

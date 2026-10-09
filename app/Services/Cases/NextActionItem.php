@@ -14,5 +14,7 @@ class NextActionItem
         public readonly ?CarbonImmutable $due = null,
         public readonly ?string $deadlineAlert = null,
         public readonly int $priority = 4,
+        public readonly string $key = '',
+        public readonly ?string $target = null,
     ) {}
 }

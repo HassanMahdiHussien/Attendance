@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\EmailDraftStatus;
 use App\Models\Concerns\BelongsToCompany;
+use App\Support\Search\SearchText;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,6 +19,13 @@ class EmailDraft extends Model
     protected array $companyUserKeys = ['sender_user_id'];
 
     protected array $companyParents = ['branch'];
+
+    protected static function booted(): void
+    {
+        static::saving(function (self $draft): void {
+            $draft->search_subject = SearchText::normalize((string) $draft->subject);
+        });
+    }
 
     protected function casts(): array
     {

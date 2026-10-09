@@ -135,8 +135,7 @@ test('signed scan UI and actions deny unassigned HR, committee, reviewer and rep
     $f['case']->forceFill(['assigned_hr_user_id' => $assigned->id])->save();
     $this->actingAs($assigned);
     $html = $this->get('/cases/'.$f['case']->id.'/signed-scan')->assertOk()->getContent();
-    preg_match('/wire:snapshot="([^"]+)"/', $html, $match);
-    $snapshot = html_entity_decode($match[1], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $snapshot = livewireSnapshotForComponent($html, SignedScan::class);
     $actors = [User::factory()->create(['company_id' => $f['company']->id, 'primary_role' => 'hr_staff']),
         User::factory()->create(['company_id' => $f['company']->id, 'primary_role' => 'committee_member']),
         User::factory()->create(['company_id' => $f['company']->id, 'primary_role' => 'reporter']),

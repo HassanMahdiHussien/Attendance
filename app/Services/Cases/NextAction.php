@@ -48,7 +48,7 @@ class NextAction
                 if ($eligible) {
                     $actions->push($this->item('committee', 'approve_recommendations', '/committee/approvals/'.$document->id, $case, 2));
                 }
-                $actions->push($this->item('waiting', 'waiting_approvals', $base, $case, 2));
+                $actions->push($this->item('waiting', 'waiting_approvals', $base, $case, 2, $approved));
             } elseif ($document->version > 1 || in_array($case->status, [S::DefenseLetterReadyForReview, S::DecisionLetterReadyForReview], true)) {
                 $actions->push($this->item('hr', 'review_issue', $base.'/documents/'.$document->id.'/confirm', $case, 2));
             }
@@ -191,13 +191,64 @@ class NextAction
         return $this->item($actor, $key, $url, $case);
     }
 
-    private function item(string $actor, string $key, string $url, DisciplinaryCase $case, int $priority = 4): NextActionItem
+    private function item(string $actor, string $key, string $url, DisciplinaryCase $case, int $priority = 4, ?int $approvalCount = null): NextActionItem
     {
         $due = $case->status === S::AwaitingEmployeeResponse ? $this->deadlines->responseDue($case)
             : ($case->status === S::AwaitingAppealWindow ? $this->deadlines->appealEnd($case) : $this->deadlines->procedureDue($case));
 
-        return new NextActionItem($actor, __('messages.home.'.$key, ['date' => Ui::date($due)]), $url,
+        $target = match ($key) {
+            'record_defense_receipt', 'record_response_overdue', 'record_response', 'record_decision_receipt' => '#next-handoff',
+            'upload_or_session', 'read_response' => '#next-response-scan',
+            'record_appeal', 'record_appeal_outcome' => $url,
+            'complete_case' => '/cases/new?draft='.$case->id,
+            'prepare_decision' => in_array($case->outcome?->value, ['warning', 'termination'], true) ? $url.'/decision' : '#next-actions',
+            'issue_defense' => $this->documentConfirmationTarget($case, DocumentType::DefenseLetter),
+            'print_recommendations' => $this->documentConfirmationTarget($case, DocumentType::Recommendations),
+            'check_citations' => $this->citationTarget($case),
+            'waiting_response', 'waiting_approvals', 'waiting_lawyer', 'appeal_window',
+            'response_window_opening', 'signature_collection_opening', 'appeal_window_opening', 'archiving_case' => null,
+            'prepare_defense', 'ai_drafting', 'review_issue' => $url === '/cases/'.$case->id ? '#next-actions' : $url,
+            default => $url,
+        };
+
+        $label = $key === 'waiting_approvals'
+            ? __('messages.home.waiting_approvals_count', ['count' => $approvalCount ?? 0])
+            : __('messages.home.'.$key, ['date' => Ui::date($due)]);
+
+        return new NextActionItem($actor, $label, $url,
             $actor === 'waiting' ? 'gray' : 'indigo', $due,
-            $this->deadlineAlert($case), $priority);
+            $this->deadlineAlert($case), $priority, $key, $target);
+    }
+
+    private function documentConfirmationTarget(DisciplinaryCase $case, DocumentType $type): string
+    {
+        $id = $case->relationLoaded('documents')
+            ? $case->documents->where('document_type', $type)->sortByDesc('version')->first()?->id
+            : $case->documents()->where('document_type', $type->value)->orderByDesc('version')->value('id');
+
+        return $id ? '/cases/'.$case->id.'/documents/'.$id.'/confirm' : '#next-documents';
+    }
+
+    private function citationTarget(DisciplinaryCase $case): string
+    {
+        $type = match ($case->status) {
+            S::DefenseLetterCitationCheck => DocumentType::DefenseLetter,
+            S::RecommendationsCitationCheck => DocumentType::Recommendations,
+            S::DecisionLetterCitationCheck => DocumentType::DecisionLetter,
+            default => null,
+        };
+        if ($type === null) {
+            return '#next-actions';
+        }
+        $id = $case->relationLoaded('documents')
+            ? $case->documents->where('document_type', $type)->sortByDesc('version')->first()?->id
+            : $case->documents()->where('document_type', $type->value)->orderByDesc('version')->value('id');
+        if (! $id) {
+            return '#next-actions';
+        }
+
+        return $type === DocumentType::Recommendations
+            ? '/cases/'.$case->id.'/recommendations/'.$id
+            : '/cases/'.$case->id.'/documents/'.$id.'/edit';
     }
 }

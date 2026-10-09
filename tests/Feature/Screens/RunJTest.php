@@ -31,6 +31,7 @@ use App\Support\Access\CaseVisibility;
 use App\Support\Access\Landing;
 use App\Support\Access\ViolationReportVisibility;
 use App\Support\Format\StageIndicator;
+use App\Support\Search\SearchText;
 use App\Support\Tenancy\TenantContext;
 use Filament\Facades\Filament;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -138,6 +139,7 @@ test('report submission requires branch membership and the inbox includes compan
     expect(fn () => app(ReportService::class)->submit($data, $reporter))->toThrow(HttpException::class);
     BranchUser::factory()->create(['company_id' => $company->id, 'branch_id' => $branch->id, 'user_id' => $reporter->id]);
     $report = app(ReportService::class)->submit($data, $reporter);
+    expect($report->search_text)->toBe(SearchText::normalize($data['violation_type'].' '.$data['place_freetext']));
     expect(ViolationReportVisibility::inbox($hr)->whereKey($report->id)->exists())->toBeTrue();
     expect(ViolationReportVisibility::for($reporter)->whereKey($report->id)->exists())->toBeTrue();
     $anotherReporter = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::Reporter]);

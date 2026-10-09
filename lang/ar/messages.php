@@ -1,6 +1,16 @@
 <?php
 
 return [
+    'search' => [
+        'open_search' => 'البحث في النظام', 'placeholder' => 'ابحث عن حالة أو موظف أو بلاغ', 'shortcut' => 'Ctrl K',
+        'cases' => 'الحالات', 'employees' => 'الموظفون', 'reports' => 'البلاغات',
+        'email_draft' => 'مسودة بريد', 'no_results' => 'لا توجد نتائج مطابقة.',
+        'active_filters' => 'المرشحات النشطة', 'clear_filters' => 'مسح المرشحات',
+        'next_step' => 'الخطوة التالية', 'due' => 'الموعد', 'open_step' => 'افتح الخطوة',
+        'actor_hr' => 'إجراء الموارد البشرية', 'actor_committee' => 'إجراء اللجنة',
+        'actor_reviewer' => 'إجراء المراجع القانوني', 'actor_waiting' => 'بانتظار الآخرين',
+        'actor_optional' => 'إجراء اختياري',
+    ],
     'home' => [
         'greeting' => 'صباح الخير، :name', 'greeting_afternoon' => 'مساء الخير، :name', 'greeting_evening' => 'مساء الخير، :name', 'open_cases' => 'الحالات المفتوحة', 'due_48h' => 'مهلة 15 يوماً خلال 48 ساعة',
         'waiting_committee' => 'بانتظار اللجنة', 'closed_within_15' => 'أغلقت ضمن 15 يوماً',
@@ -21,7 +31,7 @@ return [
         'upload_or_session' => 'ارفع نسخة الرد أو اعقد جلسة اللجنة',
         'read_response' => 'اقرأ النسخة بالذكاء الاصطناعي أو أكدها يدوياً', 'hold_session' => 'اعقد جلسة اللجنة',
         'draft_recommendations' => 'صغ التوصيات', 'approve_recommendations' => 'وافق على التوصيات',
-        'waiting_approvals' => 'بانتظار موافقات اللجنة', 'print_recommendations' => 'اطبع التوصيات',
+        'waiting_approvals' => 'بانتظار موافقات اللجنة', 'waiting_approvals_count' => 'بانتظار الموافقات (:count من 3)', 'print_recommendations' => 'اطبع التوصيات',
         'signature_collection_opening' => 'فتح مرحلة جمع التواقيع',
         'upload_signed' => 'ارفع التوصيات الموقعة', 'prepare_decision' => 'حضّر كتاب القرار',
         'give_opinion' => 'قدّم رأيك القانوني', 'waiting_lawyer' => 'بانتظار المحامي',

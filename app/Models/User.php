@@ -136,6 +136,7 @@ class User extends Authenticatable implements FilamentUser, HasLocalePreference,
             'password' => 'hashed',
             'primary_role' => UserRole::class,
             'is_active' => 'boolean',
+            'preferences' => 'array',
         ];
     }
 }

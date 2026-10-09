@@ -42,6 +42,8 @@ test('all UI translation keys exist in both catalogue layers and UI code contain
                 'app/LegalLibrary/ArticleSplitter.php', 'app/LegalLibrary/ClaudePageReader.php',
                 'app/LegalLibrary/TextLayerProbe.php', 'app/LegalLibrary/TextNormalizer.php',
                 'app/LegalLibrary/UnitBuilder.php' => true,
+                'app/Support/Text/ArabicText.php', 'app/Support/Search/SearchText.php' => str_contains($line, 'strtr('),
+                'app/Console/Commands/SearchBenchmark.php' => str_contains($line, 'أحمد') || str_contains($line, 'احمد'),
                 'app/Ai/CandidateUnits.php' => str_contains($line, 'array_diff('),
                 'app/Ai/DraftValidator.php' => str_contains($line, 'preg_match(') || str_contains($line, 'str_contains('),
                 'app/Ai/OutcomeKeywordFlag.php' => str_contains($line, '=>'),

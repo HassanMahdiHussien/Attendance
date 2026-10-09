@@ -22,6 +22,14 @@
                 @foreach($stages as $number)<option value="{{ $number }}">{{ \App\Support\Format\Ui::stageLabel($number) }}</option>@endforeach
             </x-ui.select>
         </div>
+        @if($search !== '' || $branch !== '' || $stage !== '')
+            <div class="mt-4 flex flex-wrap items-center gap-2" aria-label="{{ __('messages.search.active_filters') }}">
+                @if($search !== '')<button type="button" wire:click="removeSearchFilter" class="ui-badge-indigo rounded-full px-3 py-1">{{ __('Search') }}: {{ $search }} ×</button>@endif
+                @if($branch !== '')<button type="button" wire:click="removeBranchFilter" class="ui-badge-indigo rounded-full px-3 py-1">{{ __('Branch') }}: {{ $branches->firstWhere('id', (int) $branch)?->name }} ×</button>@endif
+                @if($stage !== '')<button type="button" wire:click="removeStageFilter" class="ui-badge-indigo rounded-full px-3 py-1">{{ __('Stage') }}: {{ \App\Support\Format\Ui::stageLabel((int) $stage) }} ×</button>@endif
+                <button type="button" wire:click="clearFilters" class="ui-link text-sm font-bold">{{ __('messages.search.clear_filters') }}</button>
+            </div>
+        @endif
     </x-ui.card>
 
     @if($cases->count() === 0)

@@ -7,6 +7,7 @@ use App\Models\Branch;
 use App\Models\DisciplinaryCase;
 use App\Services\Cases\CaseBoard;
 use App\Services\Cases\Deadlines;
+use App\Services\UserPreferences;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Url;
@@ -30,11 +31,65 @@ class Board extends Component
     {
         abort_unless(in_array(auth()->user()->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true), 403);
         Gate::authorize('viewAny', DisciplinaryCase::class);
+        $preferences = app(UserPreferences::class);
+        $saved = $preferences->boardFilters(auth()->user());
+        $params = request()->query();
+        $valid = $preferences->valid(auth()->user(), [
+            'branch' => array_key_exists('branch', $params) ? $params['branch'] : ($saved['branch'] ?? ''),
+            'stage' => array_key_exists('stage', $params) ? $params['stage'] : ($saved['stage'] ?? ''),
+            'search' => $params['search'] ?? '',
+        ]);
+        $this->branch = $valid['branch'];
+        $this->stage = $valid['stage'];
+        $this->search = $valid['search'];
+        if (array_key_exists('branch', $params) || array_key_exists('stage', $params)) {
+            $preferences->saveBoardFilters(auth()->user(), $valid);
+        }
     }
 
     public function updated(string $property): void
     {
         if (in_array($property, ['search', 'branch', 'stage'], true)) {
+            $valid = app(UserPreferences::class)->valid(auth()->user(), [
+                'search' => $this->search, 'branch' => $this->branch, 'stage' => $this->stage,
+            ]);
+            $this->search = $valid['search'];
+            $this->branch = $valid['branch'];
+            $this->stage = $valid['stage'];
+            if (in_array($property, ['branch', 'stage'], true)) {
+                app(UserPreferences::class)->saveBoardFilters(auth()->user(), $valid);
+            }
+            $this->resetPage();
+        }
+    }
+
+    public function clearFilters(): void
+    {
+        $this->search = $this->branch = $this->stage = '';
+        app(UserPreferences::class)->saveBoardFilters(auth()->user(), []);
+        $this->resetPage();
+    }
+
+    public function removeSearchFilter(): void
+    {
+        $this->removeFilter('search');
+    }
+
+    public function removeBranchFilter(): void
+    {
+        $this->removeFilter('branch');
+    }
+
+    public function removeStageFilter(): void
+    {
+        $this->removeFilter('stage');
+    }
+
+    private function removeFilter(string $filter): void
+    {
+        if (in_array($filter, ['search', 'branch', 'stage'], true)) {
+            $this->{$filter} = '';
+            app(UserPreferences::class)->saveBoardFilters(auth()->user(), ['branch' => $this->branch, 'stage' => $this->stage]);
             $this->resetPage();
         }
     }

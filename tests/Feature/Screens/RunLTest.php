@@ -7,6 +7,8 @@ use App\Enums\Outcome;
 use App\Enums\PoolRole;
 use App\Enums\PresenceCheck;
 use App\Exceptions\TransitionBlocked;
+use App\Livewire\Cases\EditRecommendations;
+use App\Livewire\Cases\ReviewApproval;
 use App\Models\CommitteeMandate;
 use App\Models\CommitteePoolMember;
 use App\Models\CommitteeSessionAttendance;
@@ -201,8 +203,7 @@ test('recommendations Livewire update reauthorizes and refuses a stale stage', f
     $f = runLFixture();
     $this->actingAs($f['admin']);
     $html = $this->get('/cases/'.$f['case']->id.'/recommendations')->assertOk()->getContent();
-    preg_match('/wire:snapshot="([^"]+)"/', $html, $match);
-    $snapshot = html_entity_decode($match[1], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $snapshot = livewireSnapshotForComponent($html, EditRecommendations::class);
     $payload = ['components' => [['snapshot' => $snapshot, 'updates' => [],
         'calls' => [['path' => '', 'method' => 'save', 'params' => []]]]]];
     $this->actingAs($f['reporter'])->postJson(Livewire::getUpdateUri(), $payload, ['X-Livewire' => 'true'])->assertNotFound();
@@ -222,8 +223,7 @@ test('approval Livewire update endpoint rejects a switched account', function ()
     $editor->submitForApproval($document, $f['admin']);
     $this->actingAs($f['approvers']['legal']);
     $html = $this->get('/committee/approvals/'.$document->id)->assertOk()->getContent();
-    preg_match('/wire:snapshot="([^"]+)"/', $html, $match);
-    $snapshot = html_entity_decode($match[1], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $snapshot = livewireSnapshotForComponent($html, ReviewApproval::class);
     $this->actingAs($f['reporter'])->postJson(Livewire::getUpdateUri(), ['components' => [[
         'snapshot' => $snapshot, 'updates' => [],
         'calls' => [['path' => '', 'method' => 'approve', 'params' => []]],
