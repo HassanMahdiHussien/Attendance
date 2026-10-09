@@ -56,7 +56,13 @@ class SignedScan extends Component
             $signatures->recordSignedScan($document, $this->scan, $this->presence, auth()->user());
             $this->scan = null;
             $this->expectedStatus = $case->fresh()->status->value;
-            $this->notice = $this->expectedStatus === CaseStatus::SignedRecommendationsUploaded->value ? __('messages.signature.scan_uploaded_present') : __('messages.signature.scan_uploaded_empty_box');
+            if ($this->expectedStatus === CaseStatus::AiVerifyAndClose->value) {
+                $this->redirect('/cases/'.$this->caseId, navigate: true);
+
+                return;
+            }
+            $this->notice = $this->expectedStatus === CaseStatus::SignedRecommendationsUploaded->value
+                ? __('messages.signature.scan_uploaded_present') : __('messages.signature.scan_uploaded_empty_box');
         } catch (TransitionBlocked $error) {
             $this->notice = $error->getMessage();
         }
@@ -74,7 +80,12 @@ class SignedScan extends Component
 
             return;
         }
-        $this->expectedStatus = CaseStatus::SignedRecommendationsUploaded->value;
+        $this->expectedStatus = $case->fresh()->status->value;
+        if ($this->expectedStatus === CaseStatus::AiVerifyAndClose->value) {
+            $this->redirect('/cases/'.$this->caseId, navigate: true);
+
+            return;
+        }
         $this->notice = __('messages.signature.empty_box_override_recorded');
     }
 
@@ -119,6 +130,11 @@ class SignedScan extends Component
             return;
         }
         $this->expectedStatus = $case->fresh()->status->value;
+        if ($this->expectedStatus === CaseStatus::AiVerifyAndClose->value) {
+            $this->redirect('/cases/'.$this->caseId, navigate: true);
+
+            return;
+        }
         $this->notice = $this->expectedStatus === CaseStatus::SignedRecommendationsUploaded->value
             ? __('messages.signature.boxes_recorded') : __('messages.signature.boxes_recorded_empty');
     }

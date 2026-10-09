@@ -135,6 +135,7 @@ class SignaturePresence
                 'attachment_id' => $scan->id, 'empty_attendee_ids' => $attendees->filter(fn ($attendance) => $presence[$attendance->id] === 'empty')->modelKeys()], actor: $hr);
             if (! in_array('empty', $presence, true)) {
                 $this->workflow->transition($case, CaseStatus::SignedRecommendationsUploaded, $hr, 'All signature boxes appear filled');
+                app(AutoDecisionDraft::class)->afterSignedRecommendations($case->refresh(), $hr);
                 $this->notifyReviewers($case);
             }
 
@@ -177,6 +178,7 @@ class SignaturePresence
             app(AuditLogger::class)->log('empty_signature_box_overridden', $document, ['reason' => $reason], $admin);
 
             $case = $this->workflow->transition($case, CaseStatus::SignedRecommendationsUploaded, $admin, 'Empty signature box overridden');
+            app(AutoDecisionDraft::class)->afterSignedRecommendations($case, $admin);
             $this->notifyReviewers($case);
 
             return $case;

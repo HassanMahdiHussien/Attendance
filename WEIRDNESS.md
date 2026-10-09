@@ -89,6 +89,9 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 - Before the response due day ends, the Next step card says it is waiting for the employee while still offering HR a secondary paper-response action. Product-owner default (2026-10-09).
 - Board branch and stage preferences are UI state and bypass user model events, so they do not create audit entries. Search terms are not stored. (2026-10-09)
 
+- **Related-case links are permanent; mistakes receive an append-only "linked in error" annotation.** They appear only to viewers who can currently open the other case, and are internal context for the AI. They are never printed in documents because the linked case may concern another employee; this is the deliberate exception to CLAUDE.md §24.4. (2026-10-09)
+- **Automatic decision-letter drafting never blocks recording signature-box presence.** A refused request leaves the ordinary manual and retry paths available, and a later AI outage follows the existing failed-draft recovery. (2026-10-09)
+
 # Provisioning boundaries
 
 - Existing companies with cases inherit only the internal-regulation answer during setup migration; a new opening still needs current letterheads, branch coverage and a committee order. An uploaded regulation satisfies setup while lawyer approval is pending, but its units remain uncitable until approved. (2026-10)

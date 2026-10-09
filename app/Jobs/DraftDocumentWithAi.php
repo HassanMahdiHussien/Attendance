@@ -70,7 +70,7 @@ class DraftDocumentWithAi implements ShouldQueue
             $exclusions = app(RegulationExclusions::class);
             $excluded = $exclusions->forComparisons($case, $comparison, $supplement);
             $units = $candidates->for($case, $case->committee_session_notes ?? '', $excluded);
-            $payload = $builder->build($case, $this->type, $units);
+            $payload = $builder->build($case, $this->type, $units, $actor);
             $pairs = $comparison?->pairs()->get(['law_unit_id', 'regulation_unit_id', 'verdict'])
                 ->map(fn ($pair) => ['law_unit_id' => $pair->law_unit_id,
                     'regulation_unit_id' => $pair->regulation_unit_id, 'verdict' => $pair->verdict])->all() ?? [];

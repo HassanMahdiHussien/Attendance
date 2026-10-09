@@ -9,6 +9,8 @@ use App\Models\DisciplinaryCase;
 use App\Models\Employee;
 use App\Models\ReportWitness;
 use App\Models\User;
+use App\Services\Cases\CaseLinks;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -31,7 +33,7 @@ class PayloadBuilder
         ];
     }
 
-    public function build(DisciplinaryCase $case, DocumentType $type, Collection $units): array
+    public function build(DisciplinaryCase $case, DocumentType $type, Collection $units, ?User $viewer = null): array
     {
         $this->restoration = [];
         $this->names($case);
@@ -51,6 +53,13 @@ class PayloadBuilder
                 'position' => $this->minimize($case->employee?->position ?? ''),
                 'department' => $this->minimize($case->employee?->department ?? ''),
             ];
+            $payload['related_cases'] = $viewer === null ? [] : app(CaseLinks::class)->visibleRelated($case, $viewer)
+                ->filter(fn (array $row) => $row['in_error'] === null)->take(10)
+                ->map(fn (array $row) => [
+                    'date' => CarbonImmutable::parse($row['case']->violation_time)->toDateString(),
+                    'violation_type' => $this->minimize($row['case']->violation_type ?? ''),
+                    'outcome' => $row['case']->outcome?->value,
+                ])->values()->all();
         }
         if ($type === DocumentType::Recommendations) {
             $payload['employee_response'] = $case->confirmedResponseText() === null ? null : $this->minimize($case->confirmedResponseText());

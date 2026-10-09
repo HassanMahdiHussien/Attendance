@@ -8,6 +8,7 @@ use App\Enums\SignaturePurpose;
 use App\Enums\SignatureStatus;
 use App\Enums\UserRole;
 use App\Models\Attachment;
+use App\Models\CaseLink;
 use App\Models\CommitteePoolMember;
 use App\Models\DisciplinaryCase;
 use App\Models\Employee;
@@ -17,6 +18,7 @@ use App\Models\User;
 use App\Services\Cases\CaseAssignment;
 use App\Services\Cases\CaseClosure;
 use App\Services\Cases\CaseInsights;
+use App\Services\Cases\CaseLinks;
 use App\Services\Cases\CaseOpening;
 use App\Services\Cases\ConflictClearance;
 use App\Services\Cases\ConsultationService;
@@ -84,6 +86,14 @@ class ShowCase extends Component
     public string $correctionReason = '';
 
     public string $consultationCancelReason = '';
+
+    public string $relatedSearch = '';
+
+    public string $relatedCaseId = '';
+
+    public string $relatedReason = '';
+
+    public array $relatedErrorReasons = [];
 
     public array $decisionSignaturePresence = ['general_manager' => 'filled', 'union' => 'filled'];
 
@@ -276,6 +286,43 @@ class ShowCase extends Component
         $this->redirect($url, navigate: true);
     }
 
+    public function linkRelated(CaseLinks $links): void
+    {
+        $case = CaseVisibility::for(auth()->user())->findOrFail($this->caseId);
+        Gate::authorize('view', $case);
+        $this->validate(['relatedCaseId' => ['required', 'integer'], 'relatedReason' => ['nullable', 'string', 'max:500']]);
+        $other = CaseVisibility::for(auth()->user())->where('cases.company_id', $case->company_id)
+            ->findOrFail((int) $this->relatedCaseId);
+        try {
+            $links->linkRelated($case, $other, $this->relatedReason, auth()->user());
+        } catch (\DomainException $exception) {
+            throw ValidationException::withMessages(['relatedCaseId' => $exception->getMessage()]);
+        }
+        $this->relatedCaseId = '';
+        $this->relatedReason = '';
+        $this->relatedSearch = '';
+        $this->notice = __('messages.related.linked');
+    }
+
+    public function markRelatedInError(int $linkId, CaseLinks $links): void
+    {
+        $case = CaseVisibility::for(auth()->user())->findOrFail($this->caseId);
+        Gate::authorize('view', $case);
+        $reason = $this->relatedErrorReasons[$linkId] ?? '';
+        if (blank($reason) || mb_strlen($reason) > 500) {
+            throw ValidationException::withMessages(['relatedErrorReasons.'.$linkId => __('messages.related.reason_required')]);
+        }
+        $link = CaseLink::query()->where(fn ($query) => $query->where('case_id', $case->id)
+            ->orWhere('linked_case_id', $case->id))->findOrFail($linkId);
+        try {
+            $links->markInError($link, $reason, auth()->user());
+        } catch (\DomainException $exception) {
+            throw ValidationException::withMessages(['relatedErrorReasons.'.$linkId => $exception->getMessage()]);
+        }
+        unset($this->relatedErrorReasons[$linkId]);
+        $this->notice = __('messages.related.annotated');
+    }
+
     public function render(): View
     {
         $record = CaseVisibility::for(auth()->user())->findOrFail($this->caseId);
@@ -287,6 +334,14 @@ class ShowCase extends Component
 
         $record->load(['documents.contents', 'documents.approvals', 'signatures', 'events.actorUser', 'assignedHrUser', 'responseChecker']);
         $insights = app(CaseInsights::class);
+        $links = app(CaseLinks::class);
+        $relatedCases = $links->visibleRelated($record, auth()->user());
+        $visibleRelatedIds = $relatedCases->pluck('case.id');
+        $record->setRelation('events', $record->events->filter(fn ($event) => ! in_array($event->event_type,
+            ['case_related_linked', 'case_related_link_in_error'], true)
+            || $visibleRelatedIds->contains((int) ($event->payload['related_case_id'] ?? 0)))->values());
+        $canLinkRelated = in_array(auth()->user()->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)
+            && auth()->user()->can('view', $record);
         $deadlines = app(Deadlines::class);
         $assigneeIds = $record->events->where('event_type', 'case_assigned')
             ->pluck('payload')->map(fn (array $payload) => $payload['user_id'] ?? null)->filter()->unique();
@@ -324,6 +379,9 @@ class ShowCase extends Component
                 ->whereIn('purpose', [SignaturePurpose::GeneralManagerSignature->value, SignaturePurpose::UnionSignature->value])
                 ->orderByDesc('id')->get()->unique(fn (Signature $check) => $check->purpose->value)->values() : collect(),
             'priors' => auth()->user()->primary_role === UserRole::ExternalLegalReviewer ? ['count' => 0, 'cases' => []] : $insights->priorBanner($record),
+            'relatedCases' => $relatedCases,
+            'relatedCandidates' => $canLinkRelated ? $links->candidates(auth()->user(), $record, $this->relatedSearch) : collect(),
+            'canLinkRelated' => $canLinkRelated,
             'pattern' => auth()->user()->primary_role === UserRole::ExternalLegalReviewer ? ['flagged' => false, 'count' => 0] : $insights->responsiblePersonPattern($record),
             'conflicts' => auth()->user()->primary_role === UserRole::ExternalLegalReviewer ? [] : app(ConflictClearance::class)->conflicts($record),
             'deadlines' => $deadlines,

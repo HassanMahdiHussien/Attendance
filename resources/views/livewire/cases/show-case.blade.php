@@ -77,6 +77,59 @@
 <a href="/cases/{{ $prior['case_id'] }}" class="ui-link">{{ \App\Support\Format\Ui::date($prior['date']) }} — {{ $prior['violation_type'] }} — {{ \App\Support\Format\Ui::outcome($prior['outcome'] ?? null) }}</a>@if($prior['same_type_repeat']) · {{ __('Same violation type repeated within 12 months') }}@endif</p>
 @endforeach</section>
 @endif
+    @if($relatedCases->isNotEmpty())
+        <p class="rounded-2xl bg-primary-light p-4 text-sm font-bold">{{ trans_choice('messages.related.count', $relatedCases->count(), ['count' => \App\Support\Format\Ui::number($relatedCases->count())]) }}</p>
+    @endif
+    <x-ui.card class="p-5">
+        <h2 class="text-lg font-black">{{ __('messages.related.title') }}</h2>
+        <p class="mt-1 text-sm text-gray-500">{{ __('messages.related.internal_only') }}</p>
+        @forelse($relatedCases as $related)
+            @php $other = $related['case']; @endphp
+            <div class="mt-4 border-t border-gray-200 pt-4">
+                <div class="flex flex-wrap items-center gap-2">
+                    <a class="ui-link font-bold" href="/cases/{{ $other->id }}">{{ __('messages.related.case_number', ['number' => \App\Support\Format\Ui::number($other->case_number)]) }} — {{ $other->employee?->name }}</a>
+                    <x-ui.badge tone="gray">{{ \App\Support\Format\Ui::outcome($other->outcome?->value) }}</x-ui.badge>
+                </div>
+                <p class="mt-1 text-sm text-gray-600">{{ \App\Support\Format\Ui::date($other->violation_time) }} · {{ $other->violation_type }}</p>
+                @if($related['link']->reason)<p class="mt-1 text-sm">{{ $related['link']->reason }}</p>@endif
+                @if($related['in_error'])
+                    <p class="mt-2 text-sm text-red-700">{{ __('messages.related.in_error', ['reason' => $related['in_error']->reason]) }}</p>
+                @elseif($canLinkRelated)
+                    <div class="mt-2 flex flex-wrap items-end gap-2">
+                        <label class="text-sm">{{ __('messages.related.error_reason') }}
+                            <x-ui.input wire:model="relatedErrorReasons.{{ $related['link']->id }}" maxlength="500" class="block" />
+                        </label>
+                        <x-ui.button variant="secondary" wire:click="markRelatedInError({{ $related['link']->id }})">{{ __('messages.related.mark_in_error') }}</x-ui.button>
+                    </div>
+                    @error('relatedErrorReasons.'.$related['link']->id)<p role="alert" class="text-sm text-red-700">{{ $message }}</p>@enderror
+                @endif
+            </div>
+        @empty
+            <p class="mt-3 text-sm text-gray-500">{{ __('messages.related.none') }}</p>
+        @endforelse
+        @if($canLinkRelated)
+            <div class="mt-5 border-t border-gray-200 pt-4">
+                <h3 class="font-bold">{{ __('messages.related.add') }}</h3>
+                <label class="mt-3 block text-sm">{{ __('messages.related.search') }}
+                    <x-ui.input wire:model.live.debounce.300ms="relatedSearch" class="mt-1 block w-full" />
+                </label>
+                <label class="mt-3 block text-sm">{{ __('messages.related.choose') }}
+                    <x-ui.select wire:model="relatedCaseId" class="mt-1 block w-full">
+                        <option value="">{{ __('messages.related.choose_placeholder') }}</option>
+                        @foreach($relatedCandidates as $candidate)
+                            <option value="{{ $candidate->id }}">{{ \App\Support\Format\Ui::number($candidate->case_number) }} — {{ $candidate->employee?->name }}</option>
+                        @endforeach
+                    </x-ui.select>
+                </label>
+                <label class="mt-3 block text-sm">{{ __('messages.related.reason_optional') }}
+                    <x-ui.input wire:model="relatedReason" maxlength="500" class="mt-1 block w-full" />
+                </label>
+                <x-ui.button class="mt-3" wire:click="linkRelated">{{ __('messages.related.link') }}</x-ui.button>
+                @error('relatedCaseId')<p role="alert" class="text-sm text-red-700">{{ $message }}</p>@enderror
+                @error('relatedReason')<p role="alert" class="text-sm text-red-700">{{ $message }}</p>@enderror
+            </div>
+        @endif
+    </x-ui.card>
     @if($pattern['flagged'])<div class="bg-amber-light text-amber rounded-2xl p-5">{{ __('The alleged responsible person was named in :count other branch cases in the past year.', ['count' => \App\Support\Format\Ui::number($pattern['count'])]) }}</div>
 @endif
     @foreach($conflicts as $conflict)<div class="bg-red-light rounded-2xl p-5">

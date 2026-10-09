@@ -167,7 +167,8 @@ class NextAction
         [$key, $url, $actor] = match ($status) {
             S::Draft => ['complete_case', $base, 'hr'],
             S::Open => ['prepare_defense', $base, 'hr'],
-            S::AiDraftingDefenseLetter, S::AiDraftingRecommendations, S::AiVerifyAndClose => ['ai_drafting', $base, 'hr'],
+            S::AiDraftingDefenseLetter, S::AiDraftingRecommendations => ['ai_drafting', $base, 'hr'],
+            S::AiVerifyAndClose => [$case->ai_request_document_type === DocumentType::DecisionLetter->value ? 'ai_drafting_decision' : 'ai_drafting', $base, 'hr'],
             S::DefenseLetterCitationCheck, S::RecommendationsCitationCheck, S::DecisionLetterCitationCheck => ['check_citations', $base, 'hr'],
             S::DefenseLetterReadyForReview, S::DecisionLetterReadyForReview => ['review_issue', $base, 'hr'],
             S::DefenseLetterConfirmed => ['issue_defense', $base, 'hr'],
@@ -207,7 +208,7 @@ class NextAction
             'check_citations' => $this->citationTarget($case),
             'waiting_response', 'waiting_approvals', 'waiting_lawyer', 'appeal_window',
             'response_window_opening', 'signature_collection_opening', 'appeal_window_opening', 'archiving_case' => null,
-            'prepare_defense', 'ai_drafting', 'review_issue' => $url === '/cases/'.$case->id ? '#next-actions' : $url,
+            'prepare_defense', 'ai_drafting', 'ai_drafting_decision', 'review_issue' => $url === '/cases/'.$case->id ? '#next-actions' : $url,
             default => $url,
         };
 

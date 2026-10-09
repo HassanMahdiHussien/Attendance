@@ -11,6 +11,7 @@ use App\Models\CaseAlert;
 use App\Models\CaseConflictClearance;
 use App\Models\CaseEvent;
 use App\Models\CaseLink;
+use App\Models\CaseLinkAnnotation;
 use App\Models\CaseWitness;
 use App\Models\Citation;
 use App\Models\CommitteeMandate;
@@ -51,7 +52,8 @@ test('every tenant foreign key rejects a row from another company through models
         'committee_pool_members' => CommitteePoolMember::class, 'violation_reports' => ViolationReport::class,
         'report_witnesses' => ReportWitness::class, 'cases' => DisciplinaryCase::class,
         'case_witnesses' => CaseWitness::class, 'case_events' => CaseEvent::class,
-        'case_links' => CaseLink::class, 'committee_session_attendances' => CommitteeSessionAttendance::class,
+        'case_links' => CaseLink::class, 'case_link_annotations' => CaseLinkAnnotation::class,
+        'committee_session_attendances' => CommitteeSessionAttendance::class,
         'appeal_trackings' => AppealTracking::class, 'documents' => Document::class,
         'attachments' => Attachment::class,
         'document_contents' => DocumentContent::class, 'document_approvals' => DocumentApproval::class,
@@ -94,6 +96,15 @@ test('every tenant foreign key rejects a row from another company through models
         }
         if (isset($attributes['case_number'])) {
             $attributes['case_number'] += 1000000000;
+        }
+        // A link carries at most one annotation per kind; point the copy at a fresh same-company link so only the
+        // foreign key under test can fail.
+        // Likewise a case pair is linked once per type; give the copy a fresh same-company case.
+        if ($key->source_table === 'case_links' && ! in_array($key->foreign_column, ['case_id', 'linked_case_id'], true)) {
+            $attributes['linked_case_id'] = $context->runForCompany($a, fn () => DisciplinaryCase::factory()->create())->id;
+        }
+        if ($key->source_table === 'case_link_annotations' && $key->foreign_column !== 'case_link_id') {
+            $attributes['case_link_id'] = $context->runForCompany($a, fn () => CaseLink::factory()->create())->id;
         }
         if (isset($attributes['employee_code'])) {
             $attributes['employee_code'] = 'CROSS-'.$target->id;
@@ -161,6 +172,7 @@ test('tenant model user links reject another company user', function (): void {
         [Attachment::class, 'uploaded_by'], [Document::class, 'issued_by'],
         [Document::class, 'second_reviewed_by'], [Document::class, 'created_by'],
         [DocumentApproval::class, 'approver_user_id'], [AppealTracking::class, 'logged_by'],
+        [CaseLink::class, 'created_by_user_id'], [CaseLinkAnnotation::class, 'created_by_user_id'],
         [Citation::class, 'overridden_by'],
     ];
 
