@@ -30,6 +30,7 @@ test('the model and database both reject status writes outside CaseWorkflow', fu
     expect(fn () => DB::statement("UPDATE cases SET status = 'open' WHERE id = {$case->id}"))->toThrow(QueryException::class);
     expect($case->fresh()->status)->toBe(CaseStatus::Draft);
 
+    completeCompanySetup($company);
     $workflow = app(CaseWorkflow::class);
     $workflow->transition($case, CaseStatus::Open, $actor, 'Opened');
     expect(fn () => $workflow->transition($case, CaseStatus::Open, $actor, 'Stale call'))->toThrow(IllegalTransition::class);

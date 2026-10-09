@@ -35,6 +35,7 @@ function driveCaseToSignedRecommendations(Outcome $outcome): array
     $law->jurisdictions()->create(['jurisdiction' => 'federal_iraq']);
     $case = DisciplinaryCase::factory()->create(['opened_by_user_id' => $hr->id,
         'violation_place_freetext' => 'Warehouse']);
+    completeCompanySetup($company);
     $case = app(CaseOpening::class)->open($case, $hr);
     $workflow = app(CaseWorkflow::class);
     $defense = Document::factory()->create(['case_id' => $case->id, 'created_by' => $hr->id]);

@@ -9,6 +9,7 @@ use App\Models\DisciplinaryCase;
 use App\Models\Law;
 use App\Models\User;
 use App\Services\CaseEventLogger;
+use App\Services\Companies\CompanySetup;
 use App\Support\Access\CaseVisibility;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -26,6 +27,13 @@ class CaseOpening
             if ($case->status !== CaseStatus::Draft || ! in_array($actor->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)
                 || ! CaseVisibility::for($actor)->whereKey($case->id)->exists()) {
                 throw new TransitionBlocked(__('messages.case.hr_draft_permission_required'));
+            }
+            $missing = array_values(array_filter(app(CompanySetup::class)->for($case->company),
+                fn (array $item): bool => ! $item['done']));
+            if ($missing !== []) {
+                throw new TransitionBlocked(__('messages.setup.incomplete', [
+                    'items' => implode('; ', array_column($missing, 'reason')),
+                ]));
             }
             if ($case->employee_id === null || $case->branch_id === null || blank($case->violation_type)
                 || $case->violation_time === null || ($case->location_id === null && blank($case->violation_place_freetext))) {

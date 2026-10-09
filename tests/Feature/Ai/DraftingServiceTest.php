@@ -38,6 +38,7 @@ function aiOpenCase(): array
     $law->jurisdictions()->create(['jurisdiction' => 'federal_iraq']);
     $case = DisciplinaryCase::factory()->create(['opened_by_user_id' => $hr->id,
         'violation_place_freetext' => 'Warehouse', 'description' => 'Hassan Mahdi called 07701234567 and sent test@example.com.']);
+    completeCompanySetup($company);
     $case = app(CaseOpening::class)->open($case, $hr);
 
     return compact('company', 'hr', 'law', 'case');

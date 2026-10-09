@@ -1,6 +1,26 @@
 <?php
 
 return [
+    'setup' => [
+        'title' => 'Finish setting up your company', 'letterhead' => 'Letterhead',
+        'branches' => 'Branches and jurisdictions', 'committee' => 'Committee order and approvers',
+        'languages' => 'Document languages', 'regulation' => 'Internal regulation',
+        'done' => 'Done', 'fix' => 'Complete setup',
+        'incomplete' => 'The company admin must complete setup before a case can be opened: :items',
+        'incomplete_short' => 'The company admin must complete setup before a case can be opened.',
+        'hr_notice' => 'Company setup is incomplete. The company admin must finish it before a case can be opened.',
+        'letterhead_missing' => 'The :language letterhead needs a reviewed name and logo or header image.',
+        'branch_missing' => 'Add at least one branch.',
+        'jurisdiction_missing' => 'Branch :branch needs a jurisdiction.',
+        'mandate_missing' => 'Add a committee Administrative Order in effect today.',
+        'approver_missing' => 'Branch :branch has no active :role approver account in the current order.',
+        'role_legal' => 'legal', 'role_hr' => 'HR', 'role_labor_union' => 'labour union',
+        'languages_missing' => 'Arabic and English must be enabled.',
+        'answer_missing' => 'Answer the Ministry-certified internal regulation question.',
+        'upload_missing' => 'Upload the internal regulation and send it to the company lawyer.',
+        'regulation_question' => 'Do you have a Ministry-certified internal regulation?',
+        'yes' => 'Yes', 'no' => 'No', 'upload_regulation' => 'Upload internal regulation',
+    ],
     'search' => [
         'open_search' => 'Search workspace', 'placeholder' => 'Search cases, employees, reports', 'shortcut' => 'Ctrl K',
         'cases' => 'Cases', 'employees' => 'Employees', 'reports' => 'Reports',

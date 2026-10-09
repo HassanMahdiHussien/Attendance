@@ -60,6 +60,7 @@ class Company extends Model
         return [
             'enabled_languages' => 'array',
             'has_internal_regulation' => 'boolean',
+            'internal_regulation_answered_at' => 'datetime',
             'requires_second_review' => 'boolean',
             'is_active' => 'boolean',
             'subscription_status' => SubscriptionStatus::class,

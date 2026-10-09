@@ -46,6 +46,7 @@ test('opening links prior cases and exposes duplicate and responsible-person pat
         'branch_id' => $employee->branch_id, 'occurred_at' => $now->addDay()]);
     $insights = app(CaseInsights::class);
     expect($insights->duplicateCandidates($case)['reports']->pluck('id')->all())->toContain($report->id);
+    completeCompanySetup($company);
     $opened = app(CaseOpening::class)->open($case, $hr);
     expect($opened->status)->toBe(CaseStatus::Open);
     expect($opened->law_version_id)->toBe($law->id);

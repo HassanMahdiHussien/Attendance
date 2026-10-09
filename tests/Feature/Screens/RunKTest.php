@@ -61,6 +61,8 @@ function runKOpen(DisciplinaryCase $case, User $hr): DisciplinaryCase
     $law->jurisdictions()->create(['jurisdiction' => 'federal_iraq']);
     $case->update(['violation_place_freetext' => 'البوابة']);
 
+    completeCompanySetup($case->company);
+
     return app(CaseOpening::class)->open($case, $hr);
 }
 
@@ -100,6 +102,7 @@ test('document edit and confirmation reject a document from another case', funct
 
 test('case page opening writes the status and opening events', function (): void {
     [$company, $hr, $case] = runKCase();
+    completeCompanySetup($company);
     $law = Law::factory()->create(['category' => 'labor', 'approval_status' => 'approved', 'effective_from' => '2026-01-01']);
     $law->jurisdictions()->create(['jurisdiction' => 'federal_iraq']);
     $case->update(['violation_place_freetext' => 'البوابة']);

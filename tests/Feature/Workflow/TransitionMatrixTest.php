@@ -27,6 +27,7 @@ test('each mapped edge can be exercised with its prerequisites while an illegal 
     app(TenantContext::class)->setCompany($company);
     $actor = User::factory()->create(['company_id' => $company->id, 'primary_role' => 'company_admin']);
     $law = Law::factory()->create(['category' => 'labor', 'approval_status' => 'approved']);
+    completeCompanySetup($company);
     $workflow = app(CaseWorkflow::class);
 
     foreach (CaseTransitions::MAP as $from => $targets) {

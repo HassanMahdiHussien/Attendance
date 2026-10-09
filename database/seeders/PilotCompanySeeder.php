@@ -13,6 +13,7 @@ use App\Models\Location;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class PilotCompanySeeder extends Seeder
 {
@@ -23,6 +24,19 @@ class PilotCompanySeeder extends Seeder
         }
         DB::transaction(function (): void {
             $company = Company::create(['name' => 'شركة الواحة للمشروبات الغازية', 'enabled_languages' => ['ar', 'en']]);
+
+            $company->update(['internal_regulation_answer' => 'no', 'internal_regulation_answered_at' => now()]);
+            $logo = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l9sAAAAASUVORK5CYII=');
+            $path = "letterheads/{$company->id}/seed.png";
+            Storage::disk('local')->put($path, $logo);
+            foreach (['ar', 'en'] as $language) {
+                DB::table('company_letterheads')->insert([
+                    'company_id' => $company->id, 'language_code' => $language, 'version' => 2,
+                    'name' => $company->name, 'footer_text' => 'CONFIDENTIAL',
+                    'header_mode' => 'logo_text', 'logo_path' => $path,
+                    'logo_sha256' => hash('sha256', $logo), 'needs_review' => false, 'created_at' => now(),
+                ]);
+            }
 
             app(TenantContext::class)->runForCompany($company, function () use ($company): void {
                 $branch = Branch::create([
