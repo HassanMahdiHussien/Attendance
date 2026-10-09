@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Enums\UserRole;
+use App\Models\CommitteePoolMember;
 use App\Models\Company;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -37,5 +38,20 @@ class LocalUsersSeeder extends Seeder
         $companyAdmin->company_id = $company->id;
         $companyAdmin->primary_role = UserRole::CompanyAdmin;
         $companyAdmin->save();
+
+        foreach (['legal', 'hr', 'labor_union'] as $role) {
+            $member = CommitteePoolMember::query()->where('company_id', $company->id)
+                ->where('role_type', $role)->firstOrFail();
+            $approver = new User;
+            $approver->name = $member->person_name;
+            $approver->email = "committee.{$role}@example.test";
+            $approver->password = $password;
+            $approver->company_id = $company->id;
+            $approver->primary_role = UserRole::CommitteeMember;
+            $approver->employee_id = $member->employee_id;
+            $approver->save();
+            $member->user_id = $approver->id;
+            $member->save();
+        }
     }
 }

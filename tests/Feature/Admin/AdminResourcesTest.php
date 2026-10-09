@@ -221,9 +221,13 @@ test('company settings keep required languages and reject HR staff', function ()
         'letterhead_address' => 'بغداد',
         'kurdish_enabled' => true,
         'requires_second_review' => true,
+        'internal_regulation_answer' => 'no',
     ])->call('save')->assertHasNoFormErrors();
     expect($this->company->fresh()->enabled_languages)->toBe(['ar', 'en', 'ku']);
     expect($this->company->fresh()->requires_second_review)->toBeTrue();
+    expect($this->company->fresh()->internal_regulation_answer)->toBe('no')
+        ->and($this->company->fresh()->internal_regulation_answered_by)->toBe($this->admin->id)
+        ->and($this->company->fresh()->internal_regulation_answered_at)->not->toBeNull();
 
     $hr = User::factory()->create(['company_id' => $this->company->id, 'primary_role' => UserRole::HrStaff]);
     $this->actingAs($hr);

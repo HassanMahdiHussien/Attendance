@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Admin\Widgets\SetupChecklist;
 use App\Filament\Auth\Login;
 use App\Http\Middleware\EnforceIdleTimeout;
 use App\Http\Middleware\EnsureAccountIsActive;
@@ -69,6 +70,7 @@ class AdminPanelProvider extends PanelProvider
             ->discoverResources(in: app_path('Filament/Admin/Resources'), for: 'App\\Filament\\Admin\\Resources')
             ->discoverPages(in: app_path('Filament/Admin/Pages'), for: 'App\\Filament\\Admin\\Pages')
             ->pages([Dashboard::class])
+            ->widgets([SetupChecklist::class])
             ->colors([
                 'primary' => Color::hex('#4F46E5'),
                 'warning' => Color::hex('#F59E0B'),

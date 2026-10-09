@@ -34,6 +34,7 @@ function uxReadyDefenseLetter(Company $company, User $hr): array
     $law->jurisdictions()->create(['jurisdiction' => 'federal_iraq']);
     $case = DisciplinaryCase::factory()->create(['company_id' => $company->id, 'opened_by_user_id' => $hr->id,
         'violation_place_freetext' => 'البوابة']);
+    completeCompanySetup($company);
     $case = app(CaseOpening::class)->open($case, $hr);
     $drafts = app(DocumentDrafts::class);
     $document = $drafts->createOrUpdate($case, DocumentType::DefenseLetter,

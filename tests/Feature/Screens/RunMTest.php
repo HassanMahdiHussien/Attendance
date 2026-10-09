@@ -58,6 +58,7 @@ function runMThroughSignedRecommendations(Outcome $outcome, bool $consultation):
     $law = Law::factory()->create(['category' => 'labor', 'approval_status' => 'approved', 'effective_from' => '2026-01-01']);
     $law->jurisdictions()->create(['jurisdiction' => 'federal_iraq']);
     $case = DisciplinaryCase::factory()->create(['opened_by_user_id' => $hr->id, 'violation_place_freetext' => 'Warehouse']);
+    completeCompanySetup($company);
     $case = app(CaseOpening::class)->open($case, $hr);
     $drafts = app(DocumentDrafts::class);
     $defense = $drafts->createOrUpdate($case, DocumentType::DefenseLetter,

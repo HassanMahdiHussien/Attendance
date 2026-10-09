@@ -44,6 +44,21 @@
     @endforelse
     @else
     @if($work['role'] === 'hr')
+        @if($work['setup_incomplete'])
+            <x-ui.card>
+                <h2 class="mb-3 text-lg font-bold text-ink">{{ __('messages.setup.title') }}</h2>
+                @if($work['setup_admin'])
+                    @foreach($work['setup'] as $item)
+                        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-line py-2">
+                            <span>{{ $item['reason'] }}</span>
+                            <x-ui.button size="small" :href="$item['url']">{{ __('messages.setup.fix') }}</x-ui.button>
+                        </div>
+                    @endforeach
+                @else
+                    <p>{{ __('messages.setup.hr_notice') }}</p>
+                @endif
+            </x-ui.card>
+        @endif
         <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
             @foreach([
                 ['open', __('messages.home.open_cases'), 'open', 'gray'],

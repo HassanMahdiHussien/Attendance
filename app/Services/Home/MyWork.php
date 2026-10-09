@@ -10,6 +10,7 @@ use App\Models\Employee;
 use App\Models\User;
 use App\Services\Cases\NextAction;
 use App\Services\Cases\PoolEligibility;
+use App\Services\Companies\CompanySetup;
 use App\Services\Dashboards\CaseMetrics;
 use App\Services\Dashboards\DashboardFilters;
 use App\Support\Access\CaseVisibility;
@@ -56,8 +57,14 @@ class MyWork
         $events = CaseEvent::query()->whereIn('case_id', CaseVisibility::for($user)->select('cases.id'))
             ->with(['disciplinaryCase:id,case_number,company_id', 'actorUser:id,name'])
             ->orderByDesc('created_at')->limit(10)->get();
+        $setup = app(CompanySetup::class);
+        $incomplete = $user->company_id !== null && ! $setup->complete($user->company);
 
         return ['role' => 'hr', 'counts' => $counts, 'actions' => $actions,
+            'setup_incomplete' => $incomplete,
+            'setup' => $incomplete && $user->primary_role === UserRole::CompanyAdmin
+                ? array_values(array_filter($setup->for($user->company), fn (array $item): bool => ! $item['done'])) : [],
+            'setup_admin' => $user->primary_role === UserRole::CompanyAdmin,
             'hotspots' => $this->metrics->thresholds($user, $filters,
                 (int) ($user->company?->hotspot_min_cases ?? 3), (int) ($user->company?->hotspot_window_days ?? 90)),
             'events' => $events];

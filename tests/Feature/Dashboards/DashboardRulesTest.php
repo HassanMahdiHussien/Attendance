@@ -208,7 +208,7 @@ test('company admins can change validated hotspot settings with an audit entry',
     app(TenantContext::class)->setCompany($company);
     $admin = User::factory()->create(['company_id' => $company->id, 'primary_role' => 'company_admin']);
     actingInAdminTenant($this, $admin, $company);
-    Livewire::test(CompanySettings::class)->fillForm(['hotspot_min_cases' => 4, 'hotspot_window_days' => 30])
+    Livewire::test(CompanySettings::class)->fillForm(['hotspot_min_cases' => 4, 'hotspot_window_days' => 30, 'internal_regulation_answer' => 'no'])
         ->call('save')->assertHasNoFormErrors();
     expect($company->fresh()->hotspot_min_cases)->toBe(4)
         ->and($company->fresh()->hotspot_window_days)->toBe(30)

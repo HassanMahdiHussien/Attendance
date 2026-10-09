@@ -11,6 +11,7 @@ use App\Exceptions\TransitionBlocked;
 use App\Models\DisciplinaryCase;
 use App\Models\User;
 use App\Services\CaseEventLogger;
+use App\Services\Companies\CompanySetup;
 use App\Support\Access\CaseVisibility;
 use App\Workflow\CaseTransitions;
 use Illuminate\Support\Facades\DB;
@@ -64,6 +65,11 @@ class CaseWorkflow
 
     private function guard(DisciplinaryCase $case, S $to, array $payload): void
     {
+        if ($case->status === S::Draft && $to === S::Open) {
+            if (! app(CompanySetup::class)->complete($case->company)) {
+                throw new TransitionBlocked(__('messages.setup.incomplete_short'));
+            }
+        }
         if ($to === S::Open) {
             foreach (['employee_id', 'branch_id', 'violation_type', 'violation_time'] as $field) {
                 if (blank($case->{$field})) {

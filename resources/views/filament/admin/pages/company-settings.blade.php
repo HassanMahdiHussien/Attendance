@@ -4,6 +4,9 @@
     @endforeach
     <form wire:submit="save" class="space-y-6">
         {{ $this->form }}
+        @if(($data['internal_regulation_answer'] ?? null) === 'yes')
+            <a href="{{ \App\Filament\Admin\Pages\InternalRegulation::getUrl(panel: 'admin', tenant: \Filament\Facades\Filament::getTenant()) }}" class="text-primary-600 underline">{{ __('messages.setup.upload_regulation') }}</a>
+        @endif
         <x-filament::button type="submit">{{ __('Save settings') }}</x-filament::button>
     </form>
 </x-filament-panels::page>

@@ -8,6 +8,7 @@ use App\Services\Documents\LetterheadService;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -47,6 +48,7 @@ class CompanySettings extends Page
             'requires_second_review' => $company->requires_second_review,
             'hotspot_min_cases' => $company->hotspot_min_cases,
             'hotspot_window_days' => $company->hotspot_window_days,
+            'internal_regulation_answer' => $company->internal_regulation_answer,
         ];
         foreach ($company->enabled_languages as $language) {
             $letterhead = CompanyLetterhead::query()->where('company_id', $company->id)
@@ -63,6 +65,8 @@ class CompanySettings extends Page
         $fields = [
             Checkbox::make('kurdish_enabled')->label(__('Enable Kurdish (optional)')),
             Checkbox::make('requires_second_review')->label(__('Second review before issuance')),
+            Radio::make('internal_regulation_answer')->label(__('messages.setup.regulation_question'))
+                ->options(['yes' => __('messages.setup.yes'), 'no' => __('messages.setup.no')])->required()->live(),
             TextInput::make('hotspot_min_cases')->label(__('Repeat alert threshold'))->numeric()->integer()->required()->minValue(2)->maxValue(50),
             TextInput::make('hotspot_window_days')->label(__('Repeat alert window in days'))->numeric()->integer()->required()->minValue(7)->maxValue(365),
         ];
@@ -113,6 +117,7 @@ class CompanySettings extends Page
         $validated = validator($data, [
             'hotspot_min_cases' => ['required', 'integer', 'between:2,50'],
             'hotspot_window_days' => ['required', 'integer', 'between:7,365'],
+            'internal_regulation_answer' => ['required', 'in:yes,no'],
         ])->validate();
         DB::transaction(function () use ($company, $data, $validated): void {
             $company->update([
@@ -120,6 +125,11 @@ class CompanySettings extends Page
                 'hotspot_window_days' => $validated['hotspot_window_days'],
                 'enabled_languages' => ['ar', 'en', ...(($data['kurdish_enabled'] ?? false) ? ['ku'] : [])],
                 'requires_second_review' => (bool) ($data['requires_second_review'] ?? false),
+                'internal_regulation_answer' => $validated['internal_regulation_answer'],
+                'internal_regulation_answered_at' => $company->internal_regulation_answer === $validated['internal_regulation_answer']
+                    ? $company->internal_regulation_answered_at : now(),
+                'internal_regulation_answered_by' => $company->internal_regulation_answer === $validated['internal_regulation_answer']
+                    ? $company->internal_regulation_answered_by : auth()->id(),
             ]);
             foreach ($company->enabled_languages as $language) {
                 $settings = $data[$language] ?? [];

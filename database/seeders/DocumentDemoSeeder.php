@@ -50,12 +50,7 @@ class DocumentDemoSeeder extends Seeder
             $members = [];
             foreach ([PoolRole::Legal, PoolRole::Hr, PoolRole::LaborUnion] as $role) {
                 $member = CommitteePoolMember::query()->where('role_type', $role->value)->firstOrFail();
-                $approver = User::factory()->create([
-                    'company_id' => $company->id, 'employee_id' => $member->employee_id,
-                    'primary_role' => UserRole::CommitteeMember,
-                    'name' => $member->person_name, 'email' => 'demo.'.$role->value.'@example.test',
-                ]);
-                $member->update(['user_id' => $approver->id]);
+                $approver = $member->user ?? throw new \RuntimeException('Demo pool approver account is missing.');
                 $members[] = [$member, $approver];
             }
             $employees = Employee::query()->orderBy('id')->get();
