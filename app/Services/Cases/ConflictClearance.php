@@ -11,6 +11,7 @@ use App\Models\DisciplinaryCase;
 use App\Models\User;
 use App\Services\CaseEventLogger;
 use App\Support\Access\CaseVisibility;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -26,22 +27,30 @@ class ConflictClearance
         if ($mandate === null) {
             return [];
         }
+        $case->load(['employee', 'allegedResponsibleEmployee', 'witnesses']);
+        $members = $mandate->poolMembers()->where(fn ($query) => $query->whereNull('branch_id')->orWhere('branch_id', $case->branch_id))->get();
+        $cleared = DB::table('case_conflict_clearances')->where('case_id', $case->id)->pluck('committee_pool_member_id');
+
+        return $this->conflictsFor($case, $members, $cleared);
+    }
+
+    public function conflictsFor(DisciplinaryCase $case, Collection $members, Collection $cleared): array
+    {
         $partyIds = array_filter(array_merge(
             [$case->employee_id, $case->alleged_responsible_employee_id],
-            $case->witnesses()->pluck('employee_id')->all(),
+            $case->witnesses->pluck('employee_id')->all(),
         ));
         $names = array_filter(array_map($this->normalize(...), array_merge(
             [$case->employee?->name, $case->allegedResponsibleEmployee?->name, $case->alleged_responsible_person_freetext],
-            $case->witnesses()->pluck('name')->all(),
+            $case->witnesses->pluck('name')->all(),
         )));
         $results = [];
-        foreach ($mandate->poolMembers()->where(fn ($query) => $query->whereNull('branch_id')->orWhere('branch_id', $case->branch_id))->get() as $member) {
+        foreach ($members as $member) {
             $hard = $member->employee_id !== null && in_array($member->employee_id, $partyIds);
             $name = $member->employee_id === null && in_array($this->normalize($member->person_name), $names, true);
             if ($hard || $name) {
-                $cleared = $name && DB::table('case_conflict_clearances')->where('case_id', $case->id)
-                    ->where('committee_pool_member_id', $member->id)->exists();
-                $results[] = ['member' => $member, 'type' => $hard ? 'employee_linked' : 'name_only', 'excluded' => $hard || ! $cleared];
+                $nameCleared = $name && $cleared->contains($member->id);
+                $results[] = ['member' => $member, 'type' => $hard ? 'employee_linked' : 'name_only', 'excluded' => $hard || ! $nameCleared];
             }
         }
 

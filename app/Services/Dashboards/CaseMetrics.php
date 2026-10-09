@@ -21,6 +21,11 @@ class CaseMetrics
     public function counts(User $viewer, DashboardFilters $filters, bool $aggregate = false, ?int $company = null): array
     {
         $keys = ['open', 'closed_month', 'recommendation_only', 'warning', 'termination', 'within15_numerator', 'within15_denominator'];
+        // The home tiles' workload counts are per company; cross-company aggregates (HR partners) never show them,
+        // and the approval check reads tenant-scoped documents.
+        if (! $aggregate) {
+            array_splice($keys, 1, 0, ['procedure_due_48h', 'waiting']);
+        }
         $counts = [];
         foreach ($keys as $key) {
             $counts[$key] = $this->metricQuery($viewer, $filters, $key, $aggregate, $company)->count();
@@ -55,6 +60,19 @@ class CaseMetrics
         $query = $this->base($viewer, $filters, $aggregate, $company);
         if ($metric === 'open') {
             return $query->where('cases.status', '!=', CaseStatus::ArchivedFinal->value);
+        }
+        if ($metric === 'procedure_due_48h') {
+            return $query->whereNotNull('cases.defense_letter_issued_at')->whereNull('cases.decision_issued_at')
+                ->where('cases.status', '!=', CaseStatus::ArchivedFinal->value)
+                ->whereRaw("TIMESTAMP(DATE_ADD(DATE(cases.defense_letter_issued_at), INTERVAL ? DAY), '23:59:59') <= ?", [
+                    (int) config('displanery.deadlines.procedure_days'),
+                    $this->deadlines->approachingCutoff(),
+                ]);
+        }
+        if ($metric === 'waiting') {
+            return $query->where(fn (Builder $waiting) => $waiting->where('cases.status', CaseStatus::RecommendationsAwaitingApprovals->value)
+                ->orWhereHas('documents', fn ($document) => $document->where('document_type', 'recommendations')
+                    ->where('version', '>', 1)->where('status', 'ready_for_review')->where('is_locked', false)));
         }
         if ($metric === 'closed_month') {
             $month = CarbonImmutable::now('Asia/Baghdad')->startOfMonth();

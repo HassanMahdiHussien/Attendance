@@ -23,6 +23,12 @@ class Deadlines
         return $this->due($case->decision_issued_at, 'appeal_days');
     }
 
+    public function approachingCutoff(?CarbonImmutable $now = null): CarbonImmutable
+    {
+        return ($now ?? CarbonImmutable::now('Asia/Baghdad'))->setTimezone('Asia/Baghdad')
+            ->addHours((int) config('displanery.deadlines.approaching_hours'));
+    }
+
     public function responseStatus(DisciplinaryCase $case, ?CarbonImmutable $now = null): ?string
     {
         $due = $this->responseDue($case);
@@ -85,7 +91,7 @@ class Deadlines
         if ($now->startOfDay()->gt($due)) {
             return $past;
         }
-        if ($now->gte($due->endOfDay()->subHours((int) config('displanery.deadlines.approaching_hours')))) {
+        if ($due->endOfDay()->setMicrosecond(0)->lte($this->approachingCutoff($now))) {
             return 'approaching';
         }
 

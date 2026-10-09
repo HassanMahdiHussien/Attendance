@@ -915,7 +915,14 @@
     "file_bindings": [],
     "routes": [],
     "links": [
-      "/home/cases/{{ $row["
+      "/cases/new",
+      "/committee",
+      "/employees",
+      "/home/cases/{{ $row[",
+      "/my-cases",
+      "/reports/inbox",
+      "/reports/new",
+      "/statistics"
     ],
     "permission_calls": [],
     "permission_conditions": []

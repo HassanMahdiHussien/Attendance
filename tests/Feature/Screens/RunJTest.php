@@ -49,14 +49,14 @@ test('the shared login sends roles to their own workspace', function (UserRole $
     Livewire::test(Login::class)->set('email', $user->email)->set('password', 'password')
         ->call('authenticate')->assertRedirect($target);
 })->with([
-    [UserRole::CompanyAdmin, '/cases'], [UserRole::HrStaff, '/cases'],
-    [UserRole::Reporter, '/reports'], [UserRole::DeptManager, '/reports'],
-    [UserRole::CommitteeMember, '/my-cases'],
+    [UserRole::CompanyAdmin, '/home'], [UserRole::HrStaff, '/home'],
+    [UserRole::Reporter, '/home'], [UserRole::DeptManager, '/home'],
+    [UserRole::CommitteeMember, '/home'],
 ]);
 
 test('cross-company roles have their own landing pages', function (): void {
     expect(Landing::for(User::factory()->make(['primary_role' => UserRole::PlatformAdmin])))->toBe('/platform');
-    expect(Landing::for(User::factory()->make(['primary_role' => UserRole::ExternalLegalReviewer])))->toBe('/my-cases');
+    expect(Landing::for(User::factory()->make(['primary_role' => UserRole::ExternalLegalReviewer])))->toBe('/home');
     expect(Landing::for(User::factory()->make(['primary_role' => UserRole::HrPartnerStaff])))->toBe('/home');
 });
 
@@ -115,11 +115,12 @@ test('each non-panel role reaches only its workspace list', function (UserRole $
     }
     $user = User::factory()->create($attributes);
     $this->actingAs($user)->get($allowed)->assertOk();
-    foreach (['/cases', '/reports', '/reports/inbox', '/my-cases', '/home'] as $path) {
+    foreach (['/cases', '/reports', '/reports/inbox', '/my-cases'] as $path) {
         if ($path !== $allowed) {
             $this->get($path)->assertForbidden();
         }
     }
+    $this->get('/home')->assertOk();
 })->with([
     [UserRole::Reporter, '/reports'], [UserRole::DeptManager, '/reports'],
     [UserRole::CommitteeMember, '/my-cases'], [UserRole::ExternalLegalReviewer, '/my-cases'],
