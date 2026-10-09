@@ -40,6 +40,18 @@ test('refreshed screens retain their original behavior surface', function (): vo
     $baseline = json_decode(File::get(base_path('tests/fixtures/ui-inventory.json')), true, flags: JSON_THROW_ON_ERROR);
     // New UI controls may be listed here with a reason once their behavior is reviewed.
     $allowedAdditions = [
+        'resources/views/livewire/cases/show-case.blade.php' => [
+            'wire' => [
+                ['wire:click', 'linkRelated'],
+                ['wire:click', 'markRelatedInError({{ $related['],
+                ['wire:model', 'relatedCaseId'],
+                ['wire:model', 'relatedReason'],
+                ['wire:model', 'relatedErrorReasons.{{ $related['],
+                ['wire:model.live.debounce.300ms', 'relatedSearch'],
+            ],
+            'errors' => ['relatedCaseId', 'relatedReason'],
+            'links' => ['/cases/{{ $other->id }}'],
+        ],
         'resources/views/livewire/cases/partials/ai-editor-controls.blade.php' => [
             'wire' => [
                 ['wire:click', 'startSupplementaryComparison'],

@@ -1,6 +1,23 @@
 <?php
 
 return [
+    'related' => [
+        'title' => 'Related cases', 'count' => '{1} :count related case|[2,*] :count related cases',
+        'internal_only' => 'Internal case context only; related cases are not printed in documents.',
+        'case_number' => 'Case #:number', 'none' => 'No related cases.',
+        'add' => 'Link a related case', 'search' => 'Search by case number or employee',
+        'choose' => 'Case', 'choose_placeholder' => 'Choose a visible case',
+        'reason_optional' => 'Reason (optional)', 'link' => 'Link case', 'linked' => 'Related case linked.',
+        'error_reason' => 'Reason for marking in error', 'mark_in_error' => 'Mark linked in error',
+        'in_error' => 'Linked in error: :reason', 'annotated' => 'Link marked in error.',
+        'reason_required' => 'Enter a reason of at most 500 characters.',
+        'invalid_link' => 'Choose another visible case in this company and a reason of at most 500 characters.',
+        'already_linked' => 'These cases are already linked.',
+        'invalid_annotation' => 'Enter a valid reason for this related link.',
+        'already_annotated' => 'This link is already marked in error.',
+        'hr_only' => 'Only HR can manage related cases.',
+        'case_unavailable' => 'The related case is unavailable.',
+    ],
     'regulation' => [
         'title' => 'Law vs internal regulation', 'suggesting' => 'Preparing suggested pairs…',
         'ai_unavailable' => 'The suggestion is unavailable. Add pairs manually or skip with a reason.',
@@ -66,7 +83,7 @@ return [
         'awaiting_approval' => 'Recommendations awaiting your approval', 'attended_cases' => 'Cases you attended',
         'awaiting_opinion' => 'Consultations awaiting your opinion', 'submit_report' => 'Submit a report',
         'complete_case' => 'Complete and open the case', 'prepare_defense' => 'Prepare the defense letter',
-        'ai_drafting' => 'AI is drafting — or write it manually', 'check_citations' => 'Check document citations',
+        'ai_drafting' => 'AI is drafting — or write it manually', 'ai_drafting_decision' => 'Drafting the decision letter…', 'check_citations' => 'Check document citations',
         'review_issue' => 'Review and issue the document', 'issue_defense' => 'Issue the defense letter',
         'response_window_opening' => 'Opening the response window',
         'record_defense_receipt' => 'Record receipt of the defense letter',
@@ -134,6 +151,10 @@ return [
         'ai_request_superseded' => 'The reading request was cancelled after HR recorded the result',
         'ai_request_expired' => 'The AI reading request expired',
         'ai_draft_requested' => 'AI drafting was requested',
+        'ai_draft_auto_requested' => 'Decision-letter drafting started automatically',
+        'ai_draft_auto_skipped' => 'Automatic decision-letter drafting could not start',
+        'case_related_linked' => 'A related case was linked',
+        'case_related_link_in_error' => 'A related link was marked in error',
         'ai_draft_saved' => 'The AI draft was saved',
         'ai_draft_failed' => 'AI drafting failed',
         'citation_relevance_checked' => 'Citation relevance was checked',
