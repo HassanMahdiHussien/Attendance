@@ -16,7 +16,7 @@ search with Ctrl K; case page "NEXT STEP" card).
 
 - Q: What can be searched? → A: Case number, employee name and employee number for staff who can see cases; employees
   by name/number for those who may open employee pages; HR also finds inbox reports/email drafts by subject or
-  violation type. Reporters search only their own reports. Results never include anything the user's existing screens
+  violation type. Reporters and department managers have no global search (product-owner default 2026-10-09); their "My reports" list stays their only path. Results never include anything the user's existing screens
   would not show.
 - Q: Arabic search? → A: Names match regardless of common spelling variants (أ/إ/آ/ا, ة/ه, ى/ي, tatweel, diacritics)
   and Arabic-Indic digits match Western digits ("٠٠٠٣" finds case 0003).
@@ -50,8 +50,9 @@ dropdown shows grouped results — Cases (number, employee, stage badge), Employ
 ### User Story 3 - The case page says what to do next (Priority: P1)
 
 **Acceptance Scenarios**:
-1. **Given** a case awaiting the employee's paper response, **Then** the card says "Record the employee's paper
-   response", shows the due date with its badge, and its button scrolls to the hand-off form on the page.
+1. **Given** a case awaiting the employee's paper response (defense receipt recorded, due day not over), **Then**
+   the card shows "Waiting for the employee's response" with the due date and badge, plus a secondary "Record the
+   paper response" button that scrolls to the hand-off form (product-owner default 2026-10-09).
 2. **Given** a case waiting on committee approvals, **Then** HR sees "Waiting for approvals (n of 3)" without an
    action button, while an eligible pool member sees "Approve the recommendations" with a button to the approval
    screen.

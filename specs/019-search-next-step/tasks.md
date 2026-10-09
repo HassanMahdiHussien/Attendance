@@ -3,7 +3,7 @@
 **Tests**: REQUIRED. Gates (as sail): `docker compose exec -T -u sail laravel.test php artisan test` ·
 `… ./vendor/bin/pint --test`. Never run two test processes at once.
 
-plan.md review resolutions (when added) override earlier sections.
+plan.md R8 (review resolutions) overrides earlier sections.
 
 ## Run S
 - [ ] T001 SearchText normaliser; migration with search columns, preferences, indexes, backfill; model hooks (R1, R2)

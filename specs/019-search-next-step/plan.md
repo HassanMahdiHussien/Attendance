@@ -45,6 +45,49 @@ Laravel 13 · Livewire 4 · MySQL 8.4 · existing `CaseVisibility`, `ViolationRe
   remembered/restored/cleared and URL precedence; card per representative status matches `MyWork` for the same viewer;
   query-count bound for search.
 
+## R8 Plan review resolutions (Codex review, 2026-10-09) — override R1–R7 where they differ
+
+### Blockers
+- **A1 Employee provider**: query source `EmployeeProfilePolicy::scope($viewer)` behind its `search()` gate (covers HR
+  scope and HR partners with `full_case_access`; partners without it get no employee results). Tests: partner with and
+  without full access, HR staff scope, committee/reviewer/reporter → no employee results.
+- **A2 Card targets are defined per action key**: `NextActionItem` gains (or the card maps from its existing key) a
+  target per action: on-page targets use new section IDs added to `show-case` (`#next-handoff` defense/decision
+  receipt and paper response, `#next-response-scan`, `#next-decision-signatures`, `#next-consultation`,
+  `#next-appeal`, `#next-documents`); screen targets use the action's route (session, recommendations, signed scan,
+  document edit/confirm, committee approval, consultation review, appeal). Gray "waiting" actions render without a
+  primary button. Product-owner default (2026-10-09, WEIRDNESS): for `awaiting_employee_response` after receipt and
+  before the due day ends, the card shows the shared "Waiting for the employee's response (due …)" state plus a
+  secondary "Record the paper response" button to `#next-handoff` (recording early is allowed); the spec's acceptance
+  scenario is amended accordingly. Test: for every status the card's label/actor equals `MyWork`'s for the same viewer,
+  and every non-waiting action has a resolvable target (anchor present in the rendered page or a valid route).
+
+### Should-fix
+- **B1 Reporters/department managers get no global search** (product-owner default 2026-10-09, WEIRDNESS): the search
+  box is not rendered for them and the component refuses their requests; their "My reports" list is the only path.
+  Report/email results are for the HR inbox roles only.
+- **B2 Write paths**: normalised columns computed by one `SearchText::normalize()` in model `saving` hooks (Employee,
+  ViolationReport, EmailDraft) — the CSV import, report submission and email intake all save through models (verify
+  each; add the call where a raw insert exists). Backfill in the migration by raw chunked updates per table ordered by
+  id using the same normaliser (no model events → no audit noise). A test asserts every write path fills the column;
+  a test compares stored columns with recomputed values for seeded rows (drift check).
+- **B3 Shared normaliser core**: extract the common Arabic steps (NFKC, diacritics/tatweel removal, Arabic-Indic and
+  Persian digits → Western, whitespace) into `App\Support\Text\ArabicText` used by both `TextNormalizer` (legal, keeps
+  its punctuation/artifact rules) and `SearchText` (adds letter folding + Latin case folding). Legal-library tests must
+  stay green unchanged.
+- **B4 Performance**: no duplicate indexes (existing unique `(company_id, employee_code)` and `(company_id,
+  case_number)` serve identifier lookups); add only `(company_id, search_name)` etc. where useful. SC-001 becomes a
+  measured target: a seeded benchmark command (`php artisan search:benchmark`, dev-only) reporting timings + `EXPLAIN`
+  for 10,000 employees / 5,000 cases; not an automated test assertion.
+- **B5 Restored filters validated**: on restore and URL input, branch must be one of the user's current company's
+  branches, stage an integer 1–5, search ≤ 100 chars; invalid saved values are dropped and the preference cleaned.
+  "No filter parameters in the URL" (restore) is distinguished from explicit empty parameters (`?branch=` → clear).
+- **B6 Preference writes**: saved only when the filter value actually changes, via a dedicated `UserPreferences`
+  service that writes the `preferences` column without model events (no audit entry for UI preferences; documented in
+  WEIRDNESS); the board search text is NOT persisted (only branch and stage), so no personal search terms are stored.
+- **Nits**: reports group = violation reports + email drafts sharing one cap of 8, ordered newest first; tests for the
+  normaliser, migration/backfill and providers live next to T001/T002.
+
 ## Constitution Check
 | Principle | Status | How |
 |---|---|---|
