@@ -4,6 +4,8 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 
 ---
 
+- **Intake AI asks questions only; it never answers them.** Human answers remain separate from the incident description and are the only new intake facts passed to defense-letter drafting. Open questions stay internal and never appear in issued documents. (2026-10-09)
+
 - **The interface defaults to English and remembers each user's Arabic choice.** Statistical exports use the language captured when requested; issued documents keep their bilingual content with Arabic governing, while operational mail to the service operator stays English.
 
 - **Shared-schema multi-tenancy (`company_id` column) instead of a separate database per company.** Deliberate simplification for the expected scale (<10 companies in year one). Revisit only if the client count grows past ~15-20, or if a large client contractually requires full data isolation — see PRD Section 13, technical architecture note.

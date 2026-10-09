@@ -1,6 +1,25 @@
 <?php
 
 return [
+    'intake' => [
+        'check_description' => 'Check my description', 'checking' => 'Checking the description…',
+        'looks_complete' => 'The description looks complete.',
+        'checklist_fallback' => 'AI is unavailable. Use these optional prompts to add any details you know.',
+        'open_points' => 'Questions and open points', 'previous_points' => 'Previous questions and answers',
+        'optional_answers' => 'Answer what you know. You can leave any question open.', 'open' => 'Open',
+        'your_answer' => 'Your answer', 'save_answer' => 'Save answer', 'answer_saved' => 'Answer saved.',
+        'description_required' => 'Write a description before checking it.',
+        'description_too_long' => 'Keep the description within 5,000 characters and the other fields concise.',
+        'rate_limited' => 'Please wait before checking again.',
+        'answer_required' => 'Enter an answer of at most 5,000 characters.',
+        'answer_too_long' => 'Keep the answer within 5,000 characters.',
+        'checklist' => [
+            'who' => 'Who exactly was involved?', 'what' => 'What happened step by step?',
+            'when' => 'When exactly did it happen?', 'where' => 'Where exactly did it happen?',
+            'why' => 'Why did it happen, if known?', 'how' => 'How did it happen?',
+            'witnesses' => 'Who saw it?', 'evidence' => 'What evidence is available?',
+        ],
+    ],
     'related' => [
         'title' => 'Related cases', 'count' => '{1} :count related case|[2,*] :count related cases',
         'internal_only' => 'Internal case context only; related cases are not printed in documents.',

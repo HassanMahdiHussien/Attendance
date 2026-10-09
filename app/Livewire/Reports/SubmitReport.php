@@ -3,6 +3,7 @@
 namespace App\Livewire\Reports;
 
 use App\Enums\UserRole;
+use App\Livewire\Concerns\ChecksDescription;
 use App\Models\Branch;
 use App\Models\Employee;
 use App\Models\Location;
@@ -15,6 +16,7 @@ use Livewire\WithFileUploads;
 
 class SubmitReport extends Component
 {
+    use ChecksDescription;
     use WithFileUploads;
 
     public string $branchId = '';
@@ -67,6 +69,10 @@ class SubmitReport extends Component
 
             return;
         }
+        $check = $this->intakeCheck();
+        if ($check && ! in_array($check->status, ['ready', 'checklist'], true)) {
+            $check = null;
+        }
         $reports->submit([
             'branch_id' => $data['branchId'], 'employee_id' => $data['employeeId'] ?: null,
             'location_id' => $data['locationId'] ?: null, 'place_freetext' => $data['place'] ?: null,
@@ -77,6 +83,7 @@ class SubmitReport extends Component
             'description' => $data['description'],
             'witnesses' => array_map(fn ($name) => ['name' => trim($name)], array_filter(explode(',', $data['witnessNames'] ?? ''))),
             'attachments' => $this->attachments,
+            'intake_check' => $check, 'intake_answers' => $this->intakeAnswers,
         ], auth()->user());
         $this->redirect('/reports', navigate: true);
     }
@@ -94,6 +101,20 @@ class SubmitReport extends Component
                 ->when($this->employeeSearch !== '', fn ($q) => $q->where('name', 'like', '%'.$this->employeeSearch.'%'))->get() : collect(),
             'responsibleEmployees' => $this->branchId ? Employee::query()->where('branch_id', $this->branchId)->where('is_active', true)
                 ->when($this->responsibleSearch !== '', fn ($q) => $q->where('name', 'like', '%'.$this->responsibleSearch.'%'))->get() : collect(),
+            'intakeCheck' => $this->intakeCheck(),
         ])->layout('layouts.workspace');
+    }
+
+    protected function intakeFields(): array
+    {
+        return ['description' => $this->description,
+            'violation_type' => $this->violationTypeId !== '' ? (ViolationType::query()->find($this->violationTypeId)?->name() ?? '') : $this->violationType,
+            'place' => $this->locationId !== '' ? (Location::query()->find($this->locationId)?->name ?? '') : $this->place,
+            'time' => $this->occurredAt];
+    }
+
+    protected function authorizeIntakeCheck(): void
+    {
+        $this->mount();
     }
 }

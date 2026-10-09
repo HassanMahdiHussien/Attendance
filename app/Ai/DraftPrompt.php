@@ -32,6 +32,9 @@ class DraftPrompt
             .'Related cases are internal context only. Never print them or restate them as case facts unless HR entered those facts independently. '
             .'Do not state the operative decision, outcome, or penalty in prose; template wording supplies it. '
             .'Return short internal notes for missing or unclear information, never in the document body.';
+        if ($type === DocumentType::DefenseLetter) {
+            $instruction .= ' intake_answers contain human-entered answers as facts; the questions are labels only, not facts. Never turn an unanswered question into an assertion.';
+        }
         if ($type === DocumentType::Recommendations) {
             $instruction .= ' The employee_response is the employee’s own account. Summarize it in findings only when relevant; never quote numbers absent from the input. body is findings; secondary_body is reasons and additional recommendations without a penalty sentence.';
         }

@@ -10,6 +10,11 @@
                         <span class="text-sm text-gray-500">{{ $email->sender?->name }} · {{ $email->sender?->email }} · {{ \App\Support\Format\Ui::date($email->received_at, 'Y-m-d H:i') }}</span>
                     </div>
                     <p dir="auto" class="whitespace-pre-line text-sm text-gray-600">{{ $email->body_text }}</p>
+                    @if($email->intakeQuestions->isNotEmpty())
+                        <div class="space-y-1"><h3 class="font-semibold">{{ __('messages.intake.open_points') }}</h3>
+                            @foreach($email->intakeQuestions as $question)<p dir="auto" class="text-sm"><strong>{{ $question->question }}</strong> — {{ $question->answer ?? __('messages.intake.open') }}</p>@endforeach
+                        </div>
+                    @endif
                     @if($email->body_truncated)<p class="text-xs text-gray-500">{{ __('The email body was shortened.') }}</p>@endif
                     @php($emailItems = $email->attachments->values()->map(fn ($row) => \App\Support\Files\FileItem::forAttachment($row))->all())
                     <div class="flex flex-wrap gap-3">@foreach($email->attachments as $attachment)<span class="text-sm"><a class="ui-link text-sm" href="/attachments/{{ $attachment->id }}">{{ $attachment->original_name }}</a> <x-ui.file-action :item="$emailItems[$loop->index]" :items="$emailItems" :index="$loop->index" :show-download="false" /></span>@endforeach</div>
@@ -34,6 +39,11 @@
                         @error('mapViolationTypeIds.'.$report->id)<p class="text-sm text-red-700">{{ $message }}</p>@enderror
                     @endif
                     <p dir="auto" class="text-sm text-gray-600">{{ $report->description }}</p>
+                    @if($report->intakeQuestions->isNotEmpty())
+                        <div class="space-y-1"><h3 class="font-semibold">{{ __('messages.intake.open_points') }}</h3>
+                            @foreach($report->intakeQuestions as $question)<p dir="auto" class="text-sm"><strong>{{ $question->question }}</strong> — {{ $question->answer ?? __('messages.intake.open') }}</p>@endforeach
+                        </div>
+                    @endif
                     @php($reportItems = $report->attachments->values()->map(fn ($row) => \App\Support\Files\FileItem::forAttachment($row))->all())
                     <div class="flex flex-wrap gap-3">@foreach($report->attachments as $attachment)<span class="text-sm"><a class="ui-link text-sm" href="/attachments/{{ $attachment->id }}">{{ $attachment->original_name }}</a> <x-ui.file-action :item="$reportItems[$loop->index]" :items="$reportItems" :index="$loop->index" :show-download="false" /></span>@endforeach</div>
                     <div class="flex flex-wrap items-end gap-3">

@@ -48,6 +48,28 @@
 </div>
 <x-ui.stepper :step="$step" class="mt-5" />
 </header>
+    @if($intakeQuestions->isNotEmpty())
+        <x-ui.card class="space-y-3">
+            <h2 class="font-bold">{{ __('messages.intake.open_points') }}</h2>
+            @foreach($intakeQuestions as $question)
+                <div class="border-t border-gray-100 pt-2" wire:key="intake-question-{{ $question->id }}">
+                    <p dir="auto" class="text-sm font-semibold">{{ $question->question }}</p>
+                    @if($question->answer !== null)
+                        <p dir="auto" class="mt-1 text-sm">{{ $question->answer }}</p>
+                    @else
+                        <p class="text-xs text-gray-600">{{ __('messages.intake.open') }}</p>
+                        @if($canAnswerIntake)
+                            <x-ui.field :label="__('messages.intake.your_answer')" for="case-intake-{{ $question->id }}">
+                                <x-ui.textarea id="case-intake-{{ $question->id }}" wire:model="intakeAnswers.{{ $question->id }}" rows="2" dir="auto" />
+                            </x-ui.field>
+                            <x-ui.button variant="secondary" wire:click="answerIntakeQuestion({{ $question->id }})">{{ __('messages.intake.save_answer') }}</x-ui.button>
+                            @error('intakeAnswers.'.$question->id)<p class="text-sm text-red-700">{{ $message }}</p>@enderror
+                        @endif
+                    @endif
+                </div>
+            @endforeach
+        </x-ui.card>
+    @endif
     @if($canMapViolationType && $record->violation_type_id === null && $violationTypes->isNotEmpty())
         <x-ui.card class="flex flex-wrap items-end gap-3">
             <x-ui.field :label="__('Map to a violation type')" for="map-violation-type"><x-ui.select id="map-violation-type" wire:model="mapViolationTypeId"><option value="">{{ __('Choose a violation type') }}</option>@foreach($violationTypes as $type)<option value="{{ $type->id }}">{{ $type->name() }}</option>@endforeach</x-ui.select></x-ui.field>

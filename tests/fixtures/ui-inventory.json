@@ -1178,5 +1178,20 @@
     "links": [],
     "permission_calls": [],
     "permission_conditions": []
+  },
+  "resources/views/livewire/partials/intake-check.blade.php": {
+    "wire": [
+      ["wire:click", "checkDescription"],
+      ["wire:model", "existingIntakeAnswers.{{ $question->id }}"],
+      ["wire:model", "intakeAnswers.{{ $index }}"]
+    ],
+    "errors": ["description"],
+    "can": [],
+    "role_conditions": [],
+    "file_bindings": [],
+    "routes": [],
+    "links": [],
+    "permission_calls": [],
+    "permission_conditions": []
   }
 }

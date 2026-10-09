@@ -19,6 +19,18 @@ class PayloadBuilder
 {
     private array $restoration = [];
 
+    public function minimizeIntake(array $input): array
+    {
+        $this->restoration = [];
+
+        $minimized = [];
+        foreach ($input as $key => $value) {
+            $minimized[$key] = $key === 'time' ? (string) $value : $this->minimize((string) $value);
+        }
+
+        return $minimized;
+    }
+
     public function comparison(DisciplinaryCase $case, Collection $units): array
     {
         $this->restoration = [];
@@ -61,6 +73,11 @@ class PayloadBuilder
                     'violation_type' => $this->minimize(Violation::name($row['case'], 'ar')),
                     'outcome' => $row['case']->outcome?->value,
                 ])->values()->all();
+            if ($type === DocumentType::DefenseLetter) {
+                $payload['intake_answers'] = $case->intakeQuestions()->whereNotNull('answer')->orderBy('id')->get()
+                    ->map(fn ($row) => ['aspect' => $row->aspect, 'question' => $this->minimize($row->question),
+                        'answer' => $this->minimize($row->answer)])->all();
+            }
         }
         if ($type === DocumentType::Recommendations) {
             $payload['employee_response'] = $case->confirmedResponseText() === null ? null : $this->minimize($case->confirmedResponseText());

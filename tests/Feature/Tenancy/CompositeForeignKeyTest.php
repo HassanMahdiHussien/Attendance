@@ -26,6 +26,8 @@ use App\Models\DocumentContent;
 use App\Models\DocumentTemplate;
 use App\Models\EmailDraft;
 use App\Models\Employee;
+use App\Models\IntakeCheck;
+use App\Models\IntakeQuestion;
 use App\Models\Law;
 use App\Models\LegalImportPage;
 use App\Models\LegalImportRun;
@@ -44,6 +46,7 @@ use App\Models\ViolationType;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 test('every tenant foreign key rejects a row from another company through models and raw inserts', function (): void {
@@ -70,6 +73,7 @@ test('every tenant foreign key rejects a row from another company through models
         'signature_presence_suggestions' => SignaturePresenceSuggestion::class,
         'ai_generation_logs' => AiGenerationLog::class,
         'email_drafts' => EmailDraft::class,
+        'intake_checks' => IntakeCheck::class, 'intake_questions' => IntakeQuestion::class,
         'regulation_comparisons' => RegulationComparison::class,
         'regulation_comparison_pairs' => RegulationComparisonPair::class,
     ];
@@ -92,11 +96,22 @@ test('every tenant foreign key rejects a row from another company through models
         $attributes = $source->getAttributes();
         unset($attributes['id']);
         $attributes[$key->foreign_column] = $target->id;
+        if ($key->source_table === 'intake_questions'
+            && in_array($key->foreign_column, ['violation_report_id', 'email_draft_id', 'case_id'], true)) {
+            foreach (['violation_report_id', 'email_draft_id', 'case_id'] as $parentKey) {
+                if ($parentKey !== $key->foreign_column) {
+                    $attributes[$parentKey] = null;
+                }
+            }
+        }
         if ($key->foreign_column === 'previous_version_id') {
             $attributes['correction_reason'] = 'Cross-company reference test';
         }
         if (isset($attributes['case_number'])) {
             $attributes['case_number'] += 1000000000;
+        }
+        if ($key->source_table === 'intake_checks') {
+            $attributes['request_token'] = (string) Str::uuid();
         }
         // A link carries at most one annotation per kind; point the copy at a fresh same-company link so only the
         // foreign key under test can fail.

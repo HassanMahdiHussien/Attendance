@@ -33,6 +33,7 @@
         <x-ui.field :label="__('Incident description')" error="description" for="report-description">
             <textarea id="report-description" wire:model="description" rows="5" class="ui-control"></textarea>@error('description')<span class="sr-only">{{ $message }}</span>@enderror
         </x-ui.field>
+        @include('livewire.partials.intake-check', ['intakeCheck' => $intakeCheck])
         <x-ui.field :label="__('Attachments (PDF or images, up to 10 MB per file)')" error="attachments.*" for="report-attachments">
             <input id="report-attachments" type="file" wire:model="attachments" multiple accept=".pdf,.jpg,.jpeg,.png" class="ui-control">@error('attachments.*')<span class="sr-only">{{ $message }}</span>@enderror
         </x-ui.field>

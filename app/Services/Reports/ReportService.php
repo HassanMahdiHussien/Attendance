@@ -17,6 +17,7 @@ use App\Services\CaseEventLogger;
 use App\Services\Cases\CaseDrafts;
 use App\Services\Cases\CaseInsights;
 use App\Services\Cases\CaseViolationTypes;
+use App\Services\Intake\IntakeQuestionService;
 use App\Support\Access\ViolationReportVisibility;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -56,6 +57,9 @@ class ReportService
             }
             foreach ($data['attachments'] ?? [] as $file) {
                 app(AttachmentService::class)->store($report, AttachmentKind::ReportEvidence, $file, $actor);
+            }
+            if ($data['intake_check'] ?? null) {
+                app(IntakeQuestionService::class)->attach($data['intake_check'], $report, $data['intake_answers'] ?? [], $actor);
             }
             app(AuditLogger::class)->log('report.submitted', $report, actor: $actor);
 
@@ -104,6 +108,7 @@ class ReportService
                 $case = app(CaseDrafts::class)->create(array_replace($data, $facts), $actor, $report);
             }
             $report->update(['status' => ReportStatus::ConvertedToCase, 'case_id' => $case->id]);
+            app(IntakeQuestionService::class)->carryToCase($report, $case);
             app(AuditLogger::class)->log($existing ? 'report.duplicate_linked' : 'report.converted', $report, ['case_id' => $case->id], $actor);
 
             return $case;

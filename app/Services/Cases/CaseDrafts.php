@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Models\ViolationReport;
 use App\Models\ViolationType;
 use App\Services\CaseEventLogger;
+use App\Services\Intake\IntakeQuestionService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
@@ -40,6 +41,12 @@ class CaseDrafts
             foreach ($data['witnesses'] ?? [] as $witness) {
                 $case->witnesses()->create(['company_id' => $case->company_id, 'name' => $witness['name'], 'employee_id' => $witness['employee_id'] ?? null]);
             }
+            if ($report !== null) {
+                app(IntakeQuestionService::class)->carryToCase($report, $case);
+            }
+            if ($data['intake_check'] ?? null) {
+                app(IntakeQuestionService::class)->attach($data['intake_check'], $case, $data['intake_answers'] ?? [], $actor);
+            }
             app(CaseEventLogger::class)->log($case, 'case_draft_created', actor: $actor);
 
             return $case;
@@ -65,6 +72,9 @@ class CaseDrafts
             $case->witnesses()->delete();
             foreach ($data['witnesses'] ?? [] as $witness) {
                 $case->witnesses()->create(['company_id' => $case->company_id, 'name' => $witness['name'], 'employee_id' => $witness['employee_id'] ?? null]);
+            }
+            if ($data['intake_check'] ?? null) {
+                app(IntakeQuestionService::class)->attach($data['intake_check'], $case, $data['intake_answers'] ?? [], $actor);
             }
             app(CaseEventLogger::class)->log($case, 'case_draft_updated', actor: $actor);
 
