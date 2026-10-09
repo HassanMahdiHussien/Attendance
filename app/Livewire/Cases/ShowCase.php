@@ -12,6 +12,7 @@ use App\Models\CaseLink;
 use App\Models\CommitteePoolMember;
 use App\Models\DisciplinaryCase;
 use App\Models\Employee;
+use App\Models\IntakeQuestion;
 use App\Models\ResponseTranscription;
 use App\Models\Signature;
 use App\Models\User;
@@ -31,6 +32,7 @@ use App\Services\Cases\ResponseReading;
 use App\Services\Cases\ResponseService;
 use App\Services\Cases\SignaturePresence;
 use App\Services\Documents\DocumentCorrector;
+use App\Services\Intake\IntakeQuestionService;
 use App\Support\Access\CaseVisibility;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Contracts\View\View;
@@ -99,6 +101,8 @@ class ShowCase extends Component
 
     public array $relatedErrorReasons = [];
 
+    public array $intakeAnswers = [];
+
     public array $decisionSignaturePresence = ['general_manager' => 'filled', 'union' => 'filled'];
 
     public function mount(string $case): void
@@ -118,6 +122,18 @@ class ShowCase extends Component
         $types->mapCase($case, (int) $this->mapViolationTypeId, auth()->user());
         $this->mapViolationTypeId = '';
         $this->notice = __('Violation type mapped');
+    }
+
+    public function answerIntakeQuestion(int $questionId, IntakeQuestionService $service): void
+    {
+        $case = $this->editable('update');
+        abort_unless(in_array(auth()->user()->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)
+            && $case->defense_letter_issued_at === null, 403);
+        $question = IntakeQuestion::query()->where('case_id', $case->id)->findOrFail($questionId);
+        $this->validate(["intakeAnswers.{$questionId}" => ['required', 'string', 'max:5000']]);
+        $service->answer($question, $this->intakeAnswers[$questionId], auth()->user());
+        unset($this->intakeAnswers[$questionId]);
+        $this->notice = __('messages.intake.answer_saved');
     }
 
     public function assign(CaseAssignment $assignments): void
@@ -381,6 +397,10 @@ class ShowCase extends Component
 
         return view('livewire.cases.show-case', [
             'record' => $record,
+            'intakeQuestions' => auth()->user()->primary_role === UserRole::ExternalLegalReviewer
+                ? collect() : $record->intakeQuestions()->orderBy('id')->get(),
+            'canAnswerIntake' => in_array(auth()->user()->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)
+                && $record->defense_letter_issued_at === null && auth()->user()->can('update', $record),
             'responseScanAttachment' => $responseScan,
             'aiAttempt' => $aiAttempt,
             'success' => session()->pull('case_success_'.$record->id),

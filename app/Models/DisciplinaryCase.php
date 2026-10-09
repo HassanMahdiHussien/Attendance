@@ -103,6 +103,11 @@ class DisciplinaryCase extends Model
         return $this->belongsTo(ViolationReport::class, 'violation_report_id');
     }
 
+    public function intakeQuestions(): HasMany
+    {
+        return $this->hasMany(IntakeQuestion::class, 'case_id');
+    }
+
     public function violationType(): BelongsTo
     {
         return $this->belongsTo(ViolationType::class, 'violation_type_id');

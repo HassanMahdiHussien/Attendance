@@ -4,9 +4,11 @@ namespace App\Livewire\Cases;
 
 use App\Enums\CaseStatus;
 use App\Enums\UserRole;
+use App\Livewire\Concerns\ChecksDescription;
 use App\Models\Branch;
 use App\Models\DisciplinaryCase;
 use App\Models\Employee;
+use App\Models\IntakeQuestion;
 use App\Models\Location;
 use App\Models\User;
 use App\Models\ViolationType;
@@ -14,6 +16,7 @@ use App\Services\Cases\CaseDrafts;
 use App\Services\Cases\CaseInsights;
 use App\Services\Cases\CaseOpening;
 use App\Services\EmailIntake\EmailDraftService;
+use App\Services\Intake\IntakeQuestionService;
 use App\Services\Reports\ReportService;
 use App\Support\Access\CaseVisibility;
 use App\Support\Access\EmailDraftVisibility;
@@ -26,6 +29,8 @@ use Livewire\Component;
 
 class CreateCase extends Component
 {
+    use ChecksDescription;
+
     public string $branchId = '';
 
     public string $employeeId = '';
@@ -51,6 +56,8 @@ class CreateCase extends Component
     public string $responsibleName = '';
 
     public string $witnessNames = '';
+
+    public array $existingIntakeAnswers = [];
 
     public bool $includePriorRecord = false;
 
@@ -120,6 +127,22 @@ class CreateCase extends Component
     {
         $this->authorizeCreate();
         $data = $this->validatedFacts();
+        foreach ($this->existingIntakeAnswers as $questionId => $answer) {
+            if (blank($answer)) {
+                continue;
+            }
+            $question = IntakeQuestion::query()->findOrFail($questionId);
+            abort_unless(($this->draftId && $question->case_id === $this->draftId)
+                || ($this->reportId && $question->violation_report_id === $this->reportId)
+                || ($this->emailId && $question->email_draft_id === $this->emailId), 403);
+            app(IntakeQuestionService::class)->answer($question, (string) $answer, auth()->user());
+        }
+        $this->existingIntakeAnswers = [];
+        $check = $this->intakeCheck();
+        if ($check && in_array($check->status, ['ready', 'checklist'], true)) {
+            $data['intake_check'] = $check;
+            $data['intake_answers'] = $this->intakeAnswers;
+        }
         $draft = $this->draftId ? $drafts->update(CaseVisibility::for(auth()->user())->findOrFail($this->draftId), $data, auth()->user())
             : ($this->emailId ? app(EmailDraftService::class)->convert(
                 EmailDraftVisibility::inbox(auth()->user())->findOrFail($this->emailId), auth()->user(), $data)
@@ -127,6 +150,8 @@ class CreateCase extends Component
                     ViolationReportVisibility::inbox(auth()->user())->findOrFail($this->reportId), auth()->user(), null, $data)
                 : $drafts->create($data, auth()->user())));
         $this->draftId = $draft->id;
+        $this->intakeCheckId = null;
+        $this->intakeAnswers = [];
         $this->emailId = null;
         $this->checkedDuplicates = false;
         $this->dispatch('draft-saved');
@@ -177,6 +202,10 @@ class CreateCase extends Component
                 ->when($this->violationTypeId !== '', fn ($query) => $query->orWhereKey($this->violationTypeId)))
                 ->orderBy('sort_order')->get(),
             'hrUsers' => User::query()->where('company_id', auth()->user()->company_id)->where('is_active', true)->whereIn('primary_role', [UserRole::HrStaff->value, UserRole::CompanyAdmin->value])->get(),
+            'intakeCheck' => $this->intakeCheck(),
+            'existingIntakeQuestions' => $this->draftId ? DisciplinaryCase::query()->findOrFail($this->draftId)->intakeQuestions()->orderBy('id')->get()
+                : ($this->reportId ? ViolationReportVisibility::inbox(auth()->user())->findOrFail($this->reportId)->intakeQuestions()->orderBy('id')->get()
+                : ($this->emailId ? EmailDraftVisibility::inbox(auth()->user())->findOrFail($this->emailId)->intakeQuestions()->orderBy('id')->get() : collect())),
         ])->layout('layouts.workspace');
     }
 
@@ -215,5 +244,18 @@ class CreateCase extends Component
     private function authorizeCreate(): void
     {
         Gate::authorize('create', DisciplinaryCase::class);
+    }
+
+    protected function intakeFields(): array
+    {
+        return ['description' => $this->description,
+            'violation_type' => $this->violationTypeId !== '' ? (ViolationType::query()->find($this->violationTypeId)?->name() ?? '') : $this->violationType,
+            'place' => $this->locationId !== '' ? (Location::query()->find($this->locationId)?->name ?? '') : $this->place,
+            'time' => $this->violationTime];
+    }
+
+    protected function authorizeIntakeCheck(): void
+    {
+        $this->authorizeCreate();
     }
 }

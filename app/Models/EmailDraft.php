@@ -8,6 +8,7 @@ use App\Support\Search\SearchText;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class EmailDraft extends Model
@@ -51,5 +52,10 @@ class EmailDraft extends Model
     public function disciplinaryCase(): BelongsTo
     {
         return $this->belongsTo(DisciplinaryCase::class, 'case_id');
+    }
+
+    public function intakeQuestions(): HasMany
+    {
+        return $this->hasMany(IntakeQuestion::class);
     }
 }

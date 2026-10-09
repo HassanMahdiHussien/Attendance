@@ -85,6 +85,11 @@ class ViolationReport extends Model
         return $this->hasMany(ReportWitness::class);
     }
 
+    public function intakeQuestions(): HasMany
+    {
+        return $this->hasMany(IntakeQuestion::class, 'violation_report_id');
+    }
+
     public function attachments(): MorphMany
     {
         return $this->morphMany(Attachment::class, 'attachable');

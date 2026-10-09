@@ -16,6 +16,7 @@
                 <x-ui.field :label="__('Witnesses, separated by commas')" for="witnesses"><x-ui.input id="witnesses" wire:model="witnessNames" /></x-ui.field>
             </div>
             <x-ui.field :label="__('Incident description')" for="description"><x-ui.textarea id="description" wire:model="description" rows="5" dir="auto" /></x-ui.field>
+            @include('livewire.partials.intake-check', ['intakeCheck' => $intakeCheck, 'existingIntakeQuestions' => $existingIntakeQuestions])
             <label class="flex items-start gap-2 text-sm"><input type="checkbox" wire:model="includePriorRecord" class="mt-1">{{ __('Include prior record in the defense letter') }}</label>
             <div class="flex flex-wrap gap-3"><x-ui.button variant="secondary" wire:click="save">{{ __('Save draft') }}</x-ui.button><x-ui.button wire:click="checkDuplicates">{{ __('Check for duplicates') }}</x-ui.button></div>
             @if($checkedDuplicates)

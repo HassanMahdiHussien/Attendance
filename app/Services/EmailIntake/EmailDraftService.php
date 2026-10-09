@@ -10,6 +10,7 @@ use App\Services\Attachments\AttachmentService;
 use App\Services\AuditLogger;
 use App\Services\CaseEventLogger;
 use App\Services\Cases\CaseDrafts;
+use App\Services\Intake\IntakeQuestionService;
 use App\Support\Access\CaseVisibility;
 use App\Support\Access\EmailDraftVisibility;
 use Illuminate\Support\Facades\DB;
@@ -55,8 +56,13 @@ class EmailDraftService
             return DB::transaction(function () use ($draft, $actor, $existing, $facts, &$copiedPaths): DisciplinaryCase {
                 $draft = EmailDraft::query()->lockForUpdate()->findOrFail($draft->id);
                 abort_unless($draft->status === EmailDraftStatus::Received, 409);
+                if ($facts['intake_check'] ?? null) {
+                    app(IntakeQuestionService::class)->attach($facts['intake_check'], $draft, $facts['intake_answers'] ?? [], $actor);
+                    unset($facts['intake_check'], $facts['intake_answers']);
+                }
                 $case = $existing ?? app(CaseDrafts::class)->create($facts, $actor);
                 abort_unless((int) $case->company_id === (int) $draft->company_id, 404);
+                app(IntakeQuestionService::class)->carryToCase($draft, $case);
                 foreach ($draft->attachments as $attachment) {
                     app(AttachmentService::class)->copyEmailEvidence($attachment, $case, $copiedPaths);
                 }
