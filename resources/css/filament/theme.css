@@ -16,3 +16,27 @@
     --status-urgent: #EF4444;
     --status-complete: #10B981;
 }
+
+.fi-body { background: #F7F8FB; color: #111827; font-family: 'Tajawal', sans-serif; }
+.fi-sidebar { background: #fff; border-inline-end: 1px solid #E5E7EB; }
+.fi-topbar { background: #fff; border-bottom: 1px solid #E5E7EB; }
+.fi-section, .fi-wi-stats-overview-stat, .fi-ta-ctn {
+    background: #fff;
+    border: 1px solid #E5E7EB;
+    border-radius: 1.25rem;
+    box-shadow: 0 1px 2px rgba(17, 24, 39, .04), 0 8px 24px -12px rgba(17, 24, 39, .08);
+}
+.fi-btn { border-radius: 1rem; }
+.fi-btn.fi-color-primary { box-shadow: 0 10px 15px -3px rgba(79, 70, 229, .18); }
+.fi-input-wrp, .fi-select-input, .fi-ta-search-field { border-radius: .75rem; border-color: #E5E7EB; }
+.fi-sidebar-item.fi-active > .fi-sidebar-item-btn { background: #EEF0FE; color: #4F46E5; }
+.fi-avatar { background: #EEF0FE; color: #4F46E5; }
+.fi-sidebar-group-label { color: #6B7280; font-weight: 700; }
+/* Filament derives button shades from contrast via inline variables and picked a pale indigo with dark text;
+   force the workspace's solid indigo primary button (§18). */
+.fi-btn.fi-color-primary:not(.fi-outlined):not(label) {
+    --bg: #4F46E5 !important;
+    --text: #fff !important;
+    --hover-bg: #4338CA !important;
+    --hover-text: #fff !important;
+}

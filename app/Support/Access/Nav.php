@@ -39,13 +39,6 @@ class Nav
             $items[] = self::item('Statistics', '/statistics', 'chart', 'statistics*');
             $items[] = self::item('Employees', '/employees', 'users', 'employees*');
         }
-        if ($url = InternalRegulationNav::url($user)) {
-            $items[] = self::item('Internal regulation', $url, 'book', 'admin/*/internal-regulation');
-        }
-        if ($role === UserRole::CompanyAdmin) {
-            $items[] = self::item('Settings', '/admin/'.$user->company_id, 'settings', 'admin/'.$user->company_id);
-        }
-
         request()->attributes->set($key, $items);
 
         return $items;

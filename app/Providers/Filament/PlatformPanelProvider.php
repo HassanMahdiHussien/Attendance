@@ -3,6 +3,7 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Auth\Login;
+use App\Filament\AvatarProviders\IndigoAvatarProvider;
 use App\Filament\Platform\Widgets\CompaniesOverview;
 use App\Http\Middleware\EnforceIdleTimeout;
 use App\Http\Middleware\EnsureAccountIsActive;
@@ -72,7 +73,7 @@ class PlatformPanelProvider extends PanelProvider
                 'warning' => Color::hex('#F59E0B'),
                 'danger' => Color::hex('#EF4444'),
                 'success' => Color::hex('#10B981'),
-            ])->font('Tajawal')->brandName(fn (): string => __('Displanery'))->favicon(asset('favicon.svg'))->viteTheme('resources/css/filament/theme.css')
+            ])->font('Tajawal')->defaultAvatarProvider(IndigoAvatarProvider::class)->brandName(fn (): string => __('Displanery'))->favicon(asset('favicon.svg'))->viteTheme('resources/css/filament/theme.css')
             ->authMiddleware([Authenticate::class]);
     }
 }
