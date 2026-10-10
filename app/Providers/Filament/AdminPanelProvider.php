@@ -32,6 +32,7 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Livewire\Livewire;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -62,12 +63,12 @@ class AdminPanelProvider extends PanelProvider
                 Action::make('locale_en')->label(fn (): string => __('English'))->action(function (): RedirectResponse {
                     auth()->user()->forceFill(['locale' => 'en'])->save();
 
-                    return redirect()->to(url()->current());
+                    return redirect()->to(Livewire::originalUrl());
                 }),
                 Action::make('locale_ar')->label(fn (): string => __('Arabic'))->action(function (): RedirectResponse {
                     auth()->user()->forceFill(['locale' => 'ar'])->save();
 
-                    return redirect()->to(url()->current());
+                    return redirect()->to(Livewire::originalUrl());
                 }),
             ])
             ->middleware([
@@ -102,7 +103,7 @@ class AdminPanelProvider extends PanelProvider
                 'warning' => Color::hex('#F59E0B'),
                 'danger' => Color::hex('#EF4444'),
                 'success' => Color::hex('#10B981'),
-            ])->font('Tajawal')->defaultAvatarProvider(IndigoAvatarProvider::class)->brandName(fn (): string => __('Displanery'))->favicon(asset('favicon.svg'))->viteTheme('resources/css/filament/theme.css')
+            ])->font('Tajawal')->darkMode(false)->defaultAvatarProvider(IndigoAvatarProvider::class)->brandName(fn (): string => __('Displanery'))->favicon(asset('favicon.svg'))->viteTheme('resources/css/filament/theme.css')
             ->authMiddleware([Authenticate::class]);
     }
 }
