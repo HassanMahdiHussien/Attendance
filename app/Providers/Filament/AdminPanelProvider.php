@@ -4,16 +4,22 @@ namespace App\Providers\Filament;
 
 use App\Filament\Admin\Widgets\SetupChecklist;
 use App\Filament\Auth\Login;
+use App\Filament\AvatarProviders\IndigoAvatarProvider;
 use App\Http\Middleware\EnforceIdleTimeout;
 use App\Http\Middleware\EnsureAccountIsActive;
 use App\Http\Middleware\SetLocale;
 use App\Http\Middleware\SetTenantContext;
 use App\Http\Middleware\SetTenantFromFilament;
 use App\Models\Company;
+use App\Support\Access\AdminNav;
+use App\Support\Access\Nav;
 use Filament\Actions\Action;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Navigation\NavigationBuilder;
+use Filament\Navigation\NavigationGroup;
+use Filament\Navigation\NavigationItem;
 use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
@@ -26,22 +32,43 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Livewire\Livewire;
 
 class AdminPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
     {
         return $panel->default()->id('admin')->path('admin')->login(Login::class)
+            ->navigation(function (): NavigationBuilder {
+                $workspace = array_map(fn (array $item): NavigationItem => NavigationItem::make(__($item['label']))
+                    ->url($item['url'])
+                    ->icon(match ($item['icon']) {
+                        'home' => 'heroicon-o-home', 'chart' => 'heroicon-o-chart-bar',
+                        'inbox' => 'heroicon-o-inbox', 'users' => 'heroicon-o-users',
+                        'check' => 'heroicon-o-check-circle', default => 'heroicon-o-folder',
+                    })
+                    ->isActiveWhen(fn (): bool => request()->is($item['pattern']))
+                    ->badge($item['count'] ? (string) $item['count'] : null), Nav::items(auth()->user()));
+
+                $settings = array_map(fn (array $item): NavigationItem => NavigationItem::make($item['label'])
+                    ->url($item['url'])
+                    ->icon($item['filamentIcon'])
+                    ->isActiveWhen(fn (): bool => $item['active']), AdminNav::items(auth()->user()));
+
+                return (new NavigationBuilder)
+                    ->group(NavigationGroup::make(__('Workspace'))->items($workspace))
+                    ->group(NavigationGroup::make(__('Settings'))->items($settings));
+            })
             ->userMenuItems([
                 Action::make('locale_en')->label(fn (): string => __('English'))->action(function (): RedirectResponse {
                     auth()->user()->forceFill(['locale' => 'en'])->save();
 
-                    return redirect()->to(url()->current());
+                    return redirect()->to(Livewire::originalUrl());
                 }),
                 Action::make('locale_ar')->label(fn (): string => __('Arabic'))->action(function (): RedirectResponse {
                     auth()->user()->forceFill(['locale' => 'ar'])->save();
 
-                    return redirect()->to(url()->current());
+                    return redirect()->to(Livewire::originalUrl());
                 }),
             ])
             ->middleware([
@@ -76,7 +103,7 @@ class AdminPanelProvider extends PanelProvider
                 'warning' => Color::hex('#F59E0B'),
                 'danger' => Color::hex('#EF4444'),
                 'success' => Color::hex('#10B981'),
-            ])->font('Tajawal')->brandName(fn (): string => __('Displanery'))->favicon(asset('favicon.svg'))->viteTheme('resources/css/filament/theme.css')
+            ])->font('Tajawal')->darkMode(false)->defaultAvatarProvider(IndigoAvatarProvider::class)->brandName(fn (): string => __('Displanery'))->favicon(asset('favicon.svg'))->viteTheme('resources/css/filament/theme.css')
             ->authMiddleware([Authenticate::class]);
     }
 }

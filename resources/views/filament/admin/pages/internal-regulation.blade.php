@@ -1,24 +1,24 @@
 <x-filament-panels::page>
     <div class="space-y-6">
         @if (auth()->user()->primary_role === \App\Enums\UserRole::CompanyAdmin)
-            <form wire:submit="upload" class="rounded-xl border p-4 space-y-3 dark:border-gray-700">
+            <form wire:submit="upload" class="space-y-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                 <h2 class="font-bold">{{ __('Upload internal regulation') }}</h2>
-                <input type="file" wire:model="sourceFile" accept=".txt,.docx,.pdf" class="block w-full">
+                <input type="file" wire:model="sourceFile" accept=".txt,.docx,.pdf" class="block w-full rounded-xl border border-gray-200 bg-white p-2">
                 @error('sourceFile') <p class="text-red-600">{{ $message }}</p> @enderror
-                <input type="text" wire:model="regulationName" placeholder="{{ __('Regulation name') }}" class="block w-full rounded border p-2" required>
+                <input type="text" wire:model="regulationName" placeholder="{{ __('Regulation name') }}" class="block w-full rounded-xl border border-gray-200 p-2" required>
                 @error('regulationName') <p class="text-red-600">{{ $message }}</p> @enderror
                 <div class="flex gap-2">
-                    <input type="text" wire:model="regulationNumber" placeholder="{{ __('Number') }}" class="rounded border p-2">
-                    <input type="number" wire:model="regulationYear" placeholder="{{ __('Year') }}" class="rounded border p-2">
+                    <input type="text" wire:model="regulationNumber" placeholder="{{ __('Number') }}" class="min-w-0 flex-1 rounded-xl border border-gray-200 p-2">
+                    <input type="number" wire:model="regulationYear" placeholder="{{ __('Year') }}" class="min-w-0 flex-1 rounded-xl border border-gray-200 p-2">
                 </div>
                 <x-filament::button type="submit">{{ __('Start import') }}</x-filament::button>
             </form>
         @endif
 
-        <section class="rounded-xl border p-4 dark:border-gray-700">
+        <section class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
             <h2 class="font-bold">{{ __('Internal regulations') }}</h2>
             @foreach ($this->laws() as $law)
-                <button type="button" wire:click="selectLaw({{ $law->id }})" class="block w-full border-b p-3 text-start">
+                <button type="button" wire:click="selectLaw({{ $law->id }})" class="block w-full border-b border-gray-200 p-3 text-start hover:bg-indigo-50 focus-visible:outline-2 focus-visible:outline-primary-600">
                     {{ $law->name }} —
                     @if ($state = $law->importRuns()->latest('id')->value('state'))
                         <x-filament::badge :color="\App\Support\Format\LegalLibraryLabels::statusColor($state)">{{ \App\Support\Format\LegalLibraryLabels::runState($state) }}</x-filament::badge>
@@ -31,7 +31,7 @@
         </section>
 
         @if ($selectedLawId)
-            <section class="rounded-xl border p-4 dark:border-gray-700">
+            <section class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                 <div class="flex justify-between">
                     <h2 class="font-bold">{{ __('Articles and clauses') }}</h2>
                     @if ($law = $this->laws()->firstWhere('id', $selectedLawId))
@@ -44,7 +44,7 @@
                 </div>
                 @foreach ($this->units() as $unit)
                     @php($approval = \App\Models\LegalUnitApproval::query()->where('legal_unit_id', $unit->id)->first())
-                    <div class="border-b p-3">
+                    <div class="border-b border-gray-200 p-3">
                         <div class="flex flex-wrap gap-3">
                             <strong>{{ __('Article') }} {{ $unit->article_number }} {{ $unit->clause_path }}</strong>
                             <x-filament::badge :color="\App\Support\Format\LegalLibraryLabels::statusColor($unit->status->value)">{{ \App\Support\Format\LegalLibraryLabels::unitStatus($unit->status->value) }}</x-filament::badge>

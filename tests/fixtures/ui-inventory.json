@@ -1,4 +1,7 @@
 {
+  "resources/views/layouts/workspace.blade.php": {
+    "controls": ["workspace-more", "workspace-settings"]
+  },
   "resources/views/livewire/auth/login.blade.php": {
     "wire": [
       [
