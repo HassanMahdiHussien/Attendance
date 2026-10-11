@@ -2,7 +2,6 @@
 
 namespace App\Providers\Filament;
 
-use App\Filament\Auth\Login;
 use App\Filament\AvatarProviders\IndigoAvatarProvider;
 use App\Filament\Platform\Widgets\CompaniesOverview;
 use App\Http\Middleware\EnforceIdleTimeout;
@@ -31,7 +30,7 @@ class PlatformPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
     {
-        return $panel->id('platform')->path('platform')->login(Login::class)
+        return $panel->id('platform')->path('platform')
             ->userMenuItems([
                 Action::make('locale_en')->label(fn (): string => __('English'))->action(function (): RedirectResponse {
                     auth()->user()->forceFill(['locale' => 'en'])->save();

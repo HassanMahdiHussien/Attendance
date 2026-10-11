@@ -1,17 +1,17 @@
 <?php
 
 use App\Enums\UserRole;
-use App\Filament\Auth\Login;
+use App\Livewire\Auth\Login;
 use App\Models\Company;
 use App\Models\HrPartner;
 use App\Models\LawFirmPartner;
 use App\Models\User;
+use App\Support\Access\Landing;
 use Filament\Facades\Filament;
 use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Livewire;
 
 beforeEach(function (): void {
-    RateLimiter::clear('livewire-rate-limiter:'.sha1(Login::class.'|authenticate|'.request()->ip()));
     RateLimiter::clear('login-ip:'.hash('sha256', (string) request()->ip()));
 });
 
@@ -52,52 +52,48 @@ test('every role has exactly its contracted panel access', function (UserRole $r
     $user = signInUser($role);
     Filament::setCurrentPanel($panel);
     expect($user->canAccessPanel(Filament::getPanel($panel)))->toBe($allowed);
-
-    $result = Livewire::test(Login::class)
-        ->fillForm(['email' => $user->email, 'password' => 'password'])
-        ->call('authenticate');
-    if ($allowed) {
-        $result->assertHasNoFormErrors();
-        expect(auth()->id())->toBe($user->id);
-    } else {
-        $result->assertHasFormErrors(['email']);
-        expect(auth()->check())->toBeFalse();
-    }
 })->with('panel access');
+
+test('every active role signs in on the single sign-in page and lands on its home', function (UserRole $role): void {
+    $user = signInUser($role);
+
+    Livewire::test(Login::class)->set('email', $user->email)->set('password', 'password')->call('authenticate')
+        ->assertHasNoErrors()->assertRedirect(Landing::for($user));
+    expect(auth()->id())->toBe($user->id);
+})->with(array_map(fn (UserRole $role): array => [$role], UserRole::cases()));
+
+test('a panel visited while signed out sends the visitor to the single sign-in page', function (string $path): void {
+    $this->get($path)->assertRedirect('/login');
+})->with(['/admin', '/platform', '/admin/login', '/platform/login']);
 
 test('all refused credential and account states have the same public error', function (): void {
     $company = Company::factory()->create();
     $active = signInUser(UserRole::CompanyAdmin, $company);
     $inactive = signInUser(UserRole::CompanyAdmin, $company);
     $inactive->forceFill(['is_active' => false])->save();
-    $wrongPanel = signInUser(UserRole::Reporter, $company);
     $inactiveCompany = Company::factory()->create(['is_active' => false]);
     $companyUser = signInUser(UserRole::CompanyAdmin, $inactiveCompany);
-    Filament::setCurrentPanel('admin');
 
     $attempts = [
         ['missing@example.test', 'password'],
         [$active->email, 'wrong'],
         [$inactive->email, 'password'],
         [$companyUser->email, 'password'],
-        [$wrongPanel->email, 'password'],
     ];
     $messages = [];
     foreach ($attempts as [$email, $password]) {
-        $result = Livewire::test(Login::class)->fillForm(['email' => $email, 'password' => $password])->call('authenticate');
-        $result->assertHasFormErrors(['email']);
-        $messages[] = $result->errors()->first('data.email');
+        RateLimiter::clear('login-ip:'.hash('sha256', (string) request()->ip()));
+        $result = Livewire::test(Login::class)->set('email', $email)->set('password', $password)->call('authenticate');
+        $result->assertHasErrors(['email']);
+        $messages[] = $result->errors()->first('email');
         expect(auth()->check())->toBeFalse();
     }
     expect(array_unique($messages))->toHaveCount(1);
 });
 
-test('platform admin signing in at admin is sent to platform', function (): void {
+test('platform admin signing in is sent to the platform panel', function (): void {
     $user = signInUser(UserRole::PlatformAdmin);
-    Filament::setCurrentPanel('admin');
-    Livewire::test(Login::class)
-        ->fillForm(['email' => $user->email, 'password' => 'password'])
-        ->call('authenticate')
+    Livewire::test(Login::class)->set('email', $user->email)->set('password', 'password')->call('authenticate')
         ->assertRedirect('/platform');
 });
 
@@ -110,3 +106,12 @@ test('inactive users and users of inactive companies are denied by both panels',
     expect($inactiveUser->canAccessPanel(Filament::getPanel($panel)))->toBeFalse();
     expect($companyUser->canAccessPanel(Filament::getPanel($panel)))->toBeFalse();
 })->with(['platform', 'admin']);
+
+test('signing in returns to the page that required it', function (): void {
+    $company = Company::factory()->create();
+    $user = signInUser(UserRole::CompanyAdmin, $company);
+    $this->get('/admin/'.$company->id.'/branches')->assertRedirect('/login');
+
+    Livewire::test(Login::class)->set('email', $user->email)->set('password', 'password')->call('authenticate')
+        ->assertRedirect(url('/admin/'.$company->id.'/branches'));
+});
