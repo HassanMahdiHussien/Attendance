@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Auth;
 
+use App\Enums\UserRole;
 use App\Models\User;
 use App\Services\Auth\LoginAttempts;
 use App\Support\Access\Landing;
@@ -50,7 +51,8 @@ class Login extends Component
         $user = Auth::user();
         $attempts->clear($this->email);
         session()->regenerate();
-        $this->redirect(Landing::for($user), navigate: true);
+        // Filament panel scripts need a full page load before its Alpine components initialize.
+        $this->redirect(Landing::for($user), navigate: $user->primary_role !== UserRole::PlatformAdmin);
     }
 
     public function render(): View

@@ -10,7 +10,7 @@ test('a company admin signs in and opens the main pages without browser errors',
     $admin = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::CompanyAdmin,
         'email' => 'admin@example.test']);
 
-    $page = visit('/login')
+    $page = visitBound('/login')
         ->fill('email', $admin->email)
         ->fill('password', 'password')
         ->press('Log in')

@@ -30,3 +30,4 @@ project-starter.zip
 # Real employee disciplinary records (pilot samples) - local only
 /docs/attachments/
 /docs/attachments.zip
+/tests/Browser/Screenshots
