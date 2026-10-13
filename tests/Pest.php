@@ -30,7 +30,7 @@ pest()->extend(TestCase::class)
         Bus::fake([GenerateDocumentPdf::class]);
         app()->bind(PageReader::class, FakePageReader::class);
     })
-    ->in('Feature');
+    ->in('Feature', 'Browser');
 
 function actingInAdminTenant(TestCase $test, User $user, Company $company): void
 {
