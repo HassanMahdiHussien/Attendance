@@ -5,6 +5,8 @@ namespace App\Jobs;
 use App\Jobs\Concerns\UsesLegalImportContext;
 use App\LegalLibrary\ArticleSplitter;
 use App\LegalLibrary\DocxText;
+use App\LegalLibrary\ExternalReadings;
+use App\LegalLibrary\ImportProgress;
 use App\LegalLibrary\PdfPages;
 use App\Models\LegalImportRun;
 use App\Models\LegalUnit;
@@ -102,10 +104,33 @@ class RenderLegalPages implements ShouldQueue
                 if ($run->fresh()->state === 'cancelled') {
                     return;
                 }
+                $transcriptions = app(ExternalReadings::class)->pageTexts($run);
                 $run->update(['state' => 'reading']);
                 foreach ($rows as $row) {
-                    ReadLegalPageText::dispatch($row->id, $run->company_id);
-                    ReadLegalPageWithAi::dispatch($row->id, $run->company_id);
+                    if (isset($transcriptions[$row->page_number])) {
+                        $row->update(['text' => $transcriptions[$row->page_number], 'text_method' => 'transcription',
+                            'text_status' => 'done']);
+                    } else {
+                        ReadLegalPageText::dispatch($row->id, $run->company_id);
+                    }
+                    if ($run->secondary_source_path !== null) {
+                        $row->update(['ai_status' => 'done', 'ai_source' => 'secondary_text']);
+                    } elseif ($run->law->kind->value !== 'internal_regulation' && $run->reading_mode === 'now') {
+                        ReadLegalPageWithAi::dispatch($row->id, $run->company_id);
+                    } elseif ($run->law->kind->value === 'internal_regulation'
+                        && isset($transcriptions[$row->page_number]) && $run->reading_mode === 'now') {
+                        ReadLegalPageWithAi::dispatch($row->id, $run->company_id);
+                    }
+                }
+                if ($run->reading_mode === 'batch' && $run->secondary_source_path === null) {
+                    $run->update(['batch_state' => 'submitting']);
+                    if ($run->law->kind->value !== 'internal_regulation'
+                        || ! $run->pages()->where('text_status', 'pending')->exists()) {
+                        SubmitLegalReadingBatch::dispatch($run->id, $run->company_id);
+                    }
+                }
+                if ($run->secondary_source_path !== null) {
+                    app(ImportProgress::class)->evaluate($run);
                 }
             } catch (Throwable $exception) {
                 if ($run->fresh()->state === 'cancelled') {

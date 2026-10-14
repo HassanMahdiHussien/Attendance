@@ -27,7 +27,8 @@ class LegalLibraryLabels
         return match ($value) {
             'unverified' => __('Unverified'), 'mismatch' => __('Needs review'),
             'verified_auto' => __('Verified automatically'), 'verified_human' => __('Verified by review'),
-            'verified_text' => __('Verified from source text'), 'excluded' => __('Excluded'), default => __('Unknown status'),
+            'verified_text' => __('Verified from source text'), 'verified_single' => __('Verified from one reading'),
+            'excluded' => __('Excluded'), default => __('Unknown status'),
         };
     }
 
@@ -44,15 +45,27 @@ class LegalLibraryLabels
     public static function pageStatus(string $value): string
     {
         return match ($value) {
-            'pending' => __('Queued'), 'done' => __('Done'), 'failed' => __('Failed'),
+            'pending' => __('Queued'), 'done' => __('Done'), 'skipped' => __('Read locally'), 'failed' => __('Failed'),
             'unavailable' => __('Unavailable'), default => __('Unknown status'),
+        };
+    }
+
+    public static function batchState(string $value): string
+    {
+        return match ($value) {
+            'submitting' => __('Submitting'), 'in_progress' => __('Processing'),
+            'canceling' => __('Cancelling'), 'ended' => __('Completed'),
+            'failed' => __('Failed'), default => __('Unknown status'),
         };
     }
 
     public static function textMethod(string $value): string
     {
         return match ($value) {
-            'text' => __('Text layer'), 'ocr' => 'OCR', default => __('Unknown method'),
+            'text' => __('Text layer'), 'ocr' => 'OCR', 'transcription' => __('Page transcription'),
+            'api' => __('API reading'), 'api_batch' => __('Batch reading'),
+            'secondary_text' => __('Independent secondary text'), 'library' => __('Verified library archive'),
+            default => __('Unknown method'),
         };
     }
 
@@ -63,6 +76,7 @@ class LegalLibraryLabels
             'one_reading_only' => __('Found in only one reading'),
             'duplicate_heading' => __('Duplicate heading — possibly amended text'),
             'page_failed' => __('Page reading failed'), 'illegible' => __('Illegible text'),
+            'partial_single_reading' => __('Article spans local and AI readings'),
             default => __('Reading mismatch'),
         };
     }
@@ -70,7 +84,7 @@ class LegalLibraryLabels
     public static function statusColor(string $value): string
     {
         return match ($value) {
-            'verified_auto', 'verified_human', 'verified_text', 'completed' => 'success',
+            'verified_auto', 'verified_human', 'verified_text', 'verified_single', 'completed' => 'success',
             'mismatch', 'ai_pending' => 'warning', 'failed' => 'danger',
             'excluded', 'cancelled' => 'gray', default => 'gray',
         };
@@ -83,8 +97,10 @@ class LegalLibraryLabels
         }
 
         $parts = [];
-        foreach (['pages' => __('Pages'), 'units' => __('Units'), 'verified_auto' => __('Verified automatically'),
+        foreach (['pages' => __('Pages'), 'local_pages' => __('Pages read locally'),
+            'ai_pages' => __('Pages read by AI'), 'units' => __('Units'), 'verified_auto' => __('Verified automatically'),
             'verified_human' => __('Verified by review'), 'verified_text' => __('Verified from source text'),
+            'verified_single' => __('Verified from one reading'),
             'mismatch' => __('Needs review'), 'unverified' => __('Unverified'), 'excluded' => __('Excluded')] as $key => $label) {
             if (array_key_exists($key, $counts)) {
                 $parts[] = Ui::number((int) $counts[$key]).' '.$label;

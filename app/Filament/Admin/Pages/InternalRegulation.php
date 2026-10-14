@@ -101,6 +101,13 @@ class InternalRegulation extends Page
             ->whereNotIn('id', LegalUnitApproval::query()->select('legal_unit_id'))->exists();
     }
 
+    public function importCounts(Law $law): ?string
+    {
+        $counts = $law->importRuns()->latest('id')->first()?->counts;
+
+        return $counts ? LegalLibraryLabels::counts($counts) : null;
+    }
+
     public function upload(): void
     {
         $company = Filament::getTenant();

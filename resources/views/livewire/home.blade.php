@@ -15,13 +15,13 @@
                 @endif
             </div>
 
-            <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+            <x-ui.stats class="sm:grid-cols-3 xl:grid-cols-5">
                 @foreach(['open' => __('Open'), 'closed_month' => __('Closed this month'), 'recommendation_only' => __('Recommendation only'), 'warning' => __('Warnings'), 'termination' => __('Termination'), 'within15_numerator' => __('Within 15 days'), 'within15_denominator' => __('Measurable cases')] as $key => $label)
                     <x-ui.stat :label="$label" :value="\App\Support\Format\Ui::number($row['counts'][$key])" />
                 @endforeach
                 <x-ui.stat :label="__('Percent within 15 days')" :value="$row['counts']['within15_percent'] === null ? '—' : \App\Support\Format\Ui::number($row['counts']['within15_percent']).__('%')" />
                 <x-ui.stat :label="__('Average procedure days')" :value="$row['counts']['average_days'] === null ? '—' : \App\Support\Format\Ui::number((string) $row['counts']['average_days'])" />
-            </div>
+            </x-ui.stats>
 
             <div class="grid gap-6 sm:grid-cols-2">
                 @foreach(['violation' => __('Violation types'), 'department' => __('Current department'), 'branch' => __('Branches'), 'location' => __('Locations')] as $group => $title)
@@ -59,18 +59,19 @@
                 @endif
             </x-ui.card>
         @endif
-        <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <x-ui.stats class="lg:grid-cols-4">
             @foreach([
-                ['open', __('messages.home.open_cases'), 'open', 'gray'],
-                ['procedure_due_48h', __('messages.home.due_48h'), 'procedure_due_48h', 'red'],
-                ['waiting', __('messages.home.waiting_committee'), 'waiting', 'gray'],
-                ['within15_percent', __('messages.home.closed_within_15'), 'within15_numerator', 'green'],
-            ] as [$key, $label, $metric, $tone])
-                <a href="{{ '/dashboard/cases?metric='.$metric.'&period=6' }}">
-                    <x-ui.stat :label="$label" :tone="$tone" :value="$key === 'waiting' ? \App\Support\Format\Ui::number($work['counts']['waiting'] ?? 0) : ($key === 'within15_percent' ? ($work['counts'][$key] === null ? '—' : \App\Support\Format\Ui::number($work['counts'][$key]).'%') : \App\Support\Format\Ui::number($work['counts'][$key]))" />
-                </a>
+                ['open', __('messages.home.open_cases'), 'open'],
+                ['procedure_due_48h', __('messages.home.due_48h'), 'procedure_due_48h'],
+                ['waiting', __('messages.home.waiting_committee'), 'waiting'],
+                ['within15_percent', __('messages.home.closed_within_15'), 'within15_numerator'],
+            ] as [$key, $label, $metric])
+                {{-- Colour only when it carries meaning: red for cases actually near the deadline, green for a measured on-time rate. --}}
+                <x-ui.stat :label="$label" :href="'/dashboard/cases?metric='.$metric.'&period=6'"
+                    :tone="match (true) { $key === 'procedure_due_48h' && ($work['counts'][$key] ?? 0) > 0 => 'red', $key === 'within15_percent' && $work['counts'][$key] !== null => 'green', default => 'gray' }"
+                    :value="$key === 'waiting' ? \App\Support\Format\Ui::number($work['counts']['waiting'] ?? 0) : ($key === 'within15_percent' ? ($work['counts'][$key] === null ? '—' : \App\Support\Format\Ui::number($work['counts'][$key]).'%') : \App\Support\Format\Ui::number($work['counts'][$key]))" />
             @endforeach
-        </div>
+        </x-ui.stats>
         <div class="grid gap-6 lg:grid-cols-3">
             <x-ui.card class="lg:col-span-2">
                 <h2 class="mb-3 text-lg font-bold text-ink">{{ __('messages.home.needs_action') }}</h2>

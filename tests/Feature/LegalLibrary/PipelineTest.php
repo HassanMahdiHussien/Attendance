@@ -55,7 +55,7 @@ test('PDF imports keep both readings and split only after all pages finish', fun
     app(TenantContext::class)->runAcrossAllCompanies(function () use ($path, $actor, $file, $fake): void {
         $law = Law::factory()->create(['kind' => 'statute', 'category' => 'labor']);
         $service = app(LawImportService::class);
-        $run = $service->start($law, $actor, new UploadedFile($path, $file, 'application/pdf', null, true), 1, 2, ImportMode::Auto);
+        $run = $service->start($law, $actor, new UploadedFile($path, $file, 'application/pdf', null, true), 1, 2, ImportMode::Auto, 'now');
         expect(fn () => $service->start($law, $actor, $path, 1, 2, ImportMode::Auto))->toThrow(ValidationException::class);
         (new RenderLegalPages($run->id, 'pdf'))->handle(app(PdfPages::class),
             app(DocxText::class), app(ArticleSplitter::class), app(AuditLogger::class));

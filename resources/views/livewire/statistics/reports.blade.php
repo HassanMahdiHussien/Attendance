@@ -36,7 +36,7 @@
             <p class="text-sm text-gray-500">{{ __('Through the end of the period') }} · {{ \App\Support\Format\Ui::date($preview['parameters']['from']) }} — {{ \App\Support\Format\Ui::date($preview['parameters']['to']) }}</p>
             @if($preview['partial'])<p class="rounded-xl bg-amber-50 p-3">{{ __('There may be other cases you cannot see') }}</p>@endif
             @if($preview['truncated'])<p class="rounded-xl bg-amber-50 p-3">{{ __('The first 1,000 rows are shown — use Excel for the full list') }}</p>@endif
-            <div class="grid gap-3 sm:grid-cols-3">@foreach($preview['summary'] as $label => $value)<x-ui.stat :label="\App\Support\Format\Ui::number($label)" :value="\App\Support\Format\Ui::number((string) ($value ?? '—'))" />@endforeach</div>
+            <x-ui.stats class="sm:grid-cols-3">@foreach($preview['summary'] as $label => $value)<x-ui.stat :label="\App\Support\Format\Ui::number($label)" :value="\App\Support\Format\Ui::number((string) ($value ?? '—'))" />@endforeach</x-ui.stats>
             @foreach($preview['sections'] as $section)
                 <h3 class="font-bold text-ink">{{ $section['title'] }}</h3>
                 <x-ui.table>

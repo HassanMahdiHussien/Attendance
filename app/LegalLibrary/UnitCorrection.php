@@ -15,7 +15,7 @@ class UnitCorrection
     public function correct(LegalUnit $unit, User $actor, string $text, string $reason): LegalUnit
     {
         abort_unless($actor->can('review', $unit->law), 403);
-        if (! in_array($unit->status->value, ['verified_auto', 'verified_human', 'verified_text'], true)
+        if (! in_array($unit->status->value, ['verified_auto', 'verified_human', 'verified_text', 'verified_single'], true)
             || $unit->superseded_by_id !== null || blank($text) || blank($reason)) {
             throw ValidationException::withMessages(['unit' => __('messages.legal.correction_required')]);
         }

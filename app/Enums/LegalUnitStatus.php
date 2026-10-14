@@ -9,5 +9,6 @@ enum LegalUnitStatus: string
     case VerifiedAuto = 'verified_auto';
     case VerifiedHuman = 'verified_human';
     case VerifiedText = 'verified_text';
+    case VerifiedSingle = 'verified_single';
     case Excluded = 'excluded';
 }

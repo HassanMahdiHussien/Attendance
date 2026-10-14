@@ -12,6 +12,7 @@ use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Schemas\Components\Utilities\Get;
@@ -57,6 +58,15 @@ class EditLaw extends EditRecord
             TextInput::make('page_to')->label(__('To page'))->numeric()->minValue(1)->live(onBlur: true),
             Select::make('mode')->label(__('Reading method'))->options(['auto' => __('Automatic'), 'text' => __('Text layer'), 'ocr' => 'OCR'])
                 ->default($this->record->import_mode)->required(),
+            Select::make('reading_mode')->label(__('AI reading mode'))
+                ->options(['batch' => __('Batch reading'), 'now' => __('Read now')])
+                ->default($this->record->kind->value === 'statute' ? 'batch' : 'now')->required(),
+            FileUpload::make('transcription')->label(__('Page transcription (JSON)'))
+                ->acceptedFileTypes(['application/json', 'text/plain'])->storeFiles(false),
+            Textarea::make('transcription_note')->label(__('Transcription source note')),
+            FileUpload::make('secondary')->label(__('Independent secondary text (PDF or TXT)'))
+                ->acceptedFileTypes(['application/pdf', 'text/plain'])->storeFiles(false),
+            Textarea::make('secondary_note')->label(__('Secondary source note')),
             Placeholder::make('range_preview')->label(__('First and last page'))
                 ->content(fn (Get $get): HtmlString => $this->previewHtml($this->record, $get('source'), $get('page_from'), $get('page_to'))),
             Checkbox::make('range_confirmed')->label(__('I verified the law starts on the first page and ends on the last')),
@@ -71,7 +81,9 @@ class EditLaw extends EditRecord
                 app(LawImportService::class)->previewPages($this->record, $data['source'] ?? null, $from, $to);
             }
             app(LawImportService::class)->start($this->record, auth()->user(), $data['source'] ?? null,
-                $from, $to, ImportMode::from($data['mode']));
+                $from, $to, ImportMode::from($data['mode']), $data['reading_mode'],
+                $data['transcription'] ?? null, $data['secondary'] ?? null,
+                $data['transcription_note'] ?? null, $data['secondary_note'] ?? null);
             $this->record->refresh();
             $this->fillForm();
         })];

@@ -38,7 +38,8 @@ class LegalImportRun extends Model
 
     protected function casts(): array
     {
-        return ['counts' => 'array', 'started_at' => 'datetime', 'finished_at' => 'datetime'];
+        return ['counts' => 'array', 'started_at' => 'datetime', 'finished_at' => 'datetime',
+            'transcription_uploaded_at' => 'datetime', 'secondary_source_uploaded_at' => 'datetime'];
     }
 
     public function law(): BelongsTo
@@ -49,5 +50,15 @@ class LegalImportRun extends Model
     public function pages(): HasMany
     {
         return $this->hasMany(LegalImportPage::class, 'run_id');
+    }
+
+    public function transcriptionUploader(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'transcription_uploaded_by');
+    }
+
+    public function secondarySourceUploader(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'secondary_source_uploaded_by');
     }
 }

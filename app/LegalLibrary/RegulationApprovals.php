@@ -17,17 +17,19 @@ class RegulationApprovals
     public function approve(LegalUnit $unit, User $actor): LegalUnitApproval
     {
         abort_unless($actor->can('review', $unit->law), 403);
-        if ($unit->law->kind->value !== 'internal_regulation'
-            || ! in_array($unit->status->value, ['verified_auto', 'verified_human', 'verified_text'], true)
-            || $unit->superseded_by_id !== null) {
-            throw ValidationException::withMessages(['unit' => __('messages.legal.regulation_approval_unavailable')]);
-        }
 
         return DB::transaction(function () use ($unit, $actor): LegalUnitApproval {
+            $unit = LegalUnit::query()->lockForUpdate()->findOrFail($unit->id);
+            if ($unit->law->kind->value !== 'internal_regulation'
+                || ! in_array($unit->status->value, ['verified_auto', 'verified_human', 'verified_text', 'verified_single'], true)
+                || $unit->superseded_by_id !== null) {
+                throw ValidationException::withMessages(['unit' => __('messages.legal.regulation_approval_unavailable')]);
+            }
             $approval = LegalUnitApproval::firstOrCreate(['legal_unit_id' => $unit->id],
                 ['company_id' => $unit->company_id, 'approved_by' => $actor->id, 'created_at' => now()]);
             if ($approval->wasRecentlyCreated) {
-                $this->audit->log('legal_unit.approved', $unit, ['approval_id' => $approval->id], $actor);
+                $this->audit->log('legal_unit.approved', $unit, ['approval_id' => $approval->id,
+                    'method' => $unit->status->value === 'verified_single' ? 'single_reading' : 'verified_unit'], $actor);
             }
 
             return $approval;
