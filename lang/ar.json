@@ -747,5 +747,10 @@
     "Name in :language": "الاسم بلغة :language",
     "Sort order": "ترتيب العرض",
     "Arabic and English names are required": "الاسمان بالعربية والإنجليزية مطلوبان",
-    "Names must be 255 characters or fewer": "يجب ألا يزيد الاسم عن 255 حرفاً"
+    "Names must be 255 characters or fewer": "يجب ألا يزيد الاسم عن 255 حرفاً",
+    "You do not have access to this page": "ليست لديك صلاحية لفتح هذه الصفحة",
+    "Your account cannot open this page. If you think it should, ask your company admin to change your access.": "لا يمكن لحسابك فتح هذه الصفحة. إذا كنت ترى أنه يجب أن يتمكن من ذلك، فاطلب من مدير الشركة تعديل صلاحياتك.",
+    "Signed in as": "تم تسجيل الدخول باسم",
+    "Go to my work": "الذهاب إلى عملي اليوم",
+    "Sign in with another account": "تسجيل الدخول بحساب آخر"
 }

@@ -48,6 +48,9 @@ Route::get('/', function () {
 });
 
 Route::middleware('guest')->get('/login', Login::class)->name('login');
+// One sign-in page for every role: the admin panels have no login of their own (old bookmarks still work).
+Route::redirect('/admin/login', '/login');
+Route::redirect('/platform/login', '/login');
 Route::post('/locale', LocaleController::class)->name('locale.update');
 
 Route::middleware('auth')->group(function (): void {

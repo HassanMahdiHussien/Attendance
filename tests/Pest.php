@@ -19,6 +19,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Pest\Browser\Api\PendingAwaitablePage;
+use Pest\Browser\Api\Webpage;
 use Tests\Fakes\FakePageReader;
 use Tests\TestCase;
 
@@ -30,7 +32,7 @@ pest()->extend(TestCase::class)
         Bus::fake([GenerateDocumentPdf::class]);
         app()->bind(PageReader::class, FakePageReader::class);
     })
-    ->in('Feature');
+    ->in('Feature', 'Browser');
 
 function actingInAdminTenant(TestCase $test, User $user, Company $company): void
 {
@@ -99,3 +101,48 @@ function livewireSnapshotForComponent(string $html, string $componentClass): str
 
     throw new RuntimeException("Snapshot for {$componentClass} was not rendered.");
 }
+
+/**
+ * Browser page whose fill() waits until Livewire has bound the input (Alpine's _x_model), then types and re-types
+ * once if Livewire's boot wiped the value. Typing straight after a wire:navigate swap or a fresh load raced that boot.
+ */
+final class BoundPage
+{
+    public function __construct(private object $page) {}
+
+    public function fill(string $field, string $value): self
+    {
+        $selector = json_encode($field);
+        $find = "document.getElementById({$selector}) || document.querySelector('[name=' + JSON.stringify({$selector}) + ']')";
+        $deadline = microtime(true) + 10;
+        while (! $this->page->script("() => { const el = {$find}; return !! (el && el._x_model); }")) {
+            if (microtime(true) > $deadline) {
+                throw new RuntimeException("Input [{$field}] was never bound by Livewire.");
+            }
+            usleep(100_000);
+        }
+        $this->page->fill($field, $value);
+        if ($this->page->script("() => ({$find}).value") !== $value) {
+            $this->page->fill($field, $value);
+        }
+
+        return $this;
+    }
+
+    public function __call(string $method, array $arguments): mixed
+    {
+        $result = $this->page->{$method}(...$arguments);
+
+        return $result instanceof Webpage || $result instanceof PendingAwaitablePage
+            ? new self($result) : $result;
+    }
+}
+
+function visitBound(string $url): BoundPage
+{
+    return new BoundPage(visit($url));
+}
+
+// Locally the app is read through Docker's slow Windows drive mount, where a first page load can exceed Playwright's
+// 5 s default; allow 20 s so browser tests fail on behaviour, not on the dev filesystem.
+pest()->browser()->timeout(20_000);
