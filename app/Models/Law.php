@@ -57,6 +57,7 @@ class Law extends Model
             'kind' => LawKind::class,
             'approval_status' => LawApprovalStatus::class,
             'requires_page_range' => 'boolean',
+            'text_layer_fixes' => 'array',
         ];
     }
 

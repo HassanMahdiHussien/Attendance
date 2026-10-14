@@ -30,7 +30,7 @@ class LegalImportPage extends Model
 
     protected function casts(): array
     {
-        return ['ai_illegible' => 'boolean'];
+        return ['ai_illegible' => 'boolean', 'text_repairs' => 'array'];
     }
 
     public function run(): BelongsTo

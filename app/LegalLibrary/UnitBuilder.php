@@ -141,6 +141,10 @@ class UnitBuilder
                 'local_pages' => $pages->where('ai_status', 'skipped')->count(),
                 'ai_pages' => $pages->filter(fn ($page) => in_array($page->ai_source, ['api', 'api_batch'], true))->count(),
                 'failed_pages' => $pages->filter(fn ($page) => $page->text_status === 'failed' || $page->ai_status === 'failed')->count(),
+                ...($pages->contains(fn ($page): bool => $page->text_repairs !== null) ? [
+                    'text_repair_mirrored_brackets' => $pages->sum(fn ($page): int => $page->text_repairs['mirrored_brackets'] ?? 0),
+                    'text_repair_kaf_from_alef_madda' => $pages->sum(fn ($page): int => $page->text_repairs['kaf_from_alef_madda'] ?? 0),
+                ] : []),
             ]]);
             $this->audit->log('legal_import.completed', $run);
         });

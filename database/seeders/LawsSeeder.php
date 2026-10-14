@@ -34,11 +34,16 @@ class LawsSeeder extends Seeder
                     'number' => $number,
                     'year' => $year,
                     'source_file_path' => $source,
-                    // Law 37's text layer is garbage and Law 71's maps ك to آ; OCR reads both correctly (research R14).
-                    'import_mode' => in_array($number, ['37', '71'], true) ? 'ocr' : 'auto',
+                    'import_mode' => $number === '37' ? 'ocr' : ($number === '71' ? 'text' : 'auto'),
+                    'text_layer_fixes' => $number === '71' ? ['mirrored_brackets', 'kaf_from_alef_madda'] : null,
                     'requires_page_range' => $number === '18' && $year === 2023,
                     'approval_status' => LawApprovalStatus::Approved,
                 ]);
+
+                if ($number === '71') {
+                    $law->update(['import_mode' => 'text',
+                        'text_layer_fixes' => ['mirrored_brackets', 'kaf_from_alef_madda']]);
+                }
 
                 foreach ($jurisdictions as $jurisdiction) {
                     LawJurisdiction::firstOrCreate(['law_id' => $law->id, 'jurisdiction' => $jurisdiction]);
