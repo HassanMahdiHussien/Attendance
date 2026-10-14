@@ -141,3 +141,11 @@ test('cross-references, wrapped amounts and numbered items inside a letter do no
     expect(array_values(array_filter(array_column($units, 'clause_path'))))->toContain('129/ثانياً')
         ->and(collect($units)->pluck('tags')->pluck('mismatch_reason')->filter()->all())->toBe([]);
 });
+
+test('an article heading standing alone at the top of every page is structure, not a running header', function (): void {
+    $pages = [];
+    foreach ([32 => 'لا يجوز تحديد مدة للعقد', 33 => 'اذا حضر العامل مقر العمل', 34 => 'يلتزم صاحب العمل بما يأتي', 35 => 'للعامل الحق في الاجازة'] as $article => $body) {
+        $pages[$article] = "المادة {$article}\n{$body}";
+    }
+    expect((new PageFurniture)->strip($pages))->toBe($pages);
+});
