@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-14T12:00:00+03:00",
+  "title": "Design System: Displanery",
+  "extensions": {
+    "colorMeta": {
+      "night": { "role": "neutral", "displayName": "Station Night", "canonical": "#0E1A2B" },
+      "night-strip": { "role": "neutral", "displayName": "Board Strip", "canonical": "#16263D" },
+      "signal-amber": { "role": "primary", "displayName": "Signal Amber", "canonical": "#F2B33D" },
+      "route-navy": { "role": "secondary", "displayName": "Route Navy", "canonical": "#1D3A63" },
+      "working-ground": { "role": "neutral", "displayName": "Working Ground", "canonical": "#F2F4F7" },
+      "overdue-red": { "role": "state", "displayName": "Overdue Red", "canonical": "#C2272D" },
+      "done-green": { "role": "state", "displayName": "Done Green", "canonical": "#1F7A58" }
+    },
+    "typographyMeta": {
+      "numeral": { "displayName": "Numeral", "purpose": "Case number in the departures strip." },
+      "countdown": { "displayName": "Countdown", "purpose": "Split-flap countdown chips." },
+      "document": { "displayName": "Document", "purpose": "Legal document previews only." }
+    },
+    "shadows": [
+      { "name": "panel-rest", "value": "0 1px 2px rgb(14 26 43 / .05)", "purpose": "Every light panel." },
+      { "name": "board-lift", "value": "0 8px 24px -12px rgb(14 26 43 / .45)", "purpose": "The departures strip." },
+      { "name": "menu", "value": "0 12px 32px -8px rgb(14 26 43 / .28)", "purpose": "Dropdowns and the account menu." }
+    ],
+    "motion": [
+      { "name": "state", "value": "150ms ease-out", "purpose": "Colour and opacity changes on hover, focus and menus." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The single primary action on a screen.",
+      "html": "<button class=\"ds-btn-primary\">Open step</button>",
+      "css": ".ds-btn-primary { background: #F2B33D; color: #0E1A2B; font: 600 14px 'Readex Pro', sans-serif; min-height: 40px; padding: 10px 16px; border: 0; border-radius: 8px; transition: background-color .15s; } .ds-btn-primary:hover { background: #DE9A1A; } .ds-btn-primary:focus-visible { outline: 2px solid #1D3A63; outline-offset: 2px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Repeated list actions and secondary choices.",
+      "html": "<button class=\"ds-btn-secondary\">Open task</button>",
+      "css": ".ds-btn-secondary { background: #fff; color: #14181F; font: 600 14px 'Readex Pro', sans-serif; min-height: 40px; padding: 10px 16px; border: 1px solid #DDE1E7; border-radius: 8px; transition: background-color .15s; } .ds-btn-secondary:hover { background: #F9FAFB; } .ds-btn-secondary:focus-visible { outline: 2px solid #1D3A63; outline-offset: 2px; }"
+    },
+    {
+      "name": "Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Text, select and date fields.",
+      "html": "<input class=\"ds-input\" placeholder=\"Search by name or case number\">",
+      "css": ".ds-input { background: #fff; color: #14181F; font: 400 14px 'Readex Pro', sans-serif; min-height: 40px; padding: 8px 12px; border: 1px solid #DDE1E7; border-radius: 8px; caret-color: #1D3A63; } .ds-input:focus-visible { outline: 2px solid #1D3A63; outline-offset: 2px; }"
+    },
+    {
+      "name": "Countdown Chip",
+      "kind": "chip",
+      "refersTo": "countdown-chip",
+      "description": "Split-flap countdown for a legal deadline.",
+      "html": "<span class=\"ds-flap\">24 days remaining</span> <span class=\"ds-flap ds-flap-late\">Overdue</span> <span class=\"ds-flap ds-flap-ok\">Done</span>",
+      "css": ".ds-flap { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 4px; font: 500 12.8px 'JetBrains Mono', monospace; letter-spacing: .025em; text-transform: uppercase; color: #E8EDF5; background: linear-gradient(to bottom, #0A1422 0 49%, #050B14 49% 51%, #0A1422 51% 100%); font-variant-numeric: tabular-nums; } .ds-flap-late { color: #FF8A8D; } .ds-flap-ok { color: #7ED7B5; }"
+    },
+    {
+      "name": "Top Bar",
+      "kind": "nav",
+      "refersTo": "top-bar",
+      "description": "Midnight navigation bar with the current page in amber.",
+      "html": "<nav class=\"ds-topbar\"><a>My work</a><a class=\"ds-on\">Cases</a><a>Reports inbox</a></nav>",
+      "css": ".ds-topbar { display: flex; height: 64px; align-items: stretch; gap: 4px; padding: 0 24px; background: #0E1A2B; font: 500 14px 'Readex Pro', sans-serif; } .ds-topbar a { display: flex; align-items: center; padding: 0 10px; color: #A9B6C9; text-decoration: none; position: relative; } .ds-topbar a:hover { color: #fff; } .ds-topbar a.ds-on { color: #F2B33D; box-shadow: inset 0 -3px 0 #F2B33D; }"
+    },
+    {
+      "name": "Route Rail",
+      "kind": "custom",
+      "description": "Five case stages as stations on one line.",
+      "html": "<ol class=\"ds-rail\"><li class=\"ds-done\">Opened</li><li class=\"ds-done\">Defense letter</li><li class=\"ds-now\">Response</li><li>Committee</li><li>Decision</li></ol>",
+      "css": ".ds-rail { display: grid; grid-template-columns: repeat(5, 1fr); list-style: none; padding: 0; font: 400 13px 'Readex Pro', sans-serif; color: #9CA3AF; text-align: center; } .ds-rail li::before { content: ''; display: block; width: 22px; height: 22px; margin: 0 auto 8px; border-radius: 50%; border: 3px solid #DDE1E7; background: #fff; } .ds-rail .ds-done { color: #4B5563; } .ds-rail .ds-done::before { border-color: #0E1A2B; background: #0E1A2B; } .ds-rail .ds-now { color: #14181F; font-weight: 600; } .ds-rail .ds-now::before { border-color: #F2B33D; background: #F2B33D; box-shadow: 0 0 0 4px #FDF3DD; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Baghdad Central Departures",
+    "overview": "Displanery reads like the departures board at Baghdad Central Station. A disciplinary case is a timetable: what is due next, from which stage, and how long until it leaves. The midnight board hangs overhead; everything below it is a calm, light working ground.",
+    "keyCharacteristics": [
+      "Midnight shell overhead, light #F2F4F7 working ground below.",
+      "Deadlines are always the most visible thing on a working screen.",
+      "Amber appears at most twice per screen: the current station and the primary action.",
+      "One interface family (Readex Pro) for Arabic and Latin; JetBrains Mono only for numbers that are measured or counted.",
+      "Right-to-left is native: every layout mirrors with logical properties."
+    ],
+    "rules": [
+      { "name": "The Two Amber Points Rule", "body": "On any screen, signal amber appears on at most the current stage and the one primary action. Repeated list actions use the secondary button.", "section": "colors" },
+      { "name": "The Meaning-Only State Rule", "body": "Red, green and ochre appear only where they carry a deadline or status meaning, never as decoration.", "section": "colors" },
+      { "name": "The Measured Mono Rule", "body": "Mono is for numbers that are counted or measured (case numbers, dates, countdowns, counts), never for labels or decoration.", "section": "typography" },
+      { "name": "The No Eyebrow Rule", "body": "No small uppercase kicker above a heading; the heading speaks for itself.", "section": "typography" }
+    ],
+    "dos": [
+      "Do put the deadlines of a case or list first, as a departures strip or board with countdown chips.",
+      "Do keep amber to the current station and the single primary action (The Two Amber Points Rule).",
+      "Do set every case number, date and countdown in JetBrains Mono with tabular figures.",
+      "Do use logical properties so every layout mirrors for Arabic."
+    ],
+    "donts": [
+      "Don't use a generic SaaS look: purple gradients, oversized rounded cards, glassy surfaces.",
+      "Don't use playful or decorative colour; colour carries state or action only.",
+      "Don't imitate old government styling (heavy borders, seals, crests).",
+      "Don't cram content: keep 20px panel padding and readable line lengths.",
+      "Don't put a small uppercase eyebrow above a heading."
+    ]
+  }
+}

@@ -11,16 +11,22 @@
     @php($filterQuery = ['branch' => $this->branch, 'period' => $this->period, 'from' => $this->from, 'to' => $this->to])
     <section class="space-y-3">
         <h2 class="text-lg font-extrabold text-ink">{{ __('Deadline alerts') }}</h2>
-        @forelse($alerts as $alert)
-            @php($label = match($alert['type']) {'procedure_approaching' => __('Procedure deadline approaches'), 'procedure_overdue' => __('Procedure deadline passed'), 'response_approaching' => __('Response deadline approaches'), 'response_missed' => __('Response deadline passed'), 'consultation_pending' => __('Legal consultation pending'), default => __('Appeal window ends soon')})
-            <a href="/cases/{{ $alert['case']->id }}" class="block rounded-2xl border border-red-100 bg-red-light p-4 font-semibold text-red-700 hover:shadow-sm">
-                {{ $label }} · <bdi>{{ \App\Support\Format\Ui::number($alert['case']->case_number) }}</bdi> · {{ $alert['case']->employee?->name }}
-                @if($alert['due']) · {{ \App\Support\Format\Ui::date($alert['due']) }} · {{ $alert['remaining_hours'] >= 0 ? __('Remaining') : __('Overdue') }} {{ abs($alert['remaining_hours']) > 48 ? __(':count days', ['count' => \App\Support\Format\Ui::number(intdiv(abs($alert['remaining_hours']), 24))]) : __(':count hours', ['count' => \App\Support\Format\Ui::number(abs($alert['remaining_hours']))]) }} @endif
-                @if($alert['waiting_days'] !== null) · {{ __('Since :count days', ['count' => \App\Support\Format\Ui::number($alert['waiting_days'])]) }} @endif
-            </a>
-        @empty
+        @if(count($alerts))
+            {{-- Departures board: every case close to or past a legal deadline, soonest first as delivered. --}}
+            <div class="overflow-hidden rounded-xl bg-night-2 text-white">
+                @foreach($alerts as $alert)
+                    @php($label = match($alert['type']) {'procedure_approaching' => __('Procedure deadline approaches'), 'procedure_overdue' => __('Procedure deadline passed'), 'response_approaching' => __('Response deadline approaches'), 'response_missed' => __('Response deadline passed'), 'consultation_pending' => __('Legal consultation pending'), default => __('Appeal window ends soon')})
+                    <a href="/cases/{{ $alert['case']->id }}" class="grid grid-cols-[4.5rem_1fr_auto] items-center gap-4 border-t border-night-line px-5 py-3 first:border-t-0 hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-signal sm:grid-cols-[4.5rem_1fr_1fr_auto]">
+                        <bdi class="font-mono text-sm font-bold text-signal">{{ \App\Support\Format\Ui::number(str_pad($alert['case']->case_number, 4, '0', STR_PAD_LEFT)) }}</bdi>
+                        <span class="min-w-0"><span class="block truncate font-medium" dir="auto">{{ $alert['case']->employee?->name }}</span><span class="block truncate text-xs text-night-soft sm:hidden">{{ $label }}</span></span>
+                        <span class="hidden truncate text-sm text-night-soft sm:block">{{ $label }}@if($alert['due']) · <bdi class="font-mono">{{ \App\Support\Format\Ui::date($alert['due']) }}</bdi>@endif</span>
+                        <span class="flap {{ ($alert['remaining_hours'] ?? 0) < 0 ? 'flap-late' : 'flap-soon' }}">@if($alert['due']){{ $alert['remaining_hours'] >= 0 ? '' : __('Overdue').' ' }}{{ abs($alert['remaining_hours']) > 48 ? __(':count days', ['count' => \App\Support\Format\Ui::number(intdiv(abs($alert['remaining_hours']), 24))]) : __(':count hours', ['count' => \App\Support\Format\Ui::number(abs($alert['remaining_hours']))]) }}@elseif($alert['waiting_days'] !== null){{ __('Since :count days', ['count' => \App\Support\Format\Ui::number($alert['waiting_days'])]) }}@endif</span>
+                    </a>
+                @endforeach
+            </div>
+        @else
             <x-ui.card><x-ui.empty :title="__('No alerts currently.')" /></x-ui.card>
-        @endforelse
+        @endif
     </section>
     <section class="space-y-3">
         <h2 class="text-lg font-extrabold text-ink">{{ __('Metrics') }}</h2>

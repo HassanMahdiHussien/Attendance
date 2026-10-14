@@ -78,16 +78,16 @@
                     @forelse($work['actions'] as $row)
                         <div class="flex flex-wrap items-center gap-3 py-4">
                             @if(isset($row['case']))
-                                <x-ui.badge :tone="$row['action']->deadlineAlert ?? 'indigo'"><bdi class="font-mono">{{ $row['action']->due ? \App\Support\Format\Ui::date($row['action']->due) : __('messages.home.ready') }}</bdi></x-ui.badge>
+                                <span class="flap min-w-[7.5rem] justify-center {{ ($row['action']->deadlineAlert ?? null) === 'red' ? 'flap-late' : (($row['action']->deadlineAlert ?? null) === 'amber' ? 'flap-soon' : '') }}"><bdi>{{ $row['action']->due ? \App\Support\Format\Ui::date($row['action']->due) : __('messages.home.ready') }}</bdi></span>
                                 <div class="min-w-0 flex-1">
-                                    <div class="font-bold">{{ $row['case']->employee?->name }} <bdi class="font-mono text-xs text-gray-500">#{{ \App\Support\Format\Ui::number($row['case']->case_number) }}</bdi></div>
+                                    <div class="font-semibold"><bdi class="me-2 font-mono text-sm text-primary">{{ \App\Support\Format\Ui::number(str_pad($row['case']->case_number, 4, '0', STR_PAD_LEFT)) }}</bdi>{{ $row['case']->employee?->name }}</div>
                                     <p class="text-sm text-gray-500">{{ $row['action']->label }}</p>
                                 </div>
-                                <x-ui.button size="small" :href="$row['action']->url">{{ __('messages.home.open_task') }}</x-ui.button>
+                                <x-ui.button size="small" variant="secondary" :href="$row['action']->url">{{ __('messages.home.open_task') }}</x-ui.button>
                             @else
-                                <x-ui.badge tone="indigo">{{ __('messages.home.new') }}</x-ui.badge>
+                                <span class="flap flap-soon min-w-[7.5rem] justify-center">{{ __('messages.home.new') }}</span>
                                 <div class="min-w-0 flex-1"><div class="font-semibold">{{ $row['label'] }}</div>@if(filled($row['summary'] ?? null))<p dir="auto" class="truncate text-sm text-gray-500">{{ $row['summary'] }}</p>@endif</div>
-                                <x-ui.button size="small" :href="$row['url']">{{ __('messages.home.review') }}</x-ui.button>
+                                <x-ui.button size="small" variant="secondary" :href="$row['url']">{{ __('messages.home.review') }}</x-ui.button>
                             @endif
                         </div>
                     @empty

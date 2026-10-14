@@ -3,40 +3,61 @@
 @source '../../../app/Filament/**/*';
 @source '../../views/filament/**/*';
 
+/* Departures world, matching the workspace (resources/css/app.css): midnight top bar, light working ground,
+   signal amber only for the primary action and the current item. */
 @theme {
-    --font-sans: 'Tajawal', sans-serif;
-    --color-primary-600: #4F46E5;
-    --color-warning-500: #F59E0B;
-    --color-danger-500: #EF4444;
-    --color-success-500: #10B981;
+    --font-sans: 'Readex Pro', sans-serif;
 }
 
 :root {
-    --status-pending: #F59E0B;
-    --status-urgent: #EF4444;
-    --status-complete: #10B981;
+    --dp-night: #0E1A2B;
+    --dp-night-line: #26384F;
+    --dp-night-soft: #A9B6C9;
+    --dp-signal: #F2B33D;
+    --dp-signal-dark: #DE9A1A;
+    --dp-ink: #14181F;
+    --dp-bg: #F2F4F7;
+    --dp-line: #DDE1E7;
+    --dp-primary: #1D3A63;
+    --dp-primary-light: #E6ECF5;
 }
 
-.fi-body { background: #F7F8FB; color: #111827; font-family: 'Tajawal', sans-serif; }
-.fi-sidebar { background: #fff; border-inline-end: 1px solid #E5E7EB; }
-.fi-topbar { background: #fff; border-bottom: 1px solid #E5E7EB; }
+.fi-body { background: var(--dp-bg); color: var(--dp-ink); font-family: 'Readex Pro', sans-serif; }
+
+/* Top bar: the station board overhead. */
+.fi-topbar { background: var(--dp-night) !important; border-bottom: 0 !important; box-shadow: none !important; color: #fff; }
+.fi-topbar .fi-logo, .fi-topbar .fi-tenant-menu-trigger { color: #fff; }
+.fi-topbar-item-btn { color: var(--dp-night-soft) !important; background: transparent !important; border-radius: .375rem; }
+.fi-topbar-item-btn:hover { color: #fff !important; }
+.fi-topbar-item-icon, .fi-topbar-group-toggle-icon, .fi-topbar-item-label { color: currentColor !important; }
+.fi-topbar-item.fi-active > .fi-topbar-item-btn { color: var(--dp-signal) !important; box-shadow: inset 0 -3px 0 var(--dp-signal); border-radius: 0; }
+.fi-topbar-item.fi-active .fi-topbar-item-label, .fi-topbar-item.fi-active .fi-topbar-item-icon { color: var(--dp-signal) !important; }
+.fi-topbar .fi-tenant-menu-trigger:hover, .fi-topbar .fi-tenant-menu-trigger:focus-visible { background: rgb(255 255 255 / .06) !important; }
+.fi-topbar .fi-tenant-menu-trigger-tenant-name { color: #fff !important; }
+.fi-topbar .fi-tenant-menu-trigger-current-tenant-label { color: var(--dp-night-soft) !important; }
+.fi-topbar .fi-tenant-menu-trigger .fi-icon { color: var(--dp-night-soft) !important; }
+.fi-topbar-nav-groups > .fi-topbar-item > .fi-dropdown-trigger > button, .fi-topbar-nav-groups > .fi-topbar-item > button { color: var(--dp-night-soft) !important; }
+.fi-topbar .fi-icon-btn { color: var(--dp-night-soft); }
+.fi-topbar .fi-icon-btn:hover { color: #fff; }
+
+/* Working surfaces. */
 .fi-section, .fi-wi-stats-overview-stat, .fi-ta-ctn {
     background: #fff;
-    border: 1px solid #E5E7EB;
-    border-radius: 1.25rem;
-    box-shadow: 0 1px 2px rgba(17, 24, 39, .04), 0 8px 24px -12px rgba(17, 24, 39, .08);
+    border: 1px solid var(--dp-line);
+    border-radius: .75rem;
+    box-shadow: 0 1px 2px rgb(14 26 43 / .05);
 }
-.fi-btn { border-radius: 1rem; }
-.fi-btn.fi-color-primary { box-shadow: 0 10px 15px -3px rgba(79, 70, 229, .18); }
-.fi-input-wrp, .fi-select-input, .fi-ta-search-field { border-radius: .75rem; border-color: #E5E7EB; }
-.fi-sidebar-item.fi-active > .fi-sidebar-item-btn { background: #EEF0FE; color: #4F46E5; }
-.fi-avatar { background: #EEF0FE; color: #4F46E5; }
-.fi-sidebar-group-label { color: #6B7280; font-weight: 700; }
-/* Filament derives button shades from contrast via inline variables and picked a pale indigo with dark text;
-   force the workspace's solid indigo primary button (§18). */
+.fi-input-wrp, .fi-select-input, .fi-ta-search-field { border-radius: .5rem; border-color: var(--dp-line); }
+.fi-dropdown-panel { border-radius: .75rem; box-shadow: 0 12px 32px -8px rgb(14 26 43 / .28); }
+.fi-btn { border-radius: .5rem; font-weight: 600; }
+.fi-ta-table { font-variant-numeric: tabular-nums; }
+::selection { background: var(--dp-signal); color: var(--dp-night); }
+
+/* Filament derives button shades from contrast via inline variables; force the workspace's signal-amber
+   primary action with midnight text. */
 .fi-btn.fi-color-primary:not(.fi-outlined):not(label) {
-    --bg: #4F46E5 !important;
-    --text: #fff !important;
-    --hover-bg: #4338CA !important;
-    --hover-text: #fff !important;
+    --bg: var(--dp-signal) !important;
+    --text: var(--dp-night) !important;
+    --hover-bg: var(--dp-signal-dark) !important;
+    --hover-text: var(--dp-night) !important;
 }

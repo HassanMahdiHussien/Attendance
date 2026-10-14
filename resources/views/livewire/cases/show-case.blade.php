@@ -19,8 +19,6 @@
 <p class="whitespace-pre-wrap mt-2">{{ $record->legal_review_note }}</p>
 </div>
 @endif
-    @if($record->minutes_typed_by_pool_member_id)<p class="ui-card p-4 text-sm">{{ __('Session minutes written by: :name', ['name' => \App\Models\CommitteePoolMember::query()->find($record->minutes_typed_by_pool_member_id)?->person_name]) }}</p>
-@endif
     @if($record->status === \App\Enums\CaseStatus::AwaitingCommitteeSignatures)
         @foreach($signatureChecks->where('presence_check', \App\Enums\PresenceCheck::BoxAppearsEmpty) as $check)
             <p role="alert" class="rounded-2xl bg-red-light p-4 text-red-700">{{ $check->signer_name }} — {{ \App\Services\Cases\PresenceWording::choice('empty') }}. {{ __('Upload a new scan or record an override reason.') }}</p>
@@ -48,9 +46,9 @@
     <header class="overflow-hidden rounded-xl bg-night-2 text-white shadow-[0_8px_24px_-12px_rgb(14_26_43/0.45)]">
         <div class="grid gap-6 p-5 sm:p-6 lg:grid-cols-[17rem_1fr]">
             <div class="min-w-0">
-                <p class="text-xs font-medium uppercase tracking-[0.14em] text-night-soft">{{ __('Case') }}</p>
-                <p class="mt-1 font-mono text-[2.75rem] font-bold leading-none text-signal"><bdi>{{ \App\Support\Format\Ui::number(str_pad($record->case_number, 4, '0', STR_PAD_LEFT)) }}</bdi></p>
+                <p class="font-mono text-[2.75rem] font-bold leading-none text-signal"><span class="sr-only">{{ __('Case') }} </span><bdi>{{ \App\Support\Format\Ui::number(str_pad($record->case_number, 4, '0', STR_PAD_LEFT)) }}</bdi></p>
                 <h1 class="mt-3 text-xl font-semibold leading-snug" dir="auto">{{ $record->employee?->name }}</h1>
+                @if($record->minutes_typed_by_pool_member_id)<p class="mt-1 text-xs text-night-soft">{{ __('Session minutes written by: :name', ['name' => \App\Models\CommitteePoolMember::query()->find($record->minutes_typed_by_pool_member_id)?->person_name]) }}</p>@endif
                 <p class="mt-1 text-sm text-night-soft" dir="auto">{{ \App\Support\Format\Violation::name($record) }} · {{ $record->employee?->position }}</p>
                 <div class="mt-3 flex flex-wrap items-center gap-3">
                     <span class="rounded bg-night-line px-2 py-0.5 text-xs font-medium">{{ \App\Support\Format\Ui::stage($record->status) }}</span>
@@ -106,8 +104,8 @@
                 };
             @endphp
             <section class="rounded-xl bg-night p-5 text-white" aria-label="{{ __('messages.search.next_step') }}">
-                <p class="text-xs font-medium uppercase tracking-[0.14em] text-night-soft">{{ __('messages.search.next_step') }} · {{ $nextActorLabel }}</p>
-                <h2 class="mt-2 text-lg font-semibold leading-snug">{{ $nextAction->label }}</h2>
+                <h2 class="text-lg font-semibold leading-snug">{{ $nextAction->label }}</h2>
+                <p class="mt-1 text-sm text-night-soft">{{ $nextActorLabel }}</p>
                 @if($nextAction->due)
                     <div class="mt-3 flex flex-wrap items-center gap-2 text-sm text-night-soft"><span>{{ __('messages.search.due') }} <bdi class="font-mono text-white">{{ \App\Support\Format\Ui::date($nextAction->due) }}</bdi></span>
                         @if($nextAction->deadlineAlert)<span class="flap {{ $nextAction->deadlineAlert === 'red' ? 'flap-late' : 'flap-soon' }}">{{ $nextAction->deadlineAlert === 'red' ? __('Overdue') : __('Approaching') }}</span>@endif
@@ -375,7 +373,7 @@
 <h2 class="text-lg font-black mb-4">{{ __('Documents and versions') }}</h2>
 @php $documentItems = $record->documents->sortByDesc('created_at')->values()->map(fn ($row) => \App\Support\Files\FileItem::forDocument($row))->all(); @endphp
 @forelse($record->documents->sortByDesc('created_at')->values() as $document)<div class="border-t py-4 flex flex-wrap items-center gap-3">
-<div class="flex-1">
+<div class="min-w-0 basis-full sm:basis-0 sm:flex-1">
 <strong>{{ $documentTypes[$document->document_type->value] ?? __('Document') }} — {{ __('Version') }} {{ \App\Support\Format\Ui::number($document->version) }}</strong> @if($document->drafted_by === \App\Enums\DraftedBy::Ai)<span class="rounded-full bg-primary-light text-primary px-2 py-1 text-xs font-bold">AI</span>@endif <p class="text-sm text-gray-500">{{ $documentStatuses[$document->status->value] ?? __('Document') }} · {{ ! $document->is_locked ? __('PDF after issuance') : ($document->pdf_status === 'ready' ? __('PDF ready') : ($document->pdf_status === 'failed' ? __('Could not prepare PDF') : __('PDF preparing'))) }}</p>
 </div>
 @if($document->pdf_status === 'ready')<x-ui.button href="{{ route('documents.pdf', $document) }}" variant="secondary">{{ __('Download PDF') }}</x-ui.button>@endif <x-ui.file-action :item="$documentItems[$loop->index]" :items="$documentItems" :index="$loop->index" :show-download="false" /> @if($canManage && $document->is_locked)<input wire:model="correctionReason" placeholder="{{ __('Correction reason') }}" class="ui-control rounded-xl border p-2">
