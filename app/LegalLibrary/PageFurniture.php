@@ -28,6 +28,9 @@ class PageFurniture
         foreach ($pages as $text) {
             $lines = $this->lines($text);
             $edges = array_merge(array_slice($lines, 0, self::EDGE_LINES), array_slice($lines, -self::EDGE_LINES));
+            // A heading standing alone ("المادة 32") also repeats near page edges once its digits are masked; it is
+            // structure, never furniture.
+            $edges = array_filter($edges, fn (string $line) => ! preg_match('/^\s*(?:المادة|مادة|الفصل|الباب|الفرع)\b/u', $line));
             foreach (array_unique(array_map(fn (string $line) => $this->key($line), $edges)) as $key) {
                 $counts[$key] = ($counts[$key] ?? 0) + 1;
             }
