@@ -30,11 +30,16 @@ class TextNormalizer
     }
 
     /**
-     * The form two readings are compared in. A dash only separates a clause marker or heading from its text, and
-     * readings disagree on whether it is "-", "–" or a run of tatweel, so the words are compared without it.
+     * The form two readings are compared in: words and numbers only. Separators and punctuation (dashes, commas,
+     * colons, full stops, brackets) are dropped because right-to-left text layers move them across words and digits
+     * ("واحدة ،اذا", "( )14من"), and a missing space between a number and a word is ignored. A space between two
+     * numbers is kept, so "1 50" never matches "150".
      */
     public function comparable(string $text): string
     {
-        return trim(preg_replace(['/[\-–]+/u', '/\s+/u'], [' ', ' '], $this->normalize($text)));
+        $text = preg_replace('/[\-–,:;.()«»"\'!?]+/u', ' ', $this->normalize($text));
+        $text = preg_replace(['/(?<=\d)\s*(?=\p{Arabic})/u', '/(?<=\p{Arabic})\s*(?=\d)/u'], [' ', ' '], $text);
+
+        return trim(preg_replace('/\s+/u', ' ', $text));
     }
 }

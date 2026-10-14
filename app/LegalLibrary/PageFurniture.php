@@ -2,6 +2,8 @@
 
 namespace App\LegalLibrary;
 
+use App\Support\Text\ArabicText;
+
 /**
  * Removes running headers and footers (gazette title, issue number, page number, date) from page readings.
  * A line counts as furniture when, with its digits masked, it sits in the first or last three lines of at least
@@ -30,7 +32,7 @@ class PageFurniture
             $edges = array_merge(array_slice($lines, 0, self::EDGE_LINES), array_slice($lines, -self::EDGE_LINES));
             // A heading standing alone ("المادة 32") also repeats near page edges once its digits are masked; it is
             // structure, never furniture.
-            $edges = array_filter($edges, fn (string $line) => ! preg_match('/^\s*(?:المادة|مادة|الفصل|الباب|الفرع)\b/u', $line));
+            $edges = array_filter($edges, fn (string $line) => ! preg_match('/^(?:المادة|مادة|الفصل|الباب|الفرع)(?!\p{L})/u', ArabicText::normalize($line)));
             foreach (array_unique(array_map(fn (string $line) => $this->key($line), $edges)) as $key) {
                 $counts[$key] = ($counts[$key] ?? 0) + 1;
             }
@@ -53,6 +55,7 @@ class PageFurniture
 
     private function key(string $line): string
     {
-        return preg_replace(['/[0-9\x{0660}-\x{0669}\x{06F0}-\x{06F9}]+/u', '/\s+/u'], ['#', ' '], trim($line));
+        // Normalised first: text layers may store Arabic as presentation forms with bidi controls around digits.
+        return preg_replace(['/[0-9\x{0660}-\x{0669}\x{06F0}-\x{06F9}]+/u', '/\s+/u'], ['#', ' '], ArabicText::normalize($line));
     }
 }
