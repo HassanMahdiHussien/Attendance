@@ -37,14 +37,38 @@ test('settings links follow registered page and resource access for the current 
     }
 });
 
-test('settings navigation does not offer a panel route to an excluded role', function (): void {
+test('a company lawyer with the review permission is offered only the internal regulation page', function (): void {
     $company = Company::factory()->create();
     $user = User::factory()->create(['primary_role' => UserRole::CommitteeMember, 'company_id' => $company->id]);
     Permission::findOrCreate('review_internal_regulation', 'web');
     $user->givePermissionTo('review_internal_regulation');
     $this->actingAs($user);
+    app(TenantContext::class)->setCompany($company);
 
-    expect(AdminNav::items($user))->toBe([]);
+    expect(array_column(AdminNav::items($user), 'label'))->toBe([__('Internal regulation')]);
+});
+
+test('the same role without the review permission gets no admin panel', function (): void {
+    $company = Company::factory()->create();
+    $user = User::factory()->create(['primary_role' => UserRole::CommitteeMember, 'company_id' => $company->id]);
+
+    expect($user->canAccessPanel(Filament::getPanel('admin')))->toBeFalse()
+        ->and(AdminNav::items($user))->toBe([]);
+});
+
+test('the company lawyer opens internal regulation but no other admin page', function (): void {
+    $company = Company::factory()->create();
+    $other = Company::factory()->create();
+    $user = User::factory()->create(['primary_role' => UserRole::CommitteeMember, 'company_id' => $company->id]);
+    Permission::findOrCreate('review_internal_regulation', 'web');
+    $user->givePermissionTo('review_internal_regulation');
+    $this->actingAs($user);
+
+    $this->get('/admin/'.$company->id.'/internal-regulation')->assertOk();
+    foreach (['branches', 'employees', 'users', 'locations', 'violation-types', 'company-settings', 'document-templates'] as $page) {
+        expect($this->get('/admin/'.$company->id.'/'.$page)->status())->toBeIn([403, 404]);
+    }
+    expect($this->get('/admin/'.$other->id.'/internal-regulation')->status())->toBeIn([403, 404]);
 });
 
 test('admin navigation starts with translated workspace links and matches settings links', function (): void {
