@@ -149,3 +149,23 @@ test('an article heading standing alone at the top of every page is structure, n
     }
     expect((new PageFurniture)->strip($pages))->toBe($pages);
 });
+
+test('headings stored as Arabic presentation forms are still recognised as structure', function (): void {
+    $pages = [];
+    foreach ([9 => 'تمثل الحقوق الواردة', 10 => 'يلتزم صاحب العمل', 11 => 'للعامل الحق', 12 => 'لا يجوز تشغيل'] as $article => $body) {
+        // "اﻟﻤﺎدة" in presentation forms with a bidi embedding, as the Law 71 text layer stores it.
+        $pages[$article] = "\u{202B}اﻟﻤﺎدة \u{202A}{$article}\u{202C}\n{$body}";
+    }
+    expect((new PageFurniture)->strip($pages))->toBe($pages);
+});
+
+test('punctuation placement and digit spacing from right-to-left text layers do not matter, numbers do', function (): void {
+    $normalizer = new TextNormalizer;
+    expect($normalizer->comparable('واحدة ،اذا كان'))->toBe($normalizer->comparable('واحدة، اذا كان'))
+        ->and($normalizer->comparable('( )14من هذا القانون'))->toBe($normalizer->comparable('(14) من هذا القانون'))
+        ->and($normalizer->comparable('خلال 24ساعة'))->toBe($normalizer->comparable('خلال 24 ساعة'))
+        ->and($normalizer->comparable(':2000/3/13'))->toBe($normalizer->comparable('2000/3/13:'));
+    expect($normalizer->comparable('1 50 من'))->not->toBe($normalizer->comparable('150 من'))
+        ->and($normalizer->comparable('(1000) الف'))->not->toBe($normalizer->comparable('(10000) الف'))
+        ->and($normalizer->comparable('الاشتراآات'))->not->toBe($normalizer->comparable('الاشتراكات'));
+});
