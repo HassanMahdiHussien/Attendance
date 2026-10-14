@@ -49,10 +49,22 @@ class LegalLibraryLabels
         };
     }
 
+    public static function batchState(string $value): string
+    {
+        return match ($value) {
+            'submitting' => __('Submitting'), 'in_progress' => __('Processing'),
+            'canceling' => __('Cancelling'), 'ended' => __('Completed'),
+            'failed' => __('Failed'), default => __('Unknown status'),
+        };
+    }
+
     public static function textMethod(string $value): string
     {
         return match ($value) {
-            'text' => __('Text layer'), 'ocr' => 'OCR', default => __('Unknown method'),
+            'text' => __('Text layer'), 'ocr' => 'OCR', 'transcription' => __('Page transcription'),
+            'api' => __('API reading'), 'api_batch' => __('Batch reading'),
+            'secondary_text' => __('Independent secondary text'), 'library' => __('Verified library archive'),
+            default => __('Unknown method'),
         };
     }
 

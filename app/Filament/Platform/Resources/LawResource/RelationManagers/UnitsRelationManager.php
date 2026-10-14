@@ -6,6 +6,7 @@ use App\LegalLibrary\LawManagement;
 use App\LegalLibrary\MismatchResolver;
 use App\LegalLibrary\UnitCorrection;
 use App\Models\LegalUnit;
+use App\Models\User;
 use App\Support\Format\LegalLibraryLabels;
 use App\Support\Format\Ui;
 use Filament\Actions\Action;
@@ -79,7 +80,20 @@ class UnitsRelationManager extends RelationManager
             ->where('clause_path', $record->clause_path)->orderBy('version')->get();
         $html = '<div dir="'.(app()->getLocale() === 'ar' ? 'rtl' : 'ltr').'" style="font-family:Amiri,serif">';
         foreach ($versions as $version) {
-            $html .= '<section><strong>'.e(__('Version')).' '.e(Ui::number($version->version)).'</strong><p dir="rtl" style="white-space:pre-wrap">'.e($version->official_text).'</p></section>';
+            $sources = $version->tags ?? [];
+            $html .= '<section><strong>'.e(__('Version')).' '.e(Ui::number($version->version)).'</strong>';
+            if (isset($sources['reading_a_source']) || isset($sources['reading_b_source'])) {
+                $html .= '<p>'.e(__('Reading sources')).': '
+                    .e(LegalLibraryLabels::textMethod((string) ($sources['reading_a_source'] ?? ''))).' / '
+                    .e(LegalLibraryLabels::textMethod((string) ($sources['reading_b_source'] ?? ''))).'</p>';
+                foreach (['reading_a_uploaded_by', 'reading_b_uploaded_by'] as $uploader) {
+                    if ($sources[$uploader] ?? null) {
+                        $html .= '<p>'.e(__('Uploaded by')).': '
+                            .e(User::find($sources[$uploader])?->name ?? __('Unknown user')).'</p>';
+                    }
+                }
+            }
+            $html .= '<p dir="rtl" style="white-space:pre-wrap">'.e($version->official_text).'</p></section>';
         }
 
         return new HtmlString($html.'</div>');

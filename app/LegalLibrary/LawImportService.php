@@ -3,8 +3,10 @@
 namespace App\LegalLibrary;
 
 use App\Enums\ImportMode;
+use App\Jobs\CancelLegalReadingBatch;
 use App\Jobs\ReadLegalPageWithAi;
 use App\Jobs\RenderLegalPages;
+use App\Jobs\SubmitLegalReadingBatch;
 use App\Models\Law;
 use App\Models\LegalImportRun;
 use App\Models\User;
@@ -20,9 +22,15 @@ class LawImportService
 {
     public function __construct(private PdfPages $pdf, private AuditLogger $audit) {}
 
-    public function start(Law $law, User $actor, UploadedFile|string|null $source, ?int $pageFrom, ?int $pageTo, ImportMode $mode): LegalImportRun
+    public function start(Law $law, User $actor, UploadedFile|string|null $source, ?int $pageFrom, ?int $pageTo,
+        ImportMode $mode, ?string $readingMode = null, ?UploadedFile $transcription = null,
+        ?UploadedFile $secondary = null, ?string $transcriptionNote = null, ?string $secondaryNote = null): LegalImportRun
     {
         abort_unless($actor->can('import', $law), 403);
+        $readingMode ??= $law->kind->value === 'statute' ? 'batch' : 'now';
+        if (! in_array($readingMode, ['now', 'batch'], true)) {
+            throw ValidationException::withMessages(['reading_mode' => __('messages.legal.source_type_unsupported')]);
+        }
         if ($law->requires_page_range && ($pageFrom === null || $pageTo === null)) {
             throw ValidationException::withMessages(['page_from' => __('messages.legal.page_range_required')]);
         }
@@ -36,6 +44,9 @@ class LawImportService
         }
         $extension = strtolower($source instanceof UploadedFile ? $source->getClientOriginalExtension() : pathinfo($path, PATHINFO_EXTENSION));
         if (! in_array($extension, ['pdf', 'txt', 'docx'], true) || ($law->kind->value === 'statute' && $extension !== 'pdf')) {
+            throw ValidationException::withMessages(['source' => __('messages.legal.source_type_unsupported')]);
+        }
+        if ($extension !== 'pdf' && ($readingMode === 'batch' || $transcription !== null || $secondary !== null)) {
             throw ValidationException::withMessages(['source' => __('messages.legal.source_type_unsupported')]);
         }
         $sha = hash_file('sha256', $path);
@@ -72,7 +83,8 @@ class LawImportService
             throw ValidationException::withMessages(['page_from' => __('messages.legal.page_range_limit')]);
         }
 
-        return DB::transaction(function () use ($law, $actor, $relative, $sha, $pageFrom, $pageTo, $mode, $extension): LegalImportRun {
+        return DB::transaction(function () use ($law, $actor, $relative, $sha, $pageFrom, $pageTo, $mode,
+            $extension, $readingMode, $transcription, $secondary, $transcriptionNote, $secondaryNote): LegalImportRun {
             Law::withoutGlobalScopes()->whereKey($law->id)->lockForUpdate()->firstOrFail();
             if (LegalImportRun::withoutGlobalScopes()->where('law_id', $law->id)
                 ->whereIn('state', ['queued', 'reading', 'ai_pending', 'splitting'])->exists()) {
@@ -80,8 +92,12 @@ class LawImportService
             }
             $run = LegalImportRun::create(['law_id' => $law->id, 'company_id' => $law->company_id,
                 'source_path' => $relative, 'source_sha256' => $sha, 'page_from' => $pageFrom,
-                'page_to' => $pageTo, 'mode' => $mode->value, 'state' => 'queued',
+                'page_to' => $pageTo, 'mode' => $mode->value, 'reading_mode' => $readingMode,
+                'reading_model' => config('displanery.ai.legal_reading_model'),
+                'reading_effort' => config('displanery.ai.legal_reading_effort'), 'state' => 'queued',
                 'started_by' => $actor->id, 'started_at' => now()]);
+            app(ExternalReadings::class)->attach($run, $actor, $transcription, $secondary,
+                $transcriptionNote, $secondaryNote);
             $law->update(['source_file_path' => $relative, 'source_sha256' => $sha, 'import_mode' => $mode->value]);
             $this->audit->log('legal_import.started', $run, ['source_sha256' => $sha], $actor);
             RenderLegalPages::dispatch($run->id, $extension)->afterCommit();
@@ -106,10 +122,18 @@ class LawImportService
             if ($pages->isEmpty()) {
                 throw ValidationException::withMessages(['run' => __('messages.legal.no_ai_pages_to_reread')]);
             }
-            $locked->update(['state' => 'reading', 'finished_at' => null]);
+            $locked->update(['state' => 'reading', 'finished_at' => null,
+                'batch_id' => null, 'batch_state' => $locked->reading_mode === 'batch' ? 'submitting' : null,
+                'reading_model' => config('displanery.ai.legal_reading_model'),
+                'reading_effort' => config('displanery.ai.legal_reading_effort')]);
             foreach ($pages as $page) {
                 $page->update(['ai_status' => 'pending', 'last_error' => null]);
-                ReadLegalPageWithAi::dispatch($page->id, $locked->company_id)->afterCommit();
+                if ($locked->reading_mode === 'now') {
+                    ReadLegalPageWithAi::dispatch($page->id, $locked->company_id)->afterCommit();
+                }
+            }
+            if ($locked->reading_mode === 'batch') {
+                SubmitLegalReadingBatch::dispatch($locked->id, $locked->company_id)->afterCommit();
             }
             $this->audit->log('legal_import.ai_retry', $locked, ['pages' => $pages->pluck('page_number')->all()], $actor);
         });
@@ -128,6 +152,9 @@ class LawImportService
             }
             $locked->update(['state' => 'cancelled', 'finished_at' => now()]);
             $this->audit->log('legal_import.cancelled', $locked, ['reason' => $reason], $actor);
+            if ($locked->batch_id !== null) {
+                CancelLegalReadingBatch::dispatch($locked->id, $locked->company_id)->afterCommit();
+            }
         });
     }
 

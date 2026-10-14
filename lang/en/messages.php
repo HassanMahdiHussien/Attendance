@@ -563,6 +563,7 @@ return [
         'pdf_size_invalid' => 'Choose a PDF within the size limit.',
         'page_range_invalid' => 'Choose a valid page range.',
         'mismatch_choice_required' => 'Choose one of the differing readings or edit the text.',
+        'official_page_required' => 'This provision has no matching gazette page. Import its official page before verification.',
         'verified_text_required' => 'Enter the verified text.',
         'exclusion_reason_required' => 'An unverified provision and an exclusion reason are required.',
         'correction_required' => 'A current verified provision, correction text, and reason are required.',

@@ -4,14 +4,23 @@ namespace Tests\Fakes;
 
 use App\Ai\ClaudeClient;
 use App\Ai\SdkClaudeClient;
+use App\LegalLibrary\BatchClient;
 use App\Models\AiGenerationLog;
 use Throwable;
 
-class FakeClaudeClient implements ClaudeClient
+class FakeClaudeClient implements BatchClient, ClaudeClient
 {
     public array $requests = [];
 
     public array $responses = [];
+
+    public array $batchRequests = [];
+
+    public array $batchRows = [];
+
+    public string $batchStatus = 'in_progress';
+
+    public bool $batchCancelled = false;
 
     public function push(array|Throwable $response): void
     {
@@ -39,5 +48,27 @@ class FakeClaudeClient implements ClaudeClient
         }
 
         return [...($response ?? []), '_generation_log_id' => $log->id];
+    }
+
+    public function create(array $requests): string
+    {
+        $this->batchRequests = $requests;
+
+        return 'msgbatch_fake';
+    }
+
+    public function status(string $batchId): string
+    {
+        return $this->batchStatus;
+    }
+
+    public function results(string $batchId): iterable
+    {
+        yield from $this->batchRows;
+    }
+
+    public function cancel(string $batchId): void
+    {
+        $this->batchCancelled = true;
     }
 }

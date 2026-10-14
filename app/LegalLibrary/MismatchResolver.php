@@ -18,6 +18,9 @@ class MismatchResolver
         if ($unit->status->value !== 'mismatch' || ! in_array($choice, ['a', 'b', 'edit'], true)) {
             throw ValidationException::withMessages(['unit' => __('messages.legal.mismatch_choice_required')]);
         }
+        if ($unit->law->kind->value === 'statute' && $unit->source_page === null) {
+            throw ValidationException::withMessages(['unit' => __('messages.legal.official_page_required')]);
+        }
         $chosen = match ($choice) {
             'a' => $unit->extraction_a,
             'b' => $unit->extraction_b,
