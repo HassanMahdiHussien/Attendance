@@ -6,6 +6,7 @@ use App\Jobs\Concerns\UsesLegalImportContext;
 use App\LegalLibrary\ImportProgress;
 use App\LegalLibrary\PdfPages;
 use App\LegalLibrary\TextLayerProbe;
+use App\LegalLibrary\TextLayerRepair;
 use App\Models\LegalImportPage;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -38,6 +39,8 @@ class ReadLegalPageText implements ShouldQueue
                 $pdfPath = Storage::disk('local')->path($run->source_path);
                 $layer = $run->mode === 'ocr' ? '' : $pdf->text($pdfPath, $page->page_number);
                 $useLayer = $run->mode === 'text' || ($run->mode === 'auto' && $probe->usable($layer));
+                $repaired = $useLayer && $run->law->text_layer_fixes
+                    ? app(TextLayerRepair::class)->repair($layer, $run->law) : null;
                 $regulation = $run->law->kind->value === 'internal_regulation' && $run->secondary_source_path === null;
                 $ocr = ! $useLayer && $regulation
                     ? $pdf->ocrWithConfidence(Storage::disk('local')->path($page->image_path)) : null;
@@ -45,8 +48,9 @@ class ReadLegalPageText implements ShouldQueue
                 $minimum = max(0, min(100, (float) config('displanery.legal_library.ocr_confidence_min', 85)));
                 $confident = $regulation && (($useLayer && $probe->usable($layer))
                     || ($confidence !== null && $confidence >= $minimum));
-                $page->update(['text' => $useLayer ? $layer : ($ocr['text'] ?? $pdf->ocr(Storage::disk('local')->path($page->image_path))),
+                $page->update(['text' => $useLayer ? ($repaired['text'] ?? $layer) : ($ocr['text'] ?? $pdf->ocr(Storage::disk('local')->path($page->image_path))),
                     'text_method' => $useLayer ? 'text' : 'ocr', 'text_status' => 'done',
+                    'text_repairs' => $repaired['counts'] ?? null,
                     'ocr_confidence' => $confidence,
                     'ai_status' => $confident ? 'skipped' : $page->ai_status,
                     'ai_source' => $confident ? null : $page->ai_source,

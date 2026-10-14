@@ -10,6 +10,7 @@ use App\Models\Law;
 use App\Support\Format\LegalLibraryLabels;
 use App\Support\Format\Ui;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -67,6 +68,10 @@ class LawResource extends Resource
             Select::make('approval_status')->label(__('Law approval'))->options(['pending' => __('Pending approval'), 'approved' => __('Approved')])
                 ->default('pending')->required(),
             TextInput::make('source_file_path')->label(__('Source path'))->required(),
+            CheckboxList::make('text_layer_fixes')->label(__('Text layer repairs'))->options([
+                'mirrored_brackets' => __('Mirrored brackets'),
+                'kaf_from_alef_madda' => __('Kaf from alef madda'),
+            ])->columns(2),
             DatePicker::make('effective_from')->label(__('Effective date')),
             DatePicker::make('repealed_at')->label(__('Repeal date')),
             Select::make('supersedes_law_id')->label(__('Supersedes'))->options(fn (): array => Law::query()->where('kind', 'statute')->pluck('name', 'id')->all())->searchable(),

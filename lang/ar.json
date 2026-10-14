@@ -781,5 +781,10 @@
     "Pages read locally": "الصفحات المقروءة محلياً",
     "Pages read by AI": "الصفحات المقروءة بالذكاء الاصطناعي",
     "Read locally": "قُرئت محلياً",
-    "Article spans local and AI readings": "المادة تمتد بين قراءة محلية وقراءة بالذكاء الاصطناعي"
+    "Article spans local and AI readings": "المادة تمتد بين قراءة محلية وقراءة بالذكاء الاصطناعي",
+    "Text layer repairs": "إصلاحات طبقة النص",
+    "Mirrored brackets": "الأقواس المعكوسة",
+    "Kaf from alef madda": "تصحيح الكاف من الألف الممدودة",
+    "Words with repaired brackets": "كلمات صُححت أقواسها",
+    "Words with repaired kaf": "كلمات صُححت فيها الكاف"
 }

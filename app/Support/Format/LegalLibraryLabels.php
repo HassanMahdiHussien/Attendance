@@ -98,7 +98,10 @@ class LegalLibraryLabels
 
         $parts = [];
         foreach (['pages' => __('Pages'), 'local_pages' => __('Pages read locally'),
-            'ai_pages' => __('Pages read by AI'), 'units' => __('Units'), 'verified_auto' => __('Verified automatically'),
+            'ai_pages' => __('Pages read by AI'), 'units' => __('Units'),
+            'text_repair_mirrored_brackets' => __('Words with repaired brackets'),
+            'text_repair_kaf_from_alef_madda' => __('Words with repaired kaf'),
+            'verified_auto' => __('Verified automatically'),
             'verified_human' => __('Verified by review'), 'verified_text' => __('Verified from source text'),
             'verified_single' => __('Verified from one reading'),
             'mismatch' => __('Needs review'), 'unverified' => __('Unverified'), 'excluded' => __('Excluded')] as $key => $label) {
