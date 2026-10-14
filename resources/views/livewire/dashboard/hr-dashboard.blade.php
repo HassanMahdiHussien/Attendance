@@ -30,12 +30,19 @@
     </section>
     <section class="space-y-3">
         <h2 class="text-lg font-extrabold text-ink">{{ __('Metrics') }}</h2>
-        <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            @foreach(['open' => __('Open cases'), 'closed_month' => __('Closed this month'), 'recommendation_only' => __('Recommendation only'), 'warning' => __('Warning'), 'termination' => __('Termination'), 'within15_numerator' => __('Within 15 days'), 'within15_denominator' => __('Measurable cases')] as $key => $label)
-                <a href="/dashboard/cases?{{ http_build_query($filterQuery + ['metric' => $key]) }}" class="ui-card block p-4 hover:border-primary focus-visible:outline-2 focus-visible:outline-primary"><span class="text-sm text-gray-500">{{ $label }}</span><strong class="mt-2 block text-2xl text-primary">{{ \App\Support\Format\Ui::number($counts[$key]) }}</strong></a>
-            @endforeach
-            <x-ui.stat :label="__('Average procedure days')" :value="$counts['average_days'] === null ? '—' : \App\Support\Format\Ui::number((string) $counts['average_days'])" />
-            <x-ui.stat :label="__('Percent within 15 days')" :value="$counts['within15_percent'] === null ? '—' : \App\Support\Format\Ui::number($counts['within15_percent']).__('%')" />
+        <div class="grid gap-4 xl:grid-cols-[5fr_4fr]">
+            <x-ui.stats :title="__('Caseload')" class="sm:grid-cols-3 lg:grid-cols-5">
+                @foreach(['open' => __('Open cases'), 'closed_month' => __('Closed this month'), 'recommendation_only' => __('Recommendation only'), 'warning' => __('Warning'), 'termination' => __('Termination')] as $key => $label)
+                    <x-ui.stat :label="$label" :value="\App\Support\Format\Ui::number($counts[$key])" :href="'/dashboard/cases?'.http_build_query($filterQuery + ['metric' => $key])" />
+                @endforeach
+            </x-ui.stats>
+            <x-ui.stats :title="__('15-day deadline')" class="lg:grid-cols-4">
+                @foreach(['within15_numerator' => __('Within 15 days'), 'within15_denominator' => __('Measurable cases')] as $key => $label)
+                    <x-ui.stat :label="$label" :value="\App\Support\Format\Ui::number($counts[$key])" :href="'/dashboard/cases?'.http_build_query($filterQuery + ['metric' => $key])" />
+                @endforeach
+                <x-ui.stat :label="__('Percent within 15 days')" :value="$counts['within15_percent'] === null ? '—' : \App\Support\Format\Ui::number($counts['within15_percent']).__('%')" />
+                <x-ui.stat :label="__('Average procedure days')" :value="$counts['average_days'] === null ? '—' : \App\Support\Format\Ui::number((string) $counts['average_days'])" />
+            </x-ui.stats>
         </div>
     </section>
     <section class="space-y-3">

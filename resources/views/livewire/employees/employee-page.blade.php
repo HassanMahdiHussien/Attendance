@@ -4,11 +4,11 @@
         <p class="text-gray-500"><bdi>{{ \App\Support\Format\Ui::number($employee->employee_code) }}</bdi> · {{ $employee->department }} · {{ $employee->position }} · {{ $employee->branch?->name }}</p>
         <p class="mt-2 text-sm text-gray-500">{{ __('Hire date') }}: <bdi>{{ \App\Support\Format\Ui::date($employee->hire_date) }}</bdi></p>
     </x-ui.card>
-    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+    <x-ui.stats class="sm:grid-cols-3">
         @foreach(['total' => __('Total cases'), 'warnings' => __('Warnings'), 'last_year' => __('Last 12 months')] as $key => $label)
             <x-ui.stat :label="$label" :value="\App\Support\Format\Ui::number($counts[$key])" />
         @endforeach
-    </div>
+    </x-ui.stats>
     @if($partial)<p class="rounded-xl bg-amber-50 p-4 text-amber-900">{{ __('There may be other cases you cannot see') }}</p>@endif
     @foreach($sections as $section)
         @if($section === 'disciplinary_history')

@@ -2,8 +2,10 @@
     <x-ui.page-header :title="__('My cases')" />
     @if($summary)
         <div class="mb-6 grid gap-3 sm:grid-cols-3">
-            <x-ui.stat :label="__('Consultations awaiting review')" :value="\App\Support\Format\Ui::number($summary['waiting'])" tone="amber" />
-            <x-ui.stat :label="__('Consultations completed this month')" :value="\App\Support\Format\Ui::number($summary['completed_month'])" tone="green" />
+            <x-ui.stats class="sm:col-span-2">
+                <x-ui.stat :label="__('Consultations awaiting review')" :value="\App\Support\Format\Ui::number($summary['waiting'])" />
+                <x-ui.stat :label="__('Consultations completed this month')" :value="\App\Support\Format\Ui::number($summary['completed_month'])" />
+            </x-ui.stats>
             <x-ui.card :title="__('Oldest pending consultation')">
                 @if($summary['oldest'])
                     <p class="text-sm">{{ __('Procedure due') }}: {{ $summary['oldest']['due'] ? \App\Support\Format\Ui::date($summary['oldest']['due']) : __('Not set') }}</p>
