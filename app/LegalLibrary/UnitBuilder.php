@@ -34,8 +34,9 @@ class UnitBuilder
                 return;
             }
             $pages = $run->pages()->orderBy('page_number')->get();
-            $readingA = $pages->filter(fn ($page) => $page->text_status === 'done')->pluck('text', 'page_number')->all();
-            $readingB = $pages->filter(fn ($page) => $page->ai_status === 'done')->pluck('ai_text', 'page_number')->all();
+            $furniture = app(PageFurniture::class);
+            $readingA = $furniture->strip($pages->filter(fn ($page) => $page->text_status === 'done')->pluck('text', 'page_number')->all());
+            $readingB = $furniture->strip($pages->filter(fn ($page) => $page->ai_status === 'done')->pluck('ai_text', 'page_number')->all());
             if ($secondaryText !== null) {
                 $readingB = [0 => $secondaryText];
             }

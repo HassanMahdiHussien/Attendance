@@ -18,6 +18,8 @@ class ArticleSplitter
         $heading = null;
         $clause = null;
         $clauseIndex = null;
+        $clauseNumber = 0;
+        $letterActive = false;
         foreach ($pages as $page => $text) {
             // Positions count non-empty lines only: pdftotext pads pages with blank lines, which would
             // otherwise push the page-number footer out of the header/footer window.
@@ -36,12 +38,24 @@ class ArticleSplitter
                 }
                 if (preg_match('/^(?:المادة|مادة)\s*[-(]*\s*(.+)$/u', $clean, $match)) {
                     $number = $this->leadingNumber($match[1]);
-                    if ($number !== null) {
+                    // A wrapped line can begin with a cross-reference ("المادة (43) من هذا القانون"), never a heading.
+                    $reference = preg_match('/^\(?\s*\d+\s*\)?\s*من\s+(?:هذا\s+)?(?:ال)?قانون/u', $match[1]);
+                    if ($number !== null && ! $reference) {
                         $article = $number;
                         $clause = null;
                         $clauseIndex = null;
+                        $clauseNumber = 0;
+                        $letterActive = false;
                         $units[] = $this->unit($number, null, $line, (int) $page, $heading);
                         $articleIndex = count($units) - 1;
+                        // The gazette often opens the first clause on the heading line ("المادة -129- أولاً: …"),
+                        // so the letters and numbered items that follow belong to it.
+                        if (preg_match('/^\(?\s*\d+\s*\)?\s*-?\s*(\S.*)$/u', $match[1], $rest)
+                            && ($inline = $this->clauseMarker($rest[1], 0)) !== null && $inline[1] === 1) {
+                            [$clause, $clauseNumber] = $inline;
+                            $units[] = $this->unit($number, $number.'/'.$clause, $line, (int) $page, $heading);
+                            $clauseIndex = count($units) - 1;
+                        }
 
                         continue;
                     }
@@ -49,9 +63,11 @@ class ArticleSplitter
                 if ($article === null) {
                     continue;
                 }
-                $marker = $this->clauseMarker($clean);
+                // Numbered items inside a lettered clause ("(1)", "(2)") belong to that letter, not to the article.
+                $marker = $letterActive && preg_match('/^\(?\d/u', $clean) ? null : $this->clauseMarker($clean, $clauseNumber);
                 if ($marker !== null) {
-                    $clause = $marker;
+                    [$clause, $clauseNumber] = $marker;
+                    $letterActive = false;
                     $this->append($units[$articleIndex], $line, (int) $page);
                     $units[] = $this->unit($article, $article.'/'.$clause, $line, (int) $page, $heading);
                     $clauseIndex = count($units) - 1;
@@ -63,6 +79,7 @@ class ArticleSplitter
                     $this->append($units[$articleIndex], $line, (int) $page);
                     $this->append($units[$clauseIndex], $line, (int) $page);
                     $units[] = $this->unit($article, $article.'/'.$clause.'/'.$letter, $line, (int) $page, $heading);
+                    $letterActive = true;
 
                     continue;
                 }
@@ -123,23 +140,27 @@ class ArticleSplitter
      * A clause marker at the start of a line: an ordinal adverb (أولاً … عاشراً), a compound ordinal
      * (حادي عشر, ثاني وعشرون), or a single ordinal word or digits followed by a separator. Definite forms
      * (الأولى, الثالثة) are article-style words that also start ordinary sentences, so they never count.
-     * Returns a canonical name so both readings produce the same key whatever spelling they used.
+     * Returns [canonical name, number] so both readings produce the same key whatever spelling they used.
      */
-    private function clauseMarker(string $clean): ?string
+    private function clauseMarker(string $clean, int $previous): ?array
     {
         if (preg_match('/^\(?(\d{1,2})\s*[)\-–:]/u', $clean, $match)) {
-            return $this->canonicalClause((int) $match[1]);
+            // A wrapped line can begin with a bracketed amount ("(15) خمسة عشر يوماً"); digits only open a clause
+            // when they continue the article's own numbering.
+            $number = (int) $match[1];
+
+            return $number === 1 || $number === $previous + 1 ? [$this->canonicalClause($number), $number] : null;
         }
         if (preg_match('/^\(?([^\-–:()]{1,30}?)\s*[\-–:)]/u', $clean, $match)) {
             $candidate = trim($match[1]);
             $number = str_starts_with($candidate, 'ال') ? null : $this->articleNumber($candidate);
             if ($number !== null && ! preg_match('/^\d/u', $candidate) && count(preg_split('/\s+/u', $candidate)) <= 3) {
-                return $this->canonicalClause((int) $number);
+                return [$this->canonicalClause((int) $number), (int) $number];
             }
         }
         $words = preg_split('/\s+/u', $clean);
         for ($length = min(3, count($words)); $length >= 1; $length--) {
-            $candidate = trim(implode(' ', array_slice($words, 0, $length)), ' -–:)');
+            $candidate = trim(implode(' ', array_slice($words, 0, $length)), ' -–:()');
             if ($candidate === '' || str_starts_with($candidate, 'ال') || preg_match('/^\d/u', $candidate)) {
                 continue;
             }
@@ -152,7 +173,7 @@ class ArticleSplitter
                 || preg_match('/^[-–:)]/u', $rest);
             $adverb = $length === 1 && str_ends_with($candidate, 'ا');
             if ($separated || $adverb || $length >= 2) {
-                return $this->canonicalClause((int) $number);
+                return [$this->canonicalClause((int) $number), (int) $number];
             }
         }
 

@@ -31,7 +31,7 @@ class ReadingComparator
                 if ($reason === null && ($structureA[$article] ?? []) !== ($structureB[$article] ?? [])) {
                     $reason = 'structure_differs';
                 }
-                if ($reason === null && $this->normalizer->normalize($first['text']) !== $this->normalizer->normalize($second['text'])) {
+                if ($reason === null && $this->normalizer->comparable($first['text']) !== $this->normalizer->comparable($second['text'])) {
                     $reason = 'text_differs';
                 }
                 $unit['extraction_a'] = $first['text'] ?? null;

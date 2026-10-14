@@ -1,6 +1,7 @@
 <?php
 
 use App\LegalLibrary\ArticleSplitter;
+use App\LegalLibrary\PageFurniture;
 use App\LegalLibrary\ReadingComparator;
 use App\LegalLibrary\TextLayerProbe;
 use App\LegalLibrary\TextNormalizer;
@@ -75,4 +76,68 @@ test('definite ordinals and page numbers are not clauses and clause keys are can
     $paths = collect($units)->pluck('clause_path')->filter()->values()->all();
     expect($paths)->toBe(['5/أولاً', '5/ثانياً', '5/ثانياً/ب']);
     expect(collect($units)->firstWhere('clause_path', null)['text'])->not->toContain('12');
+});
+
+test('gazette dashes and the zero full stop compare equal but real wording still differs', function (): void {
+    $normalizer = new TextNormalizer;
+    // Tatweel drawn as a dash, an en dash and a hyphen are one separator; "٠" after a word is the gazette full stop.
+    expect($normalizer->comparable('حادي عشر ــ العمل العرضي'))->toBe($normalizer->comparable('حادي عشر- العمل العرضي'))
+        ->and($normalizer->comparable('أـ اسم صاحب العمل'))->toBe($normalizer->comparable('أ- اسم صاحب العمل'))
+        ->and($normalizer->comparable('المادة –١٢٠– أولاً'))->toBe($normalizer->comparable('المادة -١٢٠- أولاً'))
+        ->and($normalizer->comparable('وعنوانه ٠'))->toBe($normalizer->comparable('وعنوانه .'))
+        ->and($normalizer->comparable('عشر‍ــ العمل'))->toBe($normalizer->comparable('عشر- العمل'));
+    // Numbers keep their zeros, and different words or amounts never become equal.
+    expect($normalizer->comparable('(١،٠٠٠،٠٠٠) مليون'))->not->toBe($normalizer->comparable('(١٠،٠٠٠،٠٠٠) مليون'))
+        ->and($normalizer->comparable('ما لم يكن'))->not->toBe($normalizer->comparable('ما لم يكون'))
+        ->and($normalizer->normalize('مادةـ ١٥'))->toBe('مادة 15');
+});
+
+test('the splitter still sees clause dashes after tatweel and en dash normalisation', function (): void {
+    $splitter = new ArticleSplitter(new TextNormalizer);
+    $paths = fn (string $text) => array_column($splitter->split([1 => $text]), 'clause_path');
+    // The en-dash heading is still an article, and tatweel clause markers split exactly like hyphen markers.
+    expect(array_column($splitter->split([1 => 'المادة –٣٧– نص']), 'article_number'))->toBe(['37'])
+        ->and($paths('المادة –٣٧– نص
+أولاً: يبرم
+أـ اسم صاحب العمل
+ب ــ اسم العامل'))
+        ->toBe($paths('المادة -٣٧- نص
+أولاً: يبرم
+أ- اسم صاحب العمل
+ب- اسم العامل'))
+        ->toContain('37/أولاً/أ', '37/أولاً/ب');
+});
+
+test('running headers and footers repeated across pages are removed from both readings', function (): void {
+    $pages = [];
+    $bodies = [1 => 'العمل حق لكل مواطن', 2 => 'حرية العمل مصونة', 3 => 'يحظر العمل الجبري',
+        4 => 'تحتسب المدد بالتقويم الميلادي', 5 => 'اللغة العربية هي المعتمدة', 6 => 'يلتزم صاحب العمل بالتشغيل'];
+    foreach ($bodies as $page => $body) {
+        $pages[$page] = "قوانين\nالمادة -{$page}- {$body}\nالوقائع العراقية – العدد ٤٣٨٦ ({$page}) ٢٠١٥/١١/٩";
+    }
+    $pages[7] = "المادة -7- قوانين العمل نافذة\nسطر أخير";
+    $stripped = (new PageFurniture)->strip($pages);
+    expect($stripped[3])->toBe('المادة -3- يحظر العمل الجبري')
+        ->and($stripped[7])->toBe("المادة -7- قوانين العمل نافذة\nسطر أخير");
+});
+
+test('a wrapped line starting with a bracketed amount does not open a numbered clause', function (): void {
+    $units = (new ArticleSplitter(new TextNormalizer))->split([1 => "المادة -21- نص\nأولاً: ابلاغ قسم التشغيل خلال مدة لاتزيد على\n(10) عشرة ايام من حدوث الشاغر\nثانياً: لصاحب العمل تشغيل العمال"]);
+    expect(array_values(array_filter(array_column($units, 'clause_path'))))->toBe(['21/أولاً', '21/ثانياً']);
+
+    $numbered = (new ArticleSplitter(new TextNormalizer))->split([1 => "المادة -5- نص\n(1) مواجهة ضغط عمل غير اعتيادي\n(2) إصلاح او صيانة الاجهزة"]);
+    expect(array_values(array_filter(array_column($numbered, 'clause_path'))))->toBe(['5/أولاً', '5/ثانياً']);
+});
+
+test('cross-references, wrapped amounts and numbered items inside a letter do not change the structure', function (): void {
+    $splitter = new ArticleSplitter(new TextNormalizer);
+    $units = $splitter->split([1 => "المادة -44- عند توافر احدى الحالات المنصوص عليها في البند (ثانيا) من\nالمادة (43) من هذا القانون على صاحب العمل انذار العامل\nالمادة -45- يستحق العامل مكافأة"]);
+    expect(array_column($units, 'article_number'))->toBe(['44', '45']);
+
+    $units = $splitter->split([1 => "المادة -138- نص\nثانياً: تطبق احدى العقوبات الآتية\nجـ - حجب الزيادة السنوية لمدة لاتزيد على\n(180) مئة وثمانين يوماً .\nد - تنزيل الدرجة ويستتبعه تنزيل اجره"]);
+    expect(array_values(array_filter(array_column($units, 'clause_path'))))->toBe(['138/ثانياً', '138/ثانياً/ج', '138/ثانياً/د']);
+
+    $units = $splitter->split([1 => "المادة -129- أولاً: تخول لجان التفتيش\nب - أجراء اي فحص او استفسار\n(1) التحقيق مع صاحب العمل\n(2) الاطلاع على اي كتب او سجلات\nثانياً: اتخاذ الاجراءات العاجلة في حالات الخطر"]);
+    expect(array_values(array_filter(array_column($units, 'clause_path'))))->toContain('129/ثانياً')
+        ->and(collect($units)->pluck('tags')->pluck('mismatch_reason')->filter()->all())->toBe([]);
 });
