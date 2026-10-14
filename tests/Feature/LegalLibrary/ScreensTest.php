@@ -150,12 +150,12 @@ test('mismatch actions enforce review policy on Livewire calls', function (): vo
     Filament::setCurrentPanel(Filament::getPanel('platform'));
     app(TenantContext::class)->setAllCompanies();
     $law = Law::factory()->create();
-    $unit = LegalUnit::factory()->create(['law_id' => $law->id, 'status' => 'mismatch',
+    $unit = LegalUnit::factory()->create(['law_id' => $law->id, 'status' => 'mismatch', 'source_page' => 1,
         'extraction_a' => 'نص أ', 'extraction_b' => 'نص ب']);
     Livewire::test(MismatchQueue::class)->call('selectUnit', $unit->id)
         ->call('resolveUnit', 'a')->assertHasNoErrors();
     expect($unit->fresh()->status->value)->toBe('verified_human');
-    $other = LegalUnit::factory()->create(['law_id' => $law->id, 'status' => 'mismatch', 'article_number' => '9',
+    $other = LegalUnit::factory()->create(['law_id' => $law->id, 'status' => 'mismatch', 'article_number' => '9', 'source_page' => 1,
         'extraction_a' => 'نص أ', 'extraction_b' => 'نص ب']);
     $wrong = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::CompanyAdmin]);
     // A company user can neither open the statute queue nor resolve a statute unit through the service.

@@ -6,8 +6,10 @@ use App\Ai\ClaudeClient;
 use App\Ai\SdkClaudeClient;
 use App\Enums\UserRole;
 use App\Filament\Auth\LoginResponse;
+use App\LegalLibrary\BatchClient;
 use App\LegalLibrary\ClaudePageReader;
 use App\LegalLibrary\PageReader;
+use App\LegalLibrary\SdkBatchClient;
 use App\Listeners\AuditAuthEvents;
 use App\Models\Company;
 use App\Models\DisciplinaryCase;
@@ -42,6 +44,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(IntakeMailbox::class, ImapMailbox::class);
         $this->app->scoped(TenantContext::class, fn () => new TenantContext);
         $this->app->bind(PageReader::class, ClaudePageReader::class);
+        $this->app->bind(BatchClient::class, SdkBatchClient::class);
         $this->app->bind(ClaudeClient::class, SdkClaudeClient::class);
     }
 

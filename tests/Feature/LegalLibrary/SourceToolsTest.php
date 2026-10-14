@@ -5,6 +5,7 @@ use App\LegalLibrary\ArticleSplitter;
 use App\LegalLibrary\DocxText;
 use App\LegalLibrary\PdfPages;
 use App\LegalLibrary\TextLayerProbe;
+use App\LegalLibrary\WordLigatureRepair;
 use App\Models\Company;
 use App\Models\Law;
 use App\Models\LegalImportRun;
@@ -13,6 +14,15 @@ use App\Models\User;
 use App\Services\AuditLogger;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Storage;
+
+test('secondary Word PDF cleanup fixes only known swapped letter pairs', function (): void {
+    $repair = new WordLigatureRepair;
+
+    expect($repair->repair('املادة 43 من ألحكام هذا القانون'))
+        ->toBe('المادة 43 من لأحكام هذا القانون')
+        ->and($repair->repair('المادة 43 من الأحكام الصحيحة'))
+        ->toBe('المادة 43 من الأحكام الصحيحة');
+});
 
 test('text fixture has a usable text layer and image fixture needs OCR', function (): void {
     $text = base_path('tests/fixtures/legal/text-law.pdf');

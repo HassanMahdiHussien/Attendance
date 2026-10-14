@@ -36,16 +36,18 @@ class ReadLegalPageWithAi implements ShouldQueue
     {
         $this->withinImportContext($this->companyId, function () use ($reader, $progress): void {
             $page = LegalImportPage::findOrFail($this->pageId);
-            if ($page->ai_status !== 'pending' || $page->run->state === 'cancelled') {
+            if ($page->ai_status !== 'pending' || $page->run->state === 'cancelled'
+                || $page->run->reading_mode === 'batch' || $page->run->secondary_source_path !== null) {
                 return;
             }
             $run = $page->run;
+            $page->update(['ai_source' => 'api']);
             try {
                 $reading = $reader->read(Storage::disk('local')->path($page->image_path),
                     ['company_id' => $run->company_id, 'actor_user_id' => $run->started_by,
                         'law_id' => $run->law_id, 'run_id' => $run->id, 'page' => $page->page_number]);
                 $page->update(['ai_text' => $reading->text, 'ai_illegible' => $reading->illegible,
-                    'ai_status' => 'done', 'attempts_ai' => $page->attempts_ai + 1]);
+                    'ai_status' => 'done', 'ai_source' => 'api', 'attempts_ai' => $page->attempts_ai + 1]);
             } catch (AiUnavailable $exception) {
                 $page->update(['ai_status' => 'unavailable', 'attempts_ai' => $page->attempts_ai + 1,
                     'last_error' => $exception->getMessage()]);
