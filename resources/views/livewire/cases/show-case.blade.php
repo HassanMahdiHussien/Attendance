@@ -19,8 +19,6 @@
 <p class="whitespace-pre-wrap mt-2">{{ $record->legal_review_note }}</p>
 </div>
 @endif
-    @if($record->minutes_typed_by_pool_member_id)<p class="ui-card p-4 text-sm">{{ __('Session minutes written by: :name', ['name' => \App\Models\CommitteePoolMember::query()->find($record->minutes_typed_by_pool_member_id)?->person_name]) }}</p>
-@endif
     @if($record->status === \App\Enums\CaseStatus::AwaitingCommitteeSignatures)
         @foreach($signatureChecks->where('presence_check', \App\Enums\PresenceCheck::BoxAppearsEmpty) as $check)
             <p role="alert" class="rounded-2xl bg-red-light p-4 text-red-700">{{ $check->signer_name }} — {{ \App\Services\Cases\PresenceWording::choice('empty') }}. {{ __('Upload a new scan or record an override reason.') }}</p>
@@ -35,19 +33,91 @@
     @endforeach
     @error('notice')<p role="alert" class="rounded-2xl bg-red-light p-4 text-red-700">{{ $message }}</p>
 @enderror
-    <header class="ui-card p-5">
-<div class="flex flex-wrap justify-between gap-4">
-<div>
-<p class="font-mono text-gray-500 text-sm">{{ __('Case') }} <bdi>{{ \App\Support\Format\Ui::number(str_pad($record->case_number, 4, '0', STR_PAD_LEFT)) }}</bdi>
-</p>
-<h1 class="mt-2 text-2xl font-extrabold text-ink">{{ $record->employee?->name }}</h1>
-@if($record->employee && app(\App\Policies\EmployeeProfilePolicy::class)->view(auth()->user(), $record->employee))<a class="ui-link inline-block text-sm font-bold" href="{{ route('employees.show', $record->employee) }}">{{ __('Employee page') }}</a>@endif
-<p class="text-gray-500">{{ \App\Support\Format\Violation::name($record) }} — {{ $record->employee?->position }} / {{ $record->employee?->department }}</p>
-</div>
-<x-ui.badge :tone="\App\Support\Format\Tone::case($record->status)" class="self-start">{{ \App\Support\Format\Ui::stage($record->status) }}</x-ui.badge>
-</div>
-<x-ui.stepper :step="$step" class="mt-5" />
-</header>
+    @php
+        // The departures board: every legal deadline of this case as a due event with a live countdown.
+        $today = now('Asia/Baghdad')->startOfDay();
+        $stateLabels = ['met' => __('Completed within deadline'), 'on_track' => __('Within deadline'), 'approaching' => __('Approaching'), 'missed' => __('Deadline missed'), 'overdue' => __('Overdue')];
+        $dueEvents = [
+            ['title' => __('Response'), 'stage' => \App\Support\Format\StageIndicator::stageLabel(3), 'due' => $deadlines->responseDue($record), 'state' => $deadlines->responseStatus($record)],
+            ['title' => __('Procedure'), 'stage' => \App\Support\Format\StageIndicator::stageLabel(5), 'due' => $deadlines->procedureDue($record), 'state' => $deadlines->procedureStatus($record)],
+            ['title' => __('Appeal'), 'stage' => \App\Support\Format\StageIndicator::stageLabel(5), 'due' => $deadlines->appealEnd($record), 'state' => $deadlines->appealStatus($record)],
+        ];
+    @endphp
+    <header class="overflow-hidden rounded-xl bg-night-2 text-white shadow-[0_8px_24px_-12px_rgb(14_26_43/0.45)]">
+        <div class="grid gap-6 p-5 sm:p-6 lg:grid-cols-[17rem_1fr]">
+            <div class="min-w-0">
+                <p class="font-mono text-[2.75rem] font-bold leading-none text-signal"><span class="sr-only">{{ __('Case') }} </span><bdi>{{ \App\Support\Format\Ui::number(str_pad($record->case_number, 4, '0', STR_PAD_LEFT)) }}</bdi></p>
+                <h1 class="mt-3 text-xl font-semibold leading-snug" dir="auto">{{ $record->employee?->name }}</h1>
+                @if($record->minutes_typed_by_pool_member_id)<p class="mt-1 text-xs text-night-soft">{{ __('Session minutes written by: :name', ['name' => \App\Models\CommitteePoolMember::query()->find($record->minutes_typed_by_pool_member_id)?->person_name]) }}</p>@endif
+                <p class="mt-1 text-sm text-night-soft" dir="auto">{{ \App\Support\Format\Violation::name($record) }} · {{ $record->employee?->position }}</p>
+                <div class="mt-3 flex flex-wrap items-center gap-3">
+                    <span class="rounded bg-night-line px-2 py-0.5 text-xs font-medium">{{ \App\Support\Format\Ui::stage($record->status) }}</span>
+                    @if($record->employee && app(\App\Policies\EmployeeProfilePolicy::class)->view(auth()->user(), $record->employee))<a class="rounded text-sm font-medium text-white underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-signal" href="{{ route('employees.show', $record->employee) }}">{{ __('Employee page') }}</a>@endif
+                </div>
+            </div>
+            <div class="min-w-0 overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead><tr class="text-start text-[0.7rem] uppercase tracking-[0.14em] text-night-soft">
+                        <th scope="col" class="pb-2 text-start font-medium">{{ __('Due event') }}</th>
+                        <th scope="col" class="hidden pb-2 text-start font-medium sm:table-cell">{{ __('Stage') }}</th>
+                        <th scope="col" class="pb-2 text-start font-medium">{{ __('Due') }}</th>
+                        <th scope="col" class="pb-2 text-start font-medium">{{ __('Remaining') }}</th>
+                        <th scope="col" class="hidden pb-2 text-start font-medium md:table-cell">{{ __('Status') }}</th>
+                    </tr></thead>
+                    <tbody>
+                        @foreach($dueEvents as $event)
+                            @php
+                                $days = $event['due'] ? (int) $today->diffInDays(\Carbon\CarbonImmutable::parse($event['due'])->setTimezone('Asia/Baghdad')->startOfDay(), false) : null;
+                                [$flapClass, $flapText] = match (true) {
+                                    $event['state'] === 'met' => ['flap-ok', __('Done')],
+                                    in_array($event['state'], ['missed', 'overdue'], true) => ['flap-late', __('Overdue')],
+                                    $days === null => ['flap-idle', __('Not started yet')],
+                                    $event['state'] === 'approaching' => ['flap-soon', \App\Support\Format\Ui::remaining(max(0, $days))],
+                                    default => ['', \App\Support\Format\Ui::remaining(max(0, $days))],
+                                };
+                            @endphp
+                            <tr class="border-t border-night-line">
+                                <td class="py-2.5 pe-4 font-medium">{{ $event['title'] }}</td>
+                                <td class="hidden py-2.5 pe-4 text-night-soft sm:table-cell">{{ $event['stage'] }}</td>
+                                <td class="py-2.5 pe-3 font-mono text-[0.8rem] whitespace-nowrap"><bdi>{{ $event['due'] ? \App\Support\Format\Ui::date($event['due']) : '—' }}</bdi></td>
+                                <td class="py-2.5 pe-4"><span class="flap {{ $flapClass }}">{{ $flapText }}</span></td>
+                                <td class="hidden py-2.5 text-xs md:table-cell {{ in_array($event['state'], ['missed', 'overdue'], true) ? 'text-[#FF8A8D]' : ($event['state'] === 'approaching' ? 'text-signal' : 'text-night-soft') }}">{{ $stateLabels[$event['state']] ?? __('Not started yet') }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </header>
+    <div class="grid gap-5 lg:grid-cols-3">
+        <x-ui.card class="lg:col-span-2" aria-label="{{ __('Stage') }}">
+            <x-ui.stepper :step="$step" class="mt-1" />
+        </x-ui.card>
+        @if($nextAction)
+            @php
+                $nextActorLabel = match ($nextAction->actor) {
+                    'hr' => __('messages.search.actor_hr'),
+                    'committee' => __('messages.search.actor_committee'),
+                    'reviewer' => __('messages.search.actor_reviewer'),
+                    'optional' => __('messages.search.actor_optional'),
+                    default => __('messages.search.actor_waiting'),
+                };
+            @endphp
+            <section class="rounded-xl bg-night p-5 text-white" aria-label="{{ __('messages.search.next_step') }}">
+                <h2 class="text-lg font-semibold leading-snug">{{ $nextAction->label }}</h2>
+                <p class="mt-1 text-sm text-night-soft">{{ $nextActorLabel }}</p>
+                @if($nextAction->due)
+                    <div class="mt-3 flex flex-wrap items-center gap-2 text-sm text-night-soft"><span>{{ __('messages.search.due') }} <bdi class="font-mono text-white">{{ \App\Support\Format\Ui::date($nextAction->due) }}</bdi></span>
+                        @if($nextAction->deadlineAlert)<span class="flap {{ $nextAction->deadlineAlert === 'red' ? 'flap-late' : 'flap-soon' }}">{{ $nextAction->deadlineAlert === 'red' ? __('Overdue') : __('Approaching') }}</span>@endif
+                    </div>
+                @endif
+                <div class="mt-5 flex flex-wrap gap-2">
+                    @if($nextAction->target)<x-ui.button :href="$nextAction->target">{{ __('messages.search.open_step') }}</x-ui.button>@endif
+                    @if($nextAction->key === 'waiting_response')<x-ui.button href="#next-handoff" variant="ghost" class="text-white hover:bg-white/10">{{ __('messages.home.record_response') }}</x-ui.button>@endif
+                </div>
+            </section>
+        @endif
+    </div>
     @if($intakeQuestions->isNotEmpty())
         <x-ui.card class="space-y-3">
             <h2 class="font-bold">{{ __('messages.intake.open_points') }}</h2>
@@ -75,29 +145,6 @@
             <x-ui.field :label="__('Map to a violation type')" for="map-violation-type"><x-ui.select id="map-violation-type" wire:model="mapViolationTypeId"><option value="">{{ __('Choose a violation type') }}</option>@foreach($violationTypes as $type)<option value="{{ $type->id }}">{{ $type->name() }}</option>@endforeach</x-ui.select></x-ui.field>
             <x-ui.button wire:click="mapViolationType">{{ __('Map violation type') }}</x-ui.button>
             @error('mapViolationTypeId')<span class="text-sm text-red-700">{{ $message }}</span>@enderror
-        </x-ui.card>
-    @endif
-    @if($nextAction)
-        @php
-            $nextActorLabel = match ($nextAction->actor) {
-                'hr' => __('messages.search.actor_hr'),
-                'committee' => __('messages.search.actor_committee'),
-                'reviewer' => __('messages.search.actor_reviewer'),
-                'optional' => __('messages.search.actor_optional'),
-                default => __('messages.search.actor_waiting'),
-            };
-        @endphp
-        <x-ui.card class="border border-primary/30 bg-primary-light/30 p-5" aria-label="{{ __('messages.search.next_step') }}">
-            <p class="text-xs font-black uppercase tracking-wide text-primary">{{ __('messages.search.next_step') }}</p>
-            <h2 class="mt-2 text-lg font-black">{{ $nextAction->label }}</h2>
-            <p class="mt-1 text-sm text-gray-600">{{ $nextActorLabel }}</p>
-            @if($nextAction->due)
-                <div class="mt-3 flex items-center gap-2 text-sm"><span>{{ __('messages.search.due') }} {{ \App\Support\Format\Ui::date($nextAction->due) }}</span>
-                    @if($nextAction->deadlineAlert)<x-ui.badge :tone="$nextAction->deadlineAlert">{{ $nextAction->deadlineAlert === 'red' ? __('Overdue') : __('Approaching') }}</x-ui.badge>@endif
-                </div>
-            @endif
-            @if($nextAction->target)<x-ui.button :href="$nextAction->target" class="mt-4">{{ __('messages.search.open_step') }}</x-ui.button>@endif
-            @if($nextAction->key === 'waiting_response')<x-ui.button href="#next-handoff" variant="secondary" class="mt-4">{{ __('messages.home.record_response') }}</x-ui.button>@endif
         </x-ui.card>
     @endif
     @if($priors['count'])<section class="bg-amber-light rounded-2xl p-5">
@@ -165,14 +212,14 @@
 <strong class="text-red">{{ __('Committee conflict: :name', ['name' => $conflict['member']->person_name]) }}</strong>
 <p class="text-sm">{{ $conflict['type'] === 'employee_linked' ? __('Direct link to a case party — a replacement is required.') : ($conflict['excluded'] ? __('A name match requires HR identity verification.') : __('The name match was verified.')) }}</p>
 @if($canManage && $conflict['type'] === 'name_only' && $conflict['excluded'])<input wire:model="clearanceReason" placeholder="{{ __('Identity verification reason') }}" class="ui-control rounded-xl border p-2 mt-2">
-<x-ui.button variant="secondary" wire:click="clearConflict({{ $conflict['member']->id }})" class="text-primary font-bold px-3">{{ __('Record verification') }}</x-ui.button>
+<x-ui.button variant="secondary" wire:click="clearConflict({{ $conflict['member']->id }})">{{ __('Record verification') }}</x-ui.button>
 @error('clearanceReason')<p class="text-red">{{ $message }}</p>
 @enderror@endif</div>
 @endforeach
     @if(in_array($deadlines->procedureStatus($record), ['approaching','overdue'], true))<div role="alert" class="bg-red-light text-red rounded-2xl p-5 font-bold">{{ __('Alert: the 15-day procedure deadline :state.', ['state' => $deadlines->procedureStatus($record) === 'overdue' ? __('has passed') : __('is approaching')]) }}</div>
 @endif
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-<section id="next-actions" class="ui-card scroll-mt-20 p-5 lg:col-span-2">
+<section id="next-actions" class="ui-card scroll-mt-20 p-5 lg:col-span-3">
 <h2 class="text-lg font-black mb-4">{{ __('Actions') }}</h2>
         @if($record->status !== \App\Enums\CaseStatus::ArchivedFinal && !$record->legal_review_requested_at && in_array(auth()->user()->primary_role, [\App\Enums\UserRole::CompanyAdmin, \App\Enums\UserRole::HrStaff, \App\Enums\UserRole::CommitteeMember], true))<span id="next-consultation" class="scroll-mt-20"></span><x-ui.button variant="secondary" wire:click="requestConsultation" class="mb-4 border-amber-300 text-amber-700">{{ __('Request legal consultation') }}</x-ui.button>
 @endif
@@ -184,7 +231,7 @@
 <x-ui.button variant="danger" wire:click="cancelConsultation">{{ __('Cancel consultation') }}</x-ui.button>
 @error('consultationCancelReason')<p class="text-red">{{ $message }}</p>
 @enderror@endif
-                @if(!$record->legal_review_requested_at || $record->legal_review_completed_at || $record->legal_review_cancelled_at)<x-ui.button variant="primary" wire:click="closeWithoutPenalty" class="bg-primary text-white rounded-2xl px-5 py-3">{{ __('Archive without a penalty') }}</x-ui.button>
+                @if(!$record->legal_review_requested_at || $record->legal_review_completed_at || $record->legal_review_cancelled_at)<x-ui.button variant="primary" wire:click="closeWithoutPenalty">{{ __('Archive without a penalty') }}</x-ui.button>
 @endif
             @endif
             @if($record->status === \App\Enums\CaseStatus::SignedRecommendationsUploaded && in_array($record->outcome?->value, ['warning', 'termination'], true))<x-ui.button href="/cases/{{ $record->id }}/decision">{{ __('Write decision letter') }}</x-ui.button>@endif
@@ -195,7 +242,7 @@
             @if(in_array($record->status, [\App\Enums\CaseStatus::RecommendationsAwaitingApprovals, \App\Enums\CaseStatus::RecommendationsConfirmed], true))<x-ui.button href="/cases/{{ $record->id }}/documents/{{ $record->documents->where('document_type', \App\Enums\DocumentType::Recommendations)->last()?->id }}/confirm">{{ __('Review recommendation approvals') }}</x-ui.button>@endif
             @if(in_array($record->status, [\App\Enums\CaseStatus::AwaitingCommitteeSignatures, \App\Enums\CaseStatus::SignedRecommendationsUploaded], true))<x-ui.button href="/cases/{{ $record->id }}/signed-scan" variant="secondary">{{ __('Recommendations and signatures scan') }}</x-ui.button>@endif
             @if($record->status === \App\Enums\CaseStatus::Draft)<x-ui.button href="/cases/new?draft={{ $record->id }}" variant="secondary">{{ __('Edit facts') }}</x-ui.button>
-<x-ui.button variant="primary" wire:click="open" class="bg-primary text-white rounded-2xl px-5 py-2">{{ __('Open case') }}</x-ui.button>
+<x-ui.button variant="primary" wire:click="open">{{ __('Open case') }}</x-ui.button>
 @endif
             @if($record->status === \App\Enums\CaseStatus::Open)<x-ui.button href="/cases/{{ $record->id }}/documents/{{ $record->documents->where('document_type', \App\Enums\DocumentType::DefenseLetter)->where('status', \App\Enums\DocumentStatus::Draft)->last()?->id ?? 'new' }}/edit">{{ __('Write defense request letter') }}</x-ui.button>@endif
             @if($record->status === \App\Enums\CaseStatus::DefenseLetterCitationCheck)<x-ui.button href="/cases/{{ $record->id }}/documents/{{ $record->documents->where('document_type', \App\Enums\DocumentType::DefenseLetter)->last()?->id }}/edit" variant="secondary">{{ __('Return to editing and check citations') }}</x-ui.button>@endif
@@ -222,7 +269,7 @@
 <input wire:model="attemptedBy" placeholder="{{ __('Person making the attempt') }}" class="ui-control rounded-xl border p-2">
 </div>
 @endif @endif
-                <x-ui.button variant="primary" wire:click="recordHandOff" class="bg-primary text-white rounded-2xl px-5 py-2 mt-3">{{ __('Record handoff') }}</x-ui.button>
+                <x-ui.button variant="primary" wire:click="recordHandOff" class="mt-3">{{ __('Record handoff') }}</x-ui.button>
 @foreach(['signedAt','attemptedAt','attemptLocation','attemptedBy','witnessOne','witnessTwo','witnessScan'] as $field)@error($field)<p class="text-red text-sm">{{ $message }}</p>
 @enderror@endforeach
                 @if($deadlines->responseDue($record) && now('Asia/Baghdad')->startOfDay()->gt($deadlines->responseDue($record)) && !$record->events->contains('event_type', 'response_not_received'))<x-ui.button variant="danger" wire:click="markNoResponse" class="mt-4">{{ __('Record no response') }}</x-ui.button>
@@ -250,21 +297,21 @@
 @if($handoffStatus === 'delivery_refused')<input type="datetime-local" wire:model="attemptedAt" aria-label="{{ __('Attempt date') }}" class="ui-control rounded-xl border p-2">
 <input wire:model="attemptLocation" placeholder="{{ __('Attempt location') }}" class="ui-control rounded-xl border p-2">
 <input wire:model="attemptedBy" placeholder="{{ __('Person making the attempt') }}" class="ui-control rounded-xl border p-2">@endif @endif
-                <x-ui.button variant="primary" wire:click="recordHandOff" class="bg-primary text-white rounded-2xl px-5 py-2">{{ __('Record handoff') }}</x-ui.button>
+                <x-ui.button variant="primary" wire:click="recordHandOff">{{ __('Record handoff') }}</x-ui.button>
                 @foreach(['signedAt','attemptedAt','attemptLocation','attemptedBy','witnessOne','witnessTwo','witnessScan'] as $field)@error($field)<p role="alert" class="text-red text-sm">{{ $message }}</p>
 @enderror@endforeach
             @endif
             @if(in_array($record->status, [\App\Enums\CaseStatus::AwaitingEmployeeResponse,\App\Enums\CaseStatus::ResponseReceived,\App\Enums\CaseStatus::ResponseRefusedToSign,\App\Enums\CaseStatus::ResponseDeliveryRefused], true))<div id="next-response-scan" class="scroll-mt-20 mt-5">
 <label class="block font-bold mb-2">{{ __('Employee response scan') }}</label>
 <input type="file" wire:model="responseScan" accept=".pdf,.jpg,.jpeg,.png" class="ui-control block mb-2">
-<x-ui.button variant="secondary" wire:click="uploadResponse" class="border border-primary text-primary rounded-2xl px-5 py-2">{{ __('Upload scan') }}</x-ui.button>
+<x-ui.button variant="secondary" wire:click="uploadResponse">{{ __('Upload scan') }}</x-ui.button>
 @error('responseScan')<p class="text-red">{{ $message }}</p>
 @enderror</div>
 @endif
             @if($record->status === \App\Enums\CaseStatus::Open)<div class="mt-6 border-t pt-4">
 <h3 class="font-bold mb-2">{{ __('Assigned HR employee') }}</h3>
 <x-ui.select wire:model="assigneeId" class="rounded-xl border p-2"><option value="">{{ __('Unassigned') }}</option>@foreach($hrUsers as $user)<option value="{{ $user->id }}">{{ $user->name }}</option>@endforeach</x-ui.select>
-<x-ui.button variant="secondary" wire:click="assign" class="text-primary font-bold px-3">{{ __('Save assignment') }}</x-ui.button>
+<x-ui.button variant="secondary" wire:click="assign">{{ __('Save assignment') }}</x-ui.button>
 @error('assigneeId')<p class="text-red">{{ $message }}</p>
 @enderror</div>
 @endif
@@ -293,7 +340,7 @@
 <input type="checkbox" wire:model="responseScanSafe">{{ __('I checked that the image contains no identity number, salary, or phone number') }}</label>
                     @error('responseScanSafe')<p class="text-red">{{ $message }}</p>
 @enderror
-                    <x-ui.button variant="secondary" wire:click="requestResponseReading" class="border border-primary text-primary rounded-2xl px-5 py-2">{{ __('Read response with AI') }}</x-ui.button>
+                    <x-ui.button variant="secondary" wire:click="requestResponseReading">{{ __('Read response with AI') }}</x-ui.button>
                     @error('scan')<p class="text-red">{{ $message }}</p>
 @enderror
                     @if($record->events->contains('event_type', 'response_reading_failed'))<p role="alert">{{ __('AI reading failed — you can enter the text manually') }}</p>
@@ -312,7 +359,7 @@
 </label>
                             <label>{{ __('Source') }} <x-ui.select wire:model="responseOrigin" class="rounded-xl border p-2"><option value="human">{{ __('Manual entry') }}</option>@if($aiAttempt)<option value="ai_checked">{{ __('AI reading after HR review') }}</option>@endif</x-ui.select>
 </label>
-                            <x-ui.button variant="primary" wire:click="confirmResponse" class="bg-primary text-white rounded-2xl px-5 py-2">{{ __('Confirm text after checking against the image') }}</x-ui.button>
+                            <x-ui.button variant="primary" wire:click="confirmResponse">{{ __('Confirm text after checking against the image') }}</x-ui.button>
                         </div>
                     </div>
                     @error('responseText')<p class="text-red">{{ $message }}</p>
@@ -321,20 +368,12 @@
             </div>
         @endif
     </section>
-<section class="ui-card p-5">
-<h2 class="text-lg font-black mb-4">{{ __('Deadlines') }}</h2>
-@foreach([['title' => __('Response'),'due'=>$deadlines->responseDue($record),'state'=>$deadlines->responseStatus($record)],['title' => __('Procedure'),'due'=>$deadlines->procedureDue($record),'state'=>$deadlines->procedureStatus($record)],['title' => __('Appeal'),'due'=>$deadlines->appealEnd($record),'state'=>$deadlines->appealStatus($record)]] as $deadline)<div class="rounded-2xl border border-[#EEF0F4] p-4 mb-3 {{ $colors[$deadline['state']] ?? 'ui-badge-gray' }}">
-<strong>{{ $deadline['title'] }}</strong>
-<p class="text-sm">{{ $deadline['due'] ? \App\Support\Format\Ui::date($deadline['due']) : __('Not started yet') }}</p>
-<p class="text-xs">{{ ['met' => __('Completed within deadline'), 'on_track' => __('Within deadline'), 'approaching' => __('Approaching'), 'missed' => __('Deadline missed'), 'overdue' => __('Overdue')][$deadline['state']] ?? '' }}</p>
-</div>
-@endforeach</section>
 </div>
     <section id="next-documents" class="ui-card scroll-mt-20 p-5">
 <h2 class="text-lg font-black mb-4">{{ __('Documents and versions') }}</h2>
 @php $documentItems = $record->documents->sortByDesc('created_at')->values()->map(fn ($row) => \App\Support\Files\FileItem::forDocument($row))->all(); @endphp
 @forelse($record->documents->sortByDesc('created_at')->values() as $document)<div class="border-t py-4 flex flex-wrap items-center gap-3">
-<div class="flex-1">
+<div class="min-w-0 basis-full sm:basis-0 sm:flex-1">
 <strong>{{ $documentTypes[$document->document_type->value] ?? __('Document') }} — {{ __('Version') }} {{ \App\Support\Format\Ui::number($document->version) }}</strong> @if($document->drafted_by === \App\Enums\DraftedBy::Ai)<span class="rounded-full bg-primary-light text-primary px-2 py-1 text-xs font-bold">AI</span>@endif <p class="text-sm text-gray-500">{{ $documentStatuses[$document->status->value] ?? __('Document') }} · {{ ! $document->is_locked ? __('PDF after issuance') : ($document->pdf_status === 'ready' ? __('PDF ready') : ($document->pdf_status === 'failed' ? __('Could not prepare PDF') : __('PDF preparing'))) }}</p>
 </div>
 @if($document->pdf_status === 'ready')<x-ui.button href="{{ route('documents.pdf', $document) }}" variant="secondary">{{ __('Download PDF') }}</x-ui.button>@endif <x-ui.file-action :item="$documentItems[$loop->index]" :items="$documentItems" :index="$loop->index" :show-download="false" /> @if($canManage && $document->is_locked)<input wire:model="correctionReason" placeholder="{{ __('Correction reason') }}" class="ui-control rounded-xl border p-2">

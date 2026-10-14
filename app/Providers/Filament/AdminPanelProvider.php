@@ -98,11 +98,11 @@ class AdminPanelProvider extends PanelProvider
             ->pages([Dashboard::class])
             ->widgets([SetupChecklist::class])
             ->colors([
-                'primary' => Color::hex('#4F46E5'),
-                'warning' => Color::hex('#F59E0B'),
-                'danger' => Color::hex('#EF4444'),
-                'success' => Color::hex('#10B981'),
-            ])->font('Tajawal')->darkMode(false)->defaultAvatarProvider(IndigoAvatarProvider::class)->brandName(fn (): string => __('Displanery'))->favicon(asset('favicon.svg'))->viteTheme('resources/css/filament/theme.css')
+                'primary' => Color::hex('#1D3A63'),
+                'warning' => Color::hex('#F2B33D'),
+                'danger' => Color::hex('#C2272D'),
+                'success' => Color::hex('#1F7A58'),
+            ])->font('Readex Pro')->darkMode(false)->topNavigation()->defaultAvatarProvider(IndigoAvatarProvider::class)->brandName(fn (): string => __('Displanery'))->favicon(asset('favicon.svg'))->viteTheme('resources/css/filament/theme.css')
             ->authMiddleware([Authenticate::class]);
     }
 }

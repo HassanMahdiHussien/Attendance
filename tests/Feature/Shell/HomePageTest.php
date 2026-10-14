@@ -9,7 +9,7 @@ it('renders the English LTR home page', function () {
     $this->get('/')->assertOk()
         ->assertSee('lang="en"', false)
         ->assertSee('dir="ltr"', false)
-        ->assertSee('Tajawal')
+        ->assertSee('Readex+Pro')
         ->assertSee('Displanery');
 });
 

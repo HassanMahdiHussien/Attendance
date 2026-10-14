@@ -41,8 +41,10 @@ test('a reporter checklist reaches the HR inbox and becomes an open case', funct
     $report = ViolationReport::query()->where('reporter_user_id', $reporter->id)->sole();
     expect($report->intakeQuestions()->whereNotNull('answer')->count())->toBe(1);
 
-    $hrPage = $reporterPage->click('aside form[action$="/logout"] button')
-        ->assertPathIs('/login')->assertNoJavaScriptErrors()
+    $reporterPage->click('#workspace-account > button')->click('#workspace-account-menu form[action$="/logout"] button')
+        ->assertPathIs('/login')->assertNoJavaScriptErrors();
+    // A fresh login page: typing into the page reached through the logout redirect raced Livewire's boot.
+    $hrPage = visitBound('/login')->waitForEvent('networkidle')
         ->fill('email', $hr->email)->fill('password', 'password')->press('Log in')
         ->assertPathIs('/home')->assertNoJavaScriptErrors();
     $hrPage->navigate('/reports/inbox')->assertPathIs('/reports/inbox')->assertNoJavaScriptErrors()

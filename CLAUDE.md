@@ -303,32 +303,18 @@ FILESYSTEM_DISK=local       # NOT s3 — see ADR 0006
 # WHATSAPP_BUSINESS_* — not needed yet, Phase 2 (Section 11)
 ```
 
-## 18. Visual design direction (confirmed — see `docs/design/dashboard-mockup.html`)
+## 18. Visual design direction (confirmed 2026-10-14 — see `DESIGN.md`)
 
-A working HTML mockup exists at `docs/design/dashboard-mockup.html` — Claude Code should open/read it before building any Livewire view, and match its look exactly (colors, spacing, component shapes), not just the general idea.
+**The authority is `DESIGN.md` at the project root** (tokens in its frontmatter, rules in its prose; Impeccable sidecar in `.impeccable/design.json`; product context in `PRODUCT.md`). Read it before building any view. The direction is **"Baghdad Central Departures"**, chosen by the product owner through the Impeccable design skill: a case runs like a station timetable.
 
-**Design tokens:**
-```css
---ink:        #111827   /* primary text */
---bg:         #F7F8FB   /* page background */
---primary:    #4F46E5   /* indigo — primary actions, active states */
---primary-light: #EEF0FE
---amber:      #F59E0B   /* pending/awaiting-signature status */
---amber-light: #FEF6E6
---red:        #EF4444   /* urgent/deadline-approaching status */
---red-light:  #FEECEC
---green:      #10B981   /* closed/confirmed status */
---green-light: #E9FBF3
-```
+- Midnight shell overhead (top bar `#0E1A2B`, departures strip `#16263D`), light working ground `#F2F4F7`, white panels with `#DDE1E7` hairlines.
+- **Signal amber `#F2B33D` only for the one primary action and the current stage** (the Two Amber Points Rule); route navy `#1D3A63` for links and focus; red / green / ochre only for deadline and status meaning.
+- **Fonts:** Readex Pro for all interface text (Arabic and Latin); JetBrains Mono for case numbers, dates and countdowns; Amiri only for legal document previews.
+- **Signature elements:** the departures strip of due events with split-flap countdown chips, and the five-station route rail (opened → defense letter → response → committee → decision). Deadlines are always the most visible thing on a working screen.
+- **The document confirmation/issuance screen** stays visually distinct: the document preview sits in its own light card in Amiri, reinforcing "this is the actual legal document".
+- The Filament admin panel shares the same top bar, colours and font (`resources/css/filament/theme.css`).
 
-- **UI font:** Tajawal (Google Fonts) for all interface chrome — labels, buttons, tables, nav.
-- **Document-preview font:** Amiri, used *only* when displaying an actual legal document's text (defense letter/recommendations/decision letter previews) — a deliberate contrast: modern UI everywhere, traditional Naskh the moment a real legal document appears. Do not use Amiri for app chrome.
-- **Data/reference font:** JetBrains Mono, for case IDs and similar reference numbers.
-- **Case cards:** single-row horizontal layout — initials avatar circle (indigo-tinted), name + case ID + department inline, a 5-dot step indicator (filled dots = completed stages, collapsing the Section 7 state machine into 5 visual stages: opened → defense letter → response → committee session → decision), and a pill-shaped status badge on the far side. Closed cases render at `opacity-60` to visually recede below active ones.
-- **Buttons:** rounded-2xl/3xl, indigo primary with a soft colored shadow (`shadow-indigo-200` style), not flat/sharp-cornered.
-- **The document confirmation/issuance screen** (Section 3/24.3's mandatory preview gate) is the one screen that should feel structurally different from the rest of the app — the document preview sits in its own card with a light gray background and the Amiri font, clearly visually separated from the surrounding indigo/Tajawal UI chrome, reinforcing "this is the actual legal document, review it as such" before the confirm action.
-
-An earlier, more formal navy/bronze "official seal" direction was explored and explicitly rejected as too dated — don't resurrect it without a new explicit request.
+Superseded: the earlier indigo/Tajawal mockup (`docs/design/dashboard-mockup.html`) and the rejected navy/bronze "official seal" direction. Don't resurrect either without a new explicit request.
 
 ## 19. Platform-readiness rules for Phase 1 (cheap now, expensive later)
 

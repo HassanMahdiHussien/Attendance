@@ -57,8 +57,8 @@
                                 <span class="min-w-0"><a href="/cases/{{ $case->id }}" class="ui-link block font-bold text-ink">{{ $case->employee?->name }}</a><span class="block text-xs text-gray-500">{{ $case->employee?->position }} — {{ $case->employee?->department }}</span>@if($case->employee)<a class="ui-link block text-xs font-bold" href="{{ route('employees.show', $case->employee) }}">{{ __('Employee page') }}</a>@endif</span>
                             </div>
                         </x-ui.td>
-                        <x-ui.td :label="__('Progress')"><div class="flex items-center gap-1.5" aria-label="{{ \App\Support\Format\Ui::stage($case->status) }}">@for($i = 1; $i <= 5; $i++)<span class="h-2 w-2 rounded-full {{ $i <= $step ? ($archived ? 'bg-green' : 'bg-primary') : 'bg-gray-200' }}"></span>@endfor</div></x-ui.td>
-                        <x-ui.td :label="__('Status')"><x-ui.badge :tone="$tone">{{ $pill }}</x-ui.badge></x-ui.td>
+                        <x-ui.td :label="__('Progress')"><div class="flex items-center" aria-label="{{ \App\Support\Format\Ui::stage($case->status) }}">@for($i = 1; $i <= 5; $i++)@if($i > 1)<span class="h-[2px] w-5 {{ $i <= $step ? ($archived ? 'bg-green' : 'bg-night') : 'bg-line' }}"></span>@endif<span class="h-2.5 w-2.5 shrink-0 rounded-full border-2 {{ $archived ? 'border-green bg-green' : ($i < $step ? 'border-night bg-night' : ($i === $step ? 'border-signal bg-signal' : 'border-line bg-white')) }}"></span>@endfor</div></x-ui.td>
+                        <x-ui.td :label="__('Status')">@if($urgent)<span class="flap {{ $days < 0 ? 'flap-late' : 'flap-soon' }}">{{ $pill }}</span>@else<x-ui.badge :tone="$tone">{{ $pill }}</x-ui.badge>@endif</x-ui.td>
                     </tr>
                 @endforeach
             </tbody>

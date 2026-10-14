@@ -3,66 +3,89 @@
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 
+/* Departures world (see .impeccable/surfaces): midnight shell overhead, light working ground,
+   signal amber reserved for the primary action and the current stage. */
 @theme {
-    --color-ink: #111827;
-    --color-bg: #F7F8FB;
-    --color-primary: #4F46E5;
-    --color-primary-light: #EEF0FE;
-    --color-amber: #F59E0B;
-    --color-amber-light: #FEF6E6;
-    --color-red: #EF4444;
-    --color-red-light: #FEECEC;
-    --color-green: #10B981;
-    --color-green-light: #E9FBF3;
-    --font-sans: 'Tajawal', sans-serif;
-    --font-tajawal: 'Tajawal', sans-serif;
+    --color-ink: #14181F;
+    --color-bg: #F2F4F7;
+    --color-line: #DDE1E7;
+    --color-night: #0E1A2B;
+    --color-night-2: #16263D;
+    --color-night-line: #26384F;
+    --color-night-soft: #A9B6C9;
+    --color-signal: #F2B33D;
+    --color-signal-dark: #DE9A1A;
+    --color-signal-light: #FDF3DD;
+    --color-primary: #1D3A63;
+    --color-primary-light: #E6ECF5;
+    --color-amber: #9A6400;
+    --color-amber-light: #FDF3DD;
+    --color-red: #C2272D;
+    --color-red-light: #FDECEC;
+    --color-green: #1F7A58;
+    --color-green-light: #E4F4EC;
+    --font-sans: 'Readex Pro', sans-serif;
+    --font-tajawal: 'Readex Pro', sans-serif;
     --font-amiri: 'Amiri', serif;
     --font-mono: 'JetBrains Mono', monospace;
 }
 
 @layer components {
-    .ui-card { @apply min-w-0 bg-white shadow-sm; border: 1px solid #EEF0F4; border-radius: 1.25rem; }
-    .ui-badge { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold leading-tight; }
-    .ui-badge-red { @apply bg-red-light text-red-700; }
-    .ui-badge-amber { @apply bg-amber-light text-amber-700; }
-    .ui-badge-green { @apply bg-green-light text-green-700; }
-    .ui-badge-indigo { @apply bg-primary-light text-indigo-700; }
+    .ui-card { @apply min-w-0 bg-white; border: 1px solid var(--color-line); border-radius: .75rem; box-shadow: 0 1px 2px rgb(14 26 43 / .05); }
+    .ui-badge { @apply inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold leading-tight; }
+    .ui-badge-red { @apply bg-red-light text-red; }
+    .ui-badge-amber { @apply bg-signal-light text-amber; }
+    .ui-badge-green { @apply bg-green-light text-green; }
+    .ui-badge-indigo { @apply bg-primary-light text-primary; }
     .ui-badge-gray { @apply bg-gray-100 text-gray-700; }
-    .ui-button { @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50; }
-    .ui-button-small { @apply min-h-10 px-3 py-2 text-xs; }
-    .ui-button-primary { @apply bg-primary text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700; }
-    .ui-button-secondary { @apply border bg-white text-gray-700 hover:bg-gray-50; border-color: #EEF0F4; }
-    .ui-button-ghost { @apply bg-transparent text-gray-700 hover:bg-gray-100; }
-    .ui-button-danger { @apply bg-red-600 text-white hover:bg-red-700; }
-    .ui-control { @apply min-h-10 w-full min-w-0 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary; }
-    .ui-link { @apply rounded-lg text-primary hover:text-indigo-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary; text-decoration: none; }
+    .ui-button { @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50; }
+    .ui-button-small { @apply min-h-9 px-3 py-1.5 text-xs; }
+    .ui-button-primary { @apply bg-signal text-night hover:bg-signal-dark; box-shadow: 0 1px 2px rgb(14 26 43 / .12); }
+    .ui-button-secondary { @apply border bg-white text-ink hover:bg-gray-50; border-color: var(--color-line); }
+    .ui-button-ghost { @apply bg-transparent text-ink hover:bg-gray-100; }
+    .ui-button-danger { @apply bg-red text-white hover:bg-red-700; }
+    .ui-control { @apply min-h-10 w-full min-w-0 rounded-lg border bg-white px-3 py-2 text-sm text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary; border-color: var(--color-line); }
+    .ui-link { @apply rounded text-primary hover:text-night focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary; text-decoration: none; text-underline-offset: 3px; }
     .ui-link:hover, .ui-link:focus-visible { text-decoration: underline; }
     .ui-button { text-decoration: none !important; }
-    .ui-table-wrap { @apply min-w-0 overflow-hidden bg-white; width: 100%; max-width: 100%; border: 1px solid #EEF0F4; border-radius: 1.25rem; }
-    .ui-table { @apply w-full text-sm; table-layout: fixed; }
-    .ui-table thead { @apply text-gray-600; background: #FAFAFC; }
-    .ui-table th { @apply px-4 py-3 text-start font-bold; }
-    .ui-table tbody tr { @apply border-t; border-color: #EEF0F4; }
-    .ui-table tbody tr:hover { background: #FAFAFC; }
+    .ui-table-wrap { @apply min-w-0 overflow-hidden bg-white; width: 100%; max-width: 100%; border: 1px solid var(--color-line); border-radius: .75rem; }
+    .ui-table { @apply w-full text-sm; table-layout: fixed; font-variant-numeric: tabular-nums; }
+    .ui-table thead { @apply text-xs uppercase tracking-wider text-gray-500; background: #F7F8FA; }
+    .ui-table th { @apply px-4 py-3 text-start font-semibold; }
+    .ui-table tbody tr { @apply border-t; border-color: var(--color-line); }
+    .ui-table tbody tr:hover { background: #F7F8FA; }
     .ui-td { @apply px-4 py-3 align-middle; overflow-wrap: anywhere; }
     .ui-td::before { display: none; }
-    .ui-timeline-dot { position: absolute; inset-inline-start: -7px; top: 4px; width: 12px; height: 12px; border-radius: 50%; background: #4F46E5; }
+    .ui-timeline-dot { position: absolute; inset-inline-start: -7px; top: 5px; width: 12px; height: 12px; border-radius: 50%; background: #fff; border: 3px solid var(--color-night); }
+
+    /* Split-flap countdown chip: the departures board's one signature element. */
+    .flap { @apply inline-flex items-center rounded px-2 py-0.5 font-mono text-[0.8rem] font-medium uppercase tracking-wide;
+        background: linear-gradient(to bottom, #0A1422 0 49%, #050B14 49% 51%, #0A1422 51% 100%); color: #E8EDF5; font-variant-numeric: tabular-nums; }
+    .flap-ok { color: #7ED7B5; }
+    .flap-soon { color: var(--color-signal); }
+    .flap-late { color: #FF8A8D; }
+    .flap-idle { color: var(--color-night-soft); }
 }
 
 @media (max-width: 767px) {
     .ui-table thead { display: none; }
     .ui-table, .ui-table tbody { display: block; }
     .ui-table-wrap { border: 0; background: transparent; }
-    .ui-table tbody tr { display: block; margin-bottom: .75rem; border: 1px solid #EEF0F4; border-radius: 1.25rem; background: white; overflow: hidden; }
+    .ui-table tbody tr { display: block; margin-bottom: .75rem; border: 1px solid var(--color-line); border-radius: .75rem; background: white; overflow: hidden; }
     .ui-td { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; padding: .55rem 1rem; text-align: end; overflow-wrap: anywhere; }
     .ui-td::before { display: block; flex-shrink: 0; content: attr(data-label); color: #6B7280; text-align: start; }
 }
 
 [x-cloak] { display: none !important; }
 
-/* Tailwind v4 draws a plain `border` in the current text colour; the design uses light gray dividers. */
 @layer base {
+    /* Tailwind v4 draws a plain `border` in the current text colour; the design uses the hairline colour. */
     *, ::after, ::before, ::backdrop, ::file-selector-button {
-        border-color: var(--color-gray-200, currentColor);
+        border-color: var(--color-line, currentColor);
     }
+    ::selection { background: var(--color-signal); color: var(--color-night); }
+    input, textarea { caret-color: var(--color-primary); }
+    html { scrollbar-color: #B8C1CD transparent; }
+    :focus-visible { outline-color: var(--color-primary); }
+    .font-mono { font-variant-numeric: tabular-nums; }
 }

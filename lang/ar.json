@@ -752,5 +752,7 @@
     "Your account cannot open this page. If you think it should, ask your company admin to change your access.": "لا يمكن لحسابك فتح هذه الصفحة. إذا كنت ترى أنه يجب أن يتمكن من ذلك، فاطلب من مدير الشركة تعديل صلاحياتك.",
     "Signed in as": "تم تسجيل الدخول باسم",
     "Go to my work": "الذهاب إلى عملي اليوم",
-    "Sign in with another account": "تسجيل الدخول بحساب آخر"
+    "Sign in with another account": "تسجيل الدخول بحساب آخر",
+    "Due event": "الاستحقاق",
+    "Due": "الموعد"
 }
