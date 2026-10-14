@@ -14,11 +14,11 @@ test('the workspace language switch keeps the current page in both directions', 
         ->fill('email', $admin->email)->fill('password', 'password')->press('Log in')
         ->assertPathIs('/home')->assertNoJavaScriptErrors();
     $page->navigate('/cases')->assertPathIs('/cases')->assertNoJavaScriptErrors()
-        ->click('aside button[lang]')
+        ->click('#workspace-account > button')->click('#workspace-account-menu button[lang]')
         ->assertPathIs('/cases')
         ->assertScript('document.documentElement.dir', 'rtl')
         ->assertNoJavaScriptErrors()
-        ->click('aside button[lang]')
+        ->click('#workspace-account > button')->click('#workspace-account-menu button[lang]')
         ->assertPathIs('/cases')
         ->assertScript('document.documentElement.dir', 'ltr')
         ->assertNoJavaScriptErrors();
@@ -33,8 +33,8 @@ test('the admin panel user menu switches languages on the same tenant page', fun
     $page = visitBound('/login')->assertNoJavaScriptErrors()
         ->fill('email', $admin->email)->fill('password', 'password')->press('Log in')
         ->assertPathIs('/home')->assertNoJavaScriptErrors();
-    $page->click('aside button[aria-controls="workspace-settings"]')
-        ->click('aside #workspace-settings a[href$="/branches"]')
+    $page->click('button[aria-controls="workspace-settings"]')
+        ->click('#workspace-settings a[href$="/branches"]')
         ->assertPathIs($path)->assertSee('New Branch')->assertNoJavaScriptErrors()
         ->click('.fi-user-menu-trigger')->click('Arabic')
         ->assertPathIs($path)

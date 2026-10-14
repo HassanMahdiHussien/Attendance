@@ -42,6 +42,9 @@ test('refreshed screens retain their original behavior surface', function (): vo
     $baseline = json_decode(File::get(base_path('tests/fixtures/ui-inventory.json')), true, flags: JSON_THROW_ON_ERROR);
     // New UI controls may be listed here with a reason once their behavior is reviewed.
     $allowedAdditions = [
+        'resources/views/layouts/workspace.blade.php' => [
+            'controls' => ['workspace-account-menu'],
+        ],
         'resources/views/livewire/cases/show-case.blade.php' => [
             'wire' => [
                 ['wire:click', 'linkRelated'],

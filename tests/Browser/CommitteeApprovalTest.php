@@ -54,7 +54,7 @@ test('legal, HR and union pool members approve recommendations in separate sessi
         // Browser requests reset the tenant context the in-process server shares with the test.
         app(TenantContext::class)->setCompany($company);
         expect($document->approvals()->where('role_category', $category)->where('decision', 'approved')->exists())->toBeTrue();
-        $page->click('aside form[action$="/logout"] button')
+        $page->click('#workspace-account > button')->click('#workspace-account-menu form[action$="/logout"] button')
             ->assertPathIs('/login')->assertNoJavaScriptErrors();
     }
 

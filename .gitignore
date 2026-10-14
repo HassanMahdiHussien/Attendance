@@ -31,3 +31,12 @@ project-starter.zip
 /docs/attachments/
 /docs/attachments.zip
 /tests/Browser/Screenshots
+
+# Impeccable design skill: compiled engine binaries and local-only settings
+/.claude/skills/impeccable/scripts/bin/
+/.claude/settings.local.json
+/.impeccable/config.local.json
+/.impeccable/mocks/
+/.impeccable/decision-payload.json
+/.impeccable/brief-case-page.md
+/.impeccable/questions/
