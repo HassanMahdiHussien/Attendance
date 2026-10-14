@@ -57,11 +57,11 @@
             </div>
             <div class="min-w-0 overflow-x-auto">
                 <table class="w-full text-sm">
-                    <thead><tr class="text-start text-[0.7rem] uppercase tracking-[0.14em] text-night-soft">
-                        <th scope="col" class="pb-2 text-start font-medium">{{ __('Due event') }}</th>
+                    <thead><tr class="text-start text-xs text-night-soft ltr:text-[0.7rem] ltr:uppercase ltr:tracking-[0.14em]">
+                        <th scope="col" class="pb-2 pe-4 text-start font-medium">{{ __('Due event') }}</th>
                         <th scope="col" class="hidden pb-2 text-start font-medium sm:table-cell">{{ __('Stage') }}</th>
-                        <th scope="col" class="pb-2 text-start font-medium">{{ __('Due') }}</th>
-                        <th scope="col" class="pb-2 text-start font-medium">{{ __('Remaining') }}</th>
+                        <th scope="col" class="pb-2 pe-4 text-start font-medium">{{ __('Due') }}</th>
+                        <th scope="col" class="pb-2 pe-4 text-start font-medium">{{ __('Remaining') }}</th>
                         <th scope="col" class="hidden pb-2 text-start font-medium md:table-cell">{{ __('Status') }}</th>
                     </tr></thead>
                     <tbody>
@@ -79,7 +79,7 @@
                             <tr class="border-t border-night-line">
                                 <td class="py-2.5 pe-4 font-medium">{{ $event['title'] }}</td>
                                 <td class="hidden py-2.5 pe-4 text-night-soft sm:table-cell">{{ $event['stage'] }}</td>
-                                <td class="py-2.5 pe-3 font-mono text-[0.8rem] whitespace-nowrap"><bdi>{{ $event['due'] ? \App\Support\Format\Ui::date($event['due']) : '—' }}</bdi></td>
+                                <td class="py-2.5 pe-3 font-mono text-[0.8rem] sm:whitespace-nowrap"><bdi>{{ $event['due'] ? \App\Support\Format\Ui::date($event['due']) : '—' }}</bdi></td>
                                 <td class="py-2.5 pe-4"><span class="flap {{ $flapClass }}">{{ $flapText }}</span></td>
                                 <td class="hidden py-2.5 text-xs md:table-cell {{ in_array($event['state'], ['missed', 'overdue'], true) ? 'text-[#FF8A8D]' : ($event['state'] === 'approaching' ? 'text-signal' : 'text-night-soft') }}">{{ $stateLabels[$event['state']] ?? __('Not started yet') }}</td>
                             </tr>

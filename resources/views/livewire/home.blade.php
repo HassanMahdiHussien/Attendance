@@ -77,16 +77,16 @@
                 <h2 class="mb-3 text-lg font-bold text-ink">{{ __('messages.home.needs_action') }}</h2>
                 <div class="divide-y divide-line">
                     @forelse($work['actions'] as $row)
-                        <div class="flex flex-wrap items-center gap-3 py-4">
+                        <div class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 py-4 sm:flex sm:flex-wrap sm:gap-3">
                             @if(isset($row['case']))
-                                <span class="flap min-w-[7.5rem] justify-center {{ ($row['action']->deadlineAlert ?? null) === 'red' ? 'flap-late' : (($row['action']->deadlineAlert ?? null) === 'amber' ? 'flap-soon' : '') }}"><bdi>{{ $row['action']->due ? \App\Support\Format\Ui::date($row['action']->due) : __('messages.home.ready') }}</bdi></span>
+                                <span class="flap justify-center max-sm:col-span-2 max-sm:justify-self-start sm:min-w-[7.5rem] {{ ($row['action']->deadlineAlert ?? null) === 'red' ? 'flap-late' : (($row['action']->deadlineAlert ?? null) === 'amber' ? 'flap-soon' : '') }}"><bdi>{{ $row['action']->due ? \App\Support\Format\Ui::date($row['action']->due) : __('messages.home.ready') }}</bdi></span>
                                 <div class="min-w-0 flex-1">
                                     <div class="font-semibold"><bdi class="me-2 font-mono text-sm text-primary">{{ \App\Support\Format\Ui::number(str_pad($row['case']->case_number, 4, '0', STR_PAD_LEFT)) }}</bdi>{{ $row['case']->employee?->name }}</div>
                                     <p class="text-sm text-gray-500">{{ $row['action']->label }}</p>
                                 </div>
                                 <x-ui.button size="small" variant="secondary" :href="$row['action']->url">{{ __('messages.home.open_task') }}</x-ui.button>
                             @else
-                                <span class="flap flap-soon min-w-[7.5rem] justify-center">{{ __('messages.home.new') }}</span>
+                                <span class="flap flap-soon justify-center max-sm:col-span-2 max-sm:justify-self-start sm:min-w-[7.5rem]">{{ __('messages.home.new') }}</span>
                                 <div class="min-w-0 flex-1"><div class="font-semibold">{{ $row['label'] }}</div>@if(filled($row['summary'] ?? null))<p dir="auto" class="truncate text-sm text-gray-500">{{ $row['summary'] }}</p>@endif</div>
                                 <x-ui.button size="small" variant="secondary" :href="$row['url']">{{ __('messages.home.review') }}</x-ui.button>
                             @endif
@@ -117,7 +117,7 @@
                 <x-ui.card>
                     <h2 class="mb-3 font-bold text-ink">{{ __('messages.home.recent_activity') }}</h2>
                     @forelse($work['events'] as $event)
-                        <p class="mb-2 text-sm text-gray-500">{{ \App\Support\Format\CaseTimeline::format($event->event_type, $event->event_type === 'status_changed' ? ['to' => $event->payload['to'] ?? ''] : []) }} · <bdi class="font-mono">#{{ \App\Support\Format\Ui::number($event->disciplinaryCase?->case_number ?? '') }}</bdi> · {{ $event->actorUser?->name ?? __('messages.home.system') }} · <bdi class="font-mono">{{ \App\Support\Format\Ui::date($event->created_at) }} {{ \App\Support\Format\Ui::date($event->created_at, 'H:i') }}</bdi></p>
+                        <p class="mb-2 text-sm text-gray-500">{{ \App\Support\Format\CaseTimeline::format($event->event_type, $event->event_type === 'status_changed' ? ['to' => $event->payload['to'] ?? ''] : []) }} · <bdi class="font-mono">{{ \App\Support\Format\Ui::number(str_pad((string) ($event->disciplinaryCase?->case_number ?? ''), 4, '0', STR_PAD_LEFT)) }}</bdi> · {{ $event->actorUser?->name ?? __('messages.home.system') }} · <bdi class="font-mono">{{ \App\Support\Format\Ui::date($event->created_at) }} {{ \App\Support\Format\Ui::date($event->created_at, 'H:i') }}</bdi></p>
                     @empty
                         <x-ui.empty :title="__('messages.home.no_activity')" />
                     @endforelse
@@ -129,7 +129,7 @@
             <h2 class="mb-3 text-lg font-bold">{{ __('messages.home.awaiting_approval') }}</h2>
             @forelse($work['documents'] as $document)
                 <div class="flex flex-wrap items-center gap-3 border-b border-line py-3">
-                    <span class="flex-1">{{ __('messages.home.approve_recommendations') }} · <bdi class="font-mono">#{{ \App\Support\Format\Ui::number($document->disciplinaryCase->case_number) }}</bdi></span>
+                    <span class="flex-1">{{ __('messages.home.approve_recommendations') }} · <bdi class="font-mono">{{ \App\Support\Format\Ui::number(str_pad((string) $document->disciplinaryCase->case_number, 4, '0', STR_PAD_LEFT)) }}</bdi></span>
                     <x-ui.button size="small" :href="'/committee/approvals/'.$document->id">{{ __('messages.home.review') }}</x-ui.button>
                 </div>
             @empty
@@ -139,7 +139,7 @@
         <x-ui.card>
             <h2 class="mb-3 font-bold">{{ __('messages.home.attended_cases') }}</h2>
             @foreach($work['cases'] as $case)
-                <p class="py-2"><a href="{{ '/cases/'.$case->id }}"><bdi class="font-mono">#{{ \App\Support\Format\Ui::number($case->case_number) }}</bdi> · {{ $case->employee?->name }}</a></p>
+                <p class="py-2"><a class="hover:underline" href="{{ '/cases/'.$case->id }}"><bdi class="font-mono">{{ \App\Support\Format\Ui::number(str_pad((string) $case->case_number, 4, '0', STR_PAD_LEFT)) }}</bdi> · {{ $case->employee?->name }}</a></p>
             @endforeach
         </x-ui.card>
         <x-ui.card><h2 class="mb-3 font-bold">{{ __('messages.home.quick_actions') }}</h2><x-ui.button variant="secondary" href="/committee">{{ __('Committee') }}</x-ui.button></x-ui.card>
@@ -149,7 +149,7 @@
             @forelse($work['cases'] as $case)
                 <div class="flex flex-wrap items-center gap-3 border-b border-line py-3">
                     <x-ui.badge tone="amber"><bdi class="font-mono">{{ \App\Support\Format\Ui::date(app(\App\Services\Cases\Deadlines::class)->procedureDue($case)) }}</bdi></x-ui.badge>
-                    <span class="flex-1"><bdi class="font-mono">#{{ \App\Support\Format\Ui::number($case->case_number) }}</bdi> · {{ $case->employee?->name }}</span>
+                    <span class="flex-1"><bdi class="font-mono">{{ \App\Support\Format\Ui::number(str_pad((string) $case->case_number, 4, '0', STR_PAD_LEFT)) }}</bdi> · {{ $case->employee?->name }}</span>
                     <x-ui.button size="small" :href="'/cases/'.$case->id.'/consultation'">{{ __('messages.home.give_opinion') }}</x-ui.button>
                 </div>
             @empty
