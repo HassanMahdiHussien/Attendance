@@ -59,8 +59,10 @@
     .ui-timeline-dot { position: absolute; inset-inline-start: -7px; top: 5px; width: 12px; height: 12px; border-radius: 50%; background: #fff; border: 3px solid var(--color-night); }
 
     /* Split-flap countdown chip: the departures board's one signature element. */
-    .flap { @apply inline-flex items-center rounded px-2 py-0.5 font-mono text-[0.8rem] font-medium uppercase tracking-wide;
+    .flap { @apply inline-flex items-center rounded px-2 py-0.5 whitespace-nowrap font-mono text-[0.8rem] font-medium uppercase tracking-wide;
         background: linear-gradient(to bottom, #0A1422 0 49%, #050B14 49% 51%, #0A1422 51% 100%); color: #E8EDF5; font-variant-numeric: tabular-nums; }
+    /* Letter-spacing splits joined Arabic letters apart. */
+    [dir="rtl"] .flap, [dir="rtl"] .ui-table thead { letter-spacing: normal; }
     .flap-ok { color: #7ED7B5; }
     .flap-soon { color: var(--color-signal); }
     .flap-late { color: #FF8A8D; }

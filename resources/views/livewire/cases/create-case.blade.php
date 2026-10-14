@@ -35,7 +35,7 @@
             <x-ui.badge tone="indigo">{{ __('Forwarded email') }}</x-ui.badge>
             <h2 dir="auto" class="mt-4 font-bold">{{ $email->subject }}</h2>
             <p class="mt-1 text-sm text-gray-500">{{ $email->sender?->name }} · {{ $email->sender?->email }} · {{ \App\Support\Format\Ui::date($email->received_at, 'Y-m-d H:i') }}</p>
-            <p dir="auto" class="my-4 whitespace-pre-line text-sm text-gray-700">{{ $email->body_text }}</p>
+            <p dir="auto" class="my-4 whitespace-pre-line text-sm text-gray-700 [unicode-bidi:plaintext]">{{ $email->body_text }}</p>
             @php($emailItems = $email->attachments->values()->map(fn ($row) => \App\Support\Files\FileItem::forAttachment($row))->all())
             @foreach($email->attachments as $attachment)<p class="text-sm"><a class="ui-link text-sm" href="/attachments/{{ $attachment->id }}">{{ $attachment->original_name }}</a> <x-ui.file-action :item="$emailItems[$loop->index]" :items="$emailItems" :index="$loop->index" :show-download="false" /></p>@endforeach
         </x-ui.card>

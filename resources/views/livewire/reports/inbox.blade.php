@@ -9,7 +9,7 @@
                         <div><x-ui.badge tone="indigo">{{ __('Forwarded email') }}</x-ui.badge><h2 dir="auto" class="mt-2 font-bold text-ink">{{ $email->subject }}</h2></div>
                         <span class="text-sm text-gray-500">{{ $email->sender?->name }} · {{ $email->sender?->email }} · {{ \App\Support\Format\Ui::date($email->received_at, 'Y-m-d H:i') }}</span>
                     </div>
-                    <p dir="auto" class="whitespace-pre-line text-sm text-gray-600">{{ $email->body_text }}</p>
+                    <p dir="auto" class="whitespace-pre-line text-sm text-gray-600 [unicode-bidi:plaintext]">{{ $email->body_text }}</p>
                     @if($email->intakeQuestions->isNotEmpty())
                         <div class="space-y-1"><h3 class="font-semibold">{{ __('messages.intake.open_points') }}</h3>
                             @foreach($email->intakeQuestions as $question)<p dir="auto" class="text-sm"><strong>{{ $question->question }}</strong> — {{ $question->answer ?? __('messages.intake.open') }}</p>@endforeach

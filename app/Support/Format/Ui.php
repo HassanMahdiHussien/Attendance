@@ -67,7 +67,7 @@ class Ui
             0 => __('Due today'),
             1 => __('One day remaining'),
             2 => __('Two days remaining'),
-            default => __(':days days remaining', ['days' => self::number($days)]),
+            default => trans_choice(':days days remaining', $days, ['days' => self::number($days)]),
         };
     }
 }
