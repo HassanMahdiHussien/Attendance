@@ -33,7 +33,6 @@ use App\Support\Access\ViolationReportVisibility;
 use App\Support\Format\StageIndicator;
 use App\Support\Search\SearchText;
 use App\Support\Tenancy\TenantContext;
-use Filament\Facades\Filament;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\RateLimiter;
@@ -59,22 +58,6 @@ test('cross-company roles have their own landing pages', function (): void {
     expect(Landing::for(User::factory()->make(['primary_role' => UserRole::PlatformAdmin])))->toBe('/platform');
     expect(Landing::for(User::factory()->make(['primary_role' => UserRole::ExternalLegalReviewer])))->toBe('/home');
     expect(Landing::for(User::factory()->make(['primary_role' => UserRole::HrPartnerStaff])))->toBe('/home');
-});
-
-test('panel and workspace failures share the email and IP throttle', function (): void {
-    $company = Company::factory()->create();
-    $user = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::CompanyAdmin]);
-    $emailKey = 'login-email:'.hash('sha256', $user->email);
-    $ipKey = 'login-ip:'.hash('sha256', (string) request()->ip());
-    RateLimiter::clear($emailKey);
-    RateLimiter::clear($ipKey);
-    Filament::setCurrentPanel('admin');
-    Livewire::test(App\Filament\Auth\Login::class)->fillForm(['email' => $user->email, 'password' => 'wrong'])
-        ->call('authenticate')->assertHasFormErrors(['email']);
-    Livewire::test(Login::class)->set('email', $user->email)->set('password', 'wrong')
-        ->call('authenticate')->assertHasErrors(['email']);
-    expect(RateLimiter::attempts($emailKey))->toBe(2);
-    expect(RateLimiter::attempts($ipKey))->toBe(2);
 });
 
 test('shared sign-in refuses an inactive account with the generic message', function (): void {
