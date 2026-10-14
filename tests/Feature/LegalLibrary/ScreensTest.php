@@ -254,7 +254,7 @@ test('page range preview uses compact JPEGs', function (): void {
     expect(max(getimagesize($path)[0], getimagesize($path)[1]))->toBeLessThanOrEqual(900);
 });
 
-test('workspace navigation exposes regulation only to admins and permitted reviewers', function (): void {
+test('workspace navigation exposes regulation to admins and to every permitted reviewer', function (): void {
     $company = Company::factory()->create();
     Permission::findOrCreate('review_internal_regulation', 'web');
     foreach ([UserRole::CompanyAdmin, UserRole::HrStaff, UserRole::Reporter, UserRole::CommitteeMember] as $role) {
@@ -270,11 +270,7 @@ test('workspace navigation exposes regulation only to admins and permitted revie
         $path = match ($role) {
             UserRole::Reporter => '/reports', UserRole::CommitteeMember => '/my-cases', default => '/cases',
         };
-        $response = $this->actingAs($user)->get($path)->assertOk();
-        if (in_array($role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)) {
-            $response->assertSee('/admin/'.$company->id.'/internal-regulation');
-        } else {
-            $response->assertDontSee('/admin/'.$company->id.'/internal-regulation');
-        }
+        // Company admins always, and any company user holding the review permission (the company's lawyer).
+        $this->actingAs($user)->get($path)->assertOk()->assertSee('/admin/'.$company->id.'/internal-regulation');
     }
 });

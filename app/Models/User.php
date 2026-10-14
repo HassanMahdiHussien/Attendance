@@ -81,7 +81,10 @@ class User extends Authenticatable implements FilamentUser, HasLocalePreference,
 
         return match ($panel->getId()) {
             'platform' => $this->primary_role === UserRole::PlatformAdmin,
-            'admin' => in_array($this->primary_role, [UserRole::PlatformAdmin, UserRole::CompanyAdmin, UserRole::HrStaff], true),
+            // The company's own lawyer approves its internal regulation in this panel; every other admin page keeps
+            // its own role check, so the review permission opens only the internal regulation page.
+            'admin' => in_array($this->primary_role, [UserRole::PlatformAdmin, UserRole::CompanyAdmin, UserRole::HrStaff], true)
+                || ($this->company_id !== null && $this->can('review_internal_regulation')),
             default => false,
         };
     }
