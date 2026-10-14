@@ -2,7 +2,6 @@
 
 namespace App\Livewire\Auth;
 
-use App\Enums\UserRole;
 use App\Models\User;
 use App\Services\Auth\LoginAttempts;
 use App\Support\Access\Landing;
@@ -22,8 +21,8 @@ class Login extends Component
 
     public function authenticate(LoginAttempts $attempts): void
     {
-        $this->validate(['email' => ['required', 'email'], 'password' => ['required', 'string']]);
         $this->email = $attempts->normalize($this->email);
+        $this->validate(['email' => ['required', 'email'], 'password' => ['required', 'string']]);
         $attempts->check($this->email);
 
         $valid = app(Timebox::class)->call(function (Timebox $timebox): bool {
@@ -51,8 +50,11 @@ class Login extends Component
         $user = Auth::user();
         $attempts->clear($this->email);
         session()->regenerate();
+        // Back to the page that asked for sign-in (e.g. an admin bookmark), else the role's home.
+        $target = (string) session()->pull('url.intended', Landing::for($user));
         // Filament panel scripts need a full page load before its Alpine components initialize.
-        $this->redirect(Landing::for($user), navigate: $user->primary_role !== UserRole::PlatformAdmin);
+        $panel = in_array(strtok((string) parse_url($target, PHP_URL_PATH), '/'), ['admin', 'platform'], true);
+        $this->redirect($target, navigate: ! $panel);
     }
 
     public function render(): View

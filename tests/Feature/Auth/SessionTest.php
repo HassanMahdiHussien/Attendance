@@ -69,8 +69,8 @@ beforeEach(function (): void {
 });
 
 dataset('session request paths', [
-    'platform GET' => ['/platform', '/platform/login'],
-    'admin GET' => ['/admin/login', '/admin/login'],
+    'platform GET' => ['/platform', '/login'],
+    'admin GET' => ['/admin/login', '/login'],
     'ordinary web GET' => ['/session-probe', '/login'],
 ]);
 
@@ -95,7 +95,7 @@ test('inactive company and user are refused on admin tenant and direct panel URL
     } else {
         $user->forceFill(['is_active' => false])->save();
     }
-    $this->actingAs($user)->get('/admin/'.$company->id.$pathSuffix)->assertRedirect('/admin/login');
+    $this->actingAs($user)->get('/admin/'.$company->id.$pathSuffix)->assertRedirect('/login');
     $this->assertGuest();
 })->with([
     'inactive user dashboard' => [false, ''],
@@ -136,7 +136,7 @@ test('platform users expire after 30 minutes of inactivity', function (): void {
     $this->travel(30)->minutes();
     $this->actingAs($user)->withSession(['last_activity_at' => $last])->get('/platform')->assertOk();
     $this->travel(1)->minutes();
-    $this->withSession(['last_activity_at' => $last])->get('/platform')->assertRedirect('/platform/login');
+    $this->withSession(['last_activity_at' => $last])->get('/platform')->assertRedirect('/login');
     $this->assertGuest();
 });
 
@@ -152,7 +152,7 @@ test('inactive users and companies are refused on Livewire panel updates', funct
         $response = postPanelUpdate($this, $snapshot);
         expect($response->baseResponse->getStatusCode())->toBeIn([401, 404]);
         Auth::forgetGuards();
-        $this->get('/admin/'.$company->id)->assertRedirect('/admin/login');
+        $this->get('/admin/'.$company->id)->assertRedirect('/login');
         $this->assertGuest();
     } else {
         $user->forceFill(['is_active' => false])->save();

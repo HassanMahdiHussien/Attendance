@@ -3,7 +3,6 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Admin\Widgets\SetupChecklist;
-use App\Filament\Auth\Login;
 use App\Filament\AvatarProviders\IndigoAvatarProvider;
 use App\Http\Middleware\EnforceIdleTimeout;
 use App\Http\Middleware\EnsureAccountIsActive;
@@ -38,7 +37,7 @@ class AdminPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
     {
-        return $panel->default()->id('admin')->path('admin')->login(Login::class)
+        return $panel->default()->id('admin')->path('admin')
             ->navigation(function (): NavigationBuilder {
                 $workspace = array_map(fn (array $item): NavigationItem => NavigationItem::make(__($item['label']))
                     ->url($item['url'])

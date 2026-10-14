@@ -8,7 +8,6 @@ use App\Enums\DocumentType;
 use App\Enums\UserRole;
 use App\Filament\Admin\Resources\BranchResource;
 use App\Filament\Admin\Resources\BranchResource\Pages\ListBranchs;
-use App\Filament\Auth\Login;
 use App\Livewire\Cases\ConfirmDocument;
 use App\Livewire\Reports\SubmitReport;
 use App\Models\Branch;
@@ -103,30 +102,15 @@ test('an Arabic user keeps the locale through a real Livewire update and transla
     expect($response->json('components.0.effects.html'))->toContain('اختر موقعاً أو اكتب المكان.');
 });
 
-test('an Arabic guest keeps the locale through a Filament login action', function (): void {
-    $this->withSession(['locale' => 'ar']);
-    $html = $this->get('/admin/login')->assertOk()->assertSee('البريد الإلكتروني')->getContent();
-    $snapshot = livewireSnapshotForComponent($html, Login::class);
+test('the admin panels use the single sign-in page, which offers the language switch', function (): void {
+    $this->get('/admin/login')->assertRedirect('/login');
+    $this->get('/platform/login')->assertRedirect('/login');
+    $this->get('/admin')->assertRedirect('/login');
+    $this->get('/platform')->assertRedirect('/login');
 
-    app()->setLocale('en');
-    $response = $this->withHeader('X-Livewire', 'true')->postJson(app(HandleRequests::class)->getUpdateUri(), [
-        'components' => [[
-            'snapshot' => $snapshot,
-            'updates' => [],
-            'calls' => [['path' => '', 'method' => 'authenticate', 'params' => []]],
-        ]],
-    ])->assertOk();
-    expect(app()->getLocale())->toBe('ar')
-        ->and($response->json('components.0.effects.html'))->toContain('البريد الإلكتروني');
-});
-
-test('both Filament login pages offer the language switch in both locales', function (): void {
-    $this->get('/admin/login')->assertOk()->assertSee('Language')->assertSee('Arabic');
-    $this->get('/platform/login')->assertOk()->assertSee('Language')->assertSee('Arabic');
-
+    $this->get('/login')->assertOk()->assertSee('العربية');
     $this->post('/locale', ['locale' => 'ar'])->assertRedirect();
-    $this->get('/admin/login')->assertOk()->assertSee('اللغة')->assertSee('العربية');
-    $this->get('/platform/login')->assertOk()->assertSee('اللغة')->assertSee('العربية');
+    $this->get('/login')->assertOk()->assertSee('English');
 });
 
 test('an Arabic admin sees and can run a translated Filament action', function (): void {
