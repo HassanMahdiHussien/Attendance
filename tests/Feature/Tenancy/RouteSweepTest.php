@@ -20,6 +20,7 @@ use App\Models\ViolationType;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
 // CLAUDE.md §16.1: a Company A user can never fetch Company B's data through any route, not just the ones the UI links to.
@@ -28,7 +29,14 @@ const SWEEP_EXCLUDED = [
     // Framework asset and upload-preview routes: no tenant data behind the parameter.
     '#^livewire-[^/]+/(css|js)/#',
     '#^livewire-[^/]+/preview-file/#',
+    // Filament's built-in exporter/importer downloads: the app uses neither, so no exports/imports tables exist (guarded below).
+    '#^filament/(exports|imports)/#',
 ];
+
+test('Filament exporter and importer tables stay absent while their download routes are excluded from the sweep', function (): void {
+    expect(Schema::hasTable('exports'))->toBeFalse()
+        ->and(Schema::hasTable('imports'))->toBeFalse();
+});
 
 test('a company admin cannot reach another company\'s records through any parameterised GET route', function (): void {
     $context = app(TenantContext::class);
@@ -71,8 +79,6 @@ test('a company admin cannot reach another company\'s records through any parame
                 'hr-partners' => HrPartner::factory()->create()->id,
                 'law-firm-partners' => LawFirmPartner::factory()->create()->id,
             ],
-            // Filament's own export/import download routes look the row up by id; an id that belongs to nobody in Company A is enough.
-            'import' => 999999,
         ];
     });
     $context->clear();
