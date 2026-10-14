@@ -38,12 +38,33 @@ class ReadLegalPageText implements ShouldQueue
                 $pdfPath = Storage::disk('local')->path($run->source_path);
                 $layer = $run->mode === 'ocr' ? '' : $pdf->text($pdfPath, $page->page_number);
                 $useLayer = $run->mode === 'text' || ($run->mode === 'auto' && $probe->usable($layer));
-                $page->update(['text' => $useLayer ? $layer : $pdf->ocr(Storage::disk('local')->path($page->image_path)),
+                $regulation = $run->law->kind->value === 'internal_regulation' && $run->secondary_source_path === null;
+                $ocr = ! $useLayer && $regulation
+                    ? $pdf->ocrWithConfidence(Storage::disk('local')->path($page->image_path)) : null;
+                $confidence = $ocr['confidence'] ?? null;
+                $minimum = max(0, min(100, (float) config('displanery.legal_library.ocr_confidence_min', 85)));
+                $confident = $regulation && (($useLayer && $probe->usable($layer))
+                    || ($confidence !== null && $confidence >= $minimum));
+                $page->update(['text' => $useLayer ? $layer : ($ocr['text'] ?? $pdf->ocr(Storage::disk('local')->path($page->image_path))),
                     'text_method' => $useLayer ? 'text' : 'ocr', 'text_status' => 'done',
+                    'ocr_confidence' => $confidence,
+                    'ai_status' => $confident ? 'skipped' : $page->ai_status,
+                    'ai_source' => $confident ? null : $page->ai_source,
                     'attempts_text' => $page->attempts_text + 1]);
+                if ($regulation && ! $confident && $run->reading_mode === 'now') {
+                    ReadLegalPageWithAi::dispatch($page->id, $run->company_id);
+                }
             } catch (Throwable $exception) {
                 $page->update(['text_status' => 'failed', 'attempts_text' => $page->attempts_text + 1,
                     'last_error' => mb_substr($exception->getMessage(), 0, 1900)]);
+                if ($run->law->kind->value === 'internal_regulation' && $run->secondary_source_path === null
+                    && $run->reading_mode === 'now') {
+                    ReadLegalPageWithAi::dispatch($page->id, $run->company_id);
+                }
+            }
+            if ($run->reading_mode === 'batch' && $run->law->kind->value === 'internal_regulation'
+                && $run->secondary_source_path === null && ! $run->pages()->where('text_status', 'pending')->exists()) {
+                SubmitLegalReadingBatch::dispatch($run->id, $run->company_id);
             }
             $progress->evaluate($run);
         });

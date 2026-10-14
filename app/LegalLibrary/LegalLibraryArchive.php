@@ -42,7 +42,7 @@ class LegalLibraryArchive
                 $units = LegalUnit::query()->where('law_id', $law->id)->orderBy('id')->get();
                 if ($units->isEmpty() || ! $units->whereNull('superseded_by_id')
                     ->contains(fn ($unit) => in_array($unit->status->value, ['verified_auto', 'verified_human'], true))
-                    || $units->contains(fn ($unit) => $unit->status->value === 'verified_text')
+                    || $units->contains(fn ($unit) => in_array($unit->status->value, ['verified_text', 'verified_single'], true))
                     || $units->whereNull('superseded_by_id')
                         ->contains(fn ($unit) => ! in_array($unit->status->value, ['verified_auto', 'verified_human', 'excluded'], true))) {
                     throw new RuntimeException("Law {$law->number}/{$law->year} has unverified current units.");

@@ -65,7 +65,8 @@ test('page jobs set the source company and restore the caller context', function
         Storage::disk('local')->put('legal-library/test-page.png', 'not examined by fake');
 
         return LegalImportPage::create(['run_id' => $run->id, 'page_number' => 1,
-            'image_path' => 'legal-library/test-page.png', 'image_sha256' => str_repeat('b', 64)]);
+            'image_path' => 'legal-library/test-page.png', 'image_sha256' => str_repeat('b', 64),
+            'text_status' => 'done', 'text' => 'المادة 1']);
     });
     $reader = new class implements PageReader
     {

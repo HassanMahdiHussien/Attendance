@@ -14,6 +14,10 @@
     @if ($unit = $this->selectedUnit())
         @php
             $page = $unit->importRun?->pages?->firstWhere('page_number', $unit->source_page);
+            $sourcePages = $unit->law->kind->value === 'internal_regulation'
+                ? ($unit->importRun?->pages?->whereIn('page_number',
+                    array_unique(array_filter([$unit->source_page, ...($unit->tags['continues_on'] ?? [])]))) ?? collect())
+                : collect([$page])->filter();
         @endphp
         <div class="grid gap-4 lg:grid-cols-3">
             <section class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -32,9 +36,11 @@
             <section class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                 <h3 class="font-bold">{{ __('Source') }}</h3>
                 @if ($page)
-                    <a target="_blank" href="{{ route('legal-library.pages.show', ['run' => $page->run_id, 'page' => $page->page_number]) }}">
-                        <img class="mt-3 max-h-[36rem] object-contain" src="{{ route('legal-library.pages.show', ['run' => $page->run_id, 'page' => $page->page_number]) }}" alt="{{ __('Page image') }} {{ $page->page_number }}">
-                    </a>
+                    @foreach ($sourcePages as $sourcePage)
+                        <a target="_blank" href="{{ route('legal-library.pages.show', ['run' => $sourcePage->run_id, 'page' => $sourcePage->page_number]) }}">
+                            <img class="mt-3 max-h-[36rem] object-contain" src="{{ route('legal-library.pages.show', ['run' => $sourcePage->run_id, 'page' => $sourcePage->page_number]) }}" alt="{{ __('Page image') }} {{ $sourcePage->page_number }}">
+                        </a>
+                    @endforeach
                 @else
                     <p dir="rtl" class="mt-3 whitespace-pre-wrap" style="font-family:Amiri,serif">{{ $unit->extraction_a ?: $unit->official_text }}</p>
                 @endif

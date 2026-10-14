@@ -34,6 +34,7 @@ return [
         'max_candidates' => 30],
     'legal_library' => [
         'max_pages' => 300, 'max_file_mb' => 50, 'dpi' => 250,
+        'ocr_confidence_min' => env('LEGAL_OCR_CONFIDENCE_MIN', 85),
         'max_long_edge' => 4000, 'ai_long_edge' => 1568,
         'docx_max_uncompressed_mb' => 20, 'process_timeout' => 120,
         'binaries' => ['pdfinfo' => '/usr/bin/pdfinfo', 'pdftotext' => '/usr/bin/pdftotext',

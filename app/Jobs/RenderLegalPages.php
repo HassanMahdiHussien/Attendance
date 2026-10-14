@@ -115,13 +115,19 @@ class RenderLegalPages implements ShouldQueue
                     }
                     if ($run->secondary_source_path !== null) {
                         $row->update(['ai_status' => 'done', 'ai_source' => 'secondary_text']);
-                    } elseif ($run->reading_mode === 'now') {
+                    } elseif ($run->law->kind->value !== 'internal_regulation' && $run->reading_mode === 'now') {
+                        ReadLegalPageWithAi::dispatch($row->id, $run->company_id);
+                    } elseif ($run->law->kind->value === 'internal_regulation'
+                        && isset($transcriptions[$row->page_number]) && $run->reading_mode === 'now') {
                         ReadLegalPageWithAi::dispatch($row->id, $run->company_id);
                     }
                 }
                 if ($run->reading_mode === 'batch' && $run->secondary_source_path === null) {
                     $run->update(['batch_state' => 'submitting']);
-                    SubmitLegalReadingBatch::dispatch($run->id, $run->company_id);
+                    if ($run->law->kind->value !== 'internal_regulation'
+                        || ! $run->pages()->where('text_status', 'pending')->exists()) {
+                        SubmitLegalReadingBatch::dispatch($run->id, $run->company_id);
+                    }
                 }
                 if ($run->secondary_source_path !== null) {
                     app(ImportProgress::class)->evaluate($run);

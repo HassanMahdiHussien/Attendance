@@ -774,5 +774,11 @@
     "Go to my work": "الذهاب إلى عملي اليوم",
     "Sign in with another account": "تسجيل الدخول بحساب آخر",
     "Due event": "الاستحقاق",
-    "Due": "الموعد"
+    "Due": "الموعد",
+    "Verified from one reading": "موثقة من قراءة واحدة",
+    "Single reading: check against the page image before approval": "قراءة واحدة: تحقق من النص مقابل صورة الصفحة قبل الاعتماد",
+    "Pages read locally": "الصفحات المقروءة محلياً",
+    "Pages read by AI": "الصفحات المقروءة بالذكاء الاصطناعي",
+    "Read locally": "قُرئت محلياً",
+    "Article spans local and AI readings": "المادة تمتد بين قراءة محلية وقراءة بالذكاء الاصطناعي"
 }

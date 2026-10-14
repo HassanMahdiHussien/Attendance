@@ -48,6 +48,47 @@ class PdfPages
         return $this->run([config('displanery.legal_library.binaries.tesseract', '/usr/bin/tesseract'), $png, '-', '-l', 'ara', '--psm', '6']);
     }
 
+    /** @return array{text: string, confidence: ?float} */
+    public function ocrWithConfidence(string $png): array
+    {
+        return $this->parseOcrTsv($this->run([config('displanery.legal_library.binaries.tesseract', '/usr/bin/tesseract'),
+            $png, '-', '-l', 'ara', '--psm', '6', 'tsv']));
+    }
+
+    /** @return array{text: string, confidence: ?float} */
+    public function parseOcrTsv(string $tsv): array
+    {
+        $lines = preg_split('/\R/u', trim($tsv));
+        $header = array_map('trim', explode("\t", array_shift($lines) ?? ''));
+        $required = ['level', 'page_num', 'block_num', 'par_num', 'line_num', 'conf', 'text'];
+        if (array_diff($required, $header)) {
+            return ['text' => '', 'confidence' => null];
+        }
+        $indexes = array_flip($header);
+        $words = [];
+        $total = 0.0;
+        $count = 0;
+        foreach ($lines as $line) {
+            $fields = explode("\t", $line);
+            if (($fields[$indexes['level']] ?? null) !== '5') {
+                continue;
+            }
+            $word = trim(implode("\t", array_slice($fields, $indexes['text'])));
+            $confidence = $fields[$indexes['conf']] ?? null;
+            if ($word === '' || ! is_numeric($confidence) || (float) $confidence < 0 || (float) $confidence > 100) {
+                continue;
+            }
+            $key = implode(':', array_map(fn (string $field): string => $fields[$indexes[$field]] ?? '',
+                ['page_num', 'block_num', 'par_num', 'line_num']));
+            $words[$key][] = $word;
+            $total += (float) $confidence;
+            $count++;
+        }
+
+        return ['text' => implode("\n", array_map(fn (array $line): string => implode(' ', $line), $words)),
+            'confidence' => $count ? round($total / $count, 2) : null];
+    }
+
     private function run(array $arguments): string
     {
         $process = new Process($arguments);

@@ -27,7 +27,7 @@ class LegalUnit extends Model
     {
         static::addGlobalScope(new LegalLibraryScope);
         static::saving(function (self $unit): void {
-            if ($unit->exists && in_array($unit->getRawOriginal('status'), ['verified_auto', 'verified_human', 'verified_text'], true)) {
+            if ($unit->exists && in_array($unit->getRawOriginal('status'), ['verified_auto', 'verified_human', 'verified_text', 'verified_single'], true)) {
                 $dirty = array_keys($unit->getDirty());
                 if ($dirty !== ['superseded_by_id'] || $unit->getRawOriginal('superseded_by_id') !== null || $unit->superseded_by_id === null) {
                     throw new ImmutableRecordException('Verified legal units are immutable.');
@@ -36,6 +36,14 @@ class LegalUnit extends Model
 
             $law = Law::withoutGlobalScopes()->find($unit->law_id);
             if ($law !== null) {
+                if ($unit->status === LegalUnitStatus::VerifiedSingle
+                    && ($law->kind->value !== 'internal_regulation' || $unit->source_page === null
+                        || $unit->import_run_id === null || $unit->extraction_b !== null
+                        || ! LegalImportPage::withoutGlobalScopes()->where('run_id', $unit->import_run_id)
+                            ->where('page_number', $unit->source_page)->where('text_status', 'done')
+                            ->where('ai_status', 'skipped')->exists())) {
+                    throw new ImmutableRecordException('Single-reading verification requires a regulation source page.');
+                }
                 $context = app(TenantContext::class);
                 if ($law->company_id !== null && (! $context->isSet()
                     || (! $context->isAllCompanies() && (int) $law->company_id !== $context->companyId()))) {
@@ -60,7 +68,7 @@ class LegalUnit extends Model
             }
         });
         static::deleting(function (self $unit): void {
-            if (in_array($unit->status, [LegalUnitStatus::VerifiedAuto, LegalUnitStatus::VerifiedHuman, LegalUnitStatus::VerifiedText], true)) {
+            if (in_array($unit->status, [LegalUnitStatus::VerifiedAuto, LegalUnitStatus::VerifiedHuman, LegalUnitStatus::VerifiedText, LegalUnitStatus::VerifiedSingle], true)) {
                 throw new ImmutableRecordException('Verified legal units cannot be deleted.');
             }
         });
@@ -114,7 +122,7 @@ class LegalUnit extends Model
         $on = $case->created_at?->copy()->timezone('Asia/Baghdad')->toDateString() ?? now('Asia/Baghdad')->toDateString();
         $jurisdiction = $case->jurisdiction_at_opening->value;
 
-        return $query->whereIn('legal_units.status', ['verified_auto', 'verified_human', 'verified_text'])
+        return $query->whereIn('legal_units.status', ['verified_auto', 'verified_human', 'verified_text', 'verified_single'])
             ->whereNull('legal_units.superseded_by_id')
             ->whereHas('law', function (Builder $law) use ($case, $on, $jurisdiction): void {
                 $law->where(function (Builder $choice) use ($case, $on, $jurisdiction): void {
@@ -125,7 +133,8 @@ class LegalUnit extends Model
                                     ->whereColumn('legal_unit_approvals.legal_unit_id', 'legal_units.id');
                             });
                     })->orWhere(function (Builder $statute) use ($case, $on, $jurisdiction): void {
-                        $statute->where('kind', 'statute')->where('approval_status', 'approved')
+                        $statute->where('kind', 'statute')->where('legal_units.status', '!=', 'verified_single')
+                            ->where('approval_status', 'approved')
                             ->whereExists(function ($jurisdictions) use ($jurisdiction): void {
                                 $jurisdictions->selectRaw('1')->from('law_jurisdictions')
                                     ->whereColumn('law_jurisdictions.law_id', 'laws.id')
