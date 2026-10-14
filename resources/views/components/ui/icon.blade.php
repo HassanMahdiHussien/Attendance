@@ -15,6 +15,7 @@
         'arrow' => '<path d="m19 12-14 0m6-6-6 6 6 6"/>',
         'file' => '<path d="M5 3h9l5 5v13H5zM14 3v5h5M8 13h8M8 17h8"/>',
         'clock' => '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+        'lock' => '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
         'alert' => '<path d="m12 3 10 18H2zM12 9v5M12 17h.01"/>',
         'x' => '<path d="M5 5 19 19M19 5 5 19"/>',
         'menu' => '<path d="M4 6h16M4 12h16M4 18h16"/>',
