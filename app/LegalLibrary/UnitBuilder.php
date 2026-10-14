@@ -66,8 +66,23 @@ class UnitBuilder
                 $existing = $previous->get($key);
                 $lastPage = max([$unit['page'] ?? 0, ...($unit['tags']['continues_on'] ?? [])]);
                 $pagesTouched = $unit['page'] === null ? [] : range($unit['page'], $lastPage);
+                $touched = $pages->whereIn('page_number', $pagesTouched);
+                $single = $run->law->kind->value === 'internal_regulation'
+                    && $run->secondary_source_path === null && $pagesTouched !== []
+                    && $touched->count() === count($pagesTouched)
+                    && $touched->every(fn ($page) => $page->text_status === 'done' && $page->ai_status === 'skipped');
+                $mixed = $run->law->kind->value === 'internal_regulation' && $touched->contains(
+                    fn ($page) => $page->ai_status === 'skipped') && ! $single;
+                if ($single && $unit['extraction_a'] !== null
+                    && ($unit['tags']['mismatch_reason'] ?? null) === 'one_reading_only') {
+                    $unit['status'] = 'verified_single';
+                    unset($unit['tags']['mismatch_reason']);
+                } elseif ($mixed) {
+                    $unit['status'] = 'mismatch';
+                    $unit['tags']['mismatch_reason'] = 'partial_single_reading';
+                }
                 // A failed neighboring page may contain an unseen continuation of this unit.
-                if ($pages->whereIn('page_number', $pagesTouched)->contains(fn ($page) => $page->text_status !== 'done' || $page->ai_status !== 'done')
+                if ($touched->contains(fn ($page) => $page->text_status !== 'done' || ! in_array($page->ai_status, ['done', 'skipped'], true))
                     || collect($failedPages)->contains(fn ($failed) => abs($failed - $unit['page']) === 1)) {
                     $unit['status'] = 'mismatch';
                     $unit['tags']['mismatch_reason'] = 'page_failed';
@@ -82,7 +97,8 @@ class UnitBuilder
                     : ($unit['extraction_a'] ?? $unit['extraction_b'] ?? '');
                 $text = trim(preg_replace(['/[ \t]+/u', '/ *\R */u'], [' ', "\n"], $text));
                 if ($existing && in_array($existing->status->value,
-                    ['verified_auto', 'verified_human', 'verified_text', 'excluded'], true)
+                    ['verified_auto', 'verified_human', 'verified_text', 'verified_single', 'excluded'], true)
+                    && ! ($existing->status->value === 'verified_single' && $existing->import_run_id !== $run->id)
                     && $this->normalizer->normalize($existing->official_text) === $this->normalizer->normalize($text)) {
                     continue;
                 }
@@ -91,13 +107,17 @@ class UnitBuilder
                     'previous_version_id' => $existing?->id, 'article_number' => $unit['article_number'],
                     'clause_path' => $unit['clause_path'], 'official_text' => $text, 'source_page' => $unit['page'],
                     'extraction_a' => $unit['extraction_a'], 'extraction_b' => $unit['extraction_b'],
-                    'status' => $unit['status'], 'verified_at' => $unit['status'] === 'verified_auto' ? now() : null,
+                    'status' => $unit['status'], 'verified_at' => in_array($unit['status'], ['verified_auto', 'verified_single'], true) ? now() : null,
                     'tags' => $unit['tags']]);
                 if ($unit['status'] === 'verified_auto') {
                     $this->audit->log('legal_unit.verified', $created,
                         ['method' => 'two_readings', 'import_run_id' => $run->id]);
                 }
-                if ($existing && $unit['status'] === 'verified_auto') {
+                if ($unit['status'] === 'verified_single') {
+                    $this->audit->log('legal_unit.verified', $created,
+                        ['method' => 'single_reading', 'import_run_id' => $run->id]);
+                }
+                if ($existing && in_array($unit['status'], ['verified_auto', 'verified_single'], true)) {
                     $existing->update(['superseded_by_id' => $created->id]);
                 } elseif ($existing && in_array($existing->status->value, ['unverified', 'mismatch'], true)) {
                     $existing->update(['status' => 'excluded', 'tags' => [...($existing->tags ?? []),
@@ -115,7 +135,10 @@ class UnitBuilder
             $run->update(['state' => 'completed', 'finished_at' => now(), 'counts' => [
                 'pages' => $pages->count(), 'units' => count($units),
                 'verified_auto' => collect($units)->where('status', 'verified_auto')->count(),
+                'verified_single' => collect($units)->where('status', 'verified_single')->count(),
                 'mismatch' => collect($units)->where('status', 'mismatch')->count(),
+                'local_pages' => $pages->where('ai_status', 'skipped')->count(),
+                'ai_pages' => $pages->filter(fn ($page) => in_array($page->ai_source, ['api', 'api_batch'], true))->count(),
                 'failed_pages' => $pages->filter(fn ($page) => $page->text_status === 'failed' || $page->ai_status === 'failed')->count(),
             ]]);
             $this->audit->log('legal_import.completed', $run);

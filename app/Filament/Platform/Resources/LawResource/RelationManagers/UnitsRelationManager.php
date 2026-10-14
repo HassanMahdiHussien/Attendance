@@ -56,7 +56,7 @@ class UnitsRelationManager extends RelationManager
                     app(LawManagement::class)->setUnitTopics($record, auth()->user(), $topics);
                     Notification::make()->title(__('Topics saved'))->success()->send();
                 }),
-            Action::make('correct')->label(__('Correct'))->visible(fn (LegalUnit $record): bool => in_array($record->status->value, ['verified_auto', 'verified_human', 'verified_text'], true) && $record->superseded_by_id === null)
+            Action::make('correct')->label(__('Correct'))->visible(fn (LegalUnit $record): bool => in_array($record->status->value, ['verified_auto', 'verified_human', 'verified_text', 'verified_single'], true) && $record->superseded_by_id === null)
                 ->schema([
                     Textarea::make('text')->label(__('Official text'))->required()->default(fn (LegalUnit $record): string => $record->official_text),
                     Textarea::make('reason')->label(__('Correction reason'))->required(),

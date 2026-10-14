@@ -37,8 +37,9 @@ class ImportRunsRelationManager extends RelationManager
                 ->formatStateUsing(fn ($state): string => $state === null ? '—' : LegalLibraryLabels::batchState((string) $state)),
             TextColumn::make('reading_sources')->label(__('Reading sources'))
                 ->state(fn (LegalImportRun $record): string => $record->pages()
-                    ->get(['text_method', 'ai_source'])->map(fn ($page): string => LegalLibraryLabels::textMethod((string) $page->text_method).' / '
-                        .LegalLibraryLabels::textMethod((string) $page->ai_source))->unique()->implode(__(', '))),
+                    ->get(['text_method', 'ai_source', 'ai_status'])->map(fn ($page): string => LegalLibraryLabels::textMethod((string) $page->text_method).' / '
+                        .($page->ai_status === 'skipped' ? LegalLibraryLabels::pageStatus('skipped')
+                            : LegalLibraryLabels::textMethod((string) $page->ai_source)))->unique()->implode(__(', '))),
             TextColumn::make('transcriptionUploader.name')->label(__('Transcription uploader')),
             TextColumn::make('secondarySourceUploader.name')->label(__('Secondary source uploader')),
             TextColumn::make('counts')->label(__('Progress'))->formatStateUsing(fn ($state): string => LegalLibraryLabels::counts(is_array($state) ? $state : null)),

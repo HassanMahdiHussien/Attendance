@@ -26,6 +26,9 @@
                         {{ __('Not started') }}
                     @endif
                     <span class="text-sm">{{ $this->lawSummary($law) }}</span>
+                    @if ($this->importCounts($law))
+                        <span class="text-sm">{{ $this->importCounts($law) }}</span>
+                    @endif
                 </button>
             @endforeach
         </section>
@@ -48,16 +51,21 @@
                         <div class="flex flex-wrap gap-3">
                             <strong>{{ __('Article') }} {{ $unit->article_number }} {{ $unit->clause_path }}</strong>
                             <x-filament::badge :color="\App\Support\Format\LegalLibraryLabels::statusColor($unit->status->value)">{{ \App\Support\Format\LegalLibraryLabels::unitStatus($unit->status->value) }}</x-filament::badge>
+                            @if ($unit->status === \App\Enums\LegalUnitStatus::VerifiedSingle)
+                                <span>{{ __('Single reading: check against the page image before approval') }}</span>
+                            @endif
                             @if ($approval)
                                 <span>{{ __('Approved') }} — {{ \App\Models\User::find($approval->approved_by)?->name }}, {{ \App\Support\Format\LegalLibraryLabels::dateTime(\Carbon\Carbon::parse($approval->created_at)) }}</span>
                             @else
                                 <span>{{ __('Pending approval') }}</span>
                             @endif
                             @if ($unit->source_page !== null && $unit->import_run_id !== null)
-                                <a target="_blank" class="underline" href="{{ route('legal-library.pages.show', ['run' => $unit->import_run_id, 'page' => $unit->source_page]) }}">{{ __('Page image') }}</a>
+                                @foreach (array_unique([$unit->source_page, ...($unit->tags['continues_on'] ?? [])]) as $sourcePage)
+                                    <a target="_blank" class="underline" href="{{ route('legal-library.pages.show', ['run' => $unit->import_run_id, 'page' => $sourcePage]) }}">{{ __('Page image') }} {{ \App\Support\Format\Ui::number($sourcePage) }}</a>
+                                @endforeach
                             @endif
                             @can('review', $unit->law)
-                                @if (! $approval && in_array($unit->status->value, ['verified_auto', 'verified_human', 'verified_text'], true) && $unit->superseded_by_id === null)
+                                @if (! $approval && in_array($unit->status->value, ['verified_auto', 'verified_human', 'verified_text', 'verified_single'], true) && $unit->superseded_by_id === null)
                                     <x-filament::button size="sm" wire:click="approveUnit({{ $unit->id }})">{{ __('Approve') }}</x-filament::button>
                                 @endif
                             @endcan

@@ -90,7 +90,7 @@ class LawResource extends Resource
             TextColumn::make('effective_from')->label(__('Effective'))->formatStateUsing(fn ($state): string => Ui::date($state)),
             TextColumn::make('repealed_at')->label(__('Repeal'))->formatStateUsing(fn ($state): string => Ui::date($state)),
             TextColumn::make('units_count')->label(__('Units'))->counts('units'),
-            TextColumn::make('verified_count')->label(__('Verified'))->state(fn (Law $record): int => $record->units()->whereIn('status', ['verified_auto', 'verified_human', 'verified_text'])->count()),
+            TextColumn::make('verified_count')->label(__('Verified'))->state(fn (Law $record): int => $record->units()->whereIn('status', ['verified_auto', 'verified_human', 'verified_text', 'verified_single'])->count()),
             TextColumn::make('mismatch_count')->label(__('Mismatch'))->state(fn (Law $record): int => $record->units()->where('status', 'mismatch')->count()),
             TextColumn::make('status_counts')->label(__('Statuses'))->state(fn (Law $record): string => $record->units()
                 ->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status')

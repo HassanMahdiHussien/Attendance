@@ -7,6 +7,7 @@ use App\Jobs\GenerateDocumentPdf;
 use App\Jobs\PollLegalReadingBatches;
 use App\Jobs\ReadLegalPageText;
 use App\Jobs\ReadLegalPageWithAi;
+use App\Jobs\SubmitLegalReadingBatch;
 use App\LegalLibrary\ImportProgress;
 use App\Models\Company;
 use App\Models\DisciplinaryCase;
@@ -106,9 +107,14 @@ Artisan::command('legal-library:reconcile', function (): void {
                             ReadLegalPageText::dispatch($page->id, $run->company_id);
                         }
                         if ($page->ai_status === 'pending' && $run->reading_mode === 'now'
-                            && $run->secondary_source_path === null) {
+                            && $run->secondary_source_path === null
+                            && ($run->law->kind->value !== 'internal_regulation' || $page->text_status !== 'pending')) {
                             ReadLegalPageWithAi::dispatch($page->id, $run->company_id);
                         }
+                    }
+                    if ($run->reading_mode === 'batch' && $run->batch_state === 'submitting'
+                        && $run->batch_id === null && ! $run->pages()->where('text_status', 'pending')->exists()) {
+                        SubmitLegalReadingBatch::dispatch($run->id, $run->company_id);
                     }
                     app(ImportProgress::class)->evaluate($run);
                 };

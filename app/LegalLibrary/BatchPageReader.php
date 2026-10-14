@@ -20,6 +20,10 @@ class BatchPageReader
             || $run->secondary_source_path !== null || $run->batch_state !== 'submitting') {
             return;
         }
+        if ($run->law->kind->value === 'internal_regulation'
+            && $run->pages()->where('text_status', 'pending')->exists()) {
+            return;
+        }
         $pages = $run->pages()->where('ai_status', 'pending')->orderBy('page_number')->get();
         if ($pages->isEmpty()) {
             $this->progress->evaluate($run);
