@@ -33,3 +33,17 @@ docker compose exec -T -u sail laravel.test php artisan test tests/Browser/Repor
 ```
 
 Pest Browser saves a screenshot of the failing page to `tests/Browser/Screenshots/` (git-ignored). Use `--trace` to capture Playwright traces when interaction timing or navigation is unclear. The tests arrange prior workflow state with factories and services, then exercise the target screen in Chromium. They use waiting assertions rather than fixed sleeps.
+
+## TesterArmy e2e (agent-driven, `tests/e2e/*.e2e.ts`)
+
+Plain-language end-to-end tests run by [TesterArmy e2e](https://tester.army/e2e) next to the Pest browser tests.
+They sign in through the real login screen with the local demo accounts and let an AI agent drive and judge
+the screens, which catches layout and wording problems a scripted test would not look for.
+
+- **Model:** the developer's ChatGPT subscription, never the Anthropic budget. Sign in once inside the
+  container: `docker compose exec -u sail laravel.test npx e2e login openai --device`.
+- **Run:** `docker compose exec -u sail laravel.test npm run test:e2e` (telemetry off; the seed password is read
+  from `.env` at run time and never stored). Traces of failed tests land in `.e2e/results/<test>/trace.md`.
+- **Data:** needs the seeded demo company plus a reporter assigned to a branch
+  (`reporter@example.test`); the tests submit one report per run and change nothing else.
+- Give the agent exact values (dates, codes) through `screen.getByLabel(...).fill()`; it does not know today's date.
