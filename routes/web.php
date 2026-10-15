@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AttachmentDownloadController;
 use App\Http\Controllers\DocumentOutputController;
+use App\Http\Controllers\HelpShotController;
 use App\Http\Controllers\LegalPageImageController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\ReportExportDownloadController;
@@ -26,6 +27,8 @@ use App\Livewire\Dashboard\HrDashboard;
 use App\Livewire\Dashboard\PartnerCases;
 use App\Livewire\Employees\EmployeeIndex;
 use App\Livewire\Employees\EmployeePage;
+use App\Livewire\Help\HelpArticlePage;
+use App\Livewire\Help\HelpIndex;
 use App\Livewire\Home;
 use App\Livewire\Reports\Inbox;
 use App\Livewire\Reports\MyReports;
@@ -54,6 +57,9 @@ Route::redirect('/platform/login', '/login');
 Route::post('/locale', LocaleController::class)->name('locale.update');
 
 Route::middleware('auth')->group(function (): void {
+    Route::get('/help', HelpIndex::class)->name('help.index');
+    Route::get('/help/shots/{locale}/{name}', HelpShotController::class)->name('help.shot');
+    Route::get('/help/{section}/{slug}', HelpArticlePage::class)->name('help.article');
     Route::get('/admin/{company}/employees/import/template', function (Company $company) {
         Filament::setCurrentPanel(Filament::getPanel('admin'));
         Filament::setTenant($company);

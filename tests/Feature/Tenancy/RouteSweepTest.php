@@ -70,6 +70,8 @@ test('a company admin cannot reach another company\'s records through any parame
             'attachment' => $attachment->id, 'employee' => $employee->id, 'run' => $run->id, 'page' => 1,
             'export' => ReportExport::factory()->create(['company_id' => $b->id, 'requested_by' => $userB->id])->id,
             'path' => 'sweep/'.$marker.'.txt',
+            // Help paths name shared static content, never a tenant record.
+            'section' => 'missing', 'slug' => 'missing', 'locale' => 'xx', 'name' => 'missing',
             'record' => [
                 'branches' => $branch->id, 'employees' => $employee->id, 'users' => $userB->id,
                 'locations' => Location::factory()->create(['company_id' => $b->id, 'branch_id' => $branch->id])->id,
