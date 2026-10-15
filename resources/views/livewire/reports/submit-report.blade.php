@@ -1,5 +1,8 @@
 <form wire:submit="submit" class="max-w-3xl space-y-5">
     <x-ui.page-header :title="__('Submit report')" />
+    @if($branches->isEmpty())
+        <p role="alert" class="rounded-xl bg-amber-50 p-4 text-amber-900">{{ __('Your account is not assigned to any branch yet. Ask HR to add your branch before submitting a report.') }}</p>
+    @endif
     <x-ui.card class="space-y-5">
         <div class="grid gap-4 sm:grid-cols-2">
             <x-ui.field :label="__('Branch')" error="branchId" for="report-branch">

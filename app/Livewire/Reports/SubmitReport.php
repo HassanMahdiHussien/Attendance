@@ -90,6 +90,7 @@ class SubmitReport extends Component
             'attachments' => $this->attachments,
             'intake_check' => $check, 'intake_answers' => $this->intakeAnswers,
         ], auth()->user());
+        session()->flash('status', __('Report sent. HR will review it.'));
         $this->redirect('/reports', navigate: true);
     }
 
