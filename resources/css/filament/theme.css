@@ -26,6 +26,12 @@
 
 /* Top bar: the station board overhead. */
 .fi-topbar { background: var(--dp-night) !important; border-bottom: 0 !important; box-shadow: none !important; color: #fff; }
+/* Match the workspace bar: full-width dark strip, contents in the same centred 80rem column as the page,
+   so on wide screens the menu does not sit far left of the content. */
+.fi-topbar-ctn { background: var(--dp-night); }
+@media (min-width: 1024px) {
+    .fi-topbar { max-width: 80rem; margin-inline: auto; padding-inline: 2rem !important; }
+}
 .fi-topbar .fi-logo, .fi-topbar .fi-tenant-menu-trigger { color: #fff; }
 .fi-topbar-item-btn { color: var(--dp-night-soft) !important; background: transparent !important; border-radius: .375rem; }
 .fi-topbar-item-btn:hover { color: #fff !important; }
