@@ -114,7 +114,7 @@ class DraftDocumentWithAi implements ShouldQueue
             Cache::forget('ai-draft-reasons:'.$this->token);
             $flagged = $flag->flagged($response['languages'], $case->outcome?->value);
             $response = $builder->restore($response);
-            // A token the model altered (e.g. translated "⟦الشاهد 1⟧" into "⟦Witness 1⟧") cannot be restored and must never
+            // A token the model altered (e.g. an Arabic witness token translated into "⟦Witness 1⟧") cannot be restored and must never
             // reach a document; treat it like any other invalid output so the draft is retried.
             if (str_contains(json_encode($response['languages'], JSON_UNESCAPED_UNICODE), '⟦')) {
                 Cache::put('ai-draft-reasons:'.$this->token, ['Unrestorable masked name.'], now()->addMinutes(30));
