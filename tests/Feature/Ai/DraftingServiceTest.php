@@ -4,6 +4,7 @@ use App\Ai\AiDrafting;
 use App\Ai\AiUnavailable;
 use App\Ai\CandidateUnits;
 use App\Ai\ClaudeClient;
+use App\Ai\InvalidAiOutput;
 use App\Ai\PayloadBuilder;
 use App\Enums\CaseStatus;
 use App\Enums\DocumentType;
@@ -95,6 +96,21 @@ test('AI defense draft saves with origin and notes then clears its request token
     }
     expect(fn () => DB::table('ai_draft_notes')->where('document_id', $document->id)
         ->update(['notes' => json_encode(['Altered'])]))->toThrow(QueryException::class);
+});
+
+test('a masked name the model translated is rejected instead of reaching the document', function (): void {
+    $f = aiOpenCase();
+    $fake = new FakeClaudeClient;
+    // Arabic keeps the token; English renders it as "⟦Witness 1⟧", which nothing can restore.
+    $fake->push(['languages' => ['ar' => ['body' => 'أوقف ⟦الموظف⟧ الآلة.'],
+        'en' => ['body' => 'The machine was stopped by ⟦Witness 1⟧.']], 'notes' => []]);
+    app()->instance(ClaudeClient::class, $fake);
+    app(AiDrafting::class)->request($f['case'], DocumentType::DefenseLetter, $f['hr']);
+    $token = $f['case']->fresh()->ai_request_id;
+    expect(fn () => app()->call([new DraftDocumentWithAi($f['case']->id, $f['company']->id, $f['hr']->id,
+        DocumentType::DefenseLetter, $token), 'handle']))->toThrow(InvalidAiOutput::class);
+    expect($f['case']->documents()->count())->toBe(0)
+        ->and($fake->requests[0]['messages'][0]['content'] ?? json_encode($fake->requests[0]))->toContain('never translate or alter it');
 });
 
 test('stale worker saves nothing and final failure returns to the prior state', function (): void {

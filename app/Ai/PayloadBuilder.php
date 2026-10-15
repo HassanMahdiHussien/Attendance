@@ -2,6 +2,7 @@
 
 namespace App\Ai;
 
+use App\Documents\IraqiDate;
 use App\Enums\DocumentType;
 use App\Exceptions\TransitionBlocked;
 use App\Models\CaseWitness;
@@ -75,6 +76,11 @@ class PayloadBuilder
                 'violation_type' => $this->minimize(Violation::name($case, 'ar')),
                 'place' => $this->minimize($case->location?->name ?? $case->violation_place_freetext ?? ''),
                 'time' => $case->violation_time,
+                // Ready-written dates in the documents' own style, so the prose never shows an ISO date.
+                'date_written' => $case->violation_time === null ? null : [
+                    'ar' => IraqiDate::format(CarbonImmutable::parse($case->violation_time)->setTimezone('Asia/Baghdad'), 'ar'),
+                    'en' => IraqiDate::format(CarbonImmutable::parse($case->violation_time)->setTimezone('Asia/Baghdad'), 'en'),
+                ],
                 'description' => $this->minimize($description),
                 'alleged_responsible_person' => $this->minimize($responsible),
                 'position' => $this->minimize($case->employee?->position ?? ''),
