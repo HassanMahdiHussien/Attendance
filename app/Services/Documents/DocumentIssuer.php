@@ -16,6 +16,7 @@ use App\Jobs\GenerateDocumentPdf;
 use App\Models\Document;
 use App\Models\User;
 use App\Services\CaseEventLogger;
+use App\Services\Cases\IncidentPrivacy;
 use App\Services\SequenceService;
 use App\Support\Text\ArabicText;
 use Illuminate\Support\Facades\DB;
@@ -51,6 +52,14 @@ class DocumentIssuer
             }
 
             $company = $document->company;
+            if ($document->disciplinaryCase->incident_id !== null) {
+                foreach ($document->contents as $content) {
+                    if (app(IncidentPrivacy::class)->containsOtherMemberName($document->disciplinaryCase,
+                        (string) $content->body.' '.(string) $content->secondary_body)) {
+                        throw new IssuanceBlocked(__('messages.incident.other_member_in_text'));
+                    }
+                }
+            }
             foreach ($company->enabled_languages as $language) {
                 if (blank($document->contents()->where('language_code', $language)->value('body'))) {
                     throw new IssuanceBlocked(__('messages.document.content_missing_in_language', ['language' => $language]));
@@ -106,6 +115,10 @@ class DocumentIssuer
                 'issued_by' => $actor->id,
             ]);
             $html = ArabicText::westernDigits($this->renderer->render($document));
+            if (app(IncidentPrivacy::class)->containsOtherMemberName($document->disciplinaryCase,
+                html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8'))) {
+                throw new IssuanceBlocked(__('messages.incident.other_member_in_text'));
+            }
             $document->forceFill([
                 'rendered_html' => $html,
                 'render_snapshot' => $this->renderer->snapshot(),

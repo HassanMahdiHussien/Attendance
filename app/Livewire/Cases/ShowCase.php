@@ -12,6 +12,7 @@ use App\Models\CaseLink;
 use App\Models\CommitteePoolMember;
 use App\Models\DisciplinaryCase;
 use App\Models\Employee;
+use App\Models\Incident;
 use App\Models\IntakeQuestion;
 use App\Models\ResponseTranscription;
 use App\Models\Signature;
@@ -27,6 +28,7 @@ use App\Services\Cases\ConflictClearance;
 use App\Services\Cases\ConsultationService;
 use App\Services\Cases\Deadlines;
 use App\Services\Cases\HandOffService;
+use App\Services\Cases\IncidentService;
 use App\Services\Cases\NextAction;
 use App\Services\Cases\ResponseReading;
 use App\Services\Cases\ResponseService;
@@ -34,6 +36,7 @@ use App\Services\Cases\SignaturePresence;
 use App\Services\Documents\DocumentCorrector;
 use App\Services\Intake\IntakeQuestionService;
 use App\Support\Access\CaseVisibility;
+use App\Support\Format\Ui;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Gate;
@@ -99,6 +102,12 @@ class ShowCase extends Component
 
     public string $mapViolationTypeId = '';
 
+    public string $incidentEmployeeId = '';
+
+    public string $caseDescription = '';
+
+    public string $incidentClosureReason = '';
+
     public array $relatedErrorReasons = [];
 
     public array $intakeAnswers = [];
@@ -112,6 +121,26 @@ class ShowCase extends Component
         $this->caseId = $record->id;
         $this->expectedStatus = $record->status->value;
         $this->assigneeId = (string) $record->assigned_hr_user_id;
+        $this->caseDescription = (string) $record->case_specific_description;
+    }
+
+    public function addIncidentEmployee(IncidentService $incidents): void
+    {
+        $case = $this->editable('update');
+        abort_unless($case->incident_id !== null, 404);
+        $this->validate(['incidentEmployeeId' => ['required', 'integer']]);
+        $new = $incidents->addEmployee(Incident::query()->findOrFail($case->incident_id),
+            (int) $this->incidentEmployeeId, auth()->user());
+        $this->incidentEmployeeId = '';
+        $this->notice = __('Incident employee added as case :number', ['number' => Ui::number($new->case_number)]);
+    }
+
+    public function saveCaseDescription(IncidentService $incidents): void
+    {
+        $case = $this->editable('update');
+        $this->validate(['caseDescription' => ['required', 'string', 'max:50000']]);
+        $incidents->updateCaseDescription($case, $this->caseDescription, auth()->user());
+        $this->notice = __('Case description saved');
     }
 
     public function mapViolationType(CaseViolationTypes $types): void
@@ -242,7 +271,10 @@ class ShowCase extends Component
     public function closeWithoutPenalty(CaseClosure $closure): void
     {
         $case = $this->editable('update');
-        $closure->closeWithoutPenalty($case, auth()->user());
+        if ($case->incident_id !== null) {
+            $this->validate(['incidentClosureReason' => ['required', 'string', 'max:2000']]);
+        }
+        $closure->closeWithoutPenalty($case, auth()->user(), $this->incidentClosureReason);
         $this->expectedStatus = CaseStatus::ArchivedFinal->value;
         $this->notice = __('messages.case.archived_without_penalty');
     }
@@ -366,6 +398,11 @@ class ShowCase extends Component
         $insights = app(CaseInsights::class);
         $links = app(CaseLinks::class);
         $relatedCases = $links->visibleRelated($record, auth()->user());
+        $incidentMembers = $record->incident_id === null ? collect() : app(IncidentService::class)
+            ->visibleMembers(Incident::query()->findOrFail($record->incident_id), auth()->user());
+        $canManageAllIncident = $record->incident_id !== null
+            && in_array(auth()->user()->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)
+            && app(IncidentService::class)->canManageAll(Incident::query()->findOrFail($record->incident_id), auth()->user());
         $visibleRelatedIds = $relatedCases->pluck('case.id');
         $record->setRelation('events', $record->events->filter(fn ($event) => ! in_array($event->event_type,
             ['case_related_linked', 'case_related_link_in_error'], true)
@@ -414,6 +451,13 @@ class ShowCase extends Component
                 ->orderByDesc('id')->get()->unique(fn (Signature $check) => $check->purpose->value)->values() : collect(),
             'priors' => auth()->user()->primary_role === UserRole::ExternalLegalReviewer ? ['count' => 0, 'cases' => []] : $insights->priorBanner($record),
             'relatedCases' => $relatedCases,
+            'incidentMembers' => $incidentMembers,
+            'canManageAllIncident' => $canManageAllIncident,
+            'incidentEmployees' => ! $canManageAllIncident || ! auth()->user()->can('update', $record)
+                ? collect() : Employee::query()
+                    ->where('company_id', $record->company_id)->where('branch_id', $record->branch_id)
+                    ->where('is_active', true)->whereNotIn('id', Incident::query()->findOrFail($record->incident_id)
+                    ->cases()->pluck('employee_id'))->orderBy('name')->get(),
             'relatedCandidates' => $canLinkRelated ? $links->candidates(auth()->user(), $record, $this->relatedSearch) : collect(),
             'canLinkRelated' => $canLinkRelated,
             'pattern' => auth()->user()->primary_role === UserRole::ExternalLegalReviewer ? ['flagged' => false, 'count' => 0] : $insights->responsiblePersonPattern($record),
@@ -422,6 +466,8 @@ class ShowCase extends Component
             'nextAction' => app(NextAction::class)->for($record, auth()->user()),
             'attachments' => Attachment::query()->where(function ($query) use ($record): void {
                 $query->where(fn ($caseAttachments) => $caseAttachments->where('attachable_type', $record->getMorphClass())->where('attachable_id', $record->id))
+                    ->orWhere(fn ($reportAttachments) => $reportAttachments->where('attachable_type', 'violation_report')
+                        ->where('attachable_id', $record->violation_report_id)->whereNotNull('attachable_id'))
                     ->orWhere(fn ($documentAttachments) => $documentAttachments->where('attachable_type', 'document')
                         ->whereIn('attachable_id', $record->documents->pluck('id')));
             })->orderByDesc('created_at')->get(),

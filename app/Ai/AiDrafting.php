@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Services\AuditLogger;
 use App\Services\CaseEventLogger;
 use App\Services\Cases\CaseWorkflow;
+use App\Services\Cases\IncidentPrivacy;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
@@ -40,6 +41,11 @@ class AiDrafting
             };
             if ($case->status !== $from || $case->ai_request_id !== null) {
                 throw new TransitionBlocked(__('messages.ai.drafting_unavailable'));
+            }
+            if ($case->incident_id !== null && $type !== DocumentType::DecisionLetter
+                && (blank($case->case_specific_description)
+                    || app(IncidentPrivacy::class)->containsOtherMemberName($case, $case->case_specific_description))) {
+                throw new TransitionBlocked(__('messages.incident.case_description_required'));
             }
             if ($type === DocumentType::Recommendations && (blank($case->committee_session_notes)
                 || ! $case->session_majority_reached || $case->outcome === null)) {

@@ -56,7 +56,9 @@ class CaseDrafts
     public function update(DisciplinaryCase $case, array $data, User $actor): DisciplinaryCase
     {
         Gate::forUser($actor)->authorize('update', $case);
-        if ($case->status !== CaseStatus::Draft) {
+        if ($case->status !== CaseStatus::Draft && ! ($case->incident_id !== null
+            && $case->status === CaseStatus::Open && $case->defense_letter_issued_at === null
+            && ! $case->documents()->exists())) {
             throw ValidationException::withMessages(['case' => __('messages.case.cannot_edit_open_case')]);
         }
         if ((int) $case->branch_id !== (int) $data['branch_id']) {
@@ -108,7 +110,7 @@ class CaseDrafts
         return array_intersect_key($data, array_flip([
             'branch_id', 'employee_id', 'location_id', 'violation_place_freetext', 'violation_time',
             'violation_type', 'violation_type_id', 'description', 'alleged_responsible_employee_id',
-            'alleged_responsible_person_freetext', 'include_prior_record', 'is_sensitive',
+            'alleged_responsible_person_freetext', 'include_prior_record', 'is_sensitive', 'incident_id',
         ]));
     }
 }

@@ -30,7 +30,7 @@ class DisciplinaryCase extends Model
     protected array $companyUserKeys = ['opened_by_user_id', 'assigned_hr_user_id', 'legal_review_requested_by',
         'legal_review_cancelled_by', 'employee_response_checked_by'];
 
-    protected array $companyParents = ['branch', 'violationType'];
+    protected array $companyParents = ['branch', 'violationType', 'incident'];
 
     protected static function booted(): void
     {
@@ -40,6 +40,13 @@ class DisciplinaryCase extends Model
             }
         });
         static::saving(function (self $case): void {
+            if ($case->exists && $case->isDirty('incident_id')) {
+                throw new ImmutableRecordException('Incident membership cannot be changed.');
+            }
+            if ($case->exists && $case->isDirty('case_specific_description')
+                && $case->getRawOriginal('defense_letter_issued_at') !== null) {
+                throw new ImmutableRecordException('Issued case description cannot be changed.');
+            }
             if (! $case->exists) {
                 $branch = Branch::withoutGlobalScopes()->find($case->branch_id);
                 if ($branch !== null) {
@@ -86,6 +93,11 @@ class DisciplinaryCase extends Model
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class, 'company_id');
+    }
+
+    public function incident(): BelongsTo
+    {
+        return $this->belongsTo(Incident::class);
     }
 
     public function branch(): BelongsTo

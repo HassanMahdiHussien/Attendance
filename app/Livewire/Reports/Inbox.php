@@ -67,7 +67,7 @@ class Inbox extends Component
     {
         $this->mount();
 
-        $reports = ViolationReportVisibility::inbox(auth()->user())->with(['reporter', 'attachments', 'intakeQuestions'])->latest()->get();
+        $reports = ViolationReportVisibility::inbox(auth()->user())->with(['reporter', 'employees', 'attachments', 'intakeQuestions'])->latest()->get();
         $emails = EmailDraftVisibility::inbox(auth()->user())->with(['sender', 'attachments', 'intakeQuestions'])->latest('received_at')->get();
         $items = $reports->map(fn ($report) => ['type' => 'report', 'time' => $report->created_at, 'model' => $report])
             ->concat($emails->map(fn ($email) => ['type' => 'email', 'time' => $email->received_at, 'model' => $email]))

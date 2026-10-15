@@ -19,6 +19,7 @@
                         <div class="flex flex-wrap items-center justify-between gap-2">
                             <a class="ui-link font-mono font-semibold" href="{{ route('cases.show', $case) }}">{{ __('Case') }} {{ \App\Support\Format\Ui::number(str_pad($case->case_number, 4, '0', STR_PAD_LEFT)) }}</a>
                             <x-ui.badge :tone="$case->status === \App\Enums\CaseStatus::ArchivedFinal ? 'green' : 'indigo'">{{ $case->status === \App\Enums\CaseStatus::ArchivedFinal ? \App\Support\Format\Ui::outcome($case->outcome) : \App\Support\Format\Ui::stage($case->status) }}</x-ui.badge>
+                            @if($case->incident_id)<x-ui.badge tone="indigo">{{ __('Incident') }}</x-ui.badge>@endif
                         </div>
                         <p class="text-sm text-gray-600">{{ \App\Support\Format\Ui::date($case->violation_time) }} · {{ \App\Support\Format\Violation::name($case) }} · {{ $case->location?->name ?? $case->violation_place_freetext }}</p>
                         @if($case->status !== \App\Enums\CaseStatus::ArchivedFinal)<x-ui.stepper :step="\App\Support\Format\StageIndicator::step($case->status)" />@endif

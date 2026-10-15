@@ -9,6 +9,9 @@
             <x-ui.field :label="__('Employee concerned')" for="report-employee">
                 <x-ui.input wire:model.live.debounce.300ms="employeeSearch" :placeholder="__('Search for an employee')" aria-label="{{ __('Search for an employee') }}" />
                 <select id="report-employee" wire:model="employeeId" class="ui-control mt-2" aria-label="{{ __('Employee concerned') }}"><option value="">{{ __('Not specified') }}</option>@foreach($employees as $employee)<option value="{{ $employee->id }}">{{ $employee->name }}</option>@endforeach</select>
+                <p class="mt-2 text-sm text-gray-600">{{ __('Additional employees in this incident') }}</p>
+                <div class="mt-2 max-h-44 space-y-2 overflow-y-auto">@foreach($employees as $employee)<label class="flex items-center gap-2 text-sm" wire:key="report-employee-{{ $employee->id }}"><input type="checkbox" wire:model="employeeIds" value="{{ $employee->id }}">{{ $employee->name }}</label>@endforeach</div>
+                @error('employeeIds')<span class="text-sm text-red-700">{{ $message }}</span>@enderror
             </x-ui.field>
             <x-ui.field :label="__('Location')" for="report-location">
                 <select id="report-location" wire:model="locationId" class="ui-control"><option value="">{{ __('Enter the place below') }}</option>@foreach($locations as $location)<option value="{{ $location->id }}">{{ $location->name }}</option>@endforeach</select>

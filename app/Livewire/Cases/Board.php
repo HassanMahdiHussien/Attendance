@@ -8,6 +8,7 @@ use App\Models\DisciplinaryCase;
 use App\Services\Cases\CaseBoard;
 use App\Services\Cases\Deadlines;
 use App\Services\UserPreferences;
+use App\Support\Access\CaseVisibility;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Url;
@@ -99,9 +100,15 @@ class Board extends Component
         Gate::authorize('viewAny', DisciplinaryCase::class);
         $board = app(CaseBoard::class);
         $user = auth()->user();
+        $cases = $board->page($user, $this->search, $this->branch, $this->stage);
+        $incidentIds = $cases->getCollection()->pluck('incident_id')->filter()->unique();
+        $visibleIncidentCounts = $incidentIds->isEmpty() ? collect() : CaseVisibility::for($user)
+            ->whereIn('incident_id', $incidentIds)->selectRaw('incident_id, COUNT(*) as visible_count')
+            ->groupBy('incident_id')->pluck('visible_count', 'incident_id');
 
         return view('livewire.cases.board', [
-            'cases' => $board->page($user, $this->search, $this->branch, $this->stage),
+            'cases' => $cases,
+            'visibleIncidentCounts' => $visibleIncidentCounts,
             'urgentCount' => $board->urgentCount($user, $this->search, $this->branch, $this->stage),
             'branches' => Branch::query()->where('company_id', auth()->user()->company_id)->orderBy('name')->get(),
             'stages' => range(1, 5), 'deadlines' => app(Deadlines::class),

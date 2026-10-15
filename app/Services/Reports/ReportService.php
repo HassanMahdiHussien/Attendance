@@ -17,6 +17,7 @@ use App\Services\CaseEventLogger;
 use App\Services\Cases\CaseDrafts;
 use App\Services\Cases\CaseInsights;
 use App\Services\Cases\CaseViolationTypes;
+use App\Services\Cases\IncidentService;
 use App\Services\Intake\IntakeQuestionService;
 use App\Support\Access\ViolationReportVisibility;
 use Illuminate\Support\Facades\DB;
@@ -34,16 +35,25 @@ class ReportService
         if (! empty($data['location_id'])) {
             Location::query()->where('branch_id', $branchId)->findOrFail($data['location_id']);
         }
-        foreach (['employee_id', 'alleged_responsible_employee_id'] as $key) {
-            if (! empty($data[$key])) {
-                Employee::query()->where('company_id', $actor->company_id)->where('branch_id', $branchId)->findOrFail($data[$key]);
-            }
+        $extraIds = array_map('intval', $data['employee_ids'] ?? []);
+        if (count($extraIds) !== count(array_unique($extraIds))) {
+            throw ValidationException::withMessages(['employee_ids' => __('messages.incident.unique_employees_required')]);
+        }
+        $employeeIds = array_values(array_unique(array_map('intval', array_merge(
+            array_filter([$data['employee_id'] ?? null]), $extraIds))));
+        foreach ($employeeIds as $id) {
+            Employee::query()->where('company_id', $actor->company_id)->where('branch_id', $branchId)->where('is_active', true)->findOrFail($id);
+        }
+        $data['employee_id'] = $employeeIds[0] ?? null;
+        if (! empty($data['alleged_responsible_employee_id'])) {
+            Employee::query()->where('company_id', $actor->company_id)->where('branch_id', $branchId)
+                ->findOrFail($data['alleged_responsible_employee_id']);
         }
         $data = array_replace($data, app(CaseViolationTypes::class)->selected(
             isset($data['violation_type_id']) ? (int) $data['violation_type_id'] : null,
             $data['violation_type'] ?? null, (int) $actor->company_id));
 
-        return DB::transaction(function () use ($data, $actor, $branchId): ViolationReport {
+        return DB::transaction(function () use ($data, $actor, $branchId, $employeeIds): ViolationReport {
             $report = ViolationReport::create(array_intersect_key($data, array_flip([
                 'employee_id', 'location_id', 'place_freetext', 'occurred_at', 'violation_type', 'violation_type_id',
                 'alleged_responsible_employee_id', 'alleged_responsible_person_freetext', 'description',
@@ -52,6 +62,9 @@ class ReportService
                 'reporter_user_id' => $actor->id, 'source' => ReportSource::Reporter,
                 'status' => ReportStatus::Received,
             ]);
+            foreach ($employeeIds as $employeeId) {
+                $report->employees()->attach($employeeId, ['company_id' => $report->company_id]);
+            }
             foreach ($data['witnesses'] ?? [] as $witness) {
                 $report->witnesses()->create(['company_id' => $report->company_id, 'name' => $witness['name'], 'employee_id' => $witness['employee_id'] ?? null]);
             }
@@ -89,6 +102,7 @@ class ReportService
             $report = ViolationReport::query()->lockForUpdate()->findOrFail($report->id);
             abort_unless(in_array($report->status, [ReportStatus::Received, ReportStatus::UnderReview], true), 409);
             if ($existing !== null) {
+                abort_if($report->employees()->count() > 1, 422);
                 Gate::forUser($actor)->authorize('update', $existing);
                 abort_unless($existing->company_id === $report->company_id, 404);
                 abort_unless(app(CaseInsights::class)->duplicateCandidates($report)['cases']->contains('id', $existing->id), 422);
@@ -105,7 +119,13 @@ class ReportService
                     'alleged_responsible_person_freetext' => $report->alleged_responsible_person_freetext,
                     'witnesses' => $report->witnesses->map(fn ($w) => ['name' => $w->name, 'employee_id' => $w->employee_id])->all(),
                 ];
-                $case = app(CaseDrafts::class)->create(array_replace($data, $facts), $actor, $report);
+                $selected = $report->employees()->pluck('employees.id')->all();
+                if (count($selected) > 1) {
+                    $incident = app(IncidentService::class)->createForEmployees($selected, array_replace($data, $facts), $actor, $report);
+                    $case = $incident->cases()->orderBy('id')->firstOrFail();
+                } else {
+                    $case = app(CaseDrafts::class)->create(array_replace($data, $facts), $actor, $report);
+                }
             }
             $report->update(['status' => ReportStatus::ConvertedToCase, 'case_id' => $case->id]);
             app(IntakeQuestionService::class)->carryToCase($report, $case);

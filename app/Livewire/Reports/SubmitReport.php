@@ -23,6 +23,8 @@ class SubmitReport extends Component
 
     public string $employeeId = '';
 
+    public array $employeeIds = [];
+
     public string $employeeSearch = '';
 
     public string $locationId = '';
@@ -57,6 +59,7 @@ class SubmitReport extends Component
         $this->mount();
         $data = $this->validate([
             'branchId' => ['required', 'integer'], 'employeeId' => ['nullable', 'integer'],
+            'employeeIds' => ['array'], 'employeeIds.*' => ['integer', 'distinct'],
             'locationId' => ['nullable', 'integer'], 'place' => ['nullable', 'string', 'max:255'],
             'occurredAt' => ['required', 'date'], 'violationType' => ['nullable', 'string', 'max:255'],
             'violationTypeId' => ['nullable', 'integer'],
@@ -75,6 +78,8 @@ class SubmitReport extends Component
         }
         $reports->submit([
             'branch_id' => $data['branchId'], 'employee_id' => $data['employeeId'] ?: null,
+            'employee_ids' => array_values(array_unique(array_map('intval', array_merge(
+                array_filter([$data['employeeId'] ?: null]), $data['employeeIds'])))),
             'location_id' => $data['locationId'] ?: null, 'place_freetext' => $data['place'] ?: null,
             'occurred_at' => $data['occurredAt'], 'violation_type' => $data['violationType'],
             'violation_type_id' => $data['violationTypeId'] ?: null,

@@ -39,6 +39,7 @@
                         @error('mapViolationTypeIds.'.$report->id)<p class="text-sm text-red-700">{{ $message }}</p>@enderror
                     @endif
                     <p dir="auto" class="text-sm text-gray-600">{{ $report->description }}</p>
+                    @if($report->employees->isNotEmpty())<p class="text-sm text-gray-600">{{ __('Employees named in report') }}: {{ $report->employees->pluck('name')->implode(' · ') }}</p>@endif
                     @if($report->intakeQuestions->isNotEmpty())
                         <div class="space-y-1"><h3 class="font-semibold">{{ __('messages.intake.open_points') }}</h3>
                             @foreach($report->intakeQuestions as $question)<p dir="auto" class="text-sm"><strong>{{ $question->question }}</strong> — {{ $question->answer ?? __('messages.intake.open') }}</p>@endforeach
@@ -48,9 +49,9 @@
                     <div class="flex flex-wrap gap-3">@foreach($report->attachments as $attachment)<span class="text-sm"><a class="ui-link text-sm" href="/attachments/{{ $attachment->id }}">{{ $attachment->original_name }}</a> <x-ui.file-action :item="$reportItems[$loop->index]" :items="$reportItems" :index="$loop->index" :show-download="false" /></span>@endforeach</div>
                     <div class="flex flex-wrap items-end gap-3">
                         <x-ui.button wire:click="convert({{ $report->id }})">{{ __('Convert to case') }}</x-ui.button>
-                        <x-ui.field :label="__('Link to a duplicate case')" for="report-case-{{ $report->id }}" class="min-w-44">
+                        @if($report->employees->count() <= 1)<x-ui.field :label="__('Link to a duplicate case')" for="report-case-{{ $report->id }}" class="min-w-44">
                             <select id="report-case-{{ $report->id }}" wire:model="existingCaseIds.{{ $report->id }}" class="ui-control"><option value="">{{ __('New case') }}</option>@foreach($insights->duplicateCandidates($report)['cases'] as $case)@if(\App\Support\Access\CaseVisibility::for(auth()->user())->whereKey($case->id)->exists())<option value="{{ $case->id }}">{{ \App\Support\Format\Ui::number($case->case_number) }}</option>@endif@endforeach</select>
-                        </x-ui.field>
+                        </x-ui.field>@endif
                         <x-ui.field :label="__('Dismissal reason')" for="report-reason-{{ $report->id }}"><x-ui.input id="report-reason-{{ $report->id }}" wire:model="reasons.{{ $report->id }}" /></x-ui.field>
                         <x-ui.button variant="secondary" wire:click="dismiss({{ $report->id }})">{{ __('Dismiss') }}</x-ui.button>
                     </div>
