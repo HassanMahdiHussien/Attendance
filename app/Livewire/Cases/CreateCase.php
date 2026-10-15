@@ -249,7 +249,7 @@ class CreateCase extends Component
             'branchId' => ['required', 'integer'], 'employeeId' => ['required', 'integer'],
             'employeeIds' => ['array'], 'employeeIds.*' => ['integer', 'distinct'],
             'locationId' => ['nullable', 'integer'], 'place' => ['nullable', 'string', 'max:255'],
-            'violationTime' => ['required', 'date'], 'violationType' => ['nullable', 'string', 'max:255'],
+            'violationTime' => ['required', 'date', 'before_or_equal:now'], 'violationType' => ['nullable', 'string', 'max:255'],
             'violationTypeId' => ['nullable', 'integer'],
             'description' => ['nullable', 'string'], 'responsibleEmployeeId' => ['nullable', 'integer'],
             'responsibleName' => ['nullable', 'string', 'max:255'], 'witnessNames' => ['nullable', 'string'],

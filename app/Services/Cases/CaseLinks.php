@@ -96,7 +96,8 @@ class CaseLinks
             $query->where(function ($search) use ($like, $needle): void {
                 $search->where('related_employees.search_name', 'like', $like);
                 if (ctype_digit($needle)) {
-                    $search->orWhereRaw('CAST(cases.case_number AS CHAR) LIKE ?', [$like]);
+                    // Case numbers are displayed zero-padded ("0002"), so match that form as well as the bare number.
+                    $search->orWhereRaw("(CASE WHEN cases.case_number < 10000 THEN LPAD(cases.case_number, 4, '0') ELSE CAST(cases.case_number AS CHAR) END) LIKE ?", [$like]);
                 }
             });
         }

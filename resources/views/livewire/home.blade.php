@@ -81,7 +81,7 @@
                             @if(isset($row['case']))
                                 <span class="flap justify-center max-sm:col-span-2 max-sm:justify-self-start sm:min-w-[7.5rem] {{ ($row['action']->deadlineAlert ?? null) === 'red' ? 'flap-late' : (($row['action']->deadlineAlert ?? null) === 'amber' ? 'flap-soon' : '') }}"><bdi>{{ $row['action']->due ? \App\Support\Format\Ui::date($row['action']->due) : __('messages.home.ready') }}</bdi></span>
                                 <div class="min-w-0 flex-1">
-                                    <div class="font-semibold"><bdi class="me-2 font-mono text-sm text-primary">{{ \App\Support\Format\Ui::number(str_pad($row['case']->case_number, 4, '0', STR_PAD_LEFT)) }}</bdi>{{ $row['case']->employee?->name }}</div>
+                                    <div class="flex flex-wrap items-baseline gap-x-2 font-semibold"><bdi class="font-mono text-sm text-primary">{{ \App\Support\Format\Ui::number(str_pad($row['case']->case_number, 4, '0', STR_PAD_LEFT)) }}</bdi><span>{{ $row['case']->employee?->name }}</span></div>
                                     <p class="text-sm text-gray-500">{{ $row['action']->label }}</p>
                                 </div>
                                 <x-ui.button size="small" variant="secondary" :href="$row['action']->url">{{ __('messages.home.open_task') }}</x-ui.button>

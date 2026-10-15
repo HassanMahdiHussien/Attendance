@@ -76,7 +76,9 @@ test('picker searches normalized employee names and case numbers with a ten-case
     $service = app(CaseLinks::class);
     $f['second']->employee->forceFill(['name' => 'أحمد سالم'])->save();
     expect($service->candidates($f['admin'], $f['first'], 'احمد')->pluck('id')->all())->toContain($f['second']->id)
-        ->and($service->candidates($f['admin'], $f['first'], (string) $f['second']->case_number)->pluck('id')->all())->toContain($f['second']->id);
+        ->and($service->candidates($f['admin'], $f['first'], (string) $f['second']->case_number)->pluck('id')->all())->toContain($f['second']->id)
+        // The number as every screen displays it ("0002") finds the case too.
+        ->and($service->candidates($f['admin'], $f['first'], str_pad((string) $f['second']->case_number, 4, '0', STR_PAD_LEFT))->pluck('id')->all())->toContain($f['second']->id);
     foreach (range(1, 11) as $index) {
         DisciplinaryCase::factory()->create(['opened_by_user_id' => $f['admin']->id]);
     }

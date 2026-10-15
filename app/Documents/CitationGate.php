@@ -14,7 +14,11 @@ use App\Services\Documents\RegulationExclusions;
 
 class CitationGate
 {
-    public function assertIssuable(Document $document): void
+    /**
+     * A draft preview skips only the review requirement (supporting check or reasoned override): HR has to read the
+     * draft to make that decision. Every structural rule still applies, and issuance always passes $draft = false.
+     */
+    public function assertIssuable(Document $document, bool $draft = false): void
     {
         $case = $document->disciplinaryCase;
         if ($document->regulationComparison && ! in_array($document->regulationComparison->status, ['confirmed', 'skipped'], true)) {
@@ -46,7 +50,7 @@ class CitationGate
                     }
                     $citation = $citations->get($id)?->first(fn (Citation $row) => $content->language_code !== 'ar'
                         || $row->claim_hash === $claim['claim_hash'] || ($document->is_locked && $row->claim_hash === null));
-                    if (! $citation || ! $this->valid($citation, $case)) {
+                    if (! $citation || ! $this->valid($citation, $case, $draft)) {
                         $message = $citation?->legalUnit?->superseded_by_id !== null
                             ? 'النص القانوني صُحح — حدّث الاستشهاد'
                             : 'الاستشهاد بالمادة ('.(LegalUnit::withoutGlobalScopes()->find($id)?->article_number ?? $id)
@@ -62,12 +66,12 @@ class CitationGate
         }
     }
 
-    private function valid(Citation $citation, DisciplinaryCase $case): bool
+    private function valid(Citation $citation, DisciplinaryCase $case, bool $draft = false): bool
     {
         if (! LegalUnit::query()->citableFor($case)->whereKey($citation->legal_unit_id)->exists()) {
             return false;
         }
-        if ($citation->relevance_check === RelevanceCheck::Supports) {
+        if ($draft || $citation->relevance_check === RelevanceCheck::Supports) {
             return true;
         }
 
