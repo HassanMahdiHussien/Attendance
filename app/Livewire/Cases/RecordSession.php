@@ -8,8 +8,10 @@ use App\Enums\Outcome;
 use App\Exceptions\TransitionBlocked;
 use App\Models\CommitteeMandate;
 use App\Models\CommitteeSessionAttendance;
+use App\Models\Incident;
 use App\Services\Cases\CommitteeSessionService;
 use App\Services\Cases\ConflictClearance;
+use App\Services\Cases\IncidentService;
 use App\Support\Access\CaseVisibility;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Gate;
@@ -38,6 +40,18 @@ class RecordSession extends Component
 
     public string $notice = '';
 
+    public ?int $incidentId = null;
+
+    public array $includeCases = [];
+
+    public array $caseMinutes = [];
+
+    public array $caseOutcomes = [];
+
+    public array $caseDefenseAcceptance = [];
+
+    public array $caseVotes = [];
+
     public function mount(string $case): void
     {
         $record = CaseVisibility::for(auth()->user())->findOrFail($case);
@@ -46,6 +60,7 @@ class RecordSession extends Component
             CaseStatus::ResponseRefusedToSign, CaseStatus::ResponseDeliveryRefused, CaseStatus::ResponseScannedUploaded,
             CaseStatus::AiIngestedResponse, CaseStatus::CommitteeSessionHeld], true), 404);
         $this->caseId = $record->id;
+        $this->incidentId = request()->boolean('single') ? null : $record->incident_id;
         $this->expectedStatus = $record->status->value;
         $this->minutes = $record->committee_session_notes ?? '';
         $this->outcome = $record->outcome?->value ?? 'recommendation_only';
@@ -56,6 +71,19 @@ class RecordSession extends Component
             $this->votes[$attendance->committee_pool_member_id] = $attendance->vote?->value ?? (string) $attendance->vote;
             if ($attendance->is_chair) {
                 $this->chairId = (string) $attendance->committee_pool_member_id;
+            }
+        }
+        if ($this->incidentId !== null) {
+            abort_unless(app(IncidentService::class)->canManageAll(Incident::query()->findOrFail($this->incidentId), auth()->user()), 403);
+            $members = app(IncidentService::class)->visibleMembers(Incident::query()->findOrFail($this->incidentId), auth()->user());
+            foreach ($members as $member) {
+                $this->includeCases[$member->id] = app(CommitteeSessionService::class)->sessionReady($member);
+                $this->caseMinutes[$member->id] = (string) $member->committee_session_notes;
+                $this->caseOutcomes[$member->id] = $member->outcome?->value ?? 'recommendation_only';
+                $this->caseDefenseAcceptance[$member->id] = $member->defense_acceptance?->value ?? 'rejected';
+                foreach (CommitteeSessionAttendance::query()->where('case_id', $member->id)->get() as $attendance) {
+                    $this->caseVotes[$member->id][$attendance->committee_pool_member_id] = $attendance->vote?->value ?? '';
+                }
             }
         }
     }
@@ -78,6 +106,30 @@ class RecordSession extends Component
             }
         }
         try {
+            if ($this->incidentId !== null) {
+                $this->validate(['includeCases' => ['array'], 'caseMinutes' => ['array'],
+                    'caseOutcomes' => ['array'], 'caseDefenseAcceptance' => ['array']]);
+                $perCase = [];
+                foreach ($this->includeCases as $id => $included) {
+                    if (! $included) {
+                        continue;
+                    }
+                    $this->validate([
+                        "caseMinutes.{$id}" => ['required', 'string', 'max:50000'],
+                        "caseOutcomes.{$id}" => ['required', 'in:recommendation_only,warning,termination'],
+                        "caseDefenseAcceptance.{$id}" => ['required', 'in:accepted_fully,accepted_partially,rejected'],
+                    ]);
+                    $perCase[$id] = ['minutes' => $this->caseMinutes[$id], 'outcome' => $this->caseOutcomes[$id],
+                        'defense_acceptance' => $this->caseDefenseAcceptance[$id],
+                        'votes' => $this->caseVotes[$id] ?? []];
+                }
+                $result = $sessions->recordForIncident(Incident::query()->findOrFail($this->incidentId),
+                    array_column($attendees, 'pool_member_id'), (int) $this->chairId, $this->minutes,
+                    $perCase, auth()->user(), (int) $this->minutesTypedBy);
+                $this->notice = __('messages.incident.session_recorded', ['count' => count($result['recorded'])]);
+
+                return;
+            }
             $updated = $sessions->recordSession($case, $attendees, (int) $this->chairId, $this->minutes,
                 Outcome::from($this->outcome), DefenseAcceptance::from($this->defenseAcceptance),
                 auth()->user(), (int) $this->minutesTypedBy);
@@ -116,6 +168,9 @@ class RecordSession extends Component
         $members = $mandate?->poolMembers()->where(fn ($query) => $query->whereNull('branch_id')->orWhere('branch_id', $case->branch_id))
             ->whereNotIn('id', $excluded)->get() ?? collect();
 
-        return view('livewire.cases.record-session', compact('case', 'members'))->layout('layouts.workspace');
+        $incidentCases = $this->incidentId === null ? collect() : app(IncidentService::class)
+            ->visibleMembers(Incident::query()->findOrFail($this->incidentId), auth()->user());
+
+        return view('livewire.cases.record-session', compact('case', 'members', 'incidentCases'))->layout('layouts.workspace');
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Ai;
 
 use App\Enums\DocumentType;
+use App\Exceptions\TransitionBlocked;
 use App\Models\CaseWitness;
 use App\Models\CommitteePoolMember;
 use App\Models\DisciplinaryCase;
@@ -10,6 +11,7 @@ use App\Models\Employee;
 use App\Models\ReportWitness;
 use App\Models\User;
 use App\Services\Cases\CaseLinks;
+use App\Services\Cases\IncidentPrivacy;
 use App\Support\Format\Violation;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
@@ -35,10 +37,12 @@ class PayloadBuilder
     {
         $this->restoration = [];
         $this->names($case);
+        $description = $this->description($case);
+        $this->assertPrivate($case, $description.' '.Violation::name($case, 'ar'));
 
         return [
             'violation_type' => $this->minimize(Violation::name($case, 'ar')),
-            'incident_description' => $this->minimize($case->description ?? ''),
+            'incident_description' => $this->minimize($description),
             'candidate_units' => $units->map(fn ($unit) => [
                 'id' => $unit->id, 'kind' => $unit->law->kind->value,
                 'official_text' => $unit->official_text,
@@ -50,6 +54,16 @@ class PayloadBuilder
     {
         $this->restoration = [];
         $this->names($case);
+        $description = $type === DocumentType::DecisionLetter ? '' : $this->description($case);
+        $this->assertPrivate($case, $description);
+        $responsible = $case->allegedResponsibleEmployee?->name ?? $case->alleged_responsible_person_freetext ?? '';
+        if (app(IncidentPrivacy::class)->containsOtherMemberName($case, $responsible)) {
+            $responsible = '';
+        }
+        $this->assertPrivate($case, implode(' ', array_filter([
+            Violation::name($case, 'ar'), $case->location?->name, $case->violation_place_freetext,
+            $responsible,
+        ])));
         $payload = ['document_type' => $type->value,
             'candidate_units' => $units->map(fn ($unit) => [
                 'id' => $unit->id, 'law_name' => $unit->law->name,
@@ -61,8 +75,8 @@ class PayloadBuilder
                 'violation_type' => $this->minimize(Violation::name($case, 'ar')),
                 'place' => $this->minimize($case->location?->name ?? $case->violation_place_freetext ?? ''),
                 'time' => $case->violation_time,
-                'description' => $this->minimize($case->description ?? ''),
-                'alleged_responsible_person' => $this->minimize($case->allegedResponsibleEmployee?->name ?? $case->alleged_responsible_person_freetext ?? ''),
+                'description' => $this->minimize($description),
+                'alleged_responsible_person' => $this->minimize($responsible),
                 'position' => $this->minimize($case->employee?->position ?? ''),
                 'department' => $this->minimize($case->employee?->department ?? ''),
             ];
@@ -74,12 +88,18 @@ class PayloadBuilder
                     'outcome' => $row['case']->outcome?->value,
                 ])->values()->all();
             if ($type === DocumentType::DefenseLetter) {
-                $payload['intake_answers'] = $case->intakeQuestions()->whereNotNull('answer')->orderBy('id')->get()
-                    ->map(fn ($row) => ['aspect' => $row->aspect, 'question' => $this->minimize($row->question),
-                        'answer' => $this->minimize($row->answer)])->all();
+                $payload['intake_answers'] = $case->incident_id !== null ? [] : $case->intakeQuestions()
+                    ->whereNotNull('answer')->orderBy('id')->get()
+                    ->map(function ($row) use ($case): array {
+                        $this->assertPrivate($case, $row->question.' '.$row->answer);
+
+                        return ['aspect' => $row->aspect, 'question' => $this->minimize($row->question),
+                            'answer' => $this->minimize($row->answer)];
+                    })->all();
             }
         }
         if ($type === DocumentType::Recommendations) {
+            $this->assertPrivate($case, (string) $case->confirmedResponseText().' '.(string) $case->committee_session_notes);
             $payload['employee_response'] = $case->confirmedResponseText() === null ? null : $this->minimize($case->confirmedResponseText());
             $payload['minutes'] = $this->minimize($case->committee_session_notes ?? '');
             $payload['outcome'] = $case->outcome?->value;
@@ -104,6 +124,25 @@ class PayloadBuilder
         }
 
         return $payload;
+    }
+
+    private function assertPrivate(DisciplinaryCase $case, string $text): void
+    {
+        if (app(IncidentPrivacy::class)->containsOtherMemberName($case, $text)) {
+            throw new TransitionBlocked(__('messages.incident.other_member_in_text'));
+        }
+    }
+
+    private function description(DisciplinaryCase $case): string
+    {
+        if ($case->incident_id === null) {
+            return (string) $case->description;
+        }
+        if (blank($case->case_specific_description)) {
+            throw new TransitionBlocked(__('messages.incident.case_description_required'));
+        }
+
+        return $case->case_specific_description;
     }
 
     public function restore(array $output): array

@@ -89,6 +89,25 @@
             </div>
         </div>
     </header>
+    @if($record->incident_id)
+        <x-ui.card class="space-y-4" aria-label="{{ __('Incident group') }}">
+            <h2 class="text-lg font-semibold">{{ __('Incident group') }}</h2>
+            <div class="flex flex-wrap gap-3">
+                @foreach($incidentMembers as $member)
+                    <a href="/cases/{{ $member->id }}" class="rounded-lg border border-gray-200 px-3 py-2 text-sm {{ $member->id === $record->id ? 'bg-primary-light' : 'bg-white' }}" wire:key="incident-member-{{ $member->id }}">
+                        <bdi class="font-mono">#{{ \App\Support\Format\Ui::number($member->case_number) }}</bdi> · {{ $member->employee?->name }} · {{ \App\Support\Format\Ui::stage($member->status) }}
+                    </a>
+                @endforeach
+            </div>
+            @if($canManage && in_array(auth()->user()->primary_role, [\App\Enums\UserRole::CompanyAdmin, \App\Enums\UserRole::HrStaff], true))
+                <div class="grid gap-4 lg:grid-cols-2">
+                    @if($canManageAllIncident)<div class="space-y-2"><label for="incident-add" class="block text-sm font-semibold">{{ __('Add employee to incident') }}</label><x-ui.select id="incident-add" wire:model="incidentEmployeeId"><option value="">{{ __('Choose an employee') }}</option>@foreach($incidentEmployees as $employee)<option value="{{ $employee->id }}">{{ $employee->name }}</option>@endforeach</x-ui.select>@error('incidentEmployeeId')<p class="text-sm text-red-700">{{ $message }}</p>@enderror<x-ui.button variant="secondary" wire:click="addIncidentEmployee">{{ __('Add employee') }}</x-ui.button></div>@endif
+                    <div class="space-y-2"><label for="case-specific-description" class="block text-sm font-semibold">{{ __('Description for this employee') }}</label><p class="text-xs text-gray-600">{{ __('Required before drafting this employee’s defense letter. Do not name other incident members.') }}</p><x-ui.textarea id="case-specific-description" wire:model="caseDescription" rows="4" />@error('caseDescription')<p class="text-sm text-red-700">{{ $message }}</p>@enderror@if(!$record->defense_letter_issued_at && !$record->documents()->exists())<x-ui.button variant="secondary" wire:click="saveCaseDescription">{{ __('Save description') }}</x-ui.button>@endif</div>
+                </div>
+                @if($canManageAllIncident && !$record->defense_letter_issued_at && in_array($record->status, [\App\Enums\CaseStatus::Draft, \App\Enums\CaseStatus::Open], true) && !$record->documents()->exists())<a class="ui-link text-sm" href="/cases/new?incident_case={{ $record->id }}">{{ __('Edit shared facts') }}</a>@endif
+            @endif
+        </x-ui.card>
+    @endif
     <div class="grid gap-5 lg:grid-cols-3">
         <x-ui.card class="lg:col-span-2" aria-label="{{ __('Stage') }}">
             <x-ui.stepper :step="$step" class="mt-1" />
@@ -231,13 +250,13 @@
 <x-ui.button variant="danger" wire:click="cancelConsultation">{{ __('Cancel consultation') }}</x-ui.button>
 @error('consultationCancelReason')<p class="text-red">{{ $message }}</p>
 @enderror@endif
-                @if(!$record->legal_review_requested_at || $record->legal_review_completed_at || $record->legal_review_cancelled_at)<x-ui.button variant="primary" wire:click="closeWithoutPenalty">{{ __('Archive without a penalty') }}</x-ui.button>
+                @if(!$record->legal_review_requested_at || $record->legal_review_completed_at || $record->legal_review_cancelled_at)@if($record->incident_id)<label class="mb-3 block text-sm font-semibold">{{ __('Reason to close this employee’s case') }}<x-ui.input wire:model="incidentClosureReason" class="mt-2" /></label>@error('incidentClosureReason')<p class="text-sm text-red-700">{{ $message }}</p>@enderror @endif<x-ui.button variant="primary" wire:click="closeWithoutPenalty">{{ __('Archive without a penalty') }}</x-ui.button>
 @endif
             @endif
             @if($record->status === \App\Enums\CaseStatus::SignedRecommendationsUploaded && in_array($record->outcome?->value, ['warning', 'termination'], true))<x-ui.button href="/cases/{{ $record->id }}/decision">{{ __('Write decision letter') }}</x-ui.button>@endif
             @if(in_array($record->status, [\App\Enums\CaseStatus::AwaitingExternalLegalConsultation, \App\Enums\CaseStatus::DecisionLetterReadyForReview], true))<x-ui.button href="/cases/{{ $record->id }}/documents/{{ $record->documents->where('document_type', \App\Enums\DocumentType::DecisionLetter)->last()?->id }}/confirm" variant="secondary">{{ __('Confirm decision letter') }}</x-ui.button>@endif
             @if(in_array($record->status, [\App\Enums\CaseStatus::AwaitingAppealWindow, \App\Enums\CaseStatus::AppealPending], true))<span id="next-appeal" class="scroll-mt-20"></span><x-ui.button href="/cases/{{ $record->id }}/appeal" variant="secondary">{{ __('Record appeal and outcome') }}</x-ui.button>@endif
-            @if(in_array($record->status, [\App\Enums\CaseStatus::AwaitingEmployeeResponse, \App\Enums\CaseStatus::ResponseReceived, \App\Enums\CaseStatus::ResponseRefusedToSign, \App\Enums\CaseStatus::ResponseDeliveryRefused, \App\Enums\CaseStatus::ResponseScannedUploaded, \App\Enums\CaseStatus::AiIngestedResponse, \App\Enums\CaseStatus::CommitteeSessionHeld], true))<x-ui.button href="/cases/{{ $record->id }}/session" variant="secondary">{{ __('Record committee session') }}</x-ui.button>@endif
+            @if(in_array($record->status, [\App\Enums\CaseStatus::AwaitingEmployeeResponse, \App\Enums\CaseStatus::ResponseReceived, \App\Enums\CaseStatus::ResponseRefusedToSign, \App\Enums\CaseStatus::ResponseDeliveryRefused, \App\Enums\CaseStatus::ResponseScannedUploaded, \App\Enums\CaseStatus::AiIngestedResponse, \App\Enums\CaseStatus::CommitteeSessionHeld], true))@if($record->incident_id === null || $canManageAllIncident)<x-ui.button href="/cases/{{ $record->id }}/session" variant="secondary">{{ __('Record committee session') }}</x-ui.button>@endif @if($record->incident_id)<a class="ui-link ms-3 text-sm" href="/cases/{{ $record->id }}/session?single=1">{{ __('Record this case separately') }}</a>@endif @endif
             @if(in_array($record->status, [\App\Enums\CaseStatus::CommitteeSessionHeld, \App\Enums\CaseStatus::RecommendationsCitationCheck, \App\Enums\CaseStatus::RecommendationsAwaitingApprovals, \App\Enums\CaseStatus::RecommendationsConfirmed], true) && $record->session_majority_reached)<x-ui.button href="/cases/{{ $record->id }}/recommendations" variant="secondary">{{ __('Write recommendations') }}</x-ui.button>@endif
             @if(in_array($record->status, [\App\Enums\CaseStatus::RecommendationsAwaitingApprovals, \App\Enums\CaseStatus::RecommendationsConfirmed], true))<x-ui.button href="/cases/{{ $record->id }}/documents/{{ $record->documents->where('document_type', \App\Enums\DocumentType::Recommendations)->last()?->id }}/confirm">{{ __('Review recommendation approvals') }}</x-ui.button>@endif
             @if(in_array($record->status, [\App\Enums\CaseStatus::AwaitingCommitteeSignatures, \App\Enums\CaseStatus::SignedRecommendationsUploaded], true))<x-ui.button href="/cases/{{ $record->id }}/signed-scan" variant="secondary">{{ __('Recommendations and signatures scan') }}</x-ui.button>@endif

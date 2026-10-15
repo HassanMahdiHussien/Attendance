@@ -24,7 +24,9 @@ class CaseLinks
         $this->requireEditor($actor);
         $this->requireVisible($actor, $case);
         $this->requireVisible($actor, $other);
-        if ($case->company_id !== $other->company_id || $case->id === $other->id || mb_strlen((string) $reason) > 500) {
+        if ($case->company_id !== $other->company_id || $case->id === $other->id
+            || ($case->incident_id !== null && $case->incident_id === $other->incident_id)
+            || mb_strlen((string) $reason) > 500) {
             throw new \DomainException(__('messages.related.invalid_link'));
         }
 
@@ -85,6 +87,10 @@ class CaseLinks
                 ->on('related_employees.company_id', '=', 'cases.company_id');
         })->where('cases.company_id', $case->company_id)->where('cases.id', '<>', $case->id)
             ->whereNotIn('cases.id', $linkedIds)->select('cases.*')->with('employee');
+        if ($case->incident_id !== null) {
+            $query->where(fn ($members) => $members->whereNull('cases.incident_id')
+                ->orWhere('cases.incident_id', '<>', $case->incident_id));
+        }
         if ($needle !== '') {
             $like = '%'.addcslashes($needle, '%_\\').'%';
             $query->where(function ($search) use ($like, $needle): void {

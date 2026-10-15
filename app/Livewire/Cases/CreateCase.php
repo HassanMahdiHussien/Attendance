@@ -8,6 +8,7 @@ use App\Livewire\Concerns\ChecksDescription;
 use App\Models\Branch;
 use App\Models\DisciplinaryCase;
 use App\Models\Employee;
+use App\Models\Incident;
 use App\Models\IntakeQuestion;
 use App\Models\Location;
 use App\Models\User;
@@ -15,6 +16,7 @@ use App\Models\ViolationType;
 use App\Services\Cases\CaseDrafts;
 use App\Services\Cases\CaseInsights;
 use App\Services\Cases\CaseOpening;
+use App\Services\Cases\IncidentService;
 use App\Services\EmailIntake\EmailDraftService;
 use App\Services\Intake\IntakeQuestionService;
 use App\Services\Reports\ReportService;
@@ -34,6 +36,12 @@ class CreateCase extends Component
     public string $branchId = '';
 
     public string $employeeId = '';
+
+    public array $employeeIds = [];
+
+    public ?int $incidentId = null;
+
+    public bool $editingIncident = false;
 
     public string $employeeSearch = '';
 
@@ -78,11 +86,16 @@ class CreateCase extends Component
     public function mount(): void
     {
         $this->authorizeCreate();
-        if ($id = request()->query('draft')) {
+        if ($id = request()->query('draft') ?? request()->query('incident_case')) {
             $draft = CaseVisibility::for(auth()->user())->findOrFail($id);
             Gate::authorize('update', $draft);
-            abort_unless($draft->status === CaseStatus::Draft, 404);
+            $this->editingIncident = request()->has('incident_case');
+            abort_unless($this->editingIncident
+                ? $draft->incident_id !== null && in_array($draft->status, [CaseStatus::Draft, CaseStatus::Open], true)
+                    && $draft->defense_letter_issued_at === null && ! $draft->documents()->exists()
+                : $draft->status === CaseStatus::Draft, 404);
             $this->draftId = $draft->id;
+            $this->incidentId = $draft->incident_id;
             $this->branchId = (string) $draft->branch_id;
             $this->employeeId = (string) $draft->employee_id;
             $this->locationId = (string) $draft->location_id;
@@ -111,6 +124,8 @@ class CreateCase extends Component
             $this->reportId = $report->id;
             $this->branchId = (string) $report->branch_id;
             $this->employeeId = (string) $report->employee_id;
+            $this->employeeIds = $report->employees()->where('employees.id', '!=', $report->employee_id)
+                ->pluck('employees.id')->map(fn ($id) => (string) $id)->all();
             $this->locationId = (string) $report->location_id;
             $this->place = (string) $report->place_freetext;
             $this->violationTime = Carbon::parse($report->occurred_at)->format('Y-m-d\TH:i');
@@ -123,7 +138,7 @@ class CreateCase extends Component
         }
     }
 
-    public function save(CaseDrafts $drafts): void
+    public function save(CaseDrafts $drafts, IncidentService $incidents): void
     {
         $this->authorizeCreate();
         $data = $this->validatedFacts();
@@ -143,13 +158,24 @@ class CreateCase extends Component
             $data['intake_check'] = $check;
             $data['intake_answers'] = $this->intakeAnswers;
         }
-        $draft = $this->draftId ? $drafts->update(CaseVisibility::for(auth()->user())->findOrFail($this->draftId), $data, auth()->user())
+        $selectedIds = array_values(array_unique(array_map('intval', array_merge([$this->employeeId], $this->employeeIds))));
+        if ($this->incidentId && $this->draftId) {
+            $incidents->updateSharedFacts(Incident::query()->findOrFail($this->incidentId), $data, auth()->user());
+            $draft = CaseVisibility::for(auth()->user())->findOrFail($this->draftId);
+        } elseif (! $this->draftId && ! $this->reportId && ! $this->emailId && count($selectedIds) > 1) {
+            $incident = $incidents->createForEmployees($selectedIds, $data, auth()->user());
+            $this->incidentId = $incident->id;
+            $draft = $incident->cases()->orderBy('id')->firstOrFail();
+        } else {
+            $draft = $this->draftId ? $drafts->update(CaseVisibility::for(auth()->user())->findOrFail($this->draftId), $data, auth()->user())
             : ($this->emailId ? app(EmailDraftService::class)->convert(
                 EmailDraftVisibility::inbox(auth()->user())->findOrFail($this->emailId), auth()->user(), $data)
                 : ($this->reportId ? app(ReportService::class)->convert(
                     ViolationReportVisibility::inbox(auth()->user())->findOrFail($this->reportId), auth()->user(), null, $data)
                 : $drafts->create($data, auth()->user())));
+        }
         $this->draftId = $draft->id;
+        $this->incidentId = $draft->incident_id;
         $this->intakeCheckId = null;
         $this->intakeAnswers = [];
         $this->emailId = null;
@@ -157,20 +183,26 @@ class CreateCase extends Component
         $this->dispatch('draft-saved');
     }
 
-    public function checkDuplicates(CaseDrafts $drafts, CaseInsights $insights): void
+    public function checkDuplicates(CaseDrafts $drafts, CaseInsights $insights, IncidentService $incidents): void
     {
         $this->authorizeCreate();
+        abort_if($this->editingIncident, 409);
         if ($this->draftId === null) {
-            $this->save($drafts);
+            $this->save($drafts, $incidents);
         }
         $draft = CaseVisibility::for(auth()->user())->findOrFail($this->draftId);
-        $this->duplicates = $insights->duplicateCandidates($draft)['cases']->map(fn ($case) => ['id' => $case->id, 'number' => $case->case_number])->all();
+        $draftsToCheck = $draft->incident_id ? Incident::query()->findOrFail($draft->incident_id)
+            ->cases()->where('status', CaseStatus::Draft->value)->get() : collect([$draft]);
+        $this->duplicates = $draftsToCheck->flatMap(fn ($member) => $insights->duplicateCandidates($member)['cases']
+            ->map(fn ($case) => ['id' => $case->id, 'number' => $case->case_number,
+                'employee' => $member->employee?->name]))->all();
         $this->checkedDuplicates = true;
     }
 
-    public function open(CaseOpening $opening, CaseInsights $insights): void
+    public function open(CaseOpening $opening, CaseInsights $insights, IncidentService $incidents): void
     {
         $this->authorizeCreate();
+        abort_if($this->editingIncident, 409);
         abort_unless($this->checkedDuplicates && $this->draftId !== null, 409);
         $draft = CaseVisibility::for(auth()->user())->findOrFail($this->draftId);
         Gate::authorize('update', $draft);
@@ -178,7 +210,9 @@ class CreateCase extends Component
         if ($this->duplicateCaseId !== '') {
             abort_unless($eligible->contains((int) $this->duplicateCaseId), 422);
         }
-        $case = $opening->open($draft, auth()->user());
+        $case = $draft->incident_id
+            ? $incidents->openDrafts(Incident::query()->findOrFail($draft->incident_id), auth()->user())
+            : $opening->open($draft, auth()->user());
         if ($this->duplicateCaseId !== '') {
             $other = CaseVisibility::for(auth()->user())->findOrFail($this->duplicateCaseId);
             $insights->linkDuplicate($case, $other);
@@ -213,6 +247,7 @@ class CreateCase extends Component
     {
         $data = $this->validate([
             'branchId' => ['required', 'integer'], 'employeeId' => ['required', 'integer'],
+            'employeeIds' => ['array'], 'employeeIds.*' => ['integer', 'distinct'],
             'locationId' => ['nullable', 'integer'], 'place' => ['nullable', 'string', 'max:255'],
             'violationTime' => ['required', 'date'], 'violationType' => ['nullable', 'string', 'max:255'],
             'violationTypeId' => ['nullable', 'integer'],

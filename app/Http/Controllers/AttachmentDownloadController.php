@@ -33,7 +33,8 @@ class AttachmentDownloadController extends Controller
             $parent instanceof EmailDraft => EmailDraftVisibility::inbox($user)->whereKey($parent->id)->exists(),
             $parent instanceof Document => CaseVisibility::for($user)->whereKey($parent->case_id)->exists(),
             $parent instanceof ViolationReport => $parent->case_id !== null
-                ? CaseVisibility::for($user)->whereKey($parent->case_id)->exists()
+                ? CaseVisibility::for($user)->where(fn ($query) => $query->whereKey($parent->case_id)
+                    ->orWhere('violation_report_id', $parent->id))->exists()
                 : in_array($user->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)
                     && (int) $parent->company_id === (int) $user->company_id
                     && ViolationReportVisibility::inbox($user)->whereKey($parent->id)->exists(),

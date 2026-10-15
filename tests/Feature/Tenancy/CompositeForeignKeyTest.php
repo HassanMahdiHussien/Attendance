@@ -26,6 +26,7 @@ use App\Models\DocumentContent;
 use App\Models\DocumentTemplate;
 use App\Models\EmailDraft;
 use App\Models\Employee;
+use App\Models\Incident;
 use App\Models\IntakeCheck;
 use App\Models\IntakeQuestion;
 use App\Models\Law;
@@ -76,6 +77,7 @@ test('every tenant foreign key rejects a row from another company through models
         'intake_checks' => IntakeCheck::class, 'intake_questions' => IntakeQuestion::class,
         'regulation_comparisons' => RegulationComparison::class,
         'regulation_comparison_pairs' => RegulationComparisonPair::class,
+        'incidents' => Incident::class,
     ];
     $keys = DB::select("SELECT TABLE_NAME AS source_table, CONSTRAINT_NAME AS constraint_name, REFERENCED_TABLE_NAME AS target_table, MAX(CASE WHEN COLUMN_NAME <> 'company_id' THEN COLUMN_NAME END) AS foreign_column FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = DATABASE() AND REFERENCED_TABLE_NAME IS NOT NULL GROUP BY TABLE_NAME, CONSTRAINT_NAME, REFERENCED_TABLE_NAME HAVING COUNT(*) = 2 AND SUM(COLUMN_NAME = 'company_id') = 1");
     expect(count($keys))->toBeGreaterThan(25);
@@ -84,7 +86,9 @@ test('every tenant foreign key rejects a row from another company through models
     $context = app(TenantContext::class);
 
     foreach ($keys as $key) {
-        if (in_array($key->source_table, ['citations', 'legal_import_pages', 'legal_unit_approvals'], true)) {
+        // Incident pivot and session rows have no factories; their tenant keys are exercised in IncidentTest.
+        if (in_array($key->source_table, ['citations', 'legal_import_pages', 'legal_unit_approvals',
+            'incident_sessions', 'violation_report_employees'], true)) {
             continue;
         }
         $sourceClass = $models[$key->source_table];
