@@ -25,7 +25,7 @@ class DocumentRenderer
     public function render(Document $document, bool $draft = false): string
     {
         $document->load(['contents', 'disciplinaryCase.employee', 'company']);
-        $this->citationGate->assertIssuable($document);
+        $this->citationGate->assertIssuable($document, $draft);
         $pages = [];
         $this->snapshot = ['renderer' => 'v1', 'template_versions' => [], 'template_ids' => [],
             'letterhead_versions' => [], 'letterhead_ids' => [], 'logo_sha256' => []];

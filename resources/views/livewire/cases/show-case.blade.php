@@ -240,7 +240,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
 <section id="next-actions" class="ui-card scroll-mt-20 p-5 lg:col-span-3">
 <h2 class="text-lg font-black mb-4">{{ __('Actions') }}</h2>
-        @if($record->status !== \App\Enums\CaseStatus::ArchivedFinal && !$record->legal_review_requested_at && in_array(auth()->user()->primary_role, [\App\Enums\UserRole::CompanyAdmin, \App\Enums\UserRole::HrStaff, \App\Enums\UserRole::CommitteeMember], true))<span id="next-consultation" class="scroll-mt-20"></span><x-ui.button variant="secondary" wire:click="requestConsultation" class="mb-4 border-amber-300 text-amber-700">{{ __('Request legal consultation') }}</x-ui.button>
+        @if($record->status !== \App\Enums\CaseStatus::ArchivedFinal && !$record->legal_review_requested_at && in_array(auth()->user()->primary_role, [\App\Enums\UserRole::CompanyAdmin, \App\Enums\UserRole::HrStaff, \App\Enums\UserRole::CommitteeMember], true))<span id="next-consultation" class="scroll-mt-20"></span><x-ui.button variant="secondary" wire:click="requestConsultation" wire:confirm="{{ __('Send this case to the partner law firm for legal consultation? The 15-day deadline keeps running while you wait.') }}" class="mb-4 border-amber-300 text-amber-700">{{ __('Request legal consultation') }}</x-ui.button>
 @endif
         @if(auth()->user()->primary_role === \App\Enums\UserRole::ExternalLegalReviewer && $record->legal_review_requested_at)<x-ui.button href="/cases/{{ $record->id }}/consultation" variant="secondary">{{ __('Review consultation') }}</x-ui.button>@endif
         @if($canManage)

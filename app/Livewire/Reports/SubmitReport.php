@@ -61,7 +61,7 @@ class SubmitReport extends Component
             'branchId' => ['required', 'integer'], 'employeeId' => ['nullable', 'integer'],
             'employeeIds' => ['array'], 'employeeIds.*' => ['integer', 'distinct'],
             'locationId' => ['nullable', 'integer'], 'place' => ['nullable', 'string', 'max:255'],
-            'occurredAt' => ['required', 'date'], 'violationType' => ['nullable', 'string', 'max:255'],
+            'occurredAt' => ['required', 'date', 'before_or_equal:now'], 'violationType' => ['nullable', 'string', 'max:255'],
             'violationTypeId' => ['nullable', 'integer'],
             'responsibleEmployeeId' => ['nullable', 'integer'], 'responsibleName' => ['nullable', 'string', 'max:255'],
             'witnessNames' => ['nullable', 'string'], 'description' => ['required', 'string'],

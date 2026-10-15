@@ -70,6 +70,8 @@ test('unchecked citation blocks until a reviewer gives a logged reason', functio
     app(CitationSync::class)->sync($f['document']);
     $citation = $f['document']->citations()->firstOrFail();
     expect(fn () => app(CitationGate::class)->assertIssuable($f['document']))->toThrow(IssuanceBlocked::class);
+    // A draft preview may show the unreviewed citation so HR can read it before deciding; issuance may not.
+    app(CitationGate::class)->assertIssuable($f['document'], true);
     app(CitationOverride::class)->override($citation, $f['user'], 'Checked the official text with counsel.');
     app(CitationGate::class)->assertIssuable($f['document']);
     expect($citation->fresh()->override_reason)->toBe('Checked the official text with counsel.');

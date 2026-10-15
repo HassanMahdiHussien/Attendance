@@ -86,7 +86,7 @@ class LawResource extends Resource
     {
         return $table->columns([
             TextColumn::make('name')->label(__('Law'))->searchable(),
-            TextColumn::make('name_en')->label(__('English name'))->toggleable(),
+            TextColumn::make('name_en')->label(__('English name'))->searchable()->toggleable(),
             TextColumn::make('number')->label(__('Number')),
             TextColumn::make('year')->label(__('Year')),
             TextColumn::make('category')->label(__('Category'))->formatStateUsing(fn ($state): string => LegalLibraryLabels::category($state instanceof \BackedEnum ? $state->value : (string) $state)),
