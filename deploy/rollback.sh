@@ -38,7 +38,7 @@ if pgrep -f '^(/usr/bin/)?php[0-9.]* (/[^ ]*/)?artisan backup:run' >/dev/null; t
 sudo supervisorctl stop displanery-worker
 ln -s "$previous" "$base/current.new"
 mv -Tf "$base/current.new" "$current"
-sudo systemctl reload php8.4-fpm
+sudo systemctl reload php8.5-fpm
 sudo supervisorctl start displanery-worker
 (cd "$previous" && php artisan queue:restart)
 domain="$(sed -n 's/^APP_URL=https:\/\///p' "$base/shared/.env" | head -1)"
