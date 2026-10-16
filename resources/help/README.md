@@ -17,6 +17,6 @@ Use `audience: all` for everyone, or list roles separated by commas, such as `co
 
 To add a guide, create a file with the same section and file name in both `en` and `ar`. Write each language naturally. Link to another guide with `[read more](help:getting-started/welcome)`. Refer to a screenshot with `![Description](shots/home)`. The screenshot name must be listed in `resources/help/screenshots.php` and its image must exist for both languages.
 
-On a local development machine with the demo data, regenerate screenshots with `./vendor/bin/sail artisan help:screenshots` or one image with `./vendor/bin/sail artisan help:screenshots --only=home`. Review both languages after a UI change. The command never runs outside the local environment. Screenshots contain only seeded demo data.
+On a local development machine with the demo data, regenerate screenshots with `php artisan help:screenshots` or one image with `php artisan help:screenshots --only=home`. Review both languages after a UI change. The command never runs outside the local environment. Screenshots contain only seeded demo data.
 
 Editing on a deployed server requires deploying the changed files. After deployment, the Help Center notices article changes without a build step. Run the Help tests before deployment; they check both languages, links, and screenshots.
