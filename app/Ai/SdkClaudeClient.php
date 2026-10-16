@@ -12,6 +12,7 @@ use Anthropic\Core\Exceptions\NotFoundException;
 use Anthropic\Core\Exceptions\PermissionDeniedException;
 use Anthropic\Core\Exceptions\RateLimitException;
 use Anthropic\Core\Exceptions\UnprocessableEntityException;
+use Anthropic\Lib\Streaming\MessageAccumulator;
 use Anthropic\Messages\TextBlock;
 use App\Models\AiGenerationLog;
 use Throwable;
@@ -32,10 +33,17 @@ class SdkClaudeClient implements ClaudeClient
                 // No key cannot be fixed by retrying: fail at once so the user sees the manual path immediately.
                 throw new PermanentAiFailure('AI unavailable — write it manually or try again.');
             }
-            $response = (new Client(apiKey: $key))->messages->create(
+            // Streamed: a bilingual legal draft at high effort can run for minutes, longer than a
+            // single blocking request should be held open.
+            $stream = (new Client(apiKey: $key))->messages->createStream(
                 model: $model, maxTokens: 16000, messages: $messages,
                 outputConfig: ['effort' => $effort, 'format' => ['type' => 'json_schema', 'schema' => $schema]],
             );
+            $accumulator = MessageAccumulator::forMessages();
+            foreach ($stream as $event) {
+                $accumulator->accumulate($event);
+            }
+            $response = $accumulator->message();
             $inputTokens = $response->usage->inputTokens;
             $outputTokens = $response->usage->outputTokens;
             // The model always thinks, so the first content block may be a thinking block; read the text block.

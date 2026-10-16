@@ -4,6 +4,7 @@ use App\Ai\AiDrafting;
 use App\Ai\AiUnavailable;
 use App\Ai\CandidateUnits;
 use App\Ai\ClaudeClient;
+use App\Ai\DraftPrompt;
 use App\Ai\InvalidAiOutput;
 use App\Ai\PayloadBuilder;
 use App\Enums\CaseStatus;
@@ -223,6 +224,15 @@ test('Kurdish is requested only when enabled and a company template exists', fun
         DocumentType::DefenseLetter, $f['case']->fresh()->ai_request_id), 'handle']);
     expect($fake->requests[1]['schema']['properties']['languages']['required'])->toBe(['ar', 'en', 'ku'])
         ->and($f['case']->documents()->firstOrFail()->contents()->where('language_code', 'ku')->exists())->toBeTrue();
+});
+
+test('the payload carries the employee gender so Arabic wording agrees with it', function (): void {
+    $f = aiOpenCase();
+    $f['case']->employee->forceFill(['gender' => 'female'])->save();
+    $payload = (new PayloadBuilder)->build($f['case']->fresh(), DocumentType::Recommendations, collect());
+    $messages = app(DraftPrompt::class)->messages($payload, ['ar', 'en'], DocumentType::Recommendations);
+    expect($payload['incident']['employee_gender'])->toBe('female')
+        ->and(json_encode($messages, JSON_UNESCAPED_UNICODE))->toContain('employee_gender');
 });
 
 test('names are masked as whole words only', function (): void {
