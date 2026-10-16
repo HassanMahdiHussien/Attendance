@@ -13,6 +13,7 @@ use App\Support\Tenancy\TenantContext;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Throwable;
 
 class CheckCitationRelevance implements ShouldQueue
@@ -38,14 +39,17 @@ class CheckCitationRelevance implements ShouldQueue
                     $result = $claude->structured('citation_relevance', [
                         'type' => 'object', 'properties' => ['result' => ['type' => 'string', 'enum' => ['supports', 'partial', 'does_not_support']],
                             'reason' => ['type' => 'string']], 'required' => ['result', 'reason'], 'additionalProperties' => false,
-                    ], [['role' => 'user', 'content' => 'Judge whether this official legal text supports this claim. Reply with result and a short reason only. Claim: '
+                    ], [['role' => 'user', 'content' => 'Judge whether this official legal text supports this claim. Reply with result and a reason of one sentence (at most 30 words). Claim: '
                         .$claim."\nOfficial text: ".$citation->legalUnit->official_text]],
                         ['company_id' => $document->company_id, 'case_id' => $document->case_id, 'document_id' => $document->id],
                         (string) config('displanery.ai.relevance_model'), 'medium');
                     if (! in_array($result['result'] ?? null, ['supports', 'partial', 'does_not_support'], true)
-                        || ! is_string($result['reason'] ?? null) || blank($result['reason']) || mb_strlen($result['reason']) > 200) {
+                        || ! is_string($result['reason'] ?? null) || blank($result['reason'])) {
                         continue;
                     }
+                    // Real reasons ran 300-450 characters and discarding them dropped every verdict, so keep
+                    // the verdict and shorten only the reviewer-facing reason.
+                    $result['reason'] = Str::limit(trim($result['reason']), 500);
                     DB::transaction(function () use ($citation, $document, $result, $audit, $events): void {
                         $currentDocument = Document::query()->lockForUpdate()->find($document->id);
                         $current = Citation::query()->lockForUpdate()->find($citation->id);

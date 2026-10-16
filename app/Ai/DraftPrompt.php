@@ -30,6 +30,7 @@ class DraftPrompt
             .'Use Western digits (0-9) for every number in every language. '
             .'When stating the incident date, use incident.date_written for that language verbatim. '
             .'Names are masked as ⟦…⟧ tokens; copy each token exactly as given, character for character, in every language, and never translate or alter it. '
+            .'Refer to the employee with the grammatical gender in incident.employee_gender (Arabic nouns, verbs and pronouns in the matching masculine or feminine form; he or she in English) in every language; use the conventional masculine form only when it is unspecified. Never let the minutes\' wording override a recorded gender. '
             .'Do not restate prior-record data; the template prints it. The statute prevails over an internal regulation. '
             .'Related cases are internal context only. Never print them or restate them as case facts unless HR entered those facts independently. '
             .'Do not state the operative decision, outcome, or penalty in prose; template wording supplies it. '

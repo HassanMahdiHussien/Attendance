@@ -131,6 +131,22 @@ test('relevance is checked per claim and unavailable claims remain unchecked', f
         ->and($f['document']->citations()->where('overridden', true)->count())->toBe(0);
 });
 
+test('a verdict with a long reason is kept and only the reason is shortened', function (): void {
+    Bus::fake([CheckCitationRelevance::class]);
+    $f = aiCitationFixture();
+    $f['document']->contents()->create(['company_id' => $f['company']->id, 'language_code' => 'ar',
+        'body' => "الادعاء [[cite:{$f['unit']->id}]].", 'is_authoritative' => true]);
+    app(CitationSync::class)->sync($f['document']);
+    $fake = new FakeClaudeClient;
+    // Real relevance reasons from the API were 299-446 characters long.
+    $fake->push(['result' => 'does_not_support', 'reason' => str_repeat('The cited clause concerns a different duty. ', 20)]);
+    (new CheckCitationRelevance($f['document']->id, $f['company']->id))->handle($fake,
+        app(CitationRenderer::class), app(AuditLogger::class), app(CaseEventLogger::class));
+    $citation = $f['document']->citations()->sole();
+    expect($citation->relevance_check?->value)->toBe('does_not_support')
+        ->and(mb_strlen($citation->relevance_reason))->toBeLessThanOrEqual(503);
+});
+
 test('refresh rewrites a superseded marker in every language and creates an unchecked claim', function (): void {
     Bus::fake([CheckCitationRelevance::class]);
     $f = aiCitationFixture();

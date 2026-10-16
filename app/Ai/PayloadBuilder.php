@@ -85,6 +85,8 @@ class PayloadBuilder
                 'alleged_responsible_person' => $this->minimize($responsible),
                 'position' => $this->minimize($case->employee?->position ?? ''),
                 'department' => $this->minimize($case->employee?->department ?? ''),
+                // Arabic verbs, pronouns and nouns agree with gender; without it every letter defaulted to masculine.
+                'employee_gender' => $case->employee?->gender?->value ?? 'unspecified',
             ];
             $payload['related_cases'] = $viewer === null ? [] : app(CaseLinks::class)->visibleRelated($case, $viewer)
                 ->filter(fn (array $row) => $row['in_error'] === null)->take(10)

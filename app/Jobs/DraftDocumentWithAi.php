@@ -38,7 +38,9 @@ class DraftDocumentWithAi implements ShouldQueue
 
     public int $tries = 3;
 
-    public int $timeout = 300;
+    // A real bilingual recommendations draft ran past 300 s and was killed. Keep this below the
+    // database queue's retry_after (960 s) so a running draft is never handed to a second worker.
+    public int $timeout = 900;
 
     public array $backoff = [30, 120];
 
