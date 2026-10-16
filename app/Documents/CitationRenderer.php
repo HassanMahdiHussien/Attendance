@@ -20,11 +20,23 @@ class CitationRenderer
             $clause = $unit->clause_path;
             $text = $language === 'en' ? "Article {$unit->article_number}" : "المادة ({$unit->article_number})";
             if ($clause) {
-                $text .= $language === 'en' ? $this->englishClause($clause) : " البند ({$clause})";
+                $text .= $language === 'en' ? $this->englishClause($clause) : $this->arabicClause($clause);
             }
 
-            return $text.($language === 'en' ? " of {$law}" : " من {$law}");
+            // Bracketed (product owner 2026-10-16): the AI places a marker straight after a clause, and a bare
+            // "…the employer Article 42(2)…" reads as broken grammar.
+            return '('.$text.($language === 'en' ? " of {$law}" : " من {$law}").')';
         }, $body);
+    }
+
+    // clause_path starts with the article number ("42/ثانياً"), which the text already states.
+    private function arabicClause(string $path): string
+    {
+        $parts = explode('/', $path);
+        array_shift($parts);
+        $clause = implode('/', array_map('trim', $parts));
+
+        return $clause === '' ? '' : " البند ({$clause})";
     }
 
     private function englishClause(string $path): string
