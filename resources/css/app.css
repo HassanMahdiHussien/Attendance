@@ -31,6 +31,19 @@
 }
 
 @layer components {
+    .help-prose { max-width: 72ch; font-family: 'Readex Pro', sans-serif; line-height: 1.9; overflow-wrap: anywhere; }
+    .help-prose h2, .help-prose h3 { margin-block: 1.7em .5em; font-weight: 700; line-height: 1.35; }
+    .help-prose h2 { font-size: 1.35rem; }
+    .help-prose h3 { font-size: 1.12rem; }
+    .help-prose p, .help-prose ul, .help-prose ol, .help-prose blockquote, .help-prose table { margin-block: .8em; }
+    .help-prose ul, .help-prose ol { padding-inline-start: 1.6em; }
+    .help-prose ul { list-style: disc; }
+    .help-prose ol { list-style: decimal; }
+    .help-prose a { color: var(--color-primary); text-decoration: underline; }
+    .help-prose img { max-width: 100%; height: auto; border: 1px solid var(--color-line); border-radius: .75rem; }
+    .help-prose blockquote { border-inline-start: 3px solid var(--color-signal); padding-inline-start: 1rem; color: #4b5563; }
+    .help-prose table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; }
+    .help-prose th, .help-prose td { border: 1px solid var(--color-line); padding: .5rem; text-align: start; }
     .ui-card { @apply min-w-0 bg-white; border: 1px solid var(--color-line); border-radius: .75rem; box-shadow: 0 1px 2px rgb(14 26 43 / .05); }
     .ui-badge { @apply inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold leading-tight; }
     .ui-badge-red { @apply bg-red-light text-red; }

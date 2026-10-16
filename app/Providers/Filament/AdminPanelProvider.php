@@ -59,6 +59,7 @@ class AdminPanelProvider extends PanelProvider
                     ->group(NavigationGroup::make(__('Settings'))->items($settings));
             })
             ->userMenuItems([
+                Action::make('help')->label(fn (): string => __('Help'))->url('/help'),
                 Action::make('locale_en')->label(fn (): string => __('English'))->action(function (): RedirectResponse {
                     auth()->user()->forceFill(['locale' => 'en'])->save();
 

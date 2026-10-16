@@ -56,6 +56,7 @@
                     <div id="workspace-account-menu" x-show="accountOpen" x-cloak x-transition.opacity.duration.150ms class="absolute top-full mt-2 w-64 rounded-xl border border-line bg-white p-2 text-ink shadow-[0_12px_32px_-8px_rgb(14_26_43/0.28)] end-0">
                         <div class="px-3 py-2"><strong class="block truncate text-sm">{{ auth()->user()->name }}</strong><span class="block truncate text-xs text-gray-500">{{ auth()->user()->company?->name ?? auth()->user()->email }}</span></div>
                         <div class="my-1 h-px bg-line"></div>
+                        <a href="{{ route('help.index') }}" class="flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-primary"><x-ui.icon name="help" class="h-4 w-4 text-gray-500" />{{ __('Help') }}</a>
                         <form method="POST" action="{{ route('locale.update') }}">@csrf<input type="hidden" name="locale" value="{{ $otherLocale }}"><button type="submit" class="flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-start text-sm hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-primary" lang="{{ $otherLocale }}"><x-ui.icon name="globe" class="h-4 w-4 text-gray-500" />{{ $otherLocaleLabel }}</button></form>
                         <form method="POST" action="/logout">@csrf<button type="submit" class="flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-start text-sm hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-primary"><x-ui.icon name="logout" class="h-4 w-4 text-gray-500" />{{ __('Log out') }}</button></form>
                     </div>
@@ -88,6 +89,7 @@
                     </div>
                 @endif
                 <div class="mt-4 border-t border-line pt-3 text-sm font-semibold">{{ auth()->user()->name }}</div>
+                <a href="{{ route('help.index') }}" class="mt-2 flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm font-medium text-gray-700 hover:bg-gray-50"><x-ui.icon name="help" />{{ __('Help') }}</a>
                 <form method="POST" action="{{ route('locale.update') }}">@csrf<input type="hidden" name="locale" value="{{ $otherLocale }}"><button type="submit" class="mt-2 inline-flex min-h-10 items-center gap-2 text-sm text-gray-700" lang="{{ $otherLocale }}"><x-ui.icon name="globe" class="h-4 w-4" />{{ $otherLocaleLabel }}</button></form>
                 <form method="POST" action="/logout">@csrf<button type="submit" class="inline-flex min-h-10 items-center gap-2 text-sm text-gray-700"><x-ui.icon name="logout" class="h-4 w-4" />{{ __('Log out') }}</button></form>
             </section>

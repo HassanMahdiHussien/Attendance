@@ -4,6 +4,7 @@ use App\Enums\Jurisdiction;
 use App\Enums\PoolRole;
 use App\Enums\UserRole;
 use App\Models\Branch;
+use App\Models\BranchUser;
 use App\Models\CommitteeMandate;
 use App\Models\CommitteePoolMember;
 use App\Models\Company;
@@ -57,8 +58,11 @@ it('seeds the anonymised pilot structure and built-in laws', function () {
             ->and($jurisdictions['18']->source_file_path)->toBe('docs/laws/gazette-4734-incl-social-security-law-18-2023.pdf')
             ->and($jurisdictions['18']->jurisdictions->pluck('jurisdiction')->all())->toEqualCanonicalizing([Jurisdiction::FederalIraq, Jurisdiction::KurdistanRegion]);
 
-        // Platform admin + company admin, plus one demo approver per pool category (Legal, HR, Union).
-        expect(User::count())->toBe(5)
+        // Platform admin, company admin and a branch-scoped reporter, plus one demo approver per pool category.
+        $reporter = User::where('primary_role', UserRole::Reporter)->sole();
+        expect(User::count())->toBe(6)
+            ->and($reporter->company_id)->toBe($company->id)
+            ->and(BranchUser::where('user_id', $reporter->id)->count())->toBe(1)
             ->and(User::where('primary_role', UserRole::CommitteeMember)->count())->toBe(3)
             ->and(User::where('primary_role', UserRole::PlatformAdmin)->sole()->company_id)->toBeNull()
             ->and(User::where('primary_role', UserRole::CompanyAdmin)->sole()->company_id)->toBe($company->id);

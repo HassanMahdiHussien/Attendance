@@ -44,6 +44,7 @@ test('refreshed screens retain their original behavior surface', function (): vo
     $allowedAdditions = [
         'resources/views/layouts/workspace.blade.php' => [
             'controls' => ['workspace-account-menu'],
+            'routes' => ['help.index'],
         ],
         'resources/views/livewire/cases/show-case.blade.php' => [
             'permission_conditions' => ['$canManage && in_array(auth(', '$canManageAllIncident',
