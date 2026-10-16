@@ -14,7 +14,7 @@ VAULT_MONTHLY_MONTHS="${VAULT_MONTHLY_MONTHS:-24}"
 [[ $VAULT_DAILY_DAYS =~ ^[1-9][0-9]*$ && $VAULT_MONTHLY_MONTHS =~ ^[1-9][0-9]*$ ]] || { echo "Invalid retention" >&2; exit 1; }
 # shellcheck source=/dev/null
 [[ -f /etc/os-release ]] && . /etc/os-release
-[[ ${ID:-} == ubuntu && ${VERSION_ID:-} == 24.04 ]] || { echo "Ubuntu 24.04 required" >&2; exit 1; }
+[[ ${ID:-} == ubuntu && ${VERSION_ID:-} == 26.04 ]] || { echo "Ubuntu 26.04 required" >&2; exit 1; }
 [[ -s /root/.ssh/authorized_keys ]] || { echo "Root SSH key required before hardening" >&2; exit 1; }
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
@@ -53,7 +53,7 @@ ufw --force enable
 # sshd -t needs this directory; with socket activation it may not exist until the first login.
 install -d -m 0755 /run/sshd
 sshd -t
-# Ubuntu 24.04 starts sshd from ssh.socket; its port comes from a generator that reads sshd_config.
+# Ubuntu 26.04 starts sshd from ssh.socket; its port comes from a generator that reads sshd_config.
 systemctl daemon-reload
 if systemctl is-active --quiet ssh.socket; then systemctl restart ssh.socket; else systemctl try-reload-or-restart ssh; fi
 cat > /etc/fail2ban/jail.d/displanery-backup.local <<EOF

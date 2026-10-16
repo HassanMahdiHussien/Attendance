@@ -22,7 +22,7 @@ if ! [[ $SSH_PORT =~ ^[0-9]+$ ]] || (( SSH_PORT < 1 || SSH_PORT > 65535 )); then
 [[ $DATA_DEVICE == /dev/disk/by-id/* && -b $DATA_DEVICE ]] || { echo "DATA_DEVICE must be a /dev/disk/by-id/ block device" >&2; exit 1; }
 # shellcheck source=/dev/null
 [[ -f /etc/os-release ]] && . /etc/os-release
-[[ ${ID:-} == ubuntu && ${VERSION_ID:-} == 24.04 ]] || { echo "Ubuntu 24.04 required" >&2; exit 1; }
+[[ ${ID:-} == ubuntu && ${VERSION_ID:-} == 26.04 ]] || { echo "Ubuntu 26.04 required" >&2; exit 1; }
 device="$(readlink -f "$DATA_DEVICE")"
 [[ -b $device ]] || { echo "DATA_DEVICE cannot be resolved" >&2; exit 1; }
 signature="$(wipefs -n --noheadings "$device")"
@@ -53,30 +53,15 @@ exec > >(tee -a "$LOG") 2>&1
 step() { printf '[%s] %s\n' "$(date -u +%FT%TZ)" "$*"; }
 trap 'step "Provision failed at line $LINENO; inspect $LOG"' ERR
 export DEBIAN_FRONTEND=noninteractive
-# The MySQL repository is set up before the first update, so a rerun after a failed run never
-# trips over a half-configured source. Oracle's published 2025 key is pinned by its full fingerprint.
-if ! command -v curl >/dev/null || ! command -v gpg >/dev/null; then
-    rm -f /etc/apt/sources.list.d/mysql.list
-    apt-get update
-    apt-get install -y --no-install-recommends ca-certificates curl gnupg
-fi
-install -d -m 0755 /etc/apt/keyrings
-key_tmp="$(mktemp)"
-curl -fsSL https://repo.mysql.com/RPM-GPG-KEY-mysql-2025 -o "$key_tmp"
-fingerprint="$(gpg --batch --show-keys --with-colons "$key_tmp" | awk -F: '$1 == "fpr" { print $10; exit }')"
-[[ $fingerprint == BCA43417C3B485DD128EC6D4B7B3B788A8D3785C ]] || { echo "Unexpected MySQL signing key"; exit 1; }
-gpg --batch --yes --dearmor -o /etc/apt/keyrings/mysql.gpg "$key_tmp"
-rm -f "$key_tmp"
-printf 'deb [signed-by=/etc/apt/keyrings/mysql.gpg] https://repo.mysql.com/apt/ubuntu/ noble mysql-8.4-lts\n' > /etc/apt/sources.list.d/mysql.list
-# apt verifies signatures as the unprivileged _apt user; the script's umask 077 would hide these from it.
-chmod 0644 /etc/apt/keyrings/mysql.gpg /etc/apt/sources.list.d/mysql.list
+# PHP 8.5 and MySQL 8.4 come from Ubuntu 26.04's own archive, so no third-party PHP or MySQL source is added.
 apt-get update
-apt-get install -y --no-install-recommends ca-certificates curl gnupg lsb-release software-properties-common cryptsetup e2fsprogs util-linux ufw fail2ban unattended-upgrades nginx certbot supervisor git unzip zip fontconfig openssh-server systemd-timesyncd sudo openssl cron
+apt-get install -y --no-install-recommends ca-certificates curl gnupg lsb-release cryptsetup e2fsprogs util-linux ufw fail2ban unattended-upgrades nginx certbot supervisor git unzip zip fontconfig openssh-server chrony sudo openssl cron
 if cryptsetup isLuks "$device"; then
     cryptsetup open --test-passphrase --key-file "$luks_key" "$device" || { echo "Existing LUKS volume does not open with local key"; exit 1; }
 fi
 timedatectl set-timezone UTC
-systemctl enable --now systemd-timesyncd
+# Ubuntu 26.04 syncs time with chrony; installing systemd-timesyncd would remove it and ubuntu-minimal.
+systemctl enable --now chrony
 for _ in {1..12}; do
     [[ $(timedatectl show -p NTPSynchronized --value) == yes ]] && break
     sleep 5
@@ -105,7 +90,7 @@ ufw --force enable
 # sshd -t needs this directory; with socket activation it may not exist until the first login.
 install -d -m 0755 /run/sshd
 sshd -t
-# Ubuntu 24.04 starts sshd from ssh.socket; its port comes from a generator that reads sshd_config.
+# Ubuntu 26.04 starts sshd from ssh.socket; its port comes from a generator that reads sshd_config.
 systemctl daemon-reload
 if systemctl is-active --quiet ssh.socket; then systemctl restart ssh.socket; else systemctl try-reload-or-restart ssh; fi
 cat > /etc/fail2ban/jail.d/displanery.local <<EOF
@@ -119,8 +104,8 @@ systemctl enable --now fail2ban
 systemctl restart fail2ban
 cat > /etc/apt/apt.conf.d/52displanery-upgrades <<'EOF'
 Unattended-Upgrade::Allowed-Origins { "${distro_id}:${distro_codename}-security"; };
-// PHP, MySQL and Node come from their own repositories; their security fixes must apply too.
-Unattended-Upgrade::Origins-Pattern { "origin=LP-PPA-ondrej-php"; "origin=MySQL"; "origin=Node Source"; };
+// PHP and MySQL are covered by the Ubuntu security pocket above; Node comes from its own repository.
+Unattended-Upgrade::Origins-Pattern { "origin=Node Source"; };
 Unattended-Upgrade::Automatic-Reboot "true";
 Unattended-Upgrade::Automatic-Reboot-Time "01:00";
 EOF
@@ -152,7 +137,7 @@ install -d -m 0750 /srv/data/mysql /srv/data/storage /srv/data/tmp/mysql /srv/da
 chmod 0755 /srv/data/tmp
 grep -q '^/srv/data/mysql /var/lib/mysql ' /etc/fstab || printf '/srv/data/mysql /var/lib/mysql none bind,nofail,x-systemd.requires-mounts-for=/srv/data 0 0\n' >> /etc/fstab
 mountpoint -q /var/lib/mysql || mount /var/lib/mysql
-for service in mysql php8.4-fpm supervisor; do
+for service in mysql php8.5-fpm supervisor; do
     install -d "/etc/systemd/system/$service.service.d"
     printf '[Unit]\nRequiresMountsFor=/srv/data\n' > "/etc/systemd/system/$service.service.d/data.conf"
 done
@@ -166,8 +151,13 @@ fi
 grep -q '^/srv/data/swapfile ' /etc/fstab || printf '/srv/data/swapfile none swap sw,nofail 0 0\n' >> /etc/fstab
 swapon --show=NAME | grep -Fxq /srv/data/swapfile || swapon /srv/data/swapfile
 
-apt-get install -y mysql-community-server mysql-community-client
+apt-get install -y mysql-server mysql-client
 install -m 0644 "$BASE/templates/mysql.cnf" /etc/mysql/mysql.conf.d/99-displanery.cnf
+# Ubuntu's mysqld AppArmor profile only allows its default paths; the data directory is reached through
+# the /var/lib/mysql bind mount, but the temp directory on the encrypted volume needs its own rule.
+printf '/srv/data/tmp/mysql/ r,\n/srv/data/tmp/mysql/** rwk,\n' > /etc/apparmor.d/local/usr.sbin.mysqld
+chmod 0644 /etc/apparmor.d/local/usr.sbin.mysqld
+if aa-enabled -q 2>/dev/null; then apparmor_parser -r /etc/apparmor.d/usr.sbin.mysqld; fi
 chown -R mysql:mysql /srv/data/mysql /srv/data/tmp/mysql
 systemctl enable --now mysql
 systemctl restart mysql
@@ -199,17 +189,16 @@ if MYSQL_PWD="$DB_DRILL_PASSWORD" mysql -h 127.0.0.1 -u displanery_drill -e 'USE
     echo "Drill account can access live database"; exit 1
 fi
 
-add-apt-repository -y ppa:ondrej/php
-apt-get update
-# Only what the application uses; the dev image's debugging and other-database extensions stay out.
-apt-get install -y php8.4-cli php8.4-fpm php8.4-mysql php8.4-mbstring php8.4-xml php8.4-zip php8.4-curl php8.4-gd php8.4-bcmath php8.4-intl php8.4-readline php8.4-opcache
-install -m 0644 "$BASE/templates/php-fpm-pool.conf" /etc/php/8.4/fpm/pool.d/displanery.conf
-sed -i 's/^expose_php = On/expose_php = Off/' /etc/php/8.4/fpm/php.ini
-sed -i 's/^expose_php = On/expose_php = Off/' /etc/php/8.4/cli/php.ini
-printf 'upload_tmp_dir=/srv/data/tmp/php\nsys_temp_dir=/srv/data/tmp/php\n' > /etc/php/8.4/cli/conf.d/99-displanery.ini
+# Only what the application uses; debugging and other-database extensions stay out.
+# OPcache is built into PHP 8.5, so there is no php8.5-opcache package.
+apt-get install -y php8.5-cli php8.5-fpm php8.5-mysql php8.5-mbstring php8.5-xml php8.5-zip php8.5-curl php8.5-gd php8.5-bcmath php8.5-intl php8.5-readline
+install -m 0644 "$BASE/templates/php-fpm-pool.conf" /etc/php/8.5/fpm/pool.d/displanery.conf
+sed -i 's/^expose_php = On/expose_php = Off/' /etc/php/8.5/fpm/php.ini
+sed -i 's/^expose_php = On/expose_php = Off/' /etc/php/8.5/cli/php.ini
+printf 'upload_tmp_dir=/srv/data/tmp/php\nsys_temp_dir=/srv/data/tmp/php\n' > /etc/php/8.5/cli/conf.d/99-displanery.ini
 chown deploy:deploy /srv/data/tmp/php
-systemctl enable --now php8.4-fpm
-systemctl restart php8.4-fpm
+systemctl enable --now php8.5-fpm
+systemctl restart php8.5-fpm
 
 install -d -o deploy -g deploy /srv/displanery /srv/displanery/releases /srv/displanery/shared
 printf '%s\n' "$REPO_URL" > /srv/displanery/repo-url
@@ -240,7 +229,7 @@ for key in backup_ed25519 github_deploy; do
 done
 chmod 0600 /home/deploy/.ssh/backup_ed25519 /home/deploy/.ssh/github_deploy
 cat > /etc/sudoers.d/displanery-deploy <<'EOF'
-deploy ALL=(root) NOPASSWD: /usr/bin/supervisorctl stop displanery-worker, /usr/bin/supervisorctl start displanery-worker, /usr/bin/supervisorctl restart displanery-worker, /usr/bin/systemctl reload php8.4-fpm
+deploy ALL=(root) NOPASSWD: /usr/bin/supervisorctl stop displanery-worker, /usr/bin/supervisorctl start displanery-worker, /usr/bin/supervisorctl restart displanery-worker, /usr/bin/systemctl reload php8.5-fpm
 EOF
 chmod 0440 /etc/sudoers.d/displanery-deploy
 visudo -cf /etc/sudoers.d/displanery-deploy

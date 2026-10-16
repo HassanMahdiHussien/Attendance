@@ -1,6 +1,6 @@
 # 0010 — Native production runtime and independent encrypted backups
 
-**Status:** Accepted
+**Status:** Accepted. Operating system and PHP version superseded by ADR 0012 (Ubuntu 26.04, PHP 8.5).
 
 ## Context
 

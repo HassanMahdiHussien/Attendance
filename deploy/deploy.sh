@@ -89,7 +89,7 @@ fi
 ln -s "$release" "$base/current.new"
 mv -Tf "$base/current.new" "$current"
 switched=1
-sudo systemctl reload php8.4-fpm
+sudo systemctl reload php8.5-fpm
 # Both are no-ops when already running/up, and they bring the site back after a fix-forward
 # deploy that follows a failed migration (which left maintenance on and the worker stopped).
 sudo supervisorctl start displanery-worker
