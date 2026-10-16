@@ -77,27 +77,42 @@ test('unchecked citation blocks until a reviewer gives a logged reason', functio
     expect($citation->fresh()->override_reason)->toBe('Checked the official text with counsel.');
 });
 
+test('Arabic clause rendering does not repeat the article number', function (): void {
+    $f = aiCitationFixture();
+    $f['document']->citations()->create(['company_id' => $f['company']->id,
+        'legal_unit_id' => $f['unit']->id, 'claim_sentence' => 'Claim',
+        'claim_hash' => hash('sha256', 'Claim')]);
+    $whole = LegalUnit::factory()->create(['law_id' => $f['law']->id, 'article_number' => '9', 'clause_path' => null]);
+    $f['document']->citations()->create(['company_id' => $f['company']->id,
+        'legal_unit_id' => $whole->id, 'claim_sentence' => 'Whole article',
+        'claim_hash' => hash('sha256', 'Whole article')]);
+    expect(app(CitationRenderer::class)->replace($f['document'], '[[cite:'.$f['unit']->id.']]', 'ar'))
+        ->toBe('(المادة (2) البند (ثانياً/ب) من القانون)')
+        ->and(app(CitationRenderer::class)->replace($f['document'], '[[cite:'.$whole->id.']]', 'ar'))
+        ->toBe('(المادة (9) من القانون)');
+});
+
 test('English clause rendering uses numbers and abjad letters on real paths', function (): void {
     $f = aiCitationFixture();
     $f['document']->citations()->create(['company_id' => $f['company']->id,
         'legal_unit_id' => $f['unit']->id, 'claim_sentence' => 'Claim',
         'claim_hash' => hash('sha256', 'Claim')]);
     expect(app(CitationRenderer::class)->replace($f['document'], '[[cite:'.$f['unit']->id.']]', 'en'))
-        ->toBe('Article 2(2)(b) of Social Security Law');
+        ->toBe('(Article 2(2)(b) of Social Security Law)');
     $another = LegalUnit::factory()->create(['law_id' => $f['law']->id, 'article_number' => '18',
         'clause_path' => '18/ثامن عشر']);
     $f['document']->citations()->create(['company_id' => $f['company']->id,
         'legal_unit_id' => $another->id, 'claim_sentence' => 'Another claim',
         'claim_hash' => hash('sha256', 'Another claim')]);
     expect(app(CitationRenderer::class)->replace($f['document'], '[[cite:'.$another->id.']]', 'en'))
-        ->toBe('Article 18(18) of Social Security Law');
+        ->toBe('(Article 18(18) of Social Security Law)');
     $first = LegalUnit::factory()->create(['law_id' => $f['law']->id, 'article_number' => '5',
         'clause_path' => '5/أولاً']);
     $f['document']->citations()->create(['company_id' => $f['company']->id,
         'legal_unit_id' => $first->id, 'claim_sentence' => 'First clause',
         'claim_hash' => hash('sha256', 'First clause')]);
     expect(app(CitationRenderer::class)->replace($f['document'], '[[cite:'.$first->id.']]', 'en'))
-        ->toBe('Article 5(1) of Social Security Law');
+        ->toBe('(Article 5(1) of Social Security Law)');
 });
 
 test('relevance is checked per claim and unavailable claims remain unchecked', function (): void {
