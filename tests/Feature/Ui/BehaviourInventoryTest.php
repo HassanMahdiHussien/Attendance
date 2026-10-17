@@ -43,8 +43,11 @@ test('refreshed screens retain their original behavior surface', function (): vo
     // New UI controls may be listed here with a reason once their behavior is reviewed.
     $allowedAdditions = [
         'resources/views/layouts/workspace.blade.php' => [
-            'controls' => ['workspace-account-menu'],
+            'controls' => ['workspace-account-menu', 'workspace-platform'],
             'routes' => ['help.index'],
+        ],
+        'resources/views/livewire/employees/employee-index.blade.php' => [
+            'wire' => [['wire:model.live', 'companyId']],
         ],
         'resources/views/livewire/cases/show-case.blade.php' => [
             'permission_conditions' => ['$canManage && in_array(auth(', '$canManageAllIncident',
@@ -107,7 +110,11 @@ test('refreshed screens retain their original behavior surface', function (): vo
     ];
 
     foreach ($baseline as $path => $expected) {
-        $actual = uiInventoryFor(File::get(base_path($path)));
+        $source = File::get(base_path($path));
+        if ($path === 'resources/views/layouts/workspace.blade.php') {
+            $source .= File::get(resource_path('views/layouts/partials/workspace-navigation.blade.php'));
+        }
+        $actual = uiInventoryFor($source);
         foreach ($expected as $kind => $items) {
             foreach ($items as $item) {
                 expect(in_array($item, $actual[$kind], true))->toBeTrue("Missing {$kind} in {$path}: ".json_encode($item));

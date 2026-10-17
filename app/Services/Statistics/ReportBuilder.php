@@ -119,7 +119,7 @@ class ReportBuilder
                 __('Stage') => $profile['open'] ? Ui::stage($profile['open']->status) : null,
                 __('Total cases') => $profile['counts']['total'], __('Warnings') => $profile['counts']['warnings'],
                 __('Last 12 months') => $profile['counts']['last_year']];
-            $report['sections'][] = $this->section(__('Disciplinary record'), [__('Case number'), __('Employee'), __('Incident date'), 'ISO', __('Violation'), __('Outcome'), __('Documents')],
+            $report['sections'][] = $this->section(__('Disciplinary record'), [__('Case number'), __('Employee'), __('Incident date'), __('Date (YYYY-MM-DD)'), __('Violation'), __('Outcome'), __('Documents')],
                 $profile['history']->map(fn ($case) => [$case->case_number, $employee->name,
                     $this->date($case->violation_time), $this->iso($case->violation_time), Violation::name($case),
                     Ui::outcome($case->outcome), $case->documents->map(fn ($document): string => match ($document->document_type->value) {
@@ -148,7 +148,7 @@ class ReportBuilder
             $report['summary'] = [__('Within deadline') => $totals['met'], __('Completed late') => $totals['overdue'],
                 __('Deadline missed') => $totals['missed'], __('In progress') => $totals['open'], __('Not started') => $totals['not_started']];
             $report['sections'][] = $this->section(__('Cases'), [__('Case number'), __('Employee'), __('Defense letter'), __('15-day deadline'),
-                __('Completion date'), __('Procedure'), __('Response deadline'), __('Response'), 'ISO'], $rows, $limit, $report);
+                __('Completion date'), __('Procedure'), __('Response deadline'), __('Response'), __('Date (YYYY-MM-DD)')], $rows, $limit, $report);
         } else {
             if ($type === 'periodic') {
                 $counts = $this->metrics->periodCounts($viewer, $filters, $aggregate, $params['company_id']);
@@ -174,7 +174,7 @@ class ReportBuilder
                     }
                 }
                 $report['sections'][] = $this->section(__('Case list'),
-                    [__('Case number'), __('Employee'), __('Incident date'), 'ISO', __('Violation'), __('Outcome')], $rows, $limit, $report);
+                    [__('Case number'), __('Employee'), __('Incident date'), __('Date (YYYY-MM-DD)'), __('Violation'), __('Outcome')], $rows, $limit, $report);
             }
         }
         $report['partial'] = $viewer->primary_role === UserRole::HrStaff && ! $viewer->can('view_all_company_cases');

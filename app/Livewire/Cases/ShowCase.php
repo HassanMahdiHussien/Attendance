@@ -35,6 +35,7 @@ use App\Services\Cases\ResponseService;
 use App\Services\Cases\SignaturePresence;
 use App\Services\Documents\DocumentCorrector;
 use App\Services\Intake\IntakeQuestionService;
+use App\Support\Access\CaseReturnLink;
 use App\Support\Access\CaseVisibility;
 use App\Support\Format\Ui;
 use App\Support\Tenancy\TenantContext;
@@ -434,6 +435,7 @@ class ShowCase extends Component
 
         return view('livewire.cases.show-case', [
             'record' => $record,
+            'caseListUrl' => CaseReturnLink::for(auth()->user()),
             'intakeQuestions' => auth()->user()->primary_role === UserRole::ExternalLegalReviewer
                 ? collect() : $record->intakeQuestions()->orderBy('id')->get(),
             'canAnswerIntake' => in_array(auth()->user()->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)

@@ -14,4 +14,4 @@ order: 10
 Good to know:
 
 - Official delivery is on paper. Read [paper and signatures](help:rules/paper-and-signatures) before recording a refused handoff or a signature box.
-- A recommendation-only case closes after signed recommendations and any pending consultation. Only a penalty decision starts an appeal window.
+- A recommendation-only case closes after HR uploads the signed recommendations and any requested consultation is completed or cancelled. Only a penalty decision starts an appeal window.

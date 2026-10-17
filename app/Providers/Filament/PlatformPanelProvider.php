@@ -8,7 +8,6 @@ use App\Http\Middleware\EnforceIdleTimeout;
 use App\Http\Middleware\EnsureAccountIsActive;
 use App\Http\Middleware\SetLocale;
 use App\Http\Middleware\SetTenantContext;
-use Filament\Actions\Action;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
@@ -16,34 +15,22 @@ use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\View\PanelsRenderHook;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
-use Livewire\Livewire;
 
 class PlatformPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
     {
         return $panel->id('platform')->path('platform')
-            ->userMenuItems([
-                Action::make('help')->label(fn (): string => __('Help'))->url('/help'),
-                Action::make('locale_en')->label(fn (): string => __('English'))->action(function (): RedirectResponse {
-                    auth()->user()->forceFill(['locale' => 'en'])->save();
-
-                    return redirect()->to(Livewire::originalUrl());
-                }),
-                Action::make('locale_ar')->label(fn (): string => __('Arabic'))->action(function (): RedirectResponse {
-                    auth()->user()->forceFill(['locale' => 'ar'])->save();
-
-                    return redirect()->to(Livewire::originalUrl());
-                }),
-            ])
+            ->topbar(false)->navigation(false)
+            ->renderHook(PanelsRenderHook::BODY_START, fn (): string => auth()->check() ? view('layouts.partials.workspace-navigation')->render() : '')
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
@@ -74,7 +61,7 @@ class PlatformPanelProvider extends PanelProvider
                 'warning' => Color::hex('#F2B33D'),
                 'danger' => Color::hex('#C2272D'),
                 'success' => Color::hex('#1F7A58'),
-            ])->font('Readex Pro')->darkMode(false)->topNavigation()->defaultAvatarProvider(IndigoAvatarProvider::class)->brandName(fn (): string => __('Displanery'))->brandLogo(fn () => view('filament.brand'))->brandLogoHeight('2rem')->favicon(asset('favicon.svg'))->viteTheme('resources/css/filament/theme.css')
+            ])->font('Readex Pro')->darkMode(false)->defaultAvatarProvider(IndigoAvatarProvider::class)->brandName(fn (): string => __('Displanery'))->brandLogo(fn () => view('filament.brand'))->brandLogoHeight('2rem')->favicon(asset('favicon.svg'))->viteTheme('resources/css/filament/theme.css')
             ->authMiddleware([Authenticate::class]);
     }
 }

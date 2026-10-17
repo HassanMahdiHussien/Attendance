@@ -23,6 +23,10 @@ class StageIndicator
 
     public static function label(CaseStatus $status): string
     {
+        if ($status === CaseStatus::ArchivedFinal) {
+            return __('Closed');
+        }
+
         return self::stageLabel(self::step($status));
     }
 

@@ -765,7 +765,6 @@
       "employees.show"
     ],
     "links": [
-      "/cases",
       "/cases/new?draft={{ $record->id }}",
       "/cases/{{ $prior[",
       "/cases/{{ $record->id }}/appeal",

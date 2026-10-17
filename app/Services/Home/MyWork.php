@@ -57,7 +57,8 @@ class MyWork
         ])->values();
         $events = CaseEvent::query()->whereIn('case_id', CaseVisibility::for($user)->select('cases.id'))
             ->with(['disciplinaryCase:id,case_number,company_id', 'actorUser:id,name'])
-            ->orderByDesc('created_at')->limit(10)->get();
+            ->orderByDesc('created_at')->orderByDesc('id')->limit(30)->get();
+        $events = app(ActivityFeed::class)->merge($events)->take(10);
         $setup = app(CompanySetup::class);
         $incomplete = $user->company_id !== null && ! $setup->complete($user->company);
 

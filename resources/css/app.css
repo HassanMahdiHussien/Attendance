@@ -2,6 +2,7 @@
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
+@source '../views/layouts/partials/workspace-navigation.blade.php';
 
 /* Departures world (see .impeccable/surfaces): midnight shell overhead, light working ground,
    signal amber reserved for the primary action and the current stage. */

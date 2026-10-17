@@ -71,7 +71,7 @@ test('the company lawyer opens internal regulation but no other admin page', fun
     expect($this->get('/admin/'.$other->id.'/internal-regulation')->status())->toBeIn([403, 404]);
 });
 
-test('admin navigation starts with translated workspace links and matches settings links', function (): void {
+test('admin panel uses the shared workspace navigation and keeps settings access checks', function (): void {
     $company = Company::factory()->create();
     $user = User::factory()->create(['primary_role' => UserRole::CompanyAdmin, 'company_id' => $company->id]);
     $this->actingAs($user);
@@ -81,14 +81,9 @@ test('admin navigation starts with translated workspace links and matches settin
     Filament::setTenant($company, isQuiet: true);
 
     try {
-        foreach (['en' => 'Workspace', 'ar' => 'مساحة العمل'] as $locale => $heading) {
-            app()->setLocale($locale);
-            $groups = $panel->getNavigation();
-            expect($groups[0]->getLabel())->toBe($heading);
-            expect($groups[1]->getLabel())->toBe(__('Settings'));
-            expect(count($groups[0]->getItems()))->toBe(count(Nav::items($user)));
-            expect(count($groups[1]->getItems()))->toBe(count(AdminNav::items($user)));
-        }
+        expect($panel->hasTopbar())->toBeFalse();
+        expect($panel->hasNavigation())->toBeFalse();
+        expect(array_column(AdminNav::items($user), 'label'))->not->toContain(__('Employees'));
     } finally {
         Filament::setTenant(null, isQuiet: true);
         Filament::setCurrentPanel(null);
