@@ -62,3 +62,18 @@ the test succeeds. The scheduler polls every five minutes. Processed messages ar
 `INTAKE_PROCESSED_DAYS` (default 30), discarded messages after `INTAKE_DISCARDED_DAYS` (default 7).
 Set `HEALTHCHECK_EMAIL_INTAKE_URL` for the intake ping. A failed ping contains counts only;
 inspect the application log for connection, read or move failure categories.
+
+## Demo server (laptop, demo data only)
+
+A spare Ubuntu 26.04 laptop serves `https://demo.hasnmahdi.com` for demonstrations. It holds only the seeded demo
+company and accounts, never real employee data, and is not the production server (home power and internet,
+no encrypted volume, no off-site backup).
+
+- One-time: the laptop owner runs `sudo bash ~/displanery/deploy/dev-setup.sh` (runtime, nginx, MySQL, systemd
+  queue and scheduler) and installs the Cloudflare Tunnel connector from the Zero Trust dashboard; the tunnel's
+  public hostname points at `http://localhost:80`.
+- Deploy or update from WSL: `bash deploy/demo-deploy.sh home@<laptop-ip>` (`DEMO_REF=<branch>` for another ref).
+  Only committed files travel (`git archive`). The first run writes the laptop's `.env` with new random secrets;
+  the demo login password is `SEED_DEFAULT_PASSWORD` in that file.
+- The app trusts forwarded headers only from `127.0.0.1`/`::1` (the tunnel), so links are `https://` behind the
+  tunnel while a server facing the internet directly cannot be spoofed.
