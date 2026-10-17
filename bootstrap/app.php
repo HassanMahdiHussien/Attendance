@@ -19,6 +19,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Only a proxy on this machine (the demo's Cloudflare tunnel) may set X-Forwarded-*: without it every
+        // generated URL is http:// behind HTTPS. A server facing the internet directly never sees 127.0.0.1.
+        $middleware->trustProxies(at: ['127.0.0.1', '::1']);
         $middleware->redirectGuestsTo('/login');
         $middleware->redirectUsersTo(fn (Request $request) => Landing::for($request->user()));
         $middleware->web(append: [SetLocale::class, EnsureAccountIsActive::class, EnforceIdleTimeout::class, SetTenantContext::class]);
