@@ -1,5 +1,15 @@
 # Testing
 
+## Design audit
+
+With the local demo data seeded, the app running at http://localhost, and Playwright Chromium installed
+(`npx playwright install chromium`), run `npm run audit:design`. Set
+AUDIT_BASE_URL to another loopback URL if needed. The script visits linked
+pages as demo roles in Arabic and English using GET requests and saves a reviewable
+storage/app/design-audit/<timestamp>/report.html, screenshots, and results.json. Open the HTML file in a
+browser. It caps each role and locale at 40 pages, skips missing demo users, and restores each user's locale.
+The separate AI designer bug bash is outside this command.
+
 Development runs natively in WSL (Ubuntu 26.04: PHP 8.5, MySQL 8.4, Node 24), set up once with
 `sudo bash deploy/dev-setup.sh [backup.sql]`. From `~/displanery`:
 

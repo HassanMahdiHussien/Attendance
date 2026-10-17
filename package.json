@@ -5,6 +5,7 @@
     "scripts": {
         "build": "vite build",
         "dev": "vite",
+        "audit:design": "node scripts/design-audit.mjs",
         "test:e2e": "E2E_TELEMETRY_DISABLED=1 SEED_DEFAULT_PASSWORD=$(grep ^SEED_DEFAULT_PASSWORD= .env | cut -d= -f2-) e2e run"
     },
     "devDependencies": {
