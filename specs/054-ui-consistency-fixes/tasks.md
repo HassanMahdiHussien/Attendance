@@ -1,0 +1,13 @@
+# Tasks
+- [ ] T01 Shared header partial + Filament panels use it (FR-01)
+- [ ] T02 Employees single entry + buttons (FR-02)
+- [ ] T03 Case page link visibility (FR-03)
+- [ ] T04 Board column names (FR-04)
+- [ ] T05 Reporter nav (FR-05)
+- [ ] T06 Archived case display (FR-06)
+- [ ] T07 Filament Arabic strings (FR-07)
+- [ ] T08 ISO column (FR-08)
+- [ ] T09 Activity merge (FR-09)
+- [ ] T10 Reporter rows (FR-10)
+- [ ] T11 Help wording (FR-11)
+- [ ] T12 Tests, Pint, full suite, re-run audit (FR-12)
