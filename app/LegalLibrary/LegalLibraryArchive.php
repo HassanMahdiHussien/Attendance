@@ -43,8 +43,10 @@ class LegalLibraryArchive
                 if ($units->isEmpty() || ! $units->whereNull('superseded_by_id')
                     ->contains(fn ($unit) => in_array($unit->status->value, ['verified_auto', 'verified_human'], true))
                     || $units->contains(fn ($unit) => in_array($unit->status->value, ['verified_text', 'verified_single'], true))
+                    // Mismatches travel as mismatches (product owner 2026-10-16): import keeps them uncitable, so the
+                    // review can continue on the receiving server instead of blocking the whole law.
                     || $units->whereNull('superseded_by_id')
-                        ->contains(fn ($unit) => ! in_array($unit->status->value, ['verified_auto', 'verified_human', 'excluded'], true))) {
+                        ->contains(fn ($unit) => ! in_array($unit->status->value, ['verified_auto', 'verified_human', 'excluded', 'mismatch'], true))) {
                     throw new RuntimeException("Law {$law->number}/{$law->year} has unverified current units.");
                 }
                 $source = $this->sourcePath($law->source_file_path);
@@ -68,7 +70,7 @@ class LegalLibraryArchive
                     'extraction_a' => $unit->extraction_a, 'extraction_b' => $unit->extraction_b,
                     'status' => $unit->status->value, 'verified_at' => $unit->verified_at,
                     'verified_by_source_id' => $unit->verified_by ?? ($unit->tags['library_export_verified_by'] ?? null),
-                    'tags' => array_diff_key($unit->tags ?? [], ['library_export_verified_by' => true]),
+                    'tags' => array_diff_key($unit->tags ?? [], ['library_export_verified_by' => true, 'library_source_id' => true]),
                 ])->all()];
                 $file = 'law-'.preg_replace('/[^a-z0-9-]/', '-', strtolower($law->number.'-'.$law->year.'-'.$law->category)).'.json';
                 $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR)."\n";
@@ -139,8 +141,9 @@ class LegalLibraryArchive
                 }
                 if ($unit['status'] === 'verified_auto'
                     && (! is_string($unit['extraction_a'] ?? null) || ! is_string($unit['extraction_b'] ?? null)
-                        || $this->normalizer->normalize($unit['extraction_a']) === ''
-                        || $this->normalizer->normalize($unit['extraction_a']) !== $this->normalizer->normalize($unit['extraction_b']))) {
+                        || $this->normalizer->comparable($unit['extraction_a']) === ''
+                        // The same rule ReadingComparator verified with; the stricter normalize() refused real units.
+                        || $this->normalizer->comparable($unit['extraction_a']) !== $this->normalizer->comparable($unit['extraction_b']))) {
                     throw new RuntimeException("Automatically verified unit lacks two matching readings: {$file}");
                 }
                 if ($unit['status'] === 'verified_human' && ! is_int($unit['verified_by_source_id'] ?? null)) {
@@ -184,12 +187,15 @@ class LegalLibraryArchive
         $map = [];
         $run = null;
         foreach ($rows as $item) {
-            $existing = LegalUnit::query()->where('law_id', $law->id)
+            // A law can print one article twice (original and amended), so article/clause/version is not an
+            // identity: match the exported unit itself, by its recorded source id after an import, or by its own id
+            // on the database that exported it.
+            $unit = LegalUnit::query()->where('law_id', $law->id)
                 ->where('article_number', $item['article_number'])->where('clause_path', $item['clause_path'])
-                ->where('version', $item['version'])->get();
-            if ($existing->count() > 1) {
-                throw new RuntimeException('Duplicate legal unit version in database.');
-            }
+                ->where('version', $item['version'])->get()
+                ->first(fn (LegalUnit $candidate): bool => array_key_exists('library_source_id', $candidate->tags ?? [])
+                    ? (int) $candidate->tags['library_source_id'] === (int) $item['source_id']
+                    : $candidate->id === (int) $item['source_id']);
             $prior = ($item['previous_source_id'] ?? null) === null ? null : ($map[$item['previous_source_id']] ?? null);
             if (($item['previous_source_id'] ?? null) !== null && $prior === null) {
                 throw new RuntimeException('Legal unit version chain is incomplete.');
@@ -201,8 +207,7 @@ class LegalLibraryArchive
                 'extraction_a' => $item['extraction_a'], 'extraction_b' => $item['extraction_b'],
                 'status' => $item['status'], 'verified_by' => null,
                 'verified_at' => $item['verified_at'], 'tags' => [...($item['tags'] ?? []),
-                    'library_export_verified_by' => $item['verified_by_source_id']]];
-            $unit = $existing->first();
+                    'library_export_verified_by' => $item['verified_by_source_id'], 'library_source_id' => $item['source_id']]];
             if ($unit !== null) {
                 foreach (['previous_version_id', 'official_text', 'source_page', 'extraction_a', 'extraction_b', 'status'] as $field) {
                     $actual = $field === 'status' ? $unit->status->value : $unit->{$field};
@@ -212,7 +217,7 @@ class LegalLibraryArchive
                 }
                 $tags = $unit->tags ?? [];
                 $importedVerifier = $tags['library_export_verified_by'] ?? null;
-                unset($tags['library_export_verified_by']);
+                unset($tags['library_export_verified_by'], $tags['library_source_id']);
                 if ($unit->company_id !== null || $tags != ($item['tags'] ?? [])
                     || ($unit->verified_by !== null && (int) $unit->verified_by !== (int) ($item['verified_by_source_id'] ?? 0))
                     || ($unit->verified_by === null && $importedVerifier != ($item['verified_by_source_id'] ?? null))
