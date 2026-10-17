@@ -48,8 +48,14 @@ it('seeds the anonymised pilot structure and built-in laws', function () {
             ->and(CommitteePoolMember::whereNotNull('branch_id')->count())->toBe(0)
             ->and(CommitteePoolMember::whereNotNull('employee_id')->count())->toBe(9);
 
+        // The committed library (database/legal-library) loads with the laws; units still in review stay uncitable.
+        $manifest = json_decode(file_get_contents(database_path('legal-library/manifest.json')), true);
+        $exported = collect(array_keys($manifest['files']))
+            ->sum(fn (string $file) => count(json_decode(file_get_contents(database_path('legal-library/'.$file)), true)['units']));
         expect(Law::count())->toBe(3)
-            ->and(LegalUnit::count())->toBe(0);
+            ->and(LegalUnit::count())->toBe($exported)
+            ->and(LegalUnit::where('status', 'mismatch')->count())->toBeGreaterThan(0)
+            ->and(LegalUnit::whereNotIn('status', ['verified_auto', 'verified_human', 'mismatch', 'excluded'])->count())->toBe(0);
         $jurisdictions = Law::with('jurisdictions')->get()->keyBy('number');
         expect($jurisdictions['37']->jurisdictions->pluck('jurisdiction')->all())->toBe([Jurisdiction::FederalIraq])
             ->and($jurisdictions['37']->source_file_path)->toBe('docs/laws/labor-law-37-2015-gazette-4386.pdf')
