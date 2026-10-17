@@ -33,6 +33,9 @@
     .fi-topbar { max-width: 80rem; margin-inline: auto; padding-inline: 2rem !important; }
 }
 .fi-topbar .fi-logo, .fi-topbar .fi-tenant-menu-trigger { color: #fff; }
+.fi-logo > span { display: inline-flex; align-items: center; gap: .625rem; }
+.fi-logo [data-brand-mark] { display: inline-grid; flex: none; place-items: center; width: 2rem; height: 2rem; border-radius: .375rem; color: var(--dp-night); font: 700 1rem monospace; }
+.fi-logo strong { color: #fff; font: 600 .95rem 'Readex Pro', sans-serif; }
 .fi-topbar-item-btn { color: var(--dp-night-soft) !important; background: transparent !important; border-radius: .375rem; }
 .fi-topbar-item-btn:hover { color: #fff !important; }
 .fi-topbar-item-icon, .fi-topbar-group-toggle-icon, .fi-topbar-item-label { color: currentColor !important; }

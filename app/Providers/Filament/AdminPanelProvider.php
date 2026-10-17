@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Admin\Widgets\AdminShortcuts;
 use App\Filament\Admin\Widgets\SetupChecklist;
 use App\Filament\AvatarProviders\IndigoAvatarProvider;
 use App\Http\Middleware\EnforceIdleTimeout;
@@ -97,13 +98,13 @@ class AdminPanelProvider extends PanelProvider
             ->discoverResources(in: app_path('Filament/Admin/Resources'), for: 'App\\Filament\\Admin\\Resources')
             ->discoverPages(in: app_path('Filament/Admin/Pages'), for: 'App\\Filament\\Admin\\Pages')
             ->pages([Dashboard::class])
-            ->widgets([SetupChecklist::class])
+            ->widgets([SetupChecklist::class, AdminShortcuts::class])
             ->colors([
                 'primary' => Color::hex('#1D3A63'),
                 'warning' => Color::hex('#F2B33D'),
                 'danger' => Color::hex('#C2272D'),
                 'success' => Color::hex('#1F7A58'),
-            ])->font('Readex Pro')->darkMode(false)->topNavigation()->defaultAvatarProvider(IndigoAvatarProvider::class)->brandName(fn (): string => __('Displanery'))->favicon(asset('favicon.svg'))->viteTheme('resources/css/filament/theme.css')
+            ])->font('Readex Pro')->darkMode(false)->topNavigation()->defaultAvatarProvider(IndigoAvatarProvider::class)->brandName(fn (): string => __('Displanery'))->brandLogo(fn () => view('filament.brand'))->brandLogoHeight('2rem')->favicon(asset('favicon.svg'))->viteTheme('resources/css/filament/theme.css')
             ->authMiddleware([Authenticate::class]);
     }
 }

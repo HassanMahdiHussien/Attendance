@@ -13,6 +13,10 @@ class SetupChecklist extends Widget
 
     protected static bool $isLazy = false;
 
+    protected static ?int $sort = 0;
+
+    protected int|string|array $columnSpan = 'full';
+
     public static function canView(): bool
     {
         $company = Filament::getTenant();

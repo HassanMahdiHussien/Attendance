@@ -74,7 +74,7 @@ class PlatformPanelProvider extends PanelProvider
                 'warning' => Color::hex('#F2B33D'),
                 'danger' => Color::hex('#C2272D'),
                 'success' => Color::hex('#1F7A58'),
-            ])->font('Readex Pro')->darkMode(false)->topNavigation()->defaultAvatarProvider(IndigoAvatarProvider::class)->brandName(fn (): string => __('Displanery'))->favicon(asset('favicon.svg'))->viteTheme('resources/css/filament/theme.css')
+            ])->font('Readex Pro')->darkMode(false)->topNavigation()->defaultAvatarProvider(IndigoAvatarProvider::class)->brandName(fn (): string => __('Displanery'))->brandLogo(fn () => view('filament.brand'))->brandLogoHeight('2rem')->favicon(asset('favicon.svg'))->viteTheme('resources/css/filament/theme.css')
             ->authMiddleware([Authenticate::class]);
     }
 }
