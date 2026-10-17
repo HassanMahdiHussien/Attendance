@@ -2,7 +2,7 @@
     <form wire:submit="authenticate" class="w-full max-w-md">
         <x-ui.card class="space-y-5 p-6 sm:p-8">
             <header>
-                <h1 class="text-2xl font-extrabold text-primary">{{ __('Displanery') }}</h1>
+                <h1><x-ui.brand size="lg" :name="false" /><span class="sr-only">{{ __('Displanery') }}</span></h1>
                 <p class="mt-1 text-sm text-gray-500">{{ __('Log in to your workspace') }}</p>
             </header>
             <x-ui.field :label="__('Email address')" error="email" for="email">

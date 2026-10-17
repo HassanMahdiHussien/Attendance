@@ -13,6 +13,7 @@ class OperationsMessage extends Mailable
 
     public function build(): self
     {
-        return $this->subject($this->subjectLine)->text('mail.operations-message', ['messageText' => $this->messageText]);
+        return $this->subject($this->subjectLine)
+            ->markdown('mail.operations-message-html', ['messageText' => $this->messageText]);
     }
 }

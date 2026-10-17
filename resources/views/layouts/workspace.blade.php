@@ -21,9 +21,7 @@
     <header class="sticky top-0 z-50 bg-night text-white">
         <div class="mx-auto flex h-16 w-full max-w-7xl items-center gap-4 px-4 sm:px-8">
             <a href="{{ $home }}" class="flex shrink-0 items-center gap-2.5 rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-signal">
-                {{-- Split-flap mark: the departures board's tile, carrying the D. --}}
-                <span class="grid h-8 w-8 place-items-center rounded-md font-mono text-base font-bold text-night" style="background: linear-gradient(to bottom, var(--color-signal) 0 48%, var(--color-signal-dark) 48% 52%, var(--color-signal) 52% 100%)" aria-hidden="true">D</span>
-                <span class="min-w-0 leading-tight"><strong class="block text-[0.95rem] font-semibold">{{ __('Displanery') }}</strong><span class="hidden max-w-44 truncate text-xs text-night-soft sm:block">{{ auth()->user()->company?->name ?? auth()->user()->name }}</span></span>
+                <x-ui.brand :subtitle="auth()->user()->company?->name ?? auth()->user()->name" />
             </a>
             <nav class="ms-2 hidden shrink-0 items-center xl:flex" aria-label="{{ __('Main navigation') }}">
                 @foreach($nav as $item)

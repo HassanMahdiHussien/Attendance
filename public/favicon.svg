@@ -1,4 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="16" fill="#4F46E5"/>
-  <path fill="#fff" d="M18 14h14c13 0 20 7 20 18S45 50 32 50H18zm13 27c8 0 12-3 12-9s-4-9-12-9h-4v18z"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Displanery">
+  <rect width="64" height="64" rx="12" fill="#F2B33D"/>
+  <path d="M0 30.75h64v2.5H0z" fill="#DE9A1A"/>
+  <text x="32" y="47" text-anchor="middle" fill="#0E1A2B" font-family="monospace" font-weight="700" font-size="44">D</text>
 </svg>
