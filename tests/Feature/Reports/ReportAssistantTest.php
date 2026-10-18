@@ -87,8 +87,9 @@ test('a reporter place maps to the branch location list entry but a location nee
     $builder = app(PayloadBuilder::class);
     $context = $assistant->context($session, $builder);
     $other = ['missing' => ['who', 'when', 'witnesses'], 'next_question' => ['text' => 'متى حدث الشجار؟', 'quick_replies' => []]];
-    expect(fn () => $assistant->acceptTurn($session, reportTurn(['what' => 'حدث شجار', 'location_name' => 'خط الإنتاج 1'], $other),
-        $context, $builder))->toThrow(InvalidAiOutput::class);
+    // A list location with no traced place of the reporter's own is dropped, not stored.
+    $assistant->acceptTurn($session, reportTurn(['what' => 'حدث شجار', 'location_name' => 'خط الإنتاج 1'], $other), $context, $builder);
+    expect($session->refresh()->facts['location_id'] ?? null)->toBeNull();
     $assistant->acceptTurn($session, reportTurn(['what' => 'حدث شجار', 'place_text' => 'الخط 1', 'location_name' => 'خط الإنتاج 1'], $other),
         $context, $builder);
     expect($session->refresh()->facts['location_id'])->toBe($location->id);
@@ -177,7 +178,7 @@ test('company employee names and contact data are tokens in the Claude payload a
     expect($session->fresh()->facts['employees'][0]['employee_id'])->toBe($f['employee']->id);
 });
 
-test('validator rejects invented place, date, person and summary date', function (): void {
+test('an invented place, person or summary date is never stored', function (): void {
     $f = reportAssistantFixture();
     config()->set('services.anthropic.key', 'test-key');
     Bus::fake([AskReportAssistant::class]);
@@ -187,15 +188,38 @@ test('validator rejects invented place, date, person and summary date', function
     $context = $assistant->context($session, $builder);
     $base = reportTurn(['what' => 'A gate was damaged', 'when_text' => 'today at 10:00'],
         ['missing' => ['who', 'where', 'witnesses']]);
-    expect(fn () => $assistant->acceptTurn($session, reportTurn(['place_text' => 'Warehouse 9']), $context, $builder))
-        ->toThrow(InvalidAiOutput::class);
-    expect(fn () => $assistant->acceptTurn($session, reportTurn(['people' => [['ref' => 'Unknown person', 'role' => 'involved']]]), $context, $builder))
-        ->toThrow(InvalidAiOutput::class);
+    // Untraceable facts are dropped rather than failing the turn, so the reporter is asked again instead of losing the chat.
+    $assistant->acceptTurn($session, reportTurn(['place_text' => 'Warehouse 9']), $context, $builder);
+    $assistant->acceptTurn($session->refresh(), reportTurn(['people' => [['ref' => 'Unknown person', 'role' => 'involved']]]), $context, $builder);
+    expect($session->refresh()->facts['place'] ?? null)->not->toBe('Warehouse 9')
+        ->and($session->facts['employees'])->toBe([]);
     $summaryDate = $base;
     $summaryDate['done'] = true;
+    $summaryDate['next_question'] = null;
     $summaryDate['summary'] = 'According to the reporter: A gate was damaged on 2025-01-01.';
-    expect(fn () => $assistant->acceptTurn($session, $summaryDate, $context, $builder))
-        ->toThrow(InvalidAiOutput::class);
+    $assistant->acceptTurn($session->refresh(), $summaryDate, $context, $builder);
+    expect($session->refresh()->facts['summary'] ?? null)->toBeNull();
+});
+
+test('an English report keeps names and facts the model decorated, and does not fall back to the form', function (): void {
+    $f = reportAssistantFixture();
+    config()->set('services.anthropic.key', 'test-key');
+    Bus::fake([AskReportAssistant::class]);
+    $assistant = app(ReportAssistant::class);
+    $session = $assistant->start($f['reporter'], $f['branch']->id,
+        'Please provide a defense letter for the employees : 1. Ali Hayder Mustafa…….Q.A.O Syrup 2. Haider Azher Abood……Q.A.O. '
+        .'The foreman directed the operator to prepare an additional six units as quickly as possible; an error occurred during the addition of the artificial sweetener.');
+    $builder = app(PayloadBuilder::class);
+    $assistant->acceptTurn($session, reportTurn([
+        'what' => 'an error occurred during the addition of the artificial sweetener',
+        'how_started' => 'Reporter states: the foreman directed the operator to prepare an additional six units as quickly as possible',
+        'people' => [['ref' => 'Ali Hayder Mustafa (Q.A.O Syrup)', 'role' => 'involved'], ['ref' => 'Haider Azher Abood (Q.A.O)', 'role' => 'involved']],
+    ], ['missing' => ['where', 'when', 'witnesses'], 'next_question' => ['text' => 'Where did this happen?', 'quick_replies' => []]]),
+        $assistant->context($session, $builder), $builder);
+    $session->refresh();
+    expect($session->status)->toBe('ready')
+        ->and(collect($session->facts['employees'])->pluck('name')->all())->toBe(['Ali Hayder Mustafa', 'Haider Azher Abood'])
+        ->and($session->facts['how_started'])->toBe('the foreman directed the operator to prepare an additional six units as quickly as possible');
 });
 
 test('fact traceability accepts source word overlap and rejects a new content word', function (): void {
@@ -312,7 +336,8 @@ test('invalid queued output retries and ultimately opens the form without losing
     $assistant = app(ReportAssistant::class);
     $session = $assistant->start($f['reporter'], $f['branch']->id, 'A gate was damaged');
     $fake = new FakeClaudeClient;
-    $fake->push(reportTurn(['place_text' => 'Invented warehouse']));
+    // A response missing its required fields is broken, not just untraceable, so it still retries and then opens the form.
+    $fake->push(['facts' => [], 'done' => false]);
     $job = new AskReportAssistant($session->id, $f['company']->id, $session->request_token);
     expect(fn () => $job->handle($fake, $assistant))->toThrow(InvalidAiOutput::class);
     $job->failed(new InvalidAiOutput('Invalid turn.'));

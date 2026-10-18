@@ -317,9 +317,10 @@ class ReportAssistant
     }
 
     /**
-     * Every turn re-sends all facts, and on later turns the model rewords answers it already gave
-     * («عاملان… لا أعرف اسميهما» → «…(لا أعرف اسميهما)»). A rewording that cannot be traced keeps the
-     * stored answer instead of failing the turn; a first answer still has to pass the full check.
+     * Turns the model's wording into facts the reporter's own words support, or leaves them out. Real turns decorate
+     * facts («Ali Hayder Mustafa (Q.A.O Syrup)», "Reporter states: …") or reword an earlier answer, and failing the
+     * whole turn for that sent reporters to the plain form. A fact is cleaned and, if still untraceable, dropped:
+     * nothing untraceable is stored, and a dropped required answer is simply asked again.
      */
     private function keepEarlierFacts(array $response, array $context, ReportAssistantSession $session): array
     {
@@ -334,16 +335,21 @@ class ReportAssistant
         if (! is_array($response['facts'] ?? null)) {
             return $response;
         }
-        $reporter = implode(' ', array_column(array_filter($context['masked'], fn ($line) => $line['role'] === 'reporter'), 'text'));
         $stored = $session->facts;
-        foreach (['what' => 'description', 'place_text' => 'place', 'when_text' => 'occurred_at_text',
-            'how_started' => 'how_started', 'injuries_or_damage' => 'injuries_damage'] as $source => $target) {
-            $value = $response['facts'][$source] ?? null;
-            if (is_string($value) && filled($stored[$target] ?? null) && ! $this->traceable($value, $reporter)) {
-                $response['facts'][$source] = null;
-                if ($source === 'when_text') {
-                    $response['facts']['when_iso'] = null;
-                }
+        foreach (['what', 'place_text', 'when_text', 'how_started', 'injuries_or_damage'] as $key) {
+            $value = $response['facts'][$key] ?? null;
+            if (! is_string($value) || str_contains($reporter, $value)) {
+                continue;
+            }
+            // Prefer the cleaned wording: "Reporter states: …" can still pass the word-overlap test with its label on.
+            $clean = $this->withoutDecoration($value);
+            $response['facts'][$key] = match (true) {
+                $clean !== '' && $this->traceable($clean, $reporter) => $clean,
+                $this->traceable($value, $reporter) => $value,
+                default => null,
+            };
+            if ($key === 'when_text' && $response['facts'][$key] === null) {
+                $response['facts']['when_iso'] = null;
             }
         }
         // A structured date the reporter's words do not confirm (a time they never gave, a date in another form)
@@ -351,21 +357,39 @@ class ReportAssistant
         if (($response['facts']['when_iso'] ?? null) !== null && ! $this->verifiedWhen($response['facts'], $context, $reporter)) {
             $response['facts']['when_iso'] = null;
         }
-        if (($response['facts']['location_name'] ?? null) !== null && ($response['facts']['place_text'] ?? null) === null && filled($stored['place'] ?? null)) {
-            $response['facts']['place_text'] = $stored['place'];
+        if (($response['facts']['location_name'] ?? null) !== null && ($response['facts']['place_text'] ?? null) === null) {
+            if (filled($stored['place'] ?? null)) {
+                $response['facts']['place_text'] = $stored['place'];
+            } else {
+                $response['facts']['location_name'] = null;
+            }
         }
         if (is_array($response['facts']['people'] ?? null)) {
-            $response['facts']['people'] = array_values(array_filter($response['facts']['people'], function ($person) use ($stored, $reporter): bool {
-                $kind = match ($person['role'] ?? null) {
-                    'witness' => 'witnesses', 'responsible' => 'responsible', default => 'employees'
-                };
-
-                return ! is_array($person) || ! is_string($person['ref'] ?? null) || str_contains($reporter, $person['ref'])
-                    || ($stored[$kind] ?? []) === [];
-            }));
+            $people = [];
+            foreach ($response['facts']['people'] as $person) {
+                if (is_array($person) && is_string($person['ref'] ?? null) && ! str_contains($reporter, $person['ref'])) {
+                    $clean = $this->withoutDecoration($person['ref']);
+                    if ($clean === '' || ! str_contains($reporter, $clean)) {
+                        continue;
+                    }
+                    $person['ref'] = $clean;
+                }
+                $people[] = $person;
+            }
+            $response['facts']['people'] = $people;
         }
 
         return $response;
+    }
+
+    /** Strips what the model adds around a reporter's words: bracketed roles and "Reporter states:" style labels. */
+    private function withoutDecoration(string $value): string
+    {
+        $value = preg_replace('/\s*[(\[][^)\]]*[)\]]/u', '', $value);
+        $value = preg_replace('/^\s*(?:the\s+)?reporter\s+(?:states|stated|said|says|reports|reported)(?:\s+that)?\s*[:,\-]?\s*/iu', '', $value);
+        $value = preg_replace('/^\s*(?:أفاد|ذكر|قال)\s+(?:المُبلّغ|المبلغ)\s*(?:بأن|أن)?\s*[:،\-]?\s*/u', '', $value);
+
+        return trim($value, " \t\n.،,:;-");
     }
 
     private function validateTurn(array $response, array $context, ReportAssistantSession $session, PayloadBuilder $builder): void
