@@ -62,15 +62,7 @@ class PayloadBuilder
                 $value = preg_replace('/(?<![\p{L}\p{M}])'.preg_quote($name, '/').'(?![\p{L}\p{M}])/iu', $token, $value);
             }
 
-            $dates = [];
-            $value = preg_replace_callback('/\b\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2})?\b/u', function ($match) use (&$dates) {
-                $marker = 'DATEKEEP'.count($dates).'END';
-                $dates[$marker] = $match[0];
-
-                return $marker;
-            }, $value);
             $value = $this->minimize($value);
-            $value = strtr($value, $dates);
             $value = preg_replace('/\b(?:salary|wage|راتب|الراتب|أجر)\s*[:=]?\s*\d[\d,.]*/iu', '⟦مبلغ⟧', $value);
             $value = preg_replace('/\b\d[\d,.]*\s*(?:IQD|د\\.?ع|دينار|USD|\$)\b/iu', '⟦مبلغ⟧', $value);
             $value = preg_replace('/\b(?:id|identifier|هوية|رقم وظيفي)\s*[:#-]?\s*\d+/iu', '⟦معرّف⟧', $value);
@@ -267,10 +259,19 @@ class PayloadBuilder
             // Whole words only: a short name such as "علي" must not rewrite part of "عليه".
             $value = preg_replace('/(?<![\p{L}\p{M}])'.preg_quote($name, '/').'(?![\p{L}\p{M}])/iu', $token, $value);
         }
+        // «13-10-2026» has a phone number's shape, and masking it hid the date from a reporter who wrote it
+        // three times. Dates are fenced off before the phone patterns run and put back afterwards.
+        $dates = [];
+        $value = preg_replace_callback('~(?<!\p{N})(?:\p{N}{1,2}[-/.]\p{N}{1,2}[-/.]\p{N}{4}|\p{N}{4}[-/.]\p{N}{1,2}[-/.]\p{N}{1,2})(?:\s+\p{N}{1,2}:\p{N}{2})?(?!\p{N})~u',
+            function (array $match) use (&$dates): string {
+                $dates[] = $match[0];
+
+                return "\u{E000}".(count($dates) - 1)."\u{E001}";
+            }, $value);
         $value = preg_replace('/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/u', '⟦بريد⟧', $value);
         $value = preg_replace('/(?<!\p{N})[+\p{N}][\p{N}\s()\-]{6,}\p{N}/u', '⟦رقم⟧', $value);
         $value = preg_replace('/[\p{N}]{7,}/u', '⟦رقم⟧', $value);
 
-        return $value;
+        return preg_replace_callback('/\x{E000}(\d+)\x{E001}/u', fn (array $match): string => $dates[(int) $match[1]], $value);
     }
 }

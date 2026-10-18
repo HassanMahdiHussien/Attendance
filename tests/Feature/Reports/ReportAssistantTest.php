@@ -94,6 +94,41 @@ test('a reporter place maps to the branch location list entry but a location nee
     expect($session->refresh()->facts['location_id'])->toBe($location->id);
 });
 
+test('a day-first date is traced, an unconfirmed date or time is dropped not fatal, and a long turn has room', function (): void {
+    $f = reportAssistantFixture();
+    config()->set('services.anthropic.key', 'test-key');
+    Bus::fake([AskReportAssistant::class]);
+    $assistant = app(ReportAssistant::class);
+    $day = now('Asia/Baghdad')->subDays(5)->toImmutable();
+    $session = $assistant->start($f['reporter'], $f['branch']->id,
+        'عبور علب كوكا كولا في منتج السبرايت لخط العلب الجديد التاريخ هو '.$day->format('d-m-Y'));
+    $builder = app(PayloadBuilder::class);
+    // The date used to be masked as a phone number, so the AI never saw it and kept asking "when".
+    expect($assistant->context($session, $builder)['messages'][0]['content'])->toContain($day->format('d-m-Y'))
+        ->not->toContain('⟦رقم⟧');
+    $turn = fn (string $whenText, string $iso) => reportTurn(['what' => 'عبور علب كوكا كولا في منتج السبرايت',
+        'place_text' => 'خط العلب الجديد', 'when_text' => $whenText, 'when_iso' => $iso],
+        ['missing' => ['who', 'witnesses'], 'next_question' => ['text' => 'هل يوجد شهود؟', 'quick_replies' => []]]);
+    // A date with no time given: the invented 00:00 and a wrong day are dropped, the reporter's date answers "when".
+    $assistant->acceptTurn($session, $turn($day->format('d-m-Y'), $day->format('Y-m-d').'T00:00'),
+        $assistant->context($session, $builder), $builder);
+    $assistant->acceptTurn($session->refresh(), $turn($day->format('d-m-Y'), $day->subDay()->format('Y-m-d').'T10:00'),
+        $assistant->context($session, $builder), $builder);
+    expect($session->refresh()->facts['occurred_at'] ?? null)->toBeNull()
+        ->and($session->facts['occurred_at_text'])->toBe($day->format('d-m-Y'))
+        ->and($assistant->missing($session->facts))->not->toContain('when');
+    $assistant->answer($session, $f['reporter'], $day->format('d-m-Y').' 10:00 صباحاً');
+    $assistant->acceptTurn($session->refresh(), $turn($day->format('d-m-Y').' 10:00 صباحاً', $day->format('Y-m-d').'T10:00'),
+        $assistant->context($session, $builder), $builder);
+    expect($session->refresh()->facts['occurred_at'])->toBe($day->format('Y-m-d').' 10:00:00');
+
+    $fake = new FakeClaudeClient;
+    $fake->push($turn($day->format('d-m-Y'), $day->format('Y-m-d').'T10:00'));
+    $session->update(['status' => 'pending']);
+    (new AskReportAssistant($session->id, $f['company']->id, $session->request_token))->handle($fake, $assistant);
+    expect($fake->requests[0]['options']['max_tokens'])->toBeGreaterThanOrEqual(4096);
+});
+
 test('an hour written as a word is traced, duplicate chips are dropped and mixed-language questions are rejected', function (): void {
     $f = reportAssistantFixture();
     config()->set('services.anthropic.key', 'test-key');
@@ -105,8 +140,10 @@ test('an hour written as a word is traced, duplicate chips are dropped and mixed
     $turn = fn (string $iso, string $question) => reportTurn(['what' => 'حدث شجار', 'when_text' => 'أمس حوالي الساعة العاشرة صباحاً',
         'when_iso' => now('Asia/Baghdad')->subDay()->format('Y-m-d').'T'.$iso],
         ['missing' => ['who', 'where', 'witnesses'], 'next_question' => ['text' => $question, 'quick_replies' => ['لا أعرف', 'غير معروف']]]);
-    expect(fn () => $assistant->acceptTurn($session, $turn('11:00', 'من كان طرفاً؟'), $context, $builder))->toThrow(InvalidAiOutput::class)
-        ->and(fn () => $assistant->acceptTurn($session, $turn('10:00', 'هل كان there أحد؟'), $context, $builder))->toThrow(InvalidAiOutput::class);
+    expect(fn () => $assistant->acceptTurn($session, $turn('10:00', 'هل كان there أحد؟'), $context, $builder))->toThrow(InvalidAiOutput::class);
+    // A time the reporter never said is dropped, not saved.
+    $assistant->acceptTurn($session, $turn('11:00', 'من كان طرفاً؟'), $context, $builder);
+    expect($session->refresh()->facts['occurred_at'] ?? null)->toBeNull();
     $assistant->acceptTurn($session, $turn('10:00', 'من كان طرفاً؟'), $context, $builder);
     expect($session->refresh()->facts['occurred_at'])->toContain('10:00')
         ->and($session->facts['quick_replies'])->toBe([]);
@@ -153,10 +190,6 @@ test('validator rejects invented place, date, person and summary date', function
     expect(fn () => $assistant->acceptTurn($session, reportTurn(['place_text' => 'Warehouse 9']), $context, $builder))
         ->toThrow(InvalidAiOutput::class);
     expect(fn () => $assistant->acceptTurn($session, reportTurn(['people' => [['ref' => 'Unknown person', 'role' => 'involved']]]), $context, $builder))
-        ->toThrow(InvalidAiOutput::class);
-    $wrongDate = $base;
-    $wrongDate['facts']['when_iso'] = now('Asia/Baghdad')->subDays(5)->format('Y-m-d').'T10:00';
-    expect(fn () => $assistant->acceptTurn($session, $wrongDate, $context, $builder))
         ->toThrow(InvalidAiOutput::class);
     $summaryDate = $base;
     $summaryDate['done'] = true;
@@ -222,12 +255,17 @@ test('done is rejected while a required item is missing and Arabic summaries sta
     $turn = reportTurn(['what' => 'حدث شجار', 'place_text' => 'الخط 1', 'when_text' => 'اليوم'],
         ['done' => true, 'summary' => 'أفاد المُبلّغ بأن حدث شجار في الخط 1 اليوم.', 'next_question' => null]);
     $session->update(['facts' => array_replace($session->facts, ['employees_unknown' => false, 'witnesses_none' => false])]);
-    expect(fn () => $assistant->acceptTurn($session, $turn, $context, $builder))->toThrow(InvalidAiOutput::class);
+    // Finishing while "who" is missing is not accepted: the fixed question for it is asked instead.
+    $assistant->acceptTurn($session, $turn, $context, $builder);
+    expect($session->fresh()->pending_aspect)->toBe('who')
+        ->and($session->fresh()->facts['summary'] ?? null)->toBeNull()
+        ->and(collect($session->fresh()->transcript)->last()['text'])->toBe(trans('report_assistant.question.who', [], 'ar'));
     $session->update(['facts' => array_replace($session->facts, ['employees_unknown' => true, 'witnesses_none' => true])]);
     $wrongLanguage = $turn;
     $wrongLanguage['summary'] = 'According to the reporter: حدث شجار في الخط 1 اليوم.';
-    expect(fn () => $assistant->acceptTurn($session->refresh(), $wrongLanguage, $context, $builder))
-        ->toThrow(InvalidAiOutput::class);
+    // A summary in the wrong language is dropped, not retried; the review then shows the reporter's own words.
+    $assistant->acceptTurn($session->refresh(), $wrongLanguage, $context, $builder);
+    expect($session->fresh()->facts['summary'])->toBeNull();
     $assistant->acceptTurn($session->refresh(), $turn, $context, $builder);
     expect($session->fresh()->facts['summary'])->toStartWith('أفاد المُبلّغ بأن')
         ->and($session->fresh()->status)->toBe('ready');

@@ -39,7 +39,7 @@
                 <div class="flex flex-wrap gap-2" aria-label="{{ __('Report progress') }}">@foreach(\App\Services\Reports\ReportAssistant::REQUIRED as $aspect)<span class="rounded border px-2 py-1 text-xs {{ in_array($aspect, $missing, true) ? 'border-line text-gray-600' : 'border-green bg-green-light text-green' }}">{{ __('report_assistant.progress.'.$aspect) }}</span>@endforeach</div>
                 <div class="max-h-[28rem] space-y-3 overflow-y-auto rounded-lg bg-bg p-3" aria-live="polite" x-data x-init="$el.scrollTop = $el.scrollHeight; new MutationObserver(() => $el.scrollTop = $el.scrollHeight).observe($el, { childList: true, subtree: true })">@foreach($assistantSession->transcript as $line)<div class="{{ $line['role'] === 'reporter' ? 'ms-auto bg-primary-light' : 'me-auto bg-white' }} max-w-[90%] rounded-lg border border-line p-3 text-sm"><span class="block text-xs font-semibold">{{ $line['role'] === 'reporter' ? __('You') : __('Assistant') }}</span><p dir="auto" class="whitespace-pre-line">{{ $line['text'] }}</p></div>@endforeach</div>
                 @if($assistantSession->status === 'pending')<div wire:poll.2s="pollAssistant" role="status" class="text-sm text-primary">{{ __('Thinking…') }}</div>@endif
-                @if($assistantSession->status === 'fallback')<x-ui.alert tone="amber">{{ __('The assistant is unavailable. Complete the form below to send your report.') }}</x-ui.alert>@endif
+                @if($assistantSession->status === 'fallback')<x-ui.alert tone="amber">{{ __('The assistant could not finish. Your answers are kept below. Complete what is missing and send your report.') }}</x-ui.alert>@endif
                 @if($assistantSession->facts['pending_match'] ?? null)
                     @php($match = $assistantSession->facts['pending_match'])
                     <div class="flex flex-wrap gap-2"><x-ui.button type="button" wire:click="confirmPersonMatch('yes')">{{ trans('report_assistant.yes', locale: $assistantSession->language) }}</x-ui.button><x-ui.button type="button" variant="secondary" wire:click="confirmPersonMatch('other')">{{ trans('report_assistant.someone_else', locale: $assistantSession->language) }}</x-ui.button><x-ui.button type="button" variant="secondary" wire:click="confirmPersonMatch('free')">{{ trans('report_assistant.not_in_list', locale: $assistantSession->language) }}</x-ui.button></div>
@@ -52,7 +52,7 @@
             <button type="button" wire:click="usePlainForm" class="ui-link text-sm">{{ __('Use the form instead') }}</button>
         </x-ui.card>
     @else
-    @if($assistantSession && $assistantSession->status === 'fallback')<x-ui.alert tone="amber">{{ __('The assistant is unavailable. Complete the form below to send your report.') }}</x-ui.alert>@endif
+    @if($assistantSession && $assistantSession->status === 'fallback')<x-ui.alert tone="amber">{{ __('The assistant could not finish. Your answers are kept below. Complete what is missing and send your report.') }}</x-ui.alert>@endif
     @if($assistantSession && $assistantSession->status === 'fallback')<div class="space-y-2 rounded-lg border border-line bg-bg p-3">@foreach($assistantSession->transcript as $line)<p dir="auto" class="text-sm"><span class="font-semibold">{{ $line['role'] === 'reporter' ? __('You') : __('Assistant') }}:</span> {{ $line['text'] }}</p>@endforeach</div>@endif
     <form wire:submit="submit" class="space-y-5">
     @if($branches->isEmpty())

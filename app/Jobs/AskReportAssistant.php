@@ -37,7 +37,7 @@ class AskReportAssistant implements ShouldQueue
                 $response = $claude->structured('report_assistant', $assistant->schema($context['locations']), $context['messages'],
                     ['company_id' => $session->company_id, 'actor_user_id' => $session->user_id],
                     (string) config('displanery.ai.report_assistant_model'), 'low',
-                    ['system' => $assistant->systemPrompt(), 'max_tokens' => 1024]);
+                    ['system' => $assistant->systemPrompt(), 'max_tokens' => 4096]);
                 $session->refresh();
                 if ($session->status === 'pending' && $session->request_token === $this->token) {
                     $assistant->acceptTurn($session, $response, $context, $builder);
