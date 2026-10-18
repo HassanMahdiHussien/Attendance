@@ -24,7 +24,7 @@ test('the workspace language switch keeps the current page in both directions', 
         ->assertNoJavaScriptErrors();
 });
 
-test('the admin panel user menu switches languages on the same tenant page', function (): void {
+test('the shared header switches languages on the same admin page', function (): void {
     $company = Company::factory()->create();
     completeCompanySetup($company);
     $admin = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::CompanyAdmin]);
@@ -36,11 +36,11 @@ test('the admin panel user menu switches languages on the same tenant page', fun
     $page->click('button[aria-controls="workspace-settings"]')
         ->click('#workspace-settings a[href$="/branches"]')
         ->assertPathIs($path)->assertSee('New Branch')->assertNoJavaScriptErrors()
-        ->click('.fi-user-menu-trigger')->click('Arabic')
+        ->click('button[aria-controls="workspace-account-menu"]')->click('#workspace-account-menu button[lang="ar"]')
         ->assertPathIs($path)
         ->assertScript('document.documentElement.dir', 'rtl')
         ->assertNoJavaScriptErrors()
-        ->click('.fi-user-menu-trigger')->click('English')
+        ->click('button[aria-controls="workspace-account-menu"]')->click('#workspace-account-menu button[lang="en"]')
         ->assertPathIs($path)
         ->assertScript('document.documentElement.dir', 'ltr')
         ->assertNoJavaScriptErrors();

@@ -36,7 +36,7 @@
         <x-ui.card><x-ui.empty :title="__('No matching cases.')" icon="folder"><x-slot:action><x-ui.button href="/cases/new">{{ __('Open new case') }}</x-ui.button></x-slot:action></x-ui.empty></x-ui.card>
     @else
         <x-ui.table>
-            <thead><tr><th>{{ __('Case') }}</th><th>{{ __('Employee') }}</th><th>{{ __('Progress') }}</th><th>{{ __('Status') }}</th></tr></thead>
+            <thead><tr><th>{{ __('Case number') }}</th><th>{{ __('Employee') }}</th><th>{{ __('Progress') }}</th><th>{{ __('Status') }}</th></tr></thead>
             <tbody>
                 @foreach($cases as $case)
                     @php
@@ -50,7 +50,7 @@
                         $tone = $archived ? 'green' : ($urgent ? 'red' : ($waiting ? 'amber' : \App\Support\Format\Tone::case($case->status)));
                     @endphp
                     <tr wire:key="case-{{ $case->id }}" class="{{ $archived ? 'opacity-60' : '' }}">
-                        <x-ui.td :label="__('Case')"><a href="/cases/{{ $case->id }}" class="ui-link font-mono text-xs font-bold"><bdi>#{{ \App\Support\Format\Ui::number(str_pad($case->case_number, 4, '0', STR_PAD_LEFT)) }}</bdi></a>@if($case->incident_id)<span class="mt-1 block text-xs text-gray-500">{{ __('Incident · :count visible cases', ['count' => \App\Support\Format\Ui::number($visibleIncidentCounts[$case->incident_id] ?? 1)]) }}</span>@endif</x-ui.td>
+                        <x-ui.td :label="__('Case number')"><a href="/cases/{{ $case->id }}" class="ui-link font-mono text-xs font-bold"><bdi>#{{ \App\Support\Format\Ui::number(str_pad($case->case_number, 4, '0', STR_PAD_LEFT)) }}</bdi></a>@if($case->incident_id)<span class="mt-1 block text-xs text-gray-500">{{ __('Incident · :count visible cases', ['count' => \App\Support\Format\Ui::number($visibleIncidentCounts[$case->incident_id] ?? 1)]) }}</span>@endif</x-ui.td>
                         <x-ui.td :label="__('Employee')">
                             <div class="flex items-center gap-3 text-start">
                                 <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary-light font-bold text-primary">{{ \App\Support\Format\Initials::for($case->employee?->name ?? '') }}</span>

@@ -47,6 +47,10 @@ class Ui
 
     public static function stage(CaseStatus $status): string
     {
+        if ($status === CaseStatus::ArchivedFinal) {
+            return __('Closed');
+        }
+
         return self::stageLabel(StageIndicator::step($status));
     }
 

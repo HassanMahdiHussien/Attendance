@@ -116,8 +116,9 @@
                 </x-ui.card>
                 <x-ui.card>
                     <h2 class="mb-3 font-bold text-ink">{{ __('messages.home.recent_activity') }}</h2>
-                    @forelse($work['events'] as $event)
-                        <p class="mb-2 text-sm text-gray-500">{{ \App\Support\Format\CaseTimeline::format($event->event_type, $event->event_type === 'status_changed' ? ['to' => $event->payload['to'] ?? ''] : []) }} · <bdi class="font-mono">{{ \App\Support\Format\Ui::number(str_pad((string) ($event->disciplinaryCase?->case_number ?? ''), 4, '0', STR_PAD_LEFT)) }}</bdi> · {{ $event->actorUser?->name ?? __('messages.home.system') }} · <bdi class="font-mono">{{ \App\Support\Format\Ui::date($event->created_at) }} {{ \App\Support\Format\Ui::date($event->created_at, 'H:i') }}</bdi></p>
+                    @forelse($work['events'] as $line)
+                        @php($event = $line['event'])
+                        <p class="mb-2 text-sm text-gray-500">{{ \App\Support\Format\CaseTimeline::format($event->event_type, $event->event_type === 'status_changed' ? ['to' => $event->payload['to'] ?? ''] : []) }} · <bdi class="font-mono">{{ \App\Support\Format\Ui::number(str_pad((string) ($event->disciplinaryCase?->case_number ?? ''), 4, '0', STR_PAD_LEFT)) }}</bdi> · {{ $event->actorUser?->name ?? __('messages.home.system') }} · <bdi class="font-mono">{{ \App\Support\Format\Ui::date($event->created_at) }} {{ \App\Support\Format\Ui::date($event->created_at, 'H:i') }}</bdi>@if($line['count'] > 1) <span class="font-mono">×{{ \App\Support\Format\Ui::number($line['count']) }}</span>@endif</p>
                     @empty
                         <x-ui.empty :title="__('messages.home.no_activity')" />
                     @endforelse

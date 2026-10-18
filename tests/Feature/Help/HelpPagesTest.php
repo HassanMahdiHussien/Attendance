@@ -5,10 +5,6 @@ use App\Models\Company;
 use App\Models\HrPartner;
 use App\Models\LawFirmPartner;
 use App\Models\User;
-use App\Providers\Filament\AdminPanelProvider;
-use App\Providers\Filament\PlatformPanelProvider;
-use Filament\Facades\Filament;
-use Filament\Panel;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 
@@ -61,12 +57,11 @@ test('workspace menus and both panels expose help', function (): void {
     $response = $this->actingAs(User::factory()->create(['company_id' => Company::factory()->create()->id, 'primary_role' => UserRole::CompanyAdmin]))
         ->get('/help')->assertOk()->assertSee('workspace-account-menu')->assertSee('workspace-more');
     expect(substr_count($response->getContent(), 'href="'.route('help.index').'"'))->toBeGreaterThanOrEqual(2);
-    foreach ([AdminPanelProvider::class, PlatformPanelProvider::class] as $provider) {
-        $panel = (new $provider(app()))->panel(Panel::make());
-        Filament::setCurrentPanel($panel);
-        expect($panel->getUserMenuItems())->toHaveKey('help');
-        expect($panel->getUserMenuItems()['help']->getUrl())->toBe('/help');
-    }
+    $company = Company::factory()->create();
+    $admin = User::factory()->create(['primary_role' => UserRole::CompanyAdmin, 'company_id' => $company->id]);
+    $this->actingAs($admin)->get('/admin/'.$company->id)->assertOk()->assertSee(route('help.index'), false);
+    $platform = User::factory()->create(['primary_role' => UserRole::PlatformAdmin, 'company_id' => null]);
+    $this->actingAs($platform)->get('/platform')->assertOk()->assertSee(route('help.index'), false);
 });
 
 test('screenshot command refuses non-local environments', function (): void {

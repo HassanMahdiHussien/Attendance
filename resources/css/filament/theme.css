@@ -1,13 +1,36 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
 @import '../../../vendor/filament/filament/resources/css/theme.css';
 
 @source '../../../app/Filament/**/*';
 @source '../../views/filament/**/*';
+@source '../../views/layouts/partials/workspace-navigation.blade.php';
+@source '../../views/components/ui/brand.blade.php';
+@source '../../views/components/ui/icon.blade.php';
+@source '../../views/livewire/global-search.blade.php';
 
 /* Departures world, matching the workspace (resources/css/app.css): midnight top bar, light working ground,
    signal amber only for the primary action and the current item. */
 @theme {
     --font-sans: 'Readex Pro', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    --color-ink: #14181F;
+    --color-bg: #F2F4F7;
+    --color-line: #DDE1E7;
+    --color-night: #0E1A2B;
+    --color-night-2: #16263D;
+    --color-night-line: #26384F;
+    --color-night-soft: #A9B6C9;
+    --color-signal: #F2B33D;
+    --color-signal-dark: #DE9A1A;
+    --color-primary: #1D3A63;
+    --color-primary-light: #E6ECF5;
 }
+
+[x-cloak] { display: none !important; }
+.fi-body { min-height: 100vh; }
+.fi-layout { padding-bottom: 5rem; }
+.fi-body .ui-control { min-height: 2.5rem; border: 1px solid var(--color-line); border-radius: .5rem; background: #fff; color: var(--color-ink); }
+@media (min-width: 1280px) { .fi-layout { padding-bottom: 0; } }
 
 :root {
     --dp-night: #0E1A2B;

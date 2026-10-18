@@ -16,7 +16,7 @@ class Nav
 
         $role = $user->primary_role;
         $items = [];
-        if ($role !== UserRole::PlatformAdmin) {
+        if (! in_array($role, [UserRole::PlatformAdmin, UserRole::Reporter, UserRole::DeptManager], true)) {
             $items[] = self::item('My work', '/home', 'home', 'home');
         }
         if (in_array($role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)) {

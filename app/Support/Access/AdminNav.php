@@ -7,7 +7,6 @@ use App\Filament\Admin\Pages\DocumentTemplates;
 use App\Filament\Admin\Pages\InternalRegulation;
 use App\Filament\Admin\Resources\BranchResource;
 use App\Filament\Admin\Resources\CommitteeMandateResource;
-use App\Filament\Admin\Resources\EmployeeResource;
 use App\Filament\Admin\Resources\LocationResource;
 use App\Filament\Admin\Resources\UserResource;
 use App\Filament\Admin\Resources\ViolationTypeResource;
@@ -23,7 +22,6 @@ class AdminNav
         [InternalRegulation::class, 'book', 'heroicon-o-book-open'],
         [BranchResource::class, 'folder', 'heroicon-o-building-office'],
         [CommitteeMandateResource::class, 'file', 'heroicon-o-document-check'],
-        [EmployeeResource::class, 'users', 'heroicon-o-users'],
         [LocationResource::class, 'folder', 'heroicon-o-map-pin'],
         [UserResource::class, 'users', 'heroicon-o-user-group'],
         [ViolationTypeResource::class, 'check', 'heroicon-o-list-bullet'],
@@ -32,7 +30,8 @@ class AdminNav
     public static function items(User $user): array
     {
         $panel = Filament::getPanel('admin');
-        $tenant = $user->company;
+        $tenant = Filament::getCurrentPanel()?->getId() === 'admin'
+            ? (Filament::getTenant() ?? $user->company) : $user->company;
         if (! $user->is_active || ! $tenant) {
             return [];
         }

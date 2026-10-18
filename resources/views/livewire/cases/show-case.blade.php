@@ -6,7 +6,9 @@
         $documentStatuses = ['draft' => __('Draft'), 'ready_for_review' => __('Awaiting review'), 'issued' => __('Issued'), 'superseded' => __('Superseded')];
         $colors = ['met'=>'ui-badge-green','on_track'=>'ui-badge-indigo','approaching'=>'ui-badge-amber','missed'=>'ui-badge-red','overdue'=>'ui-badge-red'];
     @endphp
-    <a href="/cases" class="ui-link inline-flex items-center gap-1 text-sm"><x-ui.icon name="arrow" class="h-4 w-4 rtl:rotate-180" />{{ __('Cases board') }}</a>
+    @if($caseListUrl)
+        <a href="{{ $caseListUrl }}" class="ui-link inline-flex items-center gap-1 text-sm"><x-ui.icon name="arrow" class="h-4 w-4 rtl:rotate-180" />{{ $caseListUrl === '/cases' ? __('Cases board') : __('My cases') }}</a>
+    @endif
     @if($success)<p role="status" class="rounded-2xl bg-green-light p-4 text-green-700">{{ $success }}</p>
 @endif
     @if($notice)<p role="status" class="rounded-2xl bg-amber-light p-4 text-amber-700">{{ $notice }}</p>
@@ -34,14 +36,9 @@
     @error('notice')<p role="alert" class="rounded-2xl bg-red-light p-4 text-red-700">{{ $message }}</p>
 @enderror
     @php
-        // The departures board: every legal deadline of this case as a due event with a live countdown.
         $today = now('Asia/Baghdad')->startOfDay();
-        $stateLabels = ['met' => __('Completed within deadline'), 'on_track' => __('Within deadline'), 'approaching' => __('Approaching'), 'missed' => __('Deadline missed'), 'overdue' => __('Overdue')];
-        $dueEvents = [
-            ['title' => __('Response'), 'stage' => \App\Support\Format\StageIndicator::stageLabel(3), 'due' => $deadlines->responseDue($record), 'state' => $deadlines->responseStatus($record)],
-            ['title' => __('Procedure'), 'stage' => \App\Support\Format\StageIndicator::stageLabel(5), 'due' => $deadlines->procedureDue($record), 'state' => $deadlines->procedureStatus($record)],
-            ['title' => __('Appeal'), 'stage' => \App\Support\Format\StageIndicator::stageLabel(5), 'due' => $deadlines->appealEnd($record), 'state' => $deadlines->appealStatus($record)],
-        ];
+        $stateLabels = ['met' => __('Completed within deadline'), 'on_track' => __('Within deadline'), 'approaching' => __('Approaching'), 'missed' => __('Deadline missed'), 'overdue' => __('Overdue'), 'not_applicable' => __('Not applicable')];
+        $dueEvents = \App\Support\Format\CaseDueEvents::for($record, $deadlines);
     @endphp
     <header class="overflow-hidden rounded-xl bg-night-2 text-white shadow-[0_8px_24px_-12px_rgb(14_26_43/0.45)]">
         <div class="grid gap-6 p-5 sm:p-6 lg:grid-cols-[17rem_1fr]">
@@ -69,6 +66,7 @@
                             @php
                                 $days = $event['due'] ? (int) $today->diffInDays(\Carbon\CarbonImmutable::parse($event['due'])->setTimezone('Asia/Baghdad')->startOfDay(), false) : null;
                                 [$flapClass, $flapText] = match (true) {
+                                    $event['state'] === 'not_applicable' => ['flap-idle', __('Not applicable')],
                                     $event['state'] === 'met' => ['flap-ok', __('Done')],
                                     in_array($event['state'], ['missed', 'overdue'], true) => ['flap-late', __('Overdue')],
                                     $days === null => ['flap-idle', __('Not started yet')],
@@ -110,7 +108,7 @@
     @endif
     <div class="grid gap-5 lg:grid-cols-3">
         <x-ui.card class="lg:col-span-2" aria-label="{{ __('Stage') }}">
-            <x-ui.stepper :step="$step" class="mt-1" />
+            <x-ui.stepper :step="$step" :closed="$record->status === \App\Enums\CaseStatus::ArchivedFinal" class="mt-1" />
         </x-ui.card>
         @if($nextAction)
             @php

@@ -20,7 +20,6 @@ use App\Support\Format\OutcomeLabel;
 use App\Support\Format\Ui;
 use App\Support\Tenancy\TenantContext;
 use Carbon\CarbonImmutable;
-use Filament\Facades\Filament;
 use Livewire\Livewire;
 use Livewire\Mechanisms\HandleRequests\HandleRequests;
 
@@ -127,17 +126,14 @@ test('an Arabic admin sees and can run a translated Filament action', function (
     expect($branch->fresh()->is_active)->toBeFalse();
 });
 
-test('both panel user menus offer the locale actions', function (): void {
-    $user = User::factory()->create(['primary_role' => UserRole::PlatformAdmin, 'locale' => 'ar']);
-    $this->actingAs($user);
-    app()->setLocale('ar');
-
-    foreach (['admin', 'platform'] as $panelId) {
-        $groups = Filament::getPanel($panelId)->getUserMenuItemGroups();
-        $labels = collect($groups)->flatMap(fn (array $items): array => array_values($items))
-            ->map(fn ($item): string => $item->getLabel())->all();
-        expect($labels)->toContain('العربية', 'English');
-    }
+test('both panels show the shared header language switch', function (): void {
+    $company = Company::factory()->create();
+    $admin = User::factory()->create(['primary_role' => UserRole::CompanyAdmin, 'company_id' => $company->id, 'locale' => 'ar']);
+    $this->actingAs($admin)->get('/admin/'.$company->id)->assertOk()
+        ->assertSee(route('locale.update'), false)->assertSee('English');
+    $platform = User::factory()->create(['primary_role' => UserRole::PlatformAdmin, 'company_id' => null, 'locale' => 'ar']);
+    $this->actingAs($platform)->get('/platform')->assertOk()
+        ->assertSee(route('locale.update'), false)->assertSee('English');
 });
 
 test('a real Livewire action displays a service exception in the user locale', function (): void {
