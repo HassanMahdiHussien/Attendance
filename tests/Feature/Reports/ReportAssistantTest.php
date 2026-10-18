@@ -41,7 +41,7 @@ function reportTurn(array $facts = [], array $other = []): array
 {
     return array_replace([
         'facts' => array_replace(['what' => null, 'place_text' => null, 'location_name' => null,
-            'when_text' => null, 'when_iso' => null, 'people' => [], 'how_started' => null,
+            'when_text' => null, 'when_iso' => null, 'people' => [], 'no_witnesses' => false, 'how_started' => null,
             'injuries_or_damage' => null], $facts),
         'missing' => ['who', 'what', 'where', 'when', 'witnesses'],
         'next_question' => ['text' => 'Who was involved?', 'quick_replies' => ['I do not know']],
@@ -201,6 +201,27 @@ test('an invented place, person or summary date is never stored', function (): v
     expect($session->refresh()->facts['summary'] ?? null)->toBeNull();
 });
 
+test('a defect found afterwards needs no witness question and finishes once the defense letter has what it needs', function (): void {
+    $f = reportAssistantFixture();
+    config()->set('services.anthropic.key', 'test-key');
+    Bus::fake([AskReportAssistant::class]);
+    $assistant = app(ReportAssistant::class);
+    $session = $assistant->start($f['reporter'], $f['branch']->id,
+        'Ali Hayder Mustafa added the wrong amount of sweetener on line 2 on Thursday, October 8, 2026; the batch is on hold.');
+    $builder = app(PayloadBuilder::class);
+    $assistant->acceptTurn($session, reportTurn([
+        'what' => 'added the wrong amount of sweetener', 'place_text' => 'line 2', 'when_text' => 'Thursday, October 8, 2026',
+        'people' => [['ref' => 'Ali Hayder Mustafa', 'role' => 'involved']], 'no_witnesses' => true,
+    ], ['missing' => [], 'next_question' => null, 'done' => true,
+        'summary' => 'According to the reporter Ali Hayder Mustafa added the wrong amount of sweetener on line 2 on Thursday, October 8, 2026.']),
+        $assistant->context($session, $builder), $builder);
+    $session->refresh();
+    expect($session->facts['witnesses_none'])->toBeTrue()
+        ->and($assistant->missing($session->facts))->toBe([])
+        ->and($session->question_count)->toBe(0)
+        ->and($session->pending_aspect)->toBeNull();
+});
+
 test('an English report keeps names and facts the model decorated, and does not fall back to the form', function (): void {
     $f = reportAssistantFixture();
     config()->set('services.anthropic.key', 'test-key');
@@ -220,6 +241,37 @@ test('an English report keeps names and facts the model decorated, and does not 
     expect($session->status)->toBe('ready')
         ->and(collect($session->facts['employees'])->pluck('name')->all())->toBe(['Ali Hayder Mustafa', 'Haider Azher Abood'])
         ->and($session->facts['how_started'])->toBe('the foreman directed the operator to prepare an additional six units as quickly as possible');
+});
+
+test('one of the employees concerned is never singled out as responsible', function (): void {
+    $f = reportAssistantFixture();
+    config()->set('services.anthropic.key', 'test-key');
+    Bus::fake([AskReportAssistant::class]);
+    $assistant = app(ReportAssistant::class);
+    $session = $assistant->start($f['reporter'], $f['branch']->id, 'الموظفون مرتضى صلاح وعلي كريم عبرت علب كوكا كولا');
+    $builder = app(PayloadBuilder::class);
+    $assistant->acceptTurn($session, reportTurn(['what' => 'عبرت علب كوكا كولا', 'people' => [
+        ['ref' => 'مرتضى صلاح', 'role' => 'involved'], ['ref' => 'علي كريم', 'role' => 'involved'],
+        ['ref' => 'مرتضى صلاح', 'role' => 'responsible'],
+    ]], ['missing' => ['where', 'when'], 'next_question' => ['text' => 'متى حدث ذلك؟', 'quick_replies' => []]]),
+        $assistant->context($session, $builder), $builder);
+    expect($session->refresh()->facts['responsible'])->toBe([])
+        ->and(collect($session->facts['employees'])->pluck('name')->all())->toBe(['مرتضى صلاح', 'علي كريم']);
+});
+
+test('cleaning an Arabic fact keeps it valid text', function (): void {
+    $f = reportAssistantFixture();
+    config()->set('services.anthropic.key', 'test-key');
+    Bus::fake([AskReportAssistant::class]);
+    $assistant = app(ReportAssistant::class);
+    $session = $assistant->start($f['reporter'], $f['branch']->id, 'عبرت علب كوكا كولا إلى منتج السبرايت في خط العلب الجديد');
+    $builder = app(PayloadBuilder::class);
+    // A byte-wise trim of «،» used to cut the last Arabic letter and leave malformed UTF-8 that could not be saved.
+    $assistant->acceptTurn($session, reportTurn(['what' => 'أفاد المُبلّغ بأن عبرت علب كوكا كولا إلى منتج السبرايت (حسب البلاغ)،'],
+        ['missing' => ['who', 'when'], 'next_question' => ['text' => 'متى حدث ذلك؟', 'quick_replies' => []]]),
+        $assistant->context($session, $builder), $builder);
+    expect($session->refresh()->facts['description'])->toBe('عبرت علب كوكا كولا إلى منتج السبرايت')
+        ->and(mb_check_encoding($session->facts['description'], 'UTF-8'))->toBeTrue();
 });
 
 test('fact traceability accepts source word overlap and rejects a new content word', function (): void {
