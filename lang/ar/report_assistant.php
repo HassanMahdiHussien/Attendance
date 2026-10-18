@@ -12,4 +12,14 @@ return [
         'witnesses' => 'هل رأى أحد ما حدث؟',
     ],
     'progress' => ['who' => 'من', 'what' => 'ماذا', 'where' => 'أين', 'when' => 'متى', 'witnesses' => 'الشهود'],
+    'review' => [
+        'summary' => 'الملخص', 'summary_ai' => 'ملخص كتبه المساعد — تحقق منه',
+        'people' => 'الأشخاص', 'employees' => 'الموظفون المعنيون', 'employees_unknown' => 'غير معروفين',
+        'witnesses' => 'الشهود', 'witnesses_none' => 'لا يوجد شهود', 'witnesses_unknown' => 'لا يُعرف إن رأى أحد ما حدث',
+        'responsible' => 'المسؤول المذكور',
+        'place_time' => 'المكان والزمان', 'place' => 'المكان', 'date' => 'التاريخ', 'time_unknown' => 'الوقت غير محدد',
+        'unknown' => 'غير معروف',
+        'what' => 'ما حدث', 'type' => 'نوع المخالفة', 'description' => 'الوصف', 'how' => 'كيف بدأ',
+        'injuries' => 'الإصابات والأضرار', 'attachments' => 'المرفقات', 'no_attachments' => 'لا توجد مرفقات',
+    ],
 ];

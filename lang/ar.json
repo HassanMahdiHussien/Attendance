@@ -295,7 +295,6 @@
     "Violation types": "أنواع المخالفات",
     "Warnings": "الإنذارات",
     "Within 15 days": "ضمن 15 يوماً",
-    "Alleged responsible person": "الشخص المسؤول المزعوم",
     "Another user reviewed this document.": "راجع هذا المستند مستخدم آخر.",
     "Attachments (PDF or images, up to 10 MB per file)": "المرفقات (PDF أو صور، حتى 10 ميغابايت للملف)",
     "Check AI wording and references before issuance. The outcome keyword check is a review flag, not a guarantee of a correct decision.": "تحقق من صياغة الذكاء الاصطناعي والمراجع قبل الإصدار. فحص كلمات النتيجة تنبيه للمراجعة وليس ضماناً لصحة القرار.",
@@ -922,5 +921,18 @@
     "Review report before sending": "مراجعة البلاغ قبل الإرسال",
     "Edit report": "تعديل البلاغ",
     "Confirm and send": "تأكيد وإرسال",
-    "Attachments": "المرفقات"
+    "This is what HR will receive. It cannot be changed after sending.": "هذا ما سيصل إلى الموارد البشرية. لا يمكن تعديله بعد الإرسال.",
+    "If something is wrong, edit the report before sending.": "إن كان هناك خطأ، عدّل البلاغ قبل إرساله.",
+    "Write what you saw in your own words, as you would tell a colleague. Then I will ask short questions about anything missing.": "اكتب ما رأيته بكلماتك، كما تحكيه لزميل. بعدها سأسألك أسئلة قصيرة عن الناقص فقط.",
+    "Example: two workers had a fight on production line 1 this morning…": "مثال: حدث شجار بين عاملين على خط الإنتاج 1 صباح اليوم…",
+    "It helps to mention, if you know:": "يساعد أن تذكر إن عرفت:",
+    "who was involved, where and when it happened": "من شارك، وأين ومتى حدث",
+    "whether anyone saw it happen": "إن كان هناك من رأى ما حدث",
+    "Prefer a form?": "لا تفضّل المحادثة؟",
+    "Fill in the form instead": "املأ النموذج بدلاً من ذلك",
+    "Type your answer…": "اكتب إجابتك…",
+    "Send": "أرسل",
+    "Question :count of 6 at most": "السؤال :count من 6 كحد أقصى",
+    "Everything needed is here": "اكتمل كل المطلوب",
+    "Missing": "ناقص"
 }

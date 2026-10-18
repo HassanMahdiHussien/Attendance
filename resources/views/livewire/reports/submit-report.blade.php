@@ -1,56 +1,144 @@
 <div class="max-w-3xl space-y-5">
     <x-ui.page-header :title="__('Submit report')" />
     @if($reviewing)
-        <x-ui.card class="space-y-5" aria-label="{{ __('Review report before sending') }}">
-            <h2 class="text-lg font-semibold">{{ __('Review report before sending') }}</h2>
-            <dl class="grid gap-4 sm:grid-cols-2">
-                <div class="sm:col-span-2"><dt class="font-medium">{{ __('Reporter summary') }}</dt><dd dir="auto" class="mt-1 whitespace-pre-line rounded-lg border border-line bg-bg p-3">{{ $assistantSession && $assistantSummary !== '' && ($assistantSession->facts['description'] ?? null) === $description ? $assistantSummary : (($assistantSession ? trans('report_assistant.summary_prefix', locale: $assistantSession->language) : __('According to the reporter: ')).mb_substr($description, 0, 600)) }}</dd></div>
-                <div><dt class="font-medium">{{ __('Employees named in report') }} <button type="button" wire:click="editReview" class="ui-link text-sm">{{ __('Edit') }}</button></dt><dd dir="auto">{{ collect($people['employees'])->pluck('name')->implode(' · ') ?: __('Not specified') }}</dd></div>
-                @if($employeesUnknown)<div><dt class="font-medium">{{ __('Employee identity') }}</dt><dd>{{ __('I do not know') }}</dd></div>@endif
-                <div><dt class="font-medium">{{ __('Witnesses') }} <button type="button" wire:click="editReview" class="ui-link text-sm">{{ __('Edit') }}</button></dt><dd dir="auto">{{ collect($people['witnesses'])->pluck('name')->implode(' · ') ?: __('Not specified') }}</dd></div>
-                @if($witnessesNone || $witnessesUnknown)<div><dt class="font-medium">{{ __('Witness answer') }}</dt><dd>{{ $witnessesNone ? __('None') : __('I do not know') }}</dd></div>@endif
-                @if($people['responsible'] !== [])<div><dt class="font-medium">{{ __('Alleged responsible person') }}</dt><dd dir="auto">{{ $people['responsible'][0]['name'] }}</dd></div>@endif
-                <div><dt class="font-medium">{{ __('Branch') }} <button type="button" wire:click="editReview" class="ui-link text-sm">{{ __('Edit') }}</button></dt><dd>{{ $branches->firstWhere('id', (int) $branchId)?->name }}</dd></div>
-                <div><dt class="font-medium">{{ __('Location') }} <button type="button" wire:click="editReview" class="ui-link text-sm">{{ __('Edit') }}</button></dt><dd>{{ $locations->firstWhere('id', (int) $locationId)?->name ?? __('Not specified') }}</dd></div>
-                <div><dt class="font-medium">{{ __('Place if not listed') }} <button type="button" wire:click="editReview" class="ui-link text-sm">{{ __('Edit') }}</button></dt><dd dir="auto">{{ $place ?: __('Not specified') }}</dd></div>
-                <div><dt class="font-medium">{{ __('Incident date and time') }} <button type="button" wire:click="editReview" class="ui-link text-sm">{{ __('Edit') }}</button></dt><dd>@if($occurredAt !== '')<bdi>{{ \App\Support\Format\Ui::date($occurredAt) }} · {{ \App\Support\Format\Ui::date($occurredAt, 'H:i') }}</bdi>@else{{ __('Not specified') }}@endif</dd></div>
-                @if($occurredAtText !== '')<div><dt class="font-medium">{{ __('Date as reported') }}</dt><dd dir="auto">{{ $occurredAtText }}</dd></div>@endif
-                <div><dt class="font-medium">{{ __('Violation type') }} <button type="button" wire:click="editReview" class="ui-link text-sm">{{ __('Edit') }}</button></dt><dd>{{ $violationTypes->firstWhere('id', (int) $violationTypeId)?->name() ?? ($violationType ?: __('Not specified')) }} @if($violationTypeId !== '' && $violationType !== '') · {{ $violationType }} @endif</dd></div>
-                <div class="sm:col-span-2"><dt class="font-medium">{{ __('Incident description') }} <button type="button" wire:click="editReview" class="ui-link text-sm">{{ __('Edit') }}</button></dt><dd dir="auto" class="whitespace-pre-line">{{ $description }}</dd></div>
-                @if($howStarted !== '')<div class="sm:col-span-2"><dt class="font-medium">{{ __('How it started (optional)') }}</dt><dd dir="auto">{{ $howStarted }}</dd></div>@endif
-                @if($injuriesDamage !== '')<div class="sm:col-span-2"><dt class="font-medium">{{ __('Injuries or damage (optional)') }}</dt><dd dir="auto">{{ $injuriesDamage }}</dd></div>@endif
-                <div class="sm:col-span-2"><dt class="font-medium">{{ __('Attachments') }} <button type="button" wire:click="editReview" class="ui-link text-sm">{{ __('Edit') }}</button></dt><dd>{{ collect($attachments)->map(fn ($file) => $file->getClientOriginalName())->implode(' · ') ?: __('Not specified') }}</dd></div>
-            </dl>
-            <div class="flex flex-wrap gap-3"><x-ui.button type="button" variant="secondary" wire:click="editReview">{{ __('Edit report') }}</x-ui.button><x-ui.button type="button" wire:click="confirmSend">{{ __('Confirm and send') }}</x-ui.button></div>
-        </x-ui.card>
+        @php
+            // The report body reads in the report's own language and direction, labels included.
+            $rl = $assistantSession?->language ?? app()->getLocale();
+            $r = fn (string $key): string => trans('report_assistant.review.'.$key, [], $rl);
+            $aiSummary = $assistantSession && $assistantSummary !== '' && ($assistantSession->facts['description'] ?? null) === $description;
+            $summaryText = $aiSummary ? $assistantSummary : trans('report_assistant.summary_prefix', [], $rl).mb_substr($description, 0, 600);
+            $unknownWords = [__('I do not know'), trans('report_assistant.chip.unknown', [], $rl)];
+            $placeText = collect([$locations->firstWhere('id', (int) $locationId)?->name, in_array($place, $unknownWords, true) ? null : $place])->filter()->unique()->implode(' — ');
+            $dateText = in_array($occurredAtText, $unknownWords, true) ? '' : $occurredAtText;
+            // A chat report's type is only its description repeated (HR classifies it), so it shows only when it adds something.
+            $freeType = $violationType !== '' && $violationType !== mb_substr($description, 0, 255) ? $violationType : null;
+            $listedType = collect([$violationTypes->firstWhere('id', (int) $violationTypeId)?->name(), $freeType])->filter()->implode(' · ');
+            $files = collect($attachments)->map(fn ($file) => $file->getClientOriginalName());
+            $row = 'grid gap-x-4 gap-y-0.5 py-2.5 sm:grid-cols-[8.5rem_minmax(0,1fr)]';
+        @endphp
+        <section class="ui-card overflow-hidden" aria-labelledby="review-title">
+            <header class="border-b border-line px-5 py-4">
+                <h2 id="review-title" class="text-lg font-semibold">{{ __('Review report before sending') }}</h2>
+                <p class="mt-1 text-sm text-gray-600">{{ __('This is what HR will receive. It cannot be changed after sending.') }}</p>
+            </header>
+            <div dir="{{ $rl === 'ar' ? 'rtl' : 'ltr' }}" lang="{{ $rl }}" class="grid gap-6 p-5">
+                <div class="grid gap-2 rounded-xl bg-primary-light p-4 sm:px-5">
+                    <span class="justify-self-start rounded bg-white px-2 py-0.5 text-xs font-medium text-primary">{{ $aiSummary ? $r('summary_ai') : $r('summary') }}</span>
+                    <p class="max-w-[64ch] whitespace-pre-line text-[1.0625rem] leading-loose">{{ $summaryText }}</p>
+                </div>
+                <section>
+                    <h3 class="font-semibold">{{ $r('people') }}</h3>
+                    <dl class="divide-y divide-line">
+                        <div class="{{ $row }}"><dt class="text-sm text-gray-600">{{ $r('employees') }}</dt><dd class="flex flex-wrap gap-1.5">@forelse($people['employees'] as $person)<span dir="auto" class="rounded border border-line bg-bg px-2.5 leading-relaxed">{{ $person['name'] }}</span>@empty<span class="text-gray-600">{{ $r('employees_unknown') }}</span>@endforelse</dd></div>
+                        <div class="{{ $row }}"><dt class="text-sm text-gray-600">{{ $r('witnesses') }}</dt><dd class="flex flex-wrap gap-1.5">@forelse($people['witnesses'] as $person)<span dir="auto" class="rounded border border-line bg-bg px-2.5 leading-relaxed">{{ $person['name'] }}</span>@empty<span>{{ $witnessesNone ? $r('witnesses_none') : $r('witnesses_unknown') }}</span>@endforelse</dd></div>
+                        @if($people['responsible'] !== [])<div class="{{ $row }}"><dt class="text-sm text-gray-600">{{ $r('responsible') }}</dt><dd dir="auto">{{ $people['responsible'][0]['name'] }}</dd></div>@endif
+                    </dl>
+                </section>
+                <section>
+                    <h3 class="font-semibold">{{ $r('place_time') }}</h3>
+                    <dl class="divide-y divide-line">
+                        <div class="{{ $row }}"><dt class="text-sm text-gray-600">{{ $r('place') }}</dt><dd><span dir="auto">{{ $placeText ?: $r('unknown') }}</span> <span class="text-gray-600">· {{ $branches->firstWhere('id', (int) $branchId)?->name }}</span></dd></div>
+                        <div class="{{ $row }}"><dt class="text-sm text-gray-600">{{ $r('date') }}</dt><dd>@if($occurredAt !== '')<bdi class="font-mono text-sm tabular-nums">{{ \App\Support\Format\Ui::date($occurredAt) }} · {{ \App\Support\Format\Ui::date($occurredAt, 'H:i') }}</bdi>@elseif($dateText !== '')<bdi dir="auto">{{ $dateText }}</bdi> <span class="text-gray-600">· {{ $r('time_unknown') }}</span>@else<span class="text-gray-600">{{ $r('unknown') }}</span>@endif</dd></div>
+                    </dl>
+                </section>
+                <section>
+                    <h3 class="font-semibold">{{ $r('what') }}</h3>
+                    <dl class="divide-y divide-line">
+                        @if($listedType)<div class="{{ $row }}"><dt class="text-sm text-gray-600">{{ $r('type') }}</dt><dd>{{ $listedType }}</dd></div>@endif
+                        <div class="{{ $row }}"><dt class="text-sm text-gray-600">{{ $r('description') }}</dt><dd dir="auto" class="whitespace-pre-line leading-relaxed">{{ $description }}</dd></div>
+                        @if($howStarted !== '')<div class="{{ $row }}"><dt class="text-sm text-gray-600">{{ $r('how') }}</dt><dd dir="auto" class="leading-relaxed">{{ $howStarted }}</dd></div>@endif
+                        @if($injuriesDamage !== '')<div class="{{ $row }}"><dt class="text-sm text-gray-600">{{ $r('injuries') }}</dt><dd dir="auto" class="leading-relaxed">{{ $injuriesDamage }}</dd></div>@endif
+                        <div class="{{ $row }}"><dt class="text-sm text-gray-600">{{ $r('attachments') }}</dt><dd dir="auto">{{ $files->implode(' · ') ?: $r('no_attachments') }}</dd></div>
+                    </dl>
+                </section>
+            </div>
+            <footer class="flex flex-wrap items-center justify-between gap-3 border-t border-line px-5 py-4">
+                <p class="max-w-[42ch] text-sm text-gray-600">{{ __('If something is wrong, edit the report before sending.') }}</p>
+                <div class="flex flex-wrap gap-2.5"><x-ui.button type="button" variant="secondary" wire:click="editReview">{{ __('Edit report') }}</x-ui.button><x-ui.button type="button" wire:click="confirmSend">{{ __('Confirm and send') }}</x-ui.button></div>
+            </footer>
+        </section>
     @elseif($chatMode)
-        <x-ui.card class="space-y-5" aria-label="{{ __('Report assistant') }}">
-            <h2 class="text-lg font-semibold">{{ __('Report assistant') }}</h2>
-            <p class="text-sm text-gray-600">{{ __('Tell us what happened. You can edit every field before sending.') }}</p>
-            @if(!$assistantSession)
-                @if($branches->isEmpty())<p role="alert" class="rounded-lg bg-signal-light p-3 text-sm">{{ __('Your account is not assigned to any branch yet. Ask HR to add your branch before submitting a report.') }}</p>@endif
-                <form wire:submit="startChat" class="space-y-4">
-                    <x-ui.field :label="__('Branch')" error="branchId" for="chat-branch"><select id="chat-branch" wire:model.live="branchId" class="ui-control"><option value="">{{ __('Select branch') }}</option>@foreach($branches as $branch)<option value="{{ $branch->id }}">{{ $branch->name }}</option>@endforeach</select></x-ui.field>
-                    <x-ui.field :label="__('What happened?')" error="chatInput" for="chat-first"><textarea id="chat-first" wire:model="chatInput" rows="4" dir="auto" class="ui-control"></textarea></x-ui.field>
-                    <x-ui.button type="submit">{{ __('Start report') }}</x-ui.button>
+        @if(!$assistantSession)
+            <section class="ui-card overflow-hidden" aria-labelledby="chat-start-title">
+                <form wire:submit="startChat" class="grid gap-4 p-5 sm:p-6">
+                    @if($branches->isEmpty())<p role="alert" class="rounded-lg bg-signal-light p-3 text-sm">{{ __('Your account is not assigned to any branch yet. Ask HR to add your branch before submitting a report.') }}</p>@endif
+                    <div class="grid gap-1">
+                        <h2 id="chat-start-title" class="text-lg font-semibold"><label for="chat-first">{{ __('What happened?') }}</label></h2>
+                        <p class="max-w-[60ch] text-gray-600">{{ __('Write what you saw in your own words, as you would tell a colleague. Then I will ask short questions about anything missing.') }}</p>
+                    </div>
+                    <div class="rounded-xl border border-line transition-shadow focus-within:border-primary focus-within:ring-4 focus-within:ring-primary-light">
+                        <textarea id="chat-first" wire:model="chatInput" rows="5" dir="auto" placeholder="{{ __('Example: two workers had a fight on production line 1 this morning…') }}" class="block w-full resize-y rounded-xl border-0 bg-transparent px-4 py-3 text-base leading-loose placeholder:text-gray-400 focus:outline-none"></textarea>
+                    </div>
+                    @error('chatInput')<p role="alert" class="text-sm text-red">{{ $message }}</p>@enderror
+                    <div class="text-sm text-gray-600">{{ __('It helps to mention, if you know:') }}<ul class="mt-1 list-disc space-y-0.5 ps-5"><li>{{ __('who was involved, where and when it happened') }}</li><li>{{ __('whether anyone saw it happen') }}</li></ul></div>
+                    <div class="flex flex-wrap items-end justify-between gap-3">
+                        @if($branches->count() > 1)
+                            <x-ui.field :label="__('Branch')" error="branchId" for="chat-branch" class="min-w-56"><select id="chat-branch" wire:model.live="branchId" class="ui-control"><option value="">{{ __('Select branch') }}</option>@foreach($branches as $branch)<option value="{{ $branch->id }}">{{ $branch->name }}</option>@endforeach</select></x-ui.field>
+                        @else
+                            <p class="text-sm text-gray-600">{{ __('Branch') }}: <span class="font-medium text-ink">{{ $branches->first()?->name }}</span></p>
+                        @endif
+                        <x-ui.button type="submit">{{ __('Start report') }}</x-ui.button>
+                    </div>
                 </form>
-            @else
-                @php($missing = app(\App\Services\Reports\ReportAssistant::class)->missing($assistantSession->facts))
-                <div class="flex flex-wrap gap-2" aria-label="{{ __('Report progress') }}">@foreach(\App\Services\Reports\ReportAssistant::REQUIRED as $aspect)<span class="rounded border px-2 py-1 text-xs {{ in_array($aspect, $missing, true) ? 'border-line text-gray-600' : 'border-green bg-green-light text-green' }}">{{ __('report_assistant.progress.'.$aspect) }}</span>@endforeach</div>
-                <div class="max-h-[28rem] space-y-3 overflow-y-auto rounded-lg bg-bg p-3" aria-live="polite" x-data x-init="$el.scrollTop = $el.scrollHeight; new MutationObserver(() => $el.scrollTop = $el.scrollHeight).observe($el, { childList: true, subtree: true })">@foreach($assistantSession->transcript as $line)<div class="{{ $line['role'] === 'reporter' ? 'ms-auto bg-primary-light' : 'me-auto bg-white' }} max-w-[90%] rounded-lg border border-line p-3 text-sm"><span class="block text-xs font-semibold">{{ $line['role'] === 'reporter' ? __('You') : __('Assistant') }}</span><p dir="auto" class="whitespace-pre-line">{{ $line['text'] }}</p></div>@endforeach</div>
-                @if($assistantSession->status === 'pending')<div wire:poll.2s="pollAssistant" role="status" class="text-sm text-primary">{{ __('Thinking…') }}</div>@endif
-                @if($assistantSession->status === 'fallback')<x-ui.alert tone="amber">{{ __('The assistant could not finish. Your answers are kept below. Complete what is missing and send your report.') }}</x-ui.alert>@endif
+                <div class="flex flex-wrap items-center justify-between gap-2 border-t border-line px-5 py-3 text-sm text-gray-600 sm:px-6"><span>{{ __('Prefer a form?') }}</span><button type="button" wire:click="usePlainForm" class="ui-link">{{ __('Fill in the form instead') }}</button></div>
+            </section>
+        @else
+            @php
+                $lang = $assistantSession->language;
+                $missing = app(\App\Services\Reports\ReportAssistant::class)->missing($assistantSession->facts);
+                $current = in_array($assistantSession->pending_aspect, $missing, true) ? $assistantSession->pending_aspect : null;
+                $chip = 'rounded-full border border-line bg-bg px-3.5 py-1 text-sm text-ink transition-colors duration-150 hover:border-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+                $finished = $assistantSession->status === 'ready' && ! $assistantSession->pending_aspect && ! ($assistantSession->facts['pending_match'] ?? null);
+            @endphp
+            <section class="ui-card overflow-hidden" aria-label="{{ __('Report assistant') }}">
+                {{-- The five required answers as the route rail: answered stations fill, the one being asked is the amber point. --}}
+                <ol dir="{{ $lang === 'ar' ? 'rtl' : 'ltr' }}" class="grid grid-cols-5 border-b border-line px-2 pb-3 pt-4 text-center text-xs sm:text-sm" aria-label="{{ __('Report progress') }}">
+                    @foreach(\App\Services\Reports\ReportAssistant::REQUIRED as $index => $aspect)
+                        @php($done = ! in_array($aspect, $missing, true))
+                        <li class="relative min-w-0" aria-current="{{ $aspect === $current ? 'step' : 'false' }}">
+                            @if($index > 0)<span class="absolute top-[0.6875rem] h-[3px] w-full -translate-y-1/2 end-1/2 {{ $done && ! in_array(\App\Services\Reports\ReportAssistant::REQUIRED[$index - 1], $missing, true) ? 'bg-night' : 'bg-line' }}" aria-hidden="true"></span>@endif
+                            <span class="relative mx-auto mb-1.5 grid h-[1.375rem] w-[1.375rem] place-items-center rounded-full border-[3px] {{ $done ? 'border-night bg-night text-white' : ($aspect === $current ? 'border-signal bg-signal ring-4 ring-signal-light' : 'border-line bg-white') }}" aria-hidden="true">@if($done)<x-ui.icon name="check" class="h-3.5! w-3.5!" stroke-width="3.2" />@endif</span>
+                            <span class="block leading-tight {{ $aspect === $current ? 'font-semibold text-ink' : ($done ? 'text-ink' : 'text-gray-500') }}">{{ trans('report_assistant.progress.'.$aspect, [], $lang) }}<span class="sr-only"> · {{ $done ? __('Done') : __('Missing') }}</span></span>
+                        </li>
+                    @endforeach
+                </ol>
+                <div dir="{{ $lang === 'ar' ? 'rtl' : 'ltr' }}" lang="{{ $lang }}" class="grid max-h-[30rem] content-start gap-3.5 overflow-y-auto p-4 sm:p-5" aria-live="polite" x-data x-init="$el.scrollTop = $el.scrollHeight; new MutationObserver(() => $el.scrollTop = $el.scrollHeight).observe($el, { childList: true, subtree: true })">
+                    @foreach($assistantSession->transcript as $line)
+                        @if($line['role'] === 'reporter')
+                            <div class="ms-auto max-w-[88%] rounded-2xl rounded-ee-md bg-primary-light px-3.5 py-2.5"><span class="sr-only">{{ __('You') }}:</span><p dir="auto" class="whitespace-pre-line leading-relaxed">{{ $line['text'] }}</p></div>
+                        @else
+                            <div class="flex max-w-[88%] items-end gap-2.5"><span class="grid h-7 w-7 flex-none place-items-center rounded-full bg-night text-white" aria-hidden="true"><x-ui.icon name="chat" class="h-4! w-4!" /></span><div class="rounded-2xl rounded-es-md border border-line bg-white px-3.5 py-2.5"><span class="sr-only">{{ __('Assistant') }}:</span><p dir="auto" class="whitespace-pre-line leading-relaxed">{{ $line['text'] }}</p></div></div>
+                        @endif
+                    @endforeach
+                    @if($assistantSession->status === 'pending')
+                        <div wire:poll.2s="pollAssistant" role="status" class="flex items-end gap-2.5"><span class="grid h-7 w-7 flex-none place-items-center rounded-full bg-night text-white" aria-hidden="true"><x-ui.icon name="chat" class="h-4! w-4!" /></span><div class="rounded-2xl rounded-es-md border border-line bg-white px-4 py-3"><span class="report-typing" aria-hidden="true"><i></i><i></i><i></i></span><span class="sr-only">{{ __('Thinking…') }}</span></div></div>
+                    @endif
+                </div>
+                @if($assistantSession->status === 'fallback')<div class="px-4 pb-4 sm:px-5"><x-ui.alert tone="amber">{{ __('The assistant could not finish. Your answers are kept below. Complete what is missing and send your report.') }}</x-ui.alert></div>@endif
                 @if($assistantSession->facts['pending_match'] ?? null)
-                    @php($match = $assistantSession->facts['pending_match'])
-                    <div class="flex flex-wrap gap-2"><x-ui.button type="button" wire:click="confirmPersonMatch('yes')">{{ trans('report_assistant.yes', locale: $assistantSession->language) }}</x-ui.button><x-ui.button type="button" variant="secondary" wire:click="confirmPersonMatch('other')">{{ trans('report_assistant.someone_else', locale: $assistantSession->language) }}</x-ui.button><x-ui.button type="button" variant="secondary" wire:click="confirmPersonMatch('free')">{{ trans('report_assistant.not_in_list', locale: $assistantSession->language) }}</x-ui.button></div>
+                    <div class="flex flex-wrap gap-2 border-t border-line px-4 py-3.5 sm:px-5"><x-ui.button type="button" wire:click="confirmPersonMatch('yes')">{{ trans('report_assistant.yes', locale: $lang) }}</x-ui.button><x-ui.button type="button" variant="secondary" wire:click="confirmPersonMatch('other')">{{ trans('report_assistant.someone_else', locale: $lang) }}</x-ui.button><x-ui.button type="button" variant="secondary" wire:click="confirmPersonMatch('free')">{{ trans('report_assistant.not_in_list', locale: $lang) }}</x-ui.button></div>
                 @elseif($assistantSession->status === 'ready' && $assistantSession->pending_aspect)
-                    <form wire:submit="answerChat" class="space-y-3"><x-ui.field :label="__('Your answer')" error="chatInput" for="chat-answer"><textarea id="chat-answer" wire:model="chatInput" rows="3" dir="auto" class="ui-control"></textarea></x-ui.field><div class="flex flex-wrap gap-2"><x-ui.button type="submit">{{ __('Reply') }}</x-ui.button>@foreach(($assistantSession->facts['quick_replies'] ?? []) as $index => $reply)<x-ui.button type="button" variant="secondary" wire:click="suggestedReply({{ $index }})">{{ $reply }}</x-ui.button>@endforeach<x-ui.button type="button" variant="secondary" wire:click="quickReply('unknown')">{{ trans('report_assistant.chip.unknown', locale: $assistantSession->language) }}</x-ui.button>@if($assistantSession->pending_aspect === 'when')<x-ui.button type="button" variant="secondary" wire:click="quickReply('today')">{{ trans('report_assistant.chip.today', locale: $assistantSession->language) }}</x-ui.button><x-ui.button type="button" variant="secondary" wire:click="quickReply('yesterday')">{{ trans('report_assistant.chip.yesterday', locale: $assistantSession->language) }}</x-ui.button>@endif @if($assistantSession->pending_aspect === 'witnesses')<x-ui.button type="button" variant="secondary" wire:click="quickReply('none')">{{ trans('report_assistant.chip.none', locale: $assistantSession->language) }}</x-ui.button>@endif</div></form>
-                @elseif($assistantSession->status === 'ready')
-                    <x-ui.button type="button" wire:click="continueToReview">{{ __('Continue to report details') }}</x-ui.button>
+                    <form wire:submit="answerChat" class="grid gap-2.5 border-t border-line px-4 py-3.5 sm:px-5">
+                        <div dir="{{ $lang === 'ar' ? 'rtl' : 'ltr' }}" class="flex flex-wrap gap-1.5">
+                            @foreach(($assistantSession->facts['quick_replies'] ?? []) as $index => $reply)<button type="button" class="{{ $chip }}" wire:click="suggestedReply({{ $index }})">{{ $reply }}</button>@endforeach
+                            @if($assistantSession->pending_aspect === 'witnesses')<button type="button" class="{{ $chip }}" wire:click="quickReply('none')">{{ trans('report_assistant.chip.none', locale: $lang) }}</button>@endif
+                            @if($assistantSession->pending_aspect === 'when')<button type="button" class="{{ $chip }}" wire:click="quickReply('today')">{{ trans('report_assistant.chip.today', locale: $lang) }}</button><button type="button" class="{{ $chip }}" wire:click="quickReply('yesterday')">{{ trans('report_assistant.chip.yesterday', locale: $lang) }}</button>@endif
+                            <button type="button" class="{{ $chip }}" wire:click="quickReply('unknown')">{{ trans('report_assistant.chip.unknown', locale: $lang) }}</button>
+                        </div>
+                        <div class="flex items-end gap-2 rounded-xl border border-line p-1.5 transition-shadow focus-within:border-primary focus-within:ring-4 focus-within:ring-primary-light">
+                            <label for="chat-answer" class="sr-only">{{ __('Your answer') }}</label>
+                            <textarea id="chat-answer" wire:model="chatInput" rows="1" dir="auto" placeholder="{{ __('Type your answer…') }}" class="block max-h-40 min-h-10 min-w-0 flex-1 resize-none border-0 bg-transparent px-2 py-2 leading-relaxed placeholder:text-gray-400 focus:outline-none" x-data x-init="$el.focus()" x-on:input="$el.style.height = 'auto'; $el.style.height = Math.min($el.scrollHeight, 160) + 'px'" x-on:keydown.enter="if (! $event.shiftKey) { $event.preventDefault(); $el.form.requestSubmit() }"></textarea>
+                            <button type="submit" class="ui-button ui-button-primary h-10 w-10 flex-none p-0" aria-label="{{ __('Send') }}"><x-ui.icon name="arrow" class="h-[1.125rem]! w-[1.125rem]! ltr:rotate-180" stroke-width="2.2" /></button>
+                        </div>
+                        @error('chatInput')<p role="alert" class="text-sm text-red">{{ $message }}</p>@enderror
+                        <p class="text-xs text-gray-500">{{ __('Question :count of 6 at most', ['count' => max(1, $assistantSession->question_count)]) }}</p>
+                    </form>
+                @elseif($finished)
+                    <div class="mx-4 mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-green-light px-4 py-3.5 sm:mx-5"><span class="inline-flex items-center gap-2 font-semibold text-green"><x-ui.icon name="check" stroke-width="2.4" />{{ __('Everything needed is here') }}</span><x-ui.button type="button" wire:click="continueToReview">{{ __('Review report') }}</x-ui.button></div>
                 @endif
-            @endif
-            <button type="button" wire:click="usePlainForm" class="ui-link text-sm">{{ __('Use the form instead') }}</button>
-        </x-ui.card>
+                <div class="flex flex-wrap items-center justify-between gap-2 border-t border-line px-4 py-3 text-sm text-gray-600 sm:px-5"><span>{{ __('Prefer a form?') }}</span><button type="button" wire:click="usePlainForm" class="ui-link">{{ __('Fill in the form instead') }}</button></div>
+            </section>
+        @endif
     @else
     @if($assistantSession && $assistantSession->status === 'fallback')<x-ui.alert tone="amber">{{ __('The assistant could not finish. Your answers are kept below. Complete what is missing and send your report.') }}</x-ui.alert>@endif
     @if($assistantSession && $assistantSession->status === 'fallback')<div class="space-y-2 rounded-lg border border-line bg-bg p-3">@foreach($assistantSession->transcript as $line)<p dir="auto" class="text-sm"><span class="font-semibold">{{ $line['role'] === 'reporter' ? __('You') : __('Assistant') }}:</span> {{ $line['text'] }}</p>@endforeach</div>@endif

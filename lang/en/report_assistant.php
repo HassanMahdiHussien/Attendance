@@ -12,4 +12,15 @@ return [
         'witnesses' => 'Were there any witnesses?',
     ],
     'progress' => ['who' => 'Who', 'what' => 'What', 'where' => 'Where', 'when' => 'When', 'witnesses' => 'Witnesses'],
+    // Review labels follow the report's language, not the interface language, so the report reads in one direction.
+    'review' => [
+        'summary' => 'Summary', 'summary_ai' => 'Written by the assistant: check it',
+        'people' => 'People', 'employees' => 'Employees concerned', 'employees_unknown' => 'Not known',
+        'witnesses' => 'Witnesses', 'witnesses_none' => 'No witnesses', 'witnesses_unknown' => 'Not known if anyone saw it',
+        'responsible' => 'Named as responsible',
+        'place_time' => 'Place and time', 'place' => 'Place', 'date' => 'Date', 'time_unknown' => 'time not given',
+        'unknown' => 'Not known',
+        'what' => 'What happened', 'type' => 'Violation type', 'description' => 'Description', 'how' => 'How it started',
+        'injuries' => 'Injuries and damage', 'attachments' => 'Attachments', 'no_attachments' => 'No attachments',
+    ],
 ];
