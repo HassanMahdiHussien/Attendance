@@ -1,5 +1,7 @@
-<div class="max-w-3xl space-y-5">
+<div class="space-y-5">
     <x-ui.page-header :title="__('Submit report')" />
+    <div class="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_19rem]">
+    <div class="min-w-0 space-y-5">
     @if($reviewing)
         @php
             // The report body reads in the report's own language and direction, labels included.
@@ -71,7 +73,7 @@
                     </div>
                     @error('chatInput')<p role="alert" class="text-sm text-red">{{ $message }}</p>@enderror
                     <div class="text-sm text-gray-600">{{ __('It helps to mention, if you know:') }}<ul class="mt-1 list-disc space-y-0.5 ps-5"><li>{{ __('who was involved, where and when it happened') }}</li><li>{{ __('whether anyone saw it happen') }}</li></ul></div>
-                    <div class="flex flex-wrap items-end justify-between gap-3">
+                    <div class="flex flex-wrap justify-between gap-3 {{ $branches->count() > 1 ? 'items-end' : 'items-center' }}">
                         @if($branches->count() > 1)
                             <x-ui.field :label="__('Branch')" error="branchId" for="chat-branch" class="min-w-56"><select id="chat-branch" wire:model.live="branchId" class="ui-control"><option value="">{{ __('Select branch') }}</option>@foreach($branches as $branch)<option value="{{ $branch->id }}">{{ $branch->name }}</option>@endforeach</select></x-ui.field>
                         @else
@@ -94,7 +96,8 @@
                 {{-- The five required answers as the route rail: answered stations fill, the one being asked is the amber point. --}}
                 <ol dir="{{ $lang === 'ar' ? 'rtl' : 'ltr' }}" class="grid grid-cols-5 border-b border-line px-2 pb-3 pt-4 text-center text-xs sm:text-sm" aria-label="{{ __('Report progress') }}">
                     @foreach(\App\Services\Reports\ReportAssistant::REQUIRED as $index => $aspect)
-                        @php($done = ! in_array($aspect, $missing, true))
+                        {{-- A block, not inline @php(…): an inline one pairs with a later @endphp and swallows the template. --}}
+                        @php $done = ! in_array($aspect, $missing, true); @endphp
                         <li class="relative min-w-0" aria-current="{{ $aspect === $current ? 'step' : 'false' }}">
                             @if($index > 0)<span class="absolute top-[0.6875rem] h-[3px] w-full -translate-y-1/2 end-1/2 {{ $done && ! in_array(\App\Services\Reports\ReportAssistant::REQUIRED[$index - 1], $missing, true) ? 'bg-night' : 'bg-line' }}" aria-hidden="true"></span>@endif
                             <span class="relative mx-auto mb-1.5 grid h-[1.375rem] w-[1.375rem] place-items-center rounded-full border-[3px] {{ $done ? 'border-night bg-night text-white' : ($aspect === $current ? 'border-signal bg-signal ring-4 ring-signal-light' : 'border-line bg-white') }}" aria-hidden="true">@if($done)<x-ui.icon name="check" class="h-3.5! w-3.5!" stroke-width="3.2" />@endif</span>
@@ -184,4 +187,33 @@
     </x-ui.card>
     </form>
     @endif
+    </div>
+    @if($chatMode || $reviewing)
+        @php
+            // Where the reporter is in the three steps; navy, not amber, so the screen keeps its two amber points.
+            $chatDone = $assistantSession && $assistantSession->status === 'ready' && ! $assistantSession->pending_aspect && ! ($assistantSession->facts['pending_match'] ?? null);
+            $guideStep = $reviewing || $chatDone ? 3 : ($assistantSession ? 2 : 1);
+            $guide = [
+                1 => [__('Describe what happened'), __('In your own words. There is no form to fill in.')],
+                2 => [__('Answer a few questions'), __('Only what is missing for HR, usually one or two.')],
+                3 => [__('Check and send'), __('You read the summary before it goes to HR.')],
+            ];
+        @endphp
+        <aside class="hidden xl:block" aria-label="{{ __('How reporting works') }}">
+            <div class="ui-card p-5">
+                <h2 class="font-semibold">{{ __('How reporting works') }}</h2>
+                <ol class="mt-4">
+                    @foreach($guide as $number => $step)
+                        <li class="relative flex gap-3 pb-5 last:pb-0" aria-current="{{ $number === $guideStep ? 'step' : 'false' }}">
+                            @if($number < 3)<span class="absolute start-[0.6875rem] top-6 h-[calc(100%-1.5rem)] w-0.5 {{ $number < $guideStep ? 'bg-night' : 'bg-line' }}" aria-hidden="true"></span>@endif
+                            <span class="relative grid h-[1.375rem] w-[1.375rem] flex-none place-items-center rounded-full border-2 text-[0.7rem] font-semibold {{ $number < $guideStep ? 'border-night bg-night text-white' : ($number === $guideStep ? 'border-primary bg-primary text-white ring-4 ring-primary-light' : 'border-line bg-white text-gray-500') }}" aria-hidden="true">@if($number < $guideStep)<x-ui.icon name="check" class="h-3! w-3!" stroke-width="3" />@else{{ $number }}@endif</span>
+                            <span class="min-w-0"><span class="block text-sm {{ $number === $guideStep ? 'font-semibold text-ink' : 'font-medium text-gray-700' }}">{{ $step[0] }}</span><span class="mt-0.5 block text-sm leading-relaxed text-gray-600">{{ $step[1] }}</span></span>
+                        </li>
+                    @endforeach
+                </ol>
+                <p class="mt-5 border-t border-line pt-4 text-sm leading-relaxed text-gray-600">{{ __('Your report goes to HR. You can follow its status in My reports.') }}</p>
+            </div>
+        </aside>
+    @endif
+    </div>
 </div>

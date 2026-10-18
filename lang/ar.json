@@ -934,5 +934,13 @@
     "Send": "أرسل",
     "Question :count of 6 at most": "السؤال :count من 6 كحد أقصى",
     "Everything needed is here": "اكتمل كل المطلوب",
-    "Missing": "ناقص"
+    "Missing": "ناقص",
+    "How reporting works": "كيف يعمل البلاغ",
+    "Describe what happened": "صف ما حدث",
+    "In your own words. There is no form to fill in.": "بكلماتك، دون نموذج تملؤه.",
+    "Answer a few questions": "أجب عن أسئلة قليلة",
+    "Only what is missing for HR, usually one or two.": "فقط ما ينقص الموارد البشرية، غالباً سؤال أو اثنان.",
+    "Check and send": "راجع وأرسل",
+    "You read the summary before it goes to HR.": "تقرأ الملخص قبل أن يصل إلى الموارد البشرية.",
+    "Your report goes to HR. You can follow its status in My reports.": "يصل بلاغك إلى الموارد البشرية، ويمكنك متابعة حالته في «بلاغاتي»."
 }
