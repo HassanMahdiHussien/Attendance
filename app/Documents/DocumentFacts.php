@@ -42,7 +42,8 @@ class DocumentFacts
             'issue_date' => IraqiDate::format($issueDate, $language),
             'reference_number' => $reference,
             'response_deadline' => IraqiDate::format($issueDate->startOfDay()->addDays((int) config('displanery.deadlines.response_days')), $language),
-            'complaint_date' => IraqiDate::format($this->date($case->violation_time, 'case.violation_time'), $language),
+            'complaint_date' => IraqiDate::format($this->date($case->violation_time, 'case.violation_time'), $language)
+                .($case->violation_time_known ? '' : ' ('.($language === 'ar' ? 'الوقت غير مذكور' : 'time not stated').')'),
             'penalty' => match ($document->penalty_type?->value) {
                 'warning' => $language === 'en' ? 'written warning' : 'إنذار خطي',
                 'termination' => $language === 'en' ? 'termination' : 'إنهاء خدمة',
@@ -109,6 +110,7 @@ class DocumentFacts
             $prior = DisciplinaryCase::query()->whereIn('id', $links)->get();
             foreach ($prior as $old) {
                 $extra['prior_cases'][] = IraqiDate::format($this->date($old->violation_time, 'prior_case_date'), $language)
+                    .($old->violation_time_known ? '' : ' ('.($language === 'ar' ? 'الوقت غير مذكور' : 'time not stated').')')
                     .' — '.$this->required(Violation::name($old, $language), 'prior_case_type')
                     .' — '.($language === 'ar'
                         ? OutcomeLabel::arabic($old->outcome)

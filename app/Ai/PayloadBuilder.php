@@ -129,7 +129,9 @@ class PayloadBuilder
             $payload['incident'] = [
                 'violation_type' => $this->minimize(Violation::name($case, 'ar')),
                 'place' => $this->minimize($case->location?->name ?? $case->violation_place_freetext ?? ''),
-                'time' => $case->violation_time,
+                'time' => $case->violation_time_known ? $case->violation_time : null,
+                'time_stated' => (bool) $case->violation_time_known,
+                'time_text' => $case->violation_time_known ? null : 'time not stated',
                 // Ready-written dates in the documents' own style, so the prose never shows an ISO date.
                 'date_written' => $case->violation_time === null ? null : [
                     'ar' => IraqiDate::format(CarbonImmutable::parse($case->violation_time)->setTimezone('Asia/Baghdad'), 'ar'),
@@ -170,7 +172,8 @@ class PayloadBuilder
             $links = DB::table('case_links')->where('case_id', $case->id)->where('link_type', 'prior_record')->pluck('linked_case_id');
             $payload['prior_record_context_only'] = DisciplinaryCase::query()->whereIn('id', $links)->get()
                 ->map(fn ($prior) => ['type' => $this->minimize(Violation::name($prior, 'ar')),
-                    'date' => $prior->violation_time, 'outcome' => $prior->outcome?->value])->all();
+                    'date' => $prior->violation_time_known ? $prior->violation_time : CarbonImmutable::parse($prior->violation_time)->toDateString(),
+                    'outcome' => $prior->outcome?->value])->all();
         }
         if ($type === DocumentType::DecisionLetter) {
             $recommendations = $case->documents()->where('document_type', DocumentType::Recommendations->value)

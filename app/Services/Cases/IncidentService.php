@@ -173,7 +173,8 @@ class IncidentService
         return [
             'branch_id' => $case->branch_id, 'location_id' => $case->location_id,
             'violation_place_freetext' => $case->violation_place_freetext,
-            'violation_time' => $case->violation_time, 'violation_type' => $case->violation_type,
+            'violation_time' => $case->violation_time, 'violation_time_known' => $case->violation_time_known,
+            'violation_type' => $case->violation_type,
             'violation_type_id' => $case->violation_type_id, 'description' => $case->description,
             'alleged_responsible_employee_id' => $case->alleged_responsible_employee_id,
             'alleged_responsible_person_freetext' => $case->alleged_responsible_person_freetext,

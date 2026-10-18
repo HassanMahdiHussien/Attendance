@@ -16,6 +16,7 @@ use App\Models\LegalImportRun;
 use App\Models\Location;
 use App\Models\ReportExport;
 use App\Models\User;
+use App\Models\ViolationReport;
 use App\Models\ViolationType;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Routing\Route as RoutingRoute;
@@ -69,6 +70,8 @@ test('a company admin cannot reach another company\'s records through any parame
             'company' => $b->id, 'tenant' => $b->id, 'case' => $case->id, 'document' => $document->id,
             'attachment' => $attachment->id, 'employee' => $employee->id, 'run' => $run->id, 'page' => 1,
             'export' => ReportExport::factory()->create(['company_id' => $b->id, 'requested_by' => $userB->id])->id,
+            'report' => ViolationReport::factory()->create(['company_id' => $b->id, 'branch_id' => $branch->id,
+                'reporter_user_id' => $userB->id, 'description' => $marker])->id,
             'path' => 'sweep/'.$marker.'.txt',
             // Help paths name shared static content, never a tenant record.
             'section' => 'missing', 'slug' => 'missing', 'locale' => 'xx', 'name' => 'missing',

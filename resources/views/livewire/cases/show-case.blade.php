@@ -47,6 +47,7 @@
                 <h1 class="mt-3 text-xl font-semibold leading-snug" dir="auto">{{ $record->employee?->name }}</h1>
                 @if($record->minutes_typed_by_pool_member_id)<p class="mt-1 text-xs text-night-soft">{{ __('Session minutes written by: :name', ['name' => \App\Models\CommitteePoolMember::query()->find($record->minutes_typed_by_pool_member_id)?->person_name]) }}</p>@endif
                 <p class="mt-1 text-sm text-night-soft" dir="auto">{{ \App\Support\Format\Violation::name($record) }} · {{ $record->employee?->position }}</p>
+                <p class="mt-1 text-sm text-night-soft">{{ __('Incident') }} <bdi class="font-mono">{{ \App\Support\Format\Ui::date($record->violation_time) }}</bdi> · {{ $record->violation_time_known ? \App\Support\Format\Ui::date($record->violation_time, 'H:i') : __('Time not stated') }}</p>
                 <div class="mt-3 flex flex-wrap items-center gap-3">
                     <span class="rounded bg-night-line px-2 py-0.5 text-xs font-medium">{{ \App\Support\Format\Ui::stage($record->status) }}</span>
                     @if($record->employee && app(\App\Policies\EmployeeProfilePolicy::class)->view(auth()->user(), $record->employee))<a class="rounded text-sm font-medium text-white underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-signal" href="{{ route('employees.show', $record->employee) }}">{{ __('Employee page') }}</a>@endif

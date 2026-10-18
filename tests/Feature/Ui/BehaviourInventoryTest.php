@@ -134,3 +134,23 @@ test('refreshed screens retain their original behavior surface', function (): vo
         }
     }
 });
+
+test('report case opening controls remain inventoried', function (): void {
+    $source = File::get(resource_path('views/livewire/cases/open-from-report.blade.php'));
+    $wire = uiInventoryFor($source)['wire'];
+    $expected = [
+        ['wire:key', 'report-person-{{ $index }}'],
+        // The inventory parser stops at the first single quote, so array lookups appear cut at "[".
+        ['wire:click', 'selectPerson({{ $index }}, {{ $candidate['],
+        ['wire:click', 'searchPerson({{ $index }})'],
+        ['wire:model', 'locationId'], ['wire:model', 'place'], ['wire:model', 'incidentDate'],
+        ['wire:model', 'incidentTime'], ['wire:model', 'violationTypeId'], ['wire:model', 'violationType'],
+        ['wire:model', 'assignedHrUserId'], ['wire:model', 'description'], ['wire:model', 'responsibleName'],
+        ['wire:model.live.debounce.300ms', 'responsibleSearch'],
+        ['wire:click', 'selectResponsible({{ $result['], ['wire:model', 'includePriorRecord'],
+        ['wire:click', 'confirmOpen({{ $duplicate['], ['wire:click', 'confirmOpen'],
+        ['wire:click', 'chooseDuplicate({{ $duplicate['],
+        ['wire:click', 'save'], ['wire:click', 'open'],
+    ];
+    expect($wire)->toEqualCanonicalizing($expected);
+});
