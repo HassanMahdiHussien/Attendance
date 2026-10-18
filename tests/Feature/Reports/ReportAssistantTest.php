@@ -11,12 +11,15 @@ use App\Models\Employee;
 use App\Models\Location;
 use App\Models\ReportAssistantSession;
 use App\Models\User;
+use App\Models\ViolationReport;
 use App\Services\Reports\ReportAssistant;
 use App\Services\Reports\ReportService;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Database\QueryException;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
 use Tests\Fakes\FakeClaudeClient;
@@ -426,6 +429,7 @@ test('sent transcripts stay immutable and the plain form enforces required answe
 });
 
 test('a finished chat continues straight to the summary review with the reporter wording as the type', function (): void {
+    Storage::fake('local');
     $f = reportAssistantFixture();
     config()->set('services.anthropic.key', 'test-key');
     Bus::fake([AskReportAssistant::class]);
@@ -444,6 +448,11 @@ test('a finished chat continues straight to the summary review with the reporter
         ->assertSee('أفاد المُبلّغ بأن شجاراً حدث في الخط 1')
         ->assertDontSee(__('Alleged responsible person'));
     expect($component->get('people')['employees'])->toEqual([['employee_id' => null, 'name' => 'بين عاملين']]);
+    // A photo added on the review screen travels with the report, so the chat path never needs the plain form.
+    $component->assertSee(trans('report_assistant.review.add_files', [], 'ar'))
+        ->set('attachments', [UploadedFile::fake()->image('gate.jpg')])->assertSee('gate.jpg')
+        ->call('confirmSend')->assertHasNoErrors()->assertRedirect('/reports');
+    expect(ViolationReport::query()->latest('id')->firstOrFail()->attachments()->count())->toBe(1);
 });
 
 test('fallback form still requires identity and witnesses', function (): void {

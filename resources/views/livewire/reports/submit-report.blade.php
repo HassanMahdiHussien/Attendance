@@ -50,7 +50,15 @@
                         <div class="{{ $row }}"><dt class="text-sm text-gray-600">{{ $r('description') }}</dt><dd dir="auto" class="whitespace-pre-line leading-relaxed">{{ $description }}</dd></div>
                         @if($howStarted !== '')<div class="{{ $row }}"><dt class="text-sm text-gray-600">{{ $r('how') }}</dt><dd dir="auto" class="leading-relaxed">{{ $howStarted }}</dd></div>@endif
                         @if($injuriesDamage !== '')<div class="{{ $row }}"><dt class="text-sm text-gray-600">{{ $r('injuries') }}</dt><dd dir="auto" class="leading-relaxed">{{ $injuriesDamage }}</dd></div>@endif
-                        <div class="{{ $row }}"><dt class="text-sm text-gray-600">{{ $r('attachments') }}</dt><dd dir="auto">{{ $files->implode(' · ') ?: $r('no_attachments') }}</dd></div>
+                        {{-- Evidence can be added here, so the chat path never needs the plain form for photos. --}}
+                        <div class="{{ $row }}"><dt class="text-sm text-gray-600">{{ $r('attachments') }}</dt><dd class="grid justify-items-start gap-1.5">
+                            @if($files->isNotEmpty())<span dir="auto">{{ $files->implode(' · ') }}</span>@endif
+                            <input id="review-attachments" type="file" wire:model="attachments" multiple accept=".pdf,.jpg,.jpeg,.png" class="peer sr-only">
+                            <label for="review-attachments" class="inline-flex cursor-pointer items-center gap-1.5 rounded text-sm font-medium text-primary hover:underline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary"><x-ui.icon name="plus" class="h-4! w-4!" />{{ $files->isEmpty() ? $r('add_files') : $r('change_files') }}</label>
+                            <span wire:loading wire:target="attachments" class="text-sm text-gray-600">{{ $r('uploading') }}</span>
+                            @error('attachments.*')<p role="alert" class="text-sm text-red">{{ $message }}</p>@enderror
+                            <span class="text-xs text-gray-500">{{ $r('files_hint') }}</span>
+                        </dd></div>
                     </dl>
                 </section>
             </div>

@@ -22,5 +22,7 @@ return [
         'unknown' => 'Not known',
         'what' => 'What happened', 'type' => 'Violation type', 'description' => 'Description', 'how' => 'How it started',
         'injuries' => 'Injuries and damage', 'attachments' => 'Attachments', 'no_attachments' => 'No attachments',
+        'add_files' => 'Add photos or files', 'change_files' => 'Choose other files', 'uploading' => 'Uploading…',
+        'files_hint' => 'PDF or images, up to 10 MB each',
     ],
 ];

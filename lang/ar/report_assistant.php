@@ -21,5 +21,7 @@ return [
         'unknown' => 'غير معروف',
         'what' => 'ما حدث', 'type' => 'نوع المخالفة', 'description' => 'الوصف', 'how' => 'كيف بدأ',
         'injuries' => 'الإصابات والأضرار', 'attachments' => 'المرفقات', 'no_attachments' => 'لا توجد مرفقات',
+        'add_files' => 'أضف صوراً أو ملفات', 'change_files' => 'اختر ملفات أخرى', 'uploading' => 'جارٍ الرفع…',
+        'files_hint' => 'PDF أو صور، حتى 10 ميغابايت للملف',
     ],
 ];
