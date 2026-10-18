@@ -99,7 +99,7 @@ class MyWork
     private function reporter(User $user): array
     {
         return ['role' => 'reporter',
-            'reports' => ViolationReportVisibility::for($user)->latest()->get(['id', 'status', 'company_id', 'created_at']),
+            'reports' => ViolationReportVisibility::for($user)->with(['employees', 'employee', 'location'])->latest()->limit(5)->get(),
             'emails' => EmailDraftVisibility::for($user)->latest()->get(['id', 'status', 'company_id', 'created_at'])];
     }
 

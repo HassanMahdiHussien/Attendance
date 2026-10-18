@@ -28,7 +28,14 @@
     --font-sans: 'Readex Pro', sans-serif;
     --font-tajawal: 'Readex Pro', sans-serif;
     --font-amiri: 'Amiri', serif;
-    --font-mono: 'JetBrains Mono', monospace;
+    /* Readex Pro second: JetBrains Mono has no Arabic, so Arabic month names in dates fall back to the interface font. */
+    --font-mono: 'JetBrains Mono', 'Readex Pro', monospace;
+}
+
+/* Spacing Arabic letters apart breaks how they join («ج د يد»), so the board's tracked labels and chips
+   keep their letter-spacing only in English. */
+:lang(ar) * {
+    letter-spacing: normal !important;
 }
 
 @layer components {

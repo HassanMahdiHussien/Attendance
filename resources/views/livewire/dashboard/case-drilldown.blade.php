@@ -15,7 +15,7 @@
                     <span class="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary-light font-bold text-primary">{{ \App\Support\Format\Initials::for($name ?? '') }}</span>
                     <span class="min-w-0 flex-1">
                         <span class="font-bold text-ink">{{ $name }}</span>
-                        <bdi class="ms-2 text-xs text-gray-500">{{ \App\Support\Format\Ui::number($case->case_number) }}</bdi>
+                        <bdi class="ms-2 font-mono text-sm text-primary">{{ \App\Support\Format\Ui::number(str_pad((string) $case->case_number, 4, '0', STR_PAD_LEFT)) }}</bdi>
                         <span class="mt-1 block text-xs text-gray-500">{{ $position }} — {{ $department }} · {{ \App\Support\Format\Violation::name($case) }} · {{ __('Incident') }} {{ \App\Support\Format\Ui::date($case->violation_time) }}</span>
                         @if($case->defense_letter_issued_at)<span class="mt-1 block text-xs text-gray-500">{{ __('Defense letter') }} {{ \App\Support\Format\Ui::date($case->defense_letter_issued_at) }}</span>@endif
                         @if($case->decision_issued_at)<span class="mt-1 block text-xs text-gray-500">{{ __('Decision') }} {{ \App\Support\Format\Ui::date($case->decision_issued_at) }}</span>@elseif($case->closed_at)<span class="mt-1 block text-xs text-gray-500">{{ __('Closure') }} {{ \App\Support\Format\Ui::date($case->closed_at) }}</span>@endif
@@ -23,10 +23,10 @@
                     <span class="hidden gap-1.5 sm:flex" aria-label="{{ \App\Support\Format\Ui::stage($case->status) }}">@for($i=1;$i<=5;$i++)<span class="h-2 w-2 rounded-full {{ $i <= $step ? ($archived ? 'bg-green' : 'bg-primary') : 'bg-gray-200' }}"></span>@endfor</span>
                     <x-ui.badge>{{ \App\Support\Format\Ui::stage($case->status) }}</x-ui.badge>
                 </a>
+                @if($case->employee_id && app(\App\Policies\EmployeeProfilePolicy::class)->companyAllowed(auth()->user(), (int) $case->company_id))
+                    <div class="border-t border-line px-4 py-2"><a href="{{ route('employees.show', $case->employee_id) }}" class="ui-link text-sm">{{ __('Employee page') }}</a></div>
+                @endif
             </x-ui.card>
-            @if($case->employee_id && app(\App\Policies\EmployeeProfilePolicy::class)->companyAllowed(auth()->user(), (int) $case->company_id))
-                <a href="{{ route('employees.show', $case->employee_id) }}" class="ui-link ms-4 text-sm">{{ __('Employee page') }}</a>
-            @endif
         @empty
             <x-ui.card><x-ui.empty :title="__('No matching cases.')" /></x-ui.card>
         @endforelse

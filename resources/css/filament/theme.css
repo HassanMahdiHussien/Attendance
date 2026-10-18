@@ -12,7 +12,7 @@
    signal amber only for the primary action and the current item. */
 @theme {
     --font-sans: 'Readex Pro', sans-serif;
-    --font-mono: 'JetBrains Mono', monospace;
+    --font-mono: 'JetBrains Mono', 'Readex Pro', monospace;
     --color-ink: #14181F;
     --color-bg: #F2F4F7;
     --color-line: #DDE1E7;
@@ -92,4 +92,9 @@
     --text: var(--dp-night) !important;
     --hover-bg: var(--dp-signal-dark) !important;
     --hover-text: var(--dp-night) !important;
+}
+
+/* Same rule as the workspace: spacing Arabic letters apart breaks how they join. */
+:lang(ar) * {
+    letter-spacing: normal !important;
 }
