@@ -51,7 +51,7 @@ test('report shows a complete review and saves only after confirmation', functio
     $f = pickerFixture();
     $this->actingAs($f['reporter']);
     $form = Livewire::test(SubmitReport::class)
-        ->assertDontSee(__('Alleged responsible person'))
+        ->assertDontSee(__('Alleged responsible person (optional)'))
         ->set('branchId', (string) $f['branch']->id)
         ->set('peopleSearch.employees', 'Ahmed')->call('addPerson', 'employees', $f['employee']->id)
         ->set('peopleSearch.employees', 'Visitor Name')->call('addFreePerson', 'employees')
@@ -88,6 +88,7 @@ test('confirmation revalidates changes and cannot bypass review', function (): v
     $this->actingAs($f['reporter']);
     $form = Livewire::test(SubmitReport::class)
         ->set('branchId', (string) $f['branch']->id)->set('place', 'Gate 3')
+        ->call('addPerson', 'employees', $f['employee']->id)->set('witnessesNone', true)
         ->set('occurredAt', now()->subHour()->format('Y-m-d\TH:i'))
         ->set('violationType', 'Incident')->set('description', 'Description');
     $form->call('submit')->assertSet('reviewing', true)

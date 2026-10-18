@@ -53,6 +53,29 @@ class ReportService
 
             return trim($name);
         }, $data['free_employee_names'] ?? []));
+        if ($employeeIds === [] && $data['free_employee_names'] === [] && ! ($data['employees_unknown'] ?? false)) {
+            throw ValidationException::withMessages(['people.employees' => __('Name at least one person.')]);
+        }
+        if (blank($data['description'] ?? null)) {
+            throw ValidationException::withMessages(['description' => __('Describe what happened in a few words.')]);
+        }
+        if (blank($data['place_freetext'] ?? null) && empty($data['location_id'])) {
+            throw ValidationException::withMessages(['place' => __('Enter where it happened or choose I do not know.')]);
+        }
+        if (blank($data['occurred_at'] ?? null) && blank($data['occurred_at_text'] ?? null)) {
+            throw ValidationException::withMessages(['occurredAtText' => __('Enter when it happened or choose I do not know.')]);
+        }
+        if ($data['witnesses'] === [] && ! ($data['witnesses_none'] ?? false) && ! ($data['witnesses_unknown'] ?? false)) {
+            throw ValidationException::withMessages(['witnessesNone' => __('Name a witness or choose none.')]);
+        }
+        $data['employees_unknown'] = $employeeIds === [] && $data['free_employee_names'] === [] && ($data['employees_unknown'] ?? false);
+        if ($data['witnesses'] !== []) {
+            $data['witnesses_none'] = false;
+            $data['witnesses_unknown'] = false;
+        }
+        if (($data['witnesses_none'] ?? false) && ($data['witnesses_unknown'] ?? false)) {
+            throw ValidationException::withMessages(['witnessesNone' => __('Choose one witness answer.')]);
+        }
         $data['employee_id'] = $employeeIds[0] ?? null;
         if (! empty($data['alleged_responsible_employee_id'])) {
             Employee::query()->where('company_id', $actor->company_id)->where('branch_id', $branchId)
@@ -61,10 +84,24 @@ class ReportService
         $data = array_replace($data, app(CaseViolationTypes::class)->selected(
             isset($data['violation_type_id']) ? (int) $data['violation_type_id'] : null,
             $data['violation_type'] ?? null, (int) $actor->company_id));
+        $session = null;
+        if (! empty($data['assistant_session_id'])) {
+            $session = app(ReportAssistant::class)->owned((int) $data['assistant_session_id'], $actor);
+            abort_unless((int) ($session->facts['branch_id'] ?? 0) === $branchId
+                && in_array($session->status, ['ready', 'manual', 'fallback'], true), 409);
+        }
+        $data['summary'] = $session && filled($session->facts['summary'] ?? null)
+            && ($data['assistant_summary'] ?? null) === $session->facts['summary']
+            && ($session->facts['description'] ?? null) === $data['description']
+            ? $session->facts['summary']
+            : ($session ? trans('report_assistant.summary_prefix', locale: $session->language)
+                : __('According to the reporter: ')).mb_substr($data['description'], 0, 600);
 
-        return DB::transaction(function () use ($data, $actor, $branchId, $employeeIds): ViolationReport {
+        return DB::transaction(function () use ($data, $actor, $branchId, $employeeIds, $session): ViolationReport {
             $report = ViolationReport::create(array_intersect_key($data, array_flip([
-                'employee_id', 'location_id', 'place_freetext', 'occurred_at', 'violation_type', 'violation_type_id',
+                'employee_id', 'employees_unknown', 'location_id', 'place_freetext', 'occurred_at', 'occurred_at_text',
+                'witnesses_none', 'witnesses_unknown', 'summary', 'how_started', 'injuries_damage',
+                'violation_type', 'violation_type_id',
                 'alleged_responsible_employee_id', 'alleged_responsible_person_freetext', 'description', 'free_employee_names',
             ])) + [
                 'company_id' => $actor->company_id, 'branch_id' => $branchId,
@@ -79,6 +116,22 @@ class ReportService
             }
             foreach ($data['attachments'] ?? [] as $file) {
                 app(AttachmentService::class)->store($report, AttachmentKind::ReportEvidence, $file, $actor);
+            }
+            if ($session !== null) {
+                $session->update(['violation_report_id' => $report->id, 'status' => 'sent',
+                    'confirmed_fields' => [
+                        'employee_ids' => $employeeIds, 'free_employee_names' => $data['free_employee_names'],
+                        'employees_unknown' => $data['employees_unknown'], 'place' => $data['place_freetext'] ?? null,
+                        'location_id' => $data['location_id'] ?? null, 'occurred_at' => $data['occurred_at'] ?? null,
+                        'occurred_at_text' => $data['occurred_at_text'] ?? null,
+                        'witnesses' => $data['witnesses'], 'witnesses_none' => $data['witnesses_none'] ?? false,
+                        'witnesses_unknown' => $data['witnesses_unknown'] ?? false,
+                        'description' => $data['description'], 'violation_type' => $data['violation_type'],
+                        'violation_type_id' => $data['violation_type_id'],
+                        'alleged_responsible_employee_id' => $data['alleged_responsible_employee_id'] ?? null,
+                        'alleged_responsible_person_freetext' => $data['alleged_responsible_person_freetext'] ?? null,
+                        'how_started' => $data['how_started'] ?? null, 'injuries_damage' => $data['injuries_damage'] ?? null,
+                    ]]);
             }
             if ($data['intake_check'] ?? null) {
                 app(IntakeQuestionService::class)->attach($data['intake_check'], $report, $data['intake_answers'] ?? [], $actor);
@@ -129,6 +182,9 @@ class ReportService
                     'alleged_responsible_person_freetext' => $report->alleged_responsible_person_freetext,
                     'witnesses' => $report->witnesses->map(fn ($w) => ['name' => $w->name, 'employee_id' => $w->employee_id])->all(),
                 ];
+                if ($report->occurred_at === null && empty($facts['violation_time'])) {
+                    throw ValidationException::withMessages(['violationTime' => __('Enter an incident date before opening a case.')]);
+                }
                 // A report may name nobody (HR picks the employee on the draft, as before) or record its
                 // employee the older single-column way; only names typed outside the list block conversion.
                 $reportEmployeeIds = $this->reportEmployeeIds($report);

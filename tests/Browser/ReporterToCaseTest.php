@@ -32,16 +32,15 @@ test('a reporter checklist reaches the HR inbox and becomes an open case', funct
         ->fill('report-occurred-at', '2026-10-09T03:00')
         ->fill('report-violation-type', 'Fight')
         ->fill('report-description', 'A fight occurred on Line 3.')
-        ->press(__('messages.intake.check_description'))
-        ->assertSee(__('messages.intake.checklist_fallback'))
-        ->fill('intake-answer-0', 'Two workers were involved.')
+        ->click('No witnesses')
         ->press('Send report')
         ->press('Confirm and send')
         ->assertPathIs('/reports')
         ->assertNoJavaScriptErrors();
 
     $report = ViolationReport::query()->where('reporter_user_id', $reporter->id)->sole();
-    expect($report->intakeQuestions()->whereNotNull('answer')->count())->toBe(1);
+    expect($report->description)->toBe('A fight occurred on Line 3.')
+        ->and($report->witnesses_none)->toBeTrue();
 
     $reporterPage->click('#workspace-account > button')->click('#workspace-account-menu form[action$="/logout"] button')
         ->assertPathIs('/login')->assertNoJavaScriptErrors();

@@ -90,7 +90,18 @@ test('refreshed screens retain their original behavior surface', function (): vo
             ],
         ],
         'resources/views/livewire/reports/submit-report.blade.php' => [
-            'wire' => [['wire:model', 'violationTypeId']],
+            'wire' => [
+                ['wire:model', 'violationTypeId'], ['wire:model', 'chatInput'], ['wire:click', 'suggestedReply({{ $index }})'],
+                ['wire:model', 'occurredAtText'], ['wire:model', 'witnessesNone'],
+                ['wire:model', 'howStarted'], ['wire:model', 'injuriesDamage'],
+                ['wire:model', 'witnessesUnknown'], ['wire:model', 'employeesUnknown'],
+                ['wire:submit', 'startChat'], ['wire:submit', 'answerChat'],
+                ['wire:click', 'usePlainForm'], ['wire:click', 'continueToReview'], ['wire:click', 'submit'],
+                ['wire:click', 'unknownPlace'], ['wire:click', 'unknownDate'],
+                ['wire:click', 'confirmPersonMatch('],
+                ['wire:click', 'quickReply('], ['wire:click', 'suggestedReply('],
+            ],
+            'errors' => ['chatInput', 'occurredAtText', 'people.employees', 'witnessesNone'],
         ],
         'resources/views/livewire/reports/inbox.blade.php' => [
             'wire' => [['wire:model', 'mapViolationTypeIds.{{ $report->id }}'],

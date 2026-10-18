@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class ViolationReport extends Model
@@ -39,6 +40,9 @@ class ViolationReport extends Model
             'source' => ReportSource::class,
             'status' => ReportStatus::class,
             'free_employee_names' => 'array',
+            'employees_unknown' => 'boolean',
+            'witnesses_none' => 'boolean',
+            'witnesses_unknown' => 'boolean',
         ];
     }
 
@@ -95,6 +99,11 @@ class ViolationReport extends Model
     public function intakeQuestions(): HasMany
     {
         return $this->hasMany(IntakeQuestion::class, 'violation_report_id');
+    }
+
+    public function assistantSession(): HasOne
+    {
+        return $this->hasOne(ReportAssistantSession::class, 'violation_report_id');
     }
 
     public function attachments(): MorphMany

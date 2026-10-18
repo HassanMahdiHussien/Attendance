@@ -117,7 +117,8 @@ test('report submission requires branch membership and the inbox includes compan
     $branch = Branch::factory()->create(['company_id' => $company->id]);
     $reporter = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::Reporter]);
     $hr = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::HrStaff]);
-    $data = ['branch_id' => $branch->id, 'place_freetext' => 'البوابة', 'occurred_at' => now(),
+    $data = ['branch_id' => $branch->id, 'employees_unknown' => true, 'witnesses_none' => true,
+        'place_freetext' => 'البوابة', 'occurred_at' => now(),
         'violation_type' => 'تأخير', 'description' => 'وصف البلاغ'];
     expect(fn () => app(ReportService::class)->submit($data, $reporter))->toThrow(HttpException::class);
     BranchUser::factory()->create(['company_id' => $company->id, 'branch_id' => $branch->id, 'user_id' => $reporter->id]);

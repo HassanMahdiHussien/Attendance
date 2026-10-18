@@ -118,6 +118,7 @@ test('report submission keeps partial answers and conversion carries the open po
     $report = app(ReportService::class)->submit([
         'branch_id' => $branch->id, 'employee_id' => $employee->id, 'place_freetext' => 'Line 3',
         'occurred_at' => '2026-10-09 03:00', 'violation_type' => 'Fight', 'description' => 'A fight occurred',
+        'witnesses_none' => true,
         'intake_check' => $check, 'intake_answers' => [0 => 'Two workers'],
     ], $reporter);
     expect($report->intakeQuestions()->count())->toBe(8);
@@ -127,19 +128,20 @@ test('report submission keeps partial answers and conversion carries the open po
     expect($case->intakeQuestions()->whereNull('answer')->count())->toBe(7);
 });
 
-test('a pending queued check never blocks report submission', function (): void {
+test('reporter submission uses the plain form when AI is unavailable', function (): void {
     $company = Company::factory()->create();
     app(TenantContext::class)->setCompany($company);
     $branch = Branch::factory()->create(['company_id' => $company->id]);
     $reporter = User::factory()->create(['company_id' => $company->id, 'primary_role' => 'reporter']);
     BranchUser::factory()->create(['company_id' => $company->id, 'branch_id' => $branch->id, 'user_id' => $reporter->id]);
-    config()->set('services.anthropic.key', 'test-key');
-    Bus::fake([SuggestIntakeQuestions::class]);
+    config()->set('services.anthropic.key', null);
+    $employee = Employee::factory()->create(['company_id' => $company->id, 'branch_id' => $branch->id]);
     $this->actingAs($reporter);
     Livewire::test(SubmitReport::class)
         ->set('branchId', (string) $branch->id)->set('place', 'Line 3')
+        ->call('addPerson', 'employees', $employee->id)->set('witnessesNone', true)
         ->set('occurredAt', '2026-10-09T03:00')->set('violationType', 'Fight')
-        ->set('description', 'A fight occurred')->call('checkDescription')
+        ->set('description', 'A fight occurred')
         ->call('submit')->assertHasNoErrors()->call('confirmSend')->assertHasNoErrors();
     expect(ViolationReport::query()->where('reporter_user_id', $reporter->id)->count())->toBe(1);
 });
