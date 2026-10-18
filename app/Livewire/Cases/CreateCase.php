@@ -5,9 +5,9 @@ namespace App\Livewire\Cases;
 use App\Enums\CaseStatus;
 use App\Enums\UserRole;
 use App\Livewire\Concerns\ChecksDescription;
+use App\Livewire\Concerns\PicksPeople;
 use App\Models\Branch;
 use App\Models\DisciplinaryCase;
-use App\Models\Employee;
 use App\Models\Incident;
 use App\Models\IntakeQuestion;
 use App\Models\Location;
@@ -18,6 +18,7 @@ use App\Services\Cases\CaseInsights;
 use App\Services\Cases\CaseOpening;
 use App\Services\Cases\IncidentService;
 use App\Services\EmailIntake\EmailDraftService;
+use App\Services\Employees\EmployeePicker;
 use App\Services\Intake\IntakeQuestionService;
 use App\Services\Reports\ReportService;
 use App\Support\Access\CaseVisibility;
@@ -32,6 +33,7 @@ use Livewire\Component;
 class CreateCase extends Component
 {
     use ChecksDescription;
+    use PicksPeople;
 
     public string $branchId = '';
 
@@ -42,8 +44,6 @@ class CreateCase extends Component
     public ?int $incidentId = null;
 
     public bool $editingIncident = false;
-
-    public string $employeeSearch = '';
 
     public string $locationId = '';
 
@@ -56,14 +56,6 @@ class CreateCase extends Component
     public string $violationTypeId = '';
 
     public string $description = '';
-
-    public string $responsibleEmployeeId = '';
-
-    public string $responsibleSearch = '';
-
-    public string $responsibleName = '';
-
-    public string $witnessNames = '';
 
     public array $existingIntakeAnswers = [];
 
@@ -98,16 +90,18 @@ class CreateCase extends Component
             $this->incidentId = $draft->incident_id;
             $this->branchId = (string) $draft->branch_id;
             $this->employeeId = (string) $draft->employee_id;
+            $this->people['employees'] = [['employee_id' => $draft->employee_id, 'name' => $draft->employee->name]];
             $this->locationId = (string) $draft->location_id;
             $this->place = (string) $draft->violation_place_freetext;
             $this->violationTime = Carbon::parse($draft->violation_time)->format('Y-m-d\TH:i');
             $this->violationType = (string) $draft->violation_type;
             $this->violationTypeId = (string) $draft->violation_type_id;
             $this->description = (string) $draft->description;
-            $this->responsibleEmployeeId = (string) $draft->alleged_responsible_employee_id;
-            $this->responsibleName = (string) $draft->alleged_responsible_person_freetext;
+            $this->people['responsible'] = $draft->alleged_responsible_employee_id
+                ? [['employee_id' => $draft->alleged_responsible_employee_id, 'name' => $draft->allegedResponsibleEmployee->name]]
+                : ($draft->alleged_responsible_person_freetext ? [['employee_id' => null, 'name' => $draft->alleged_responsible_person_freetext]] : []);
             $this->assignedHrUserId = (string) $draft->assigned_hr_user_id;
-            $this->witnessNames = $draft->witnesses->pluck('name')->implode(', ');
+            $this->people['witnesses'] = $draft->witnesses->map(fn ($w) => ['employee_id' => $w->employee_id, 'name' => $w->name])->all();
             $this->includePriorRecord = (bool) $draft->include_prior_record;
 
             return;
@@ -126,15 +120,18 @@ class CreateCase extends Component
             $this->employeeId = (string) $report->employee_id;
             $this->employeeIds = $report->employees()->where('employees.id', '!=', $report->employee_id)
                 ->pluck('employees.id')->map(fn ($id) => (string) $id)->all();
+            $this->people['employees'] = $report->employees->sortBy(fn ($e) => $e->id === $report->employee_id ? 0 : 1)
+                ->map(fn ($e) => ['employee_id' => $e->id, 'name' => $e->name])->values()->all();
             $this->locationId = (string) $report->location_id;
             $this->place = (string) $report->place_freetext;
             $this->violationTime = Carbon::parse($report->occurred_at)->format('Y-m-d\TH:i');
             $this->violationType = $report->violation_type;
             $this->violationTypeId = (string) $report->violation_type_id;
             $this->description = $report->description;
-            $this->responsibleEmployeeId = (string) $report->alleged_responsible_employee_id;
-            $this->responsibleName = (string) $report->alleged_responsible_person_freetext;
-            $this->witnessNames = $report->witnesses->pluck('name')->implode(', ');
+            $this->people['responsible'] = $report->alleged_responsible_employee_id
+                ? [['employee_id' => $report->alleged_responsible_employee_id, 'name' => $report->allegedResponsibleEmployee->name]]
+                : ($report->alleged_responsible_person_freetext ? [['employee_id' => null, 'name' => $report->alleged_responsible_person_freetext]] : []);
+            $this->people['witnesses'] = $report->witnesses->map(fn ($w) => ['employee_id' => $w->employee_id, 'name' => $w->name])->all();
         }
     }
 
@@ -176,9 +173,13 @@ class CreateCase extends Component
         }
         $this->draftId = $draft->id;
         $this->incidentId = $draft->incident_id;
+        if ($this->incidentId !== null) {
+            $this->people['employees'] = array_slice($this->people['employees'], 0, 1);
+        }
         $this->intakeCheckId = null;
         $this->intakeAnswers = [];
         $this->emailId = null;
+        $this->reportId = null;
         $this->checkedDuplicates = false;
         $this->dispatch('draft-saved');
     }
@@ -220,17 +221,15 @@ class CreateCase extends Component
         $this->redirect('/cases/'.$case->id, navigate: true);
     }
 
-    public function render(): View
+    public function render(EmployeePicker $picker): View
     {
         $this->authorizeCreate();
 
         return view('livewire.cases.create-case', [
             'email' => $this->emailId ? EmailDraftVisibility::inbox(auth()->user())->with('attachments')->findOrFail($this->emailId) : null,
+            'sourceReport' => $this->reportId ? ViolationReportVisibility::inbox(auth()->user())->findOrFail($this->reportId) : null,
             'branches' => Branch::query()->where('company_id', auth()->user()->company_id)->where('is_active', true)->get(),
-            'employees' => $this->branchId ? Employee::query()->where('branch_id', $this->branchId)->where('is_active', true)
-                ->when($this->employeeSearch !== '', fn ($q) => $q->where('name', 'like', '%'.$this->employeeSearch.'%'))->get() : collect(),
-            'responsibleEmployees' => $this->branchId ? Employee::query()->where('branch_id', $this->branchId)->where('is_active', true)
-                ->when($this->responsibleSearch !== '', fn ($q) => $q->where('name', 'like', '%'.$this->responsibleSearch.'%'))->get() : collect(),
+            'peopleResults' => $this->peopleResults($picker),
             'locations' => $this->branchId ? Location::query()->where('branch_id', $this->branchId)->where('is_active', true)->get() : collect(),
             'violationTypes' => ViolationType::query()->where(fn ($query) => $query->where('is_active', true)
                 ->when($this->violationTypeId !== '', fn ($query) => $query->orWhereKey($this->violationTypeId)))
@@ -246,13 +245,11 @@ class CreateCase extends Component
     private function validatedFacts(): array
     {
         $data = $this->validate([
-            'branchId' => ['required', 'integer'], 'employeeId' => ['required', 'integer'],
-            'employeeIds' => ['array'], 'employeeIds.*' => ['integer', 'distinct'],
+            'branchId' => ['required', 'integer'],
             'locationId' => ['nullable', 'integer'], 'place' => ['nullable', 'string', 'max:255'],
             'violationTime' => ['required', 'date', 'before_or_equal:now'], 'violationType' => ['nullable', 'string', 'max:255'],
             'violationTypeId' => ['nullable', 'integer'],
-            'description' => ['nullable', 'string'], 'responsibleEmployeeId' => ['nullable', 'integer'],
-            'responsibleName' => ['nullable', 'string', 'max:255'], 'witnessNames' => ['nullable', 'string'],
+            'description' => ['nullable', 'string'],
             'assignedHrUserId' => ['nullable', 'integer'],
         ]);
         if (blank($this->locationId) && blank($this->place)) {
@@ -262,17 +259,26 @@ class CreateCase extends Component
         if (blank($data['violationTypeId']) && blank($data['violationType'])) {
             throw ValidationException::withMessages(['violationType' => __('Choose a violation type or describe another')]);
         }
+        $employees = $this->pickedPeople('employees', false);
+        if ($employees === []) {
+            throw ValidationException::withMessages(['employeeId' => __('Choose an employee')]);
+        }
+        abort_if(! $this->allowsMultipleEmployees() && count($employees) > 1, 422);
+        $responsible = $this->pickedPeople('responsible');
+        $this->employeeId = (string) $employees[0]['employee_id'];
+        $this->employeeIds = array_map(fn ($item) => (string) $item['employee_id'], array_slice($employees, 1));
 
         return [
-            'branch_id' => $data['branchId'], 'employee_id' => $data['employeeId'],
+            'branch_id' => $data['branchId'], 'employee_id' => $this->employeeId,
+            'employee_ids' => array_map(fn ($item) => $item['employee_id'], $employees),
             'location_id' => $data['locationId'] ?: null, 'violation_place_freetext' => $data['place'] ?: null,
             'violation_time' => $data['violationTime'], 'violation_type' => $data['violationType'],
             'violation_type_id' => $data['violationTypeId'] ?: null,
-            'description' => $data['description'], 'alleged_responsible_employee_id' => $data['responsibleEmployeeId'] ?: null,
-            'alleged_responsible_person_freetext' => $data['responsibleName'] ?: null,
+            'description' => $data['description'], 'alleged_responsible_employee_id' => $responsible[0]['employee_id'] ?? null,
+            'alleged_responsible_person_freetext' => ($responsible[0]['employee_id'] ?? null) ? null : ($responsible[0]['name'] ?? null),
             'assigned_hr_user_id' => $data['assignedHrUserId'] ?: auth()->id(),
             'include_prior_record' => $this->includePriorRecord,
-            'witnesses' => array_map(fn ($name) => ['name' => trim($name)], array_filter(explode(',', $data['witnessNames'] ?? ''))),
+            'witnesses' => $this->pickedPeople('witnesses'),
         ];
     }
 
@@ -292,5 +298,10 @@ class CreateCase extends Component
     protected function authorizeIntakeCheck(): void
     {
         $this->authorizeCreate();
+    }
+
+    protected function allowsMultipleEmployees(): bool
+    {
+        return $this->draftId === null && $this->emailId === null && ! $this->editingIncident;
     }
 }

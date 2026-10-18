@@ -78,9 +78,7 @@ test('refreshed screens retain their original behavior surface', function (): vo
                 '/cases/{{ $record->id }}/session?single=1'],
         ],
         'resources/views/livewire/cases/create-case.blade.php' => [
-            'wire' => [['wire:model', 'violationTypeId'], ['wire:model', 'employeeIds'],
-                ['wire:key', 'case-employee-{{ $employee->id }}']],
-            'errors' => ['employeeIds'],
+            'wire' => [['wire:model', 'violationTypeId']],
         ],
         'resources/views/livewire/cases/record-session.blade.php' => [
             'wire' => [
@@ -92,9 +90,7 @@ test('refreshed screens retain their original behavior surface', function (): vo
             ],
         ],
         'resources/views/livewire/reports/submit-report.blade.php' => [
-            'wire' => [['wire:model', 'violationTypeId'], ['wire:model', 'employeeIds'],
-                ['wire:key', 'report-employee-{{ $employee->id }}']],
-            'errors' => ['employeeIds'],
+            'wire' => [['wire:model', 'violationTypeId']],
         ],
         'resources/views/livewire/reports/inbox.blade.php' => [
             'wire' => [['wire:model', 'mapViolationTypeIds.{{ $report->id }}'],

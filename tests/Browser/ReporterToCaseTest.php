@@ -26,7 +26,8 @@ test('a reporter checklist reaches the HR inbox and becomes an open case', funct
         ->assertPathIs('/home')->assertNoJavaScriptErrors();
     $reporterPage->navigate('/reports/new')->assertPathIs('/reports/new')->assertNoJavaScriptErrors()
         ->select('report-branch', $branch->id)
-        ->select('report-employee', $employee->id)
+        ->typeSlowly('#people-employees', $employee->name)
+        ->click($employee->employee_code)
         ->fill('report-place', 'Line 3')
         ->fill('report-occurred-at', '2026-10-09T03:00')
         ->fill('report-violation-type', 'Fight')
@@ -35,6 +36,7 @@ test('a reporter checklist reaches the HR inbox and becomes an open case', funct
         ->assertSee(__('messages.intake.checklist_fallback'))
         ->fill('intake-answer-0', 'Two workers were involved.')
         ->press('Send report')
+        ->press('Confirm and send')
         ->assertPathIs('/reports')
         ->assertNoJavaScriptErrors();
 

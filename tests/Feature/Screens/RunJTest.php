@@ -284,7 +284,7 @@ test('case intake shows a same-employee duplicate before opening', function (): 
         'employee_id' => $employee->id, 'opened_by_user_id' => $admin->id, 'violation_time' => now()->subHours(30)]);
     $this->actingAs($admin);
     Livewire::test(CreateCase::class)
-        ->set('branchId', (string) $branch->id)->set('employeeId', (string) $employee->id)
+        ->set('branchId', (string) $branch->id)->call('addPerson', 'employees', $employee->id)
         ->set('place', 'البوابة')->set('violationTime', now()->format('Y-m-d H:i:s'))
         ->set('violationType', 'تأخير')->call('checkDuplicates')
         ->assertSet('checkedDuplicates', true)->assertSee($earlier->case_number);

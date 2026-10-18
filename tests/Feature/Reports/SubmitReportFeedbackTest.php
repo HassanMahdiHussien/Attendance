@@ -27,7 +27,8 @@ test('a sent report confirms itself and an unassigned reporter is told to ask HR
         ->set('branchId', (string) $branch->id)->set('place', 'Line 3')
         ->set('occurredAt', '2026-10-09T03:00')->set('violationType', 'Fight')
         ->set('description', 'A fight occurred')
-        ->call('submit')->assertHasNoErrors()->assertRedirect('/reports');
+        ->call('submit')->assertHasNoErrors()->assertSet('reviewing', true)
+        ->call('confirmSend')->assertHasNoErrors()->assertRedirect('/reports');
     expect(session('status'))->toBe(__('Report sent. HR will review it.'));
 });
 

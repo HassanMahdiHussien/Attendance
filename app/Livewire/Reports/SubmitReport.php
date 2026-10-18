@@ -4,28 +4,27 @@ namespace App\Livewire\Reports;
 
 use App\Enums\UserRole;
 use App\Livewire\Concerns\ChecksDescription;
+use App\Livewire\Concerns\PicksPeople;
 use App\Models\Branch;
-use App\Models\Employee;
 use App\Models\Location;
 use App\Models\ViolationType;
+use App\Services\Cases\CaseViolationTypes;
+use App\Services\Employees\EmployeePicker;
 use App\Services\Reports\ReportService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
 class SubmitReport extends Component
 {
     use ChecksDescription;
+    use PicksPeople;
     use WithFileUploads;
 
     public string $branchId = '';
-
-    public string $employeeId = '';
-
-    public array $employeeIds = [];
-
-    public string $employeeSearch = '';
 
     public string $locationId = '';
 
@@ -37,56 +36,49 @@ class SubmitReport extends Component
 
     public string $violationTypeId = '';
 
-    public string $responsibleEmployeeId = '';
-
-    public string $responsibleSearch = '';
-
-    public string $responsibleName = '';
-
-    public string $witnessNames = '';
-
     public string $description = '';
 
     public array $attachments = [];
+
+    #[Locked]
+    public bool $reviewing = false;
 
     public function mount(): void
     {
         abort_unless(in_array(auth()->user()->primary_role, [UserRole::Reporter, UserRole::DeptManager], true), 403);
     }
 
-    public function submit(ReportService $reports): void
+    public function submit(): void
     {
         $this->mount();
-        $data = $this->validate([
-            'branchId' => ['required', 'integer'], 'employeeId' => ['nullable', 'integer'],
-            'employeeIds' => ['array'], 'employeeIds.*' => ['integer', 'distinct'],
-            'locationId' => ['nullable', 'integer'], 'place' => ['nullable', 'string', 'max:255'],
-            'occurredAt' => ['required', 'date', 'before_or_equal:now'], 'violationType' => ['nullable', 'string', 'max:255'],
-            'violationTypeId' => ['nullable', 'integer'],
-            'responsibleEmployeeId' => ['nullable', 'integer'], 'responsibleName' => ['nullable', 'string', 'max:255'],
-            'witnessNames' => ['nullable', 'string'], 'description' => ['required', 'string'],
-            'attachments' => ['array'], 'attachments.*' => ['file', 'max:10240'],
-        ]);
-        if (blank($this->locationId) && blank($this->place)) {
-            $this->addError('place', __('messages.report.location_or_place_required'));
+        $this->validatedReport();
+        $this->reviewing = true;
+    }
 
-            return;
-        }
+    public function editReview(): void
+    {
+        $this->reviewing = false;
+    }
+
+    public function confirmSend(ReportService $reports): void
+    {
+        $this->mount();
+        abort_unless($this->reviewing, 409);
+        $data = $this->validatedReport();
         $check = $this->intakeCheck();
         if ($check && ! in_array($check->status, ['ready', 'checklist'], true)) {
             $check = null;
         }
+        $employees = $this->pickedPeople('employees');
+        $ids = array_values(array_map(fn ($item) => $item['employee_id'], array_filter($employees, fn ($item) => $item['employee_id'] !== null)));
         $reports->submit([
-            'branch_id' => $data['branchId'], 'employee_id' => $data['employeeId'] ?: null,
-            'employee_ids' => array_values(array_unique(array_map('intval', array_merge(
-                array_filter([$data['employeeId'] ?: null]), $data['employeeIds'])))),
+            'branch_id' => $data['branchId'], 'employee_id' => $ids[0] ?? null,
+            'employee_ids' => $ids,
+            'free_employee_names' => array_values(array_map(fn ($item) => $item['name'], array_filter($employees, fn ($item) => $item['employee_id'] === null))),
             'location_id' => $data['locationId'] ?: null, 'place_freetext' => $data['place'] ?: null,
             'occurred_at' => $data['occurredAt'], 'violation_type' => $data['violationType'],
             'violation_type_id' => $data['violationTypeId'] ?: null,
-            'alleged_responsible_employee_id' => $data['responsibleEmployeeId'] ?: null,
-            'alleged_responsible_person_freetext' => $data['responsibleName'] ?: null,
-            'description' => $data['description'],
-            'witnesses' => array_map(fn ($name) => ['name' => trim($name)], array_filter(explode(',', $data['witnessNames'] ?? ''))),
+            'description' => $data['description'], 'witnesses' => $this->pickedPeople('witnesses'),
             'attachments' => $this->attachments,
             'intake_check' => $check, 'intake_answers' => $this->intakeAnswers,
         ], auth()->user());
@@ -94,7 +86,33 @@ class SubmitReport extends Component
         $this->redirect('/reports', navigate: true);
     }
 
-    public function render(): View
+    private function validatedReport(): array
+    {
+        $data = $this->validate([
+            'branchId' => ['required', 'integer'],
+            'locationId' => ['nullable', 'integer'], 'place' => ['nullable', 'string', 'max:255'],
+            'occurredAt' => ['required', 'date', 'before_or_equal:now'], 'violationType' => ['nullable', 'string', 'max:255'],
+            'violationTypeId' => ['nullable', 'integer'],
+            'description' => ['required', 'string'],
+            'attachments' => ['array'], 'attachments.*' => ['file', 'max:10240'],
+        ]);
+        if (blank($this->locationId) && blank($this->place)) {
+            throw ValidationException::withMessages(['place' => __('messages.report.location_or_place_required')]);
+        }
+        app(EmployeePicker::class)->authorizeBranch(auth()->user(), (int) $this->branchId);
+        if ($this->locationId !== '') {
+            Location::query()->where('company_id', auth()->user()->company_id)
+                ->where('branch_id', $this->branchId)->where('is_active', true)->findOrFail($this->locationId);
+        }
+        app(CaseViolationTypes::class)->selected($this->violationTypeId !== '' ? (int) $this->violationTypeId : null,
+            $this->violationType, (int) auth()->user()->company_id);
+        $this->pickedPeople('employees');
+        $this->pickedPeople('witnesses');
+
+        return $data;
+    }
+
+    public function render(EmployeePicker $picker): View
     {
         $this->mount();
         $branchIds = DB::table('branch_user')->where('company_id', auth()->user()->company_id)->where('user_id', auth()->id())->pluck('branch_id');
@@ -103,10 +121,7 @@ class SubmitReport extends Component
             'branches' => Branch::query()->whereIn('id', $branchIds)->get(),
             'locations' => $this->branchId ? Location::query()->where('branch_id', $this->branchId)->where('is_active', true)->get() : collect(),
             'violationTypes' => ViolationType::query()->where('is_active', true)->orderBy('sort_order')->get(),
-            'employees' => $this->branchId ? Employee::query()->where('branch_id', $this->branchId)->where('is_active', true)
-                ->when($this->employeeSearch !== '', fn ($q) => $q->where('name', 'like', '%'.$this->employeeSearch.'%'))->get() : collect(),
-            'responsibleEmployees' => $this->branchId ? Employee::query()->where('branch_id', $this->branchId)->where('is_active', true)
-                ->when($this->responsibleSearch !== '', fn ($q) => $q->where('name', 'like', '%'.$this->responsibleSearch.'%'))->get() : collect(),
+            'peopleResults' => $this->peopleResults($picker),
             'intakeCheck' => $this->intakeCheck(),
         ])->layout('layouts.workspace');
     }
@@ -122,5 +137,10 @@ class SubmitReport extends Component
     protected function authorizeIntakeCheck(): void
     {
         $this->mount();
+    }
+
+    protected function allowsFreeEmployees(): bool
+    {
+        return true;
     }
 }

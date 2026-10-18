@@ -140,6 +140,6 @@ test('a pending queued check never blocks report submission', function (): void 
         ->set('branchId', (string) $branch->id)->set('place', 'Line 3')
         ->set('occurredAt', '2026-10-09T03:00')->set('violationType', 'Fight')
         ->set('description', 'A fight occurred')->call('checkDescription')
-        ->call('submit')->assertHasNoErrors();
+        ->call('submit')->assertHasNoErrors()->call('confirmSend')->assertHasNoErrors();
     expect(ViolationReport::query()->where('reporter_user_id', $reporter->id)->count())->toBe(1);
 });

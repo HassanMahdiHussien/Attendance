@@ -18,6 +18,7 @@ use App\Services\Cases\CaseDrafts;
 use App\Services\Cases\CaseInsights;
 use App\Services\Cases\CaseViolationTypes;
 use App\Services\Cases\IncidentService;
+use App\Services\Employees\EmployeePicker;
 use App\Services\Intake\IntakeQuestionService;
 use App\Support\Access\ViolationReportVisibility;
 use Illuminate\Support\Facades\DB;
@@ -44,6 +45,14 @@ class ReportService
         foreach ($employeeIds as $id) {
             Employee::query()->where('company_id', $actor->company_id)->where('branch_id', $branchId)->where('is_active', true)->findOrFail($id);
         }
+        $data['witnesses'] = app(EmployeePicker::class)->selections($actor, $branchId, $data['witnesses'] ?? [], true);
+        $data['free_employee_names'] = array_values(array_map(function ($name): string {
+            if (! is_string($name) || trim($name) === '' || mb_strlen(trim($name)) > 255) {
+                throw ValidationException::withMessages(['free_employee_names' => __('Choose a person or enter a name')]);
+            }
+
+            return trim($name);
+        }, $data['free_employee_names'] ?? []));
         $data['employee_id'] = $employeeIds[0] ?? null;
         if (! empty($data['alleged_responsible_employee_id'])) {
             Employee::query()->where('company_id', $actor->company_id)->where('branch_id', $branchId)
@@ -56,7 +65,7 @@ class ReportService
         return DB::transaction(function () use ($data, $actor, $branchId, $employeeIds): ViolationReport {
             $report = ViolationReport::create(array_intersect_key($data, array_flip([
                 'employee_id', 'location_id', 'place_freetext', 'occurred_at', 'violation_type', 'violation_type_id',
-                'alleged_responsible_employee_id', 'alleged_responsible_person_freetext', 'description',
+                'alleged_responsible_employee_id', 'alleged_responsible_person_freetext', 'description', 'free_employee_names',
             ])) + [
                 'company_id' => $actor->company_id, 'branch_id' => $branchId,
                 'reporter_user_id' => $actor->id, 'source' => ReportSource::Reporter,
@@ -97,6 +106,7 @@ class ReportService
     public function convert(ViolationReport $report, User $actor, ?DisciplinaryCase $existing = null, array $facts = []): DisciplinaryCase
     {
         $this->authorizeInbox($report, $actor);
+        abort_if($existing !== null && (($report->free_employee_names ?? []) !== [] || $this->reportEmployeeIds($report) === []), 422);
 
         return DB::transaction(function () use ($report, $actor, $existing, $facts): DisciplinaryCase {
             $report = ViolationReport::query()->lockForUpdate()->findOrFail($report->id);
@@ -119,7 +129,23 @@ class ReportService
                     'alleged_responsible_person_freetext' => $report->alleged_responsible_person_freetext,
                     'witnesses' => $report->witnesses->map(fn ($w) => ['name' => $w->name, 'employee_id' => $w->employee_id])->all(),
                 ];
-                $selected = $report->employees()->pluck('employees.id')->all();
+                // A report may name nobody (HR picks the employee on the draft, as before) or record its
+                // employee the older single-column way; only names typed outside the list block conversion.
+                $reportEmployeeIds = $this->reportEmployeeIds($report);
+                $chosen = $facts['employee_ids'] ?? (! empty($facts['employee_id']) ? [$facts['employee_id']] : $reportEmployeeIds);
+                $selected = array_values(array_unique(array_map('intval', $chosen)));
+                $free = $report->free_employee_names ?? [];
+                if (array_diff($reportEmployeeIds, $selected) !== []
+                    || ($free !== [] && count($selected) < count($reportEmployeeIds) + count($free))) {
+                    throw ValidationException::withMessages(['employeeId' => __('Add employees to the list before opening a case')]);
+                }
+                foreach ($selected as $id) {
+                    app(EmployeePicker::class)->employee($actor, (int) $report->branch_id, $id);
+                }
+                unset($facts['employee_ids']);
+                if (count($selected) === 1) {
+                    $facts['employee_id'] = $selected[0];
+                }
                 if (count($selected) > 1) {
                     $incident = app(IncidentService::class)->createForEmployees($selected, array_replace($data, $facts), $actor, $report);
                     $case = $incident->cases()->orderBy('id')->firstOrFail();
@@ -133,6 +159,14 @@ class ReportService
 
             return $case;
         });
+    }
+
+    /** @return list<int> */
+    private function reportEmployeeIds(ViolationReport $report): array
+    {
+        $ids = $report->employees()->pluck('employees.id')->map(fn ($id): int => (int) $id)->all();
+
+        return $ids === [] && $report->employee_id !== null ? [(int) $report->employee_id] : $ids;
     }
 
     private function authorizeInbox(ViolationReport $report, User $actor): void
