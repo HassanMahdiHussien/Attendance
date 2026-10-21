@@ -6,13 +6,14 @@ use App\Documents\DocumentRenderer;
 use App\Documents\PdfGenerator;
 use App\Exceptions\IssuanceBlocked;
 use App\Models\Document;
+use App\Services\Documents\DraftPreview;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class DocumentOutputController extends Controller
 {
-    public function preview(Request $request, string $document, DocumentRenderer $renderer, PdfGenerator $pdf)
+    public function preview(Request $request, string $document, DocumentRenderer $renderer, PdfGenerator $pdf, DraftPreview $previews)
     {
         $document = Document::withoutGlobalScopes()->findOrFail($document);
         abort_unless($request->user()->can('view', $document),
@@ -21,7 +22,9 @@ class DocumentOutputController extends Controller
         app(TenantContext::class)->setCompany($document->company);
 
         try {
-            $html = $pdf->htmlWithFonts($renderer->render($document, true));
+            $token = $request->query('token');
+            $contents = $previews->contents(is_string($token) ? $token : null, $document, $request->user());
+            $html = $pdf->htmlWithFonts($renderer->render($document, true, $contents));
             $status = 200;
         } catch (IssuanceBlocked $error) {
             $html = view('documents.missing', ['reason' => $error->getMessage()])->render();

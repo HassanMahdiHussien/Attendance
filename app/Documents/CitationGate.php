@@ -18,7 +18,7 @@ class CitationGate
      * A draft preview skips only the review requirement (supporting check or reasoned override): HR has to read the
      * draft to make that decision. Every structural rule still applies, and issuance always passes $draft = false.
      */
-    public function assertIssuable(Document $document, bool $draft = false): void
+    public function assertIssuable(Document $document, bool $draft = false, ?array $contents = null): void
     {
         $case = $document->disciplinaryCase;
         if ($document->regulationComparison && ! in_array($document->regulationComparison->status, ['confirmed', 'skipped'], true)) {
@@ -32,7 +32,8 @@ class CitationGate
             throw new IssuanceBlocked(__($exclusions->refusalKey($document, $blockedCitation->legal_unit_id)));
         }
         foreach ($document->contents()->get() as $content) {
-            foreach ([$content->body, $content->secondary_body] as $body) {
+            $override = $contents[$content->language_code] ?? [];
+            foreach ([$override['body'] ?? $content->body, $override['secondary_body'] ?? $content->secondary_body] as $body) {
                 if ($body === null) {
                     continue;
                 }
@@ -48,8 +49,10 @@ class CitationGate
                     if (in_array($id, $excluded, true)) {
                         throw new IssuanceBlocked(__($exclusions->refusalKey($document, $id)));
                     }
+                    // Unsaved wording has no synced claim hash; the saved issuance path still requires one.
                     $citation = $citations->get($id)?->first(fn (Citation $row) => $content->language_code !== 'ar'
-                        || $row->claim_hash === $claim['claim_hash'] || ($document->is_locked && $row->claim_hash === null));
+                        || $row->claim_hash === $claim['claim_hash'] || ($document->is_locked && $row->claim_hash === null)
+                        || ($draft && $contents !== null));
                     if (! $citation || ! $this->valid($citation, $case, $draft)) {
                         $message = $citation?->legalUnit?->superseded_by_id !== null
                             ? 'النص القانوني صُحح — حدّث الاستشهاد'

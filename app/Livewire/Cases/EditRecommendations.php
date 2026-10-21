@@ -10,6 +10,7 @@ use App\Livewire\Cases\Concerns\DraftsWithAi;
 use App\Models\DisciplinaryCase;
 use App\Models\Document;
 use App\Services\Cases\RecommendationsEditor;
+use App\Services\Documents\DraftPreview;
 use App\Support\Access\CaseVisibility;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Gate;
@@ -31,6 +32,12 @@ class EditRecommendations extends Component
     public array $recommendations = [];
 
     public string $notice = '';
+
+    public ?string $previewToken = null;
+
+    public int $previewVersion = 0;
+
+    public bool $hasUnsavedChanges = false;
 
     public function mount(string $case, ?string $document = null): void
     {
@@ -66,6 +73,36 @@ class EditRecommendations extends Component
         $this->documentId = $document->id;
         $this->expectedStatus = $case->fresh()->status->value;
         $this->notice = __('messages.document.draft_saved');
+        $this->previewToken = null;
+        $this->hasUnsavedChanges = false;
+    }
+
+    public function updatedFindings(): void
+    {
+        $this->refreshPreview();
+    }
+
+    public function updatedRecommendations(): void
+    {
+        $this->refreshPreview();
+    }
+
+    private function refreshPreview(): void
+    {
+        $case = $this->editable();
+        $document = $this->documentId ? $case->documents()->findOrFail($this->documentId) : null;
+        if (! $document || $document->is_locked) {
+            return;
+        }
+        $this->validate([
+            'findings.*' => ['nullable', 'string', 'max:50000'],
+            'recommendations.*' => ['nullable', 'string', 'max:50000'],
+        ]);
+        [$token, $dirty] = app(DraftPreview::class)
+            ->refresh($document, auth()->user(), $this->findings, $this->recommendations);
+        $this->previewToken = $token;
+        $this->hasUnsavedChanges = $dirty;
+        $this->previewVersion++;
     }
 
     public function submit(RecommendationsEditor $editor): void
@@ -103,6 +140,8 @@ class EditRecommendations extends Component
     {
         $this->findings = $document->contents->pluck('body', 'language_code')->all();
         $this->recommendations = $document->contents->pluck('secondary_body', 'language_code')->all();
+        $this->previewToken = null;
+        $this->hasUnsavedChanges = false;
     }
 
     private function editable(): DisciplinaryCase

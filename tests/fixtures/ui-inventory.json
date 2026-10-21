@@ -259,7 +259,7 @@
         "language-{{ $language }}"
       ],
       [
-        "wire:model",
+        "wire:model.live.debounce.1000ms",
         "bodies.{{ $language }}"
       ]
     ],
@@ -294,11 +294,11 @@
         "language-{{ $language }}"
       ],
       [
-        "wire:model",
+        "wire:model.live.debounce.1000ms",
         "findings.{{ $language }}"
       ],
       [
-        "wire:model",
+        "wire:model.live.debounce.1000ms",
         "recommendations.{{ $language }}"
       ]
     ],
