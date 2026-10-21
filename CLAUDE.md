@@ -25,7 +25,7 @@ It does **not** replace the company's leave system, calculate pay, or make disci
 
 ## 3. Tech stack (fixed — do not deviate without asking)
 
-Same as Displanary: Laravel 13 (PHP ^8.4), MySQL, shared-schema multi-tenancy via `company_id`, Livewire 4 + Tailwind for working screens, Filament 5 for back-office CRUD, Pest, Laravel Pint, `spatie/laravel-permission`, `spatie/laravel-backup`, `openspout/openspout` (Excel read/write), Browsershot for printable statements, Claude API for AI, local-disk storage on a private VPS (no cloud storage), Laravel queues (database driver) + scheduler, Laravel Sail locally. **Never add a package without asking.**
+Same as Displanary: Laravel 13 (PHP ^8.4), MySQL, shared-schema multi-tenancy via `company_id`, Livewire 4 + Tailwind for working screens, Filament 5 for back-office CRUD, Pest, Laravel Pint, `spatie/laravel-permission`, `spatie/laravel-backup`, `openspout/openspout` (Excel read/write), Browsershot for printable statements, Claude API for AI, local-disk storage on a private VPS (no cloud storage), Laravel queues (database driver) + scheduler, native WSL Ubuntu locally (no Docker). **Never add a package without asking.**
 
 ## 4. Attendance rules (load-bearing — get these exactly right)
 

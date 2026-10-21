@@ -9,36 +9,36 @@ law. It is the first module of a wider employee-lifecycle platform.
 
 ## Stack
 
-Laravel 13 (PHP 8.4) · MySQL 8.4 · Livewire 4 · Filament 5 · Tailwind v4 · Pest 5 · Laravel Sail.
-Everything runs in Docker; the host needs only Docker Desktop and Git.
+Laravel 13 (PHP 8.5) · MySQL 8.4 · Livewire 4 · Filament 5 · Tailwind v4 · Pest 5.
+Development runs natively in WSL Ubuntu 26.04 (the same runtime as `deploy/dev-setup.sh` installs); there is no Docker.
 
-## First run (fresh clone)
+## First run (fresh clone in WSL, e.g. `~/attendance`)
 
 ```bash
-cp .env.example .env          # then set SEED_DEFAULT_PASSWORD
-docker run --rm -v "$(pwd):/var/www/html" -w /var/www/html laravelsail/php84-composer:latest composer install --ignore-platform-reqs
-docker compose up -d          # app, mysql, queue worker, scheduler
-docker compose exec -T -u sail laravel.test php artisan key:generate
-docker compose exec -T -u sail laravel.test php artisan migrate --seed
-docker compose exec -T -u sail laravel.test npm install
-docker compose exec -T -u sail laravel.test npm run build
+cp .env.example .env          # DB_HOST=127.0.0.1, DB_DATABASE=attendance, APP_URL=http://localhost:8001; set SEED_DEFAULT_PASSWORD
+composer install
+php artisan key:generate
+php artisan migrate --seed
+npm ci && npm run build
+php artisan serve --port=8001
 ```
 
-On PowerShell, replace `$(pwd)` with `${PWD}`. The app is served at http://localhost.
+The `attendance` database must exist and be granted to the `.env` user (one-time, with sudo).
 The seed creates the anonymised pilot company and two local accounts, `platform.admin@example.test`
 (Platform Admin) and `company.admin@example.test` (pilot company admin). Both use `SEED_DEFAULT_PASSWORD`.
 
 ## Gates (run before every commit)
 
 ```bash
-docker compose exec -T -u sail laravel.test php artisan test
-docker compose exec -T -u sail laravel.test ./vendor/bin/pint --test
+php artisan test --compact
+./vendor/bin/pint --test
 ```
 
-Tests run against the MySQL `testing` database. SQLite is never used, because the immutability
-rules live in MySQL triggers.
+Tests run against the MySQL `testing_attendance` database, so they never share a database with
+Displanary's suite on the same machine. SQLite is never used, because the immutability rules live
+in MySQL triggers.
 
 ## Server note
 
-MySQL must run with `log_bin_trust_function_creators=1` (set in `compose.yaml` locally), or the
-migrations cannot create the immutability triggers.
+MySQL must run with `log_bin_trust_function_creators=1` (set by `deploy/dev-setup.sh` locally), or
+the migrations cannot create the immutability triggers.

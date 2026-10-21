@@ -6,26 +6,25 @@ Read `CLAUDE.md` (authoritative build reference), `WEIRDNESS.md` (deliberate dec
 
 ## Environment
 
-- No PHP, Composer or MySQL on the host. Everything runs in Docker (Laravel Sail compose file).
-- The stack must be running: `docker compose up -d`.
-- Run every PHP / artisan / composer / npm command inside the app container **as the `sail` user**:
-  `docker compose exec -T -u sail laravel.test <command>`. Running as root (the exec default) creates
-  private storage folders (mode 0700) that the web server, which runs as `sail`, cannot read.
-- Do **not** install PHP, Composer, Laravel Boost or anything else on the host, and do not add
-  packages (`composer require`, `npm install <pkg>`) — package changes need the product owner's
-  approval.
+- Development runs natively in WSL Ubuntu 26.04 (PHP 8.5, MySQL 8.4, Node 24) from `~/attendance`.
+  There is no Docker. Run PHP / artisan / composer / npm commands directly in that folder as your
+  own user, never with `sudo` (root-owned storage folders break the web server).
+- You may be working in a Windows copy of the repo without PHP. Then you cannot run the gates:
+  say so in your report and the orchestrator runs them in WSL.
+- Do not install anything, and do not add packages (`composer require`, `npm install <pkg>`) —
+  package changes need the product owner's approval.
 
 ## Gates (must pass before you finish)
 
 ```
-docker compose exec -T -u sail laravel.test php artisan test
-docker compose exec -T -u sail laravel.test ./vendor/bin/pint --test
+php artisan test --compact
+./vendor/bin/pint --test
 ```
-Fix formatting with `docker compose exec -T -u sail laravel.test ./vendor/bin/pint`.
+Fix formatting with `./vendor/bin/pint`.
 
 ## Rules
 
-- Tests are Pest, against MySQL (database `testing`), never SQLite.
+- Tests are Pest, against MySQL (database `testing_attendance`), never SQLite.
 - Business logic in service classes; models/Livewire stay thin.
 - Never weaken tenant scoping, CSRF, auth, append-only logs or document immutability.
 - Comments explain why, not what. No ticket/task IDs or "phase"/"MVP"/"for now" wording in code.
