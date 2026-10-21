@@ -9,6 +9,7 @@ use App\Models\Concerns\BelongsToCompany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class Attachment extends Model
@@ -29,6 +30,8 @@ class Attachment extends Model
                 'email_draft' => EmailDraft::class,
                 'case' => DisciplinaryCase::class,
                 'document' => Document::class,
+                'report_assistant_session' => ReportAssistantSession::class,
+                'case_file_intake' => CaseFileIntake::class,
                 default => throw new TenantMismatch('Unknown attachment parent.'),
             };
             $parent = $model::withoutGlobalScopes()->find($attachment->attachable_id);
@@ -63,5 +66,10 @@ class Attachment extends Model
     public function attachable(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    public function textReading(): HasOne
+    {
+        return $this->hasOne(AttachmentText::class);
     }
 }

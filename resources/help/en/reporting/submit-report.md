@@ -9,6 +9,8 @@ What you need: a reporter or department manager account assigned to a branch. HR
 
 ![The report assistant](shots/submit-report)
 
+You can select **Attach files** under **What happened?** and start with files alone. Add more during the chat with the paperclip. Email (.eml or .msg), PDF, Word, images and video are accepted; video may be up to 50 MB, other files up to 10 MB each, with 10 files per report. The assistant uses readable text to ask only for missing facts. Unreadable files stay attached for HR to review.
+
 1. Open **My reports**, then **+ New report**. Under **What happened?**, write what you saw in your own words, as you would tell a colleague: who was involved, where and when, if you know. Select **Start report**.
 2. The assistant asks short questions only about what is missing, usually one or two. Type your answer and select **Send**, or tap a quick reply such as **I do not know**. The bar at the top shows which items are already answered.
 3. When everything needed is in, select **Review report**. Read the summary at the top: it was written by the assistant from your own words, so check it. Below it are the people, place and time, and what happened.

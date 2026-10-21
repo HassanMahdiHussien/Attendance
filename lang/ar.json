@@ -977,5 +977,15 @@
     "Open the case": "فتح الحالة",
     "Not known if anyone saw it": "لا يُعرف إن رأى أحد ما حدث",
     "Show :count earlier events": "عرض :count من الأحداث السابقة",
-    "More actions": "إجراءات أخرى"
+    "More actions": "إجراءات أخرى",
+    "Write what happened, or attach an email, document or photos.": "اكتب ما حدث، أو أرفق رسالة بريد أو مستنداً أو صوراً.",
+    "Attach files": "إرفاق ملفات",
+    "Email, PDF, Word, images or video up to 50 MB": "بريد، PDF، Word، صور أو فيديو حتى 50 ميغابايت",
+    "Remove file": "إزالة الملف",
+    "Maximum 10 files.": "الحد الأقصى 10 ملفات.",
+    "Attach an email or document": "إرفاق بريد أو مستند",
+    "Email, PDF, Word or images": "بريد، PDF، Word أو صور",
+    "Choose files": "اختر ملفات",
+    "Names mentioned in the files. Match each person in the employee picker:": "الأسماء المذكورة في الملفات. طابق كل شخص في قائمة الموظفين:",
+    "Attachments (email, documents, images or video)": "المرفقات (بريد أو مستندات أو صور أو فيديو)"
 }

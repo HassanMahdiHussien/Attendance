@@ -78,7 +78,9 @@ test('refreshed screens retain their original behavior surface', function (): vo
                 '/cases/{{ $record->id }}/session?single=1'],
         ],
         'resources/views/livewire/cases/create-case.blade.php' => [
-            'wire' => [['wire:model', 'violationTypeId']],
+            'wire' => [['wire:model', 'violationTypeId'], ['wire:model', 'caseFiles']],
+            'errors' => ['caseFiles', 'caseFiles.*'],
+            'file_bindings' => [[['wire:model', 'caseFiles']]],
         ],
         'resources/views/livewire/cases/record-session.blade.php' => [
             'wire' => [
@@ -100,8 +102,10 @@ test('refreshed screens retain their original behavior surface', function (): vo
                 ['wire:click', 'unknownPlace'], ['wire:click', 'unknownDate'],
                 ['wire:click', 'confirmPersonMatch('],
                 ['wire:click', 'quickReply('], ['wire:click', 'suggestedReply('],
+                ['wire:click', 'removeUpload({{ $index }})'],
+                ['wire:click', 'removeSessionFile({{ $file->id }})'],
             ],
-            'errors' => ['chatInput', 'occurredAtText', 'people.employees', 'witnessesNone'],
+            'errors' => ['chatInput', 'occurredAtText', 'people.employees', 'witnessesNone', 'attachments'],
         ],
         'resources/views/livewire/reports/inbox.blade.php' => [
             'wire' => [['wire:model', 'mapViolationTypeIds.{{ $report->id }}'],

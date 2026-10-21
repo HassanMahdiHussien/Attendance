@@ -89,8 +89,9 @@ test('every tenant foreign key rejects a row from another company through models
 
     foreach ($keys as $key) {
         // Incident pivot and session rows have no factories; their tenant keys are exercised in IncidentTest.
+        // File readings and HR file intakes have none either; ReportAttachmentTest exercises their tenant keys.
         if (in_array($key->source_table, ['citations', 'legal_import_pages', 'legal_unit_approvals',
-            'incident_sessions', 'violation_report_employees'], true)) {
+            'incident_sessions', 'violation_report_employees', 'attachment_texts', 'case_file_intakes'], true)) {
             continue;
         }
         $sourceClass = $models[$key->source_table];

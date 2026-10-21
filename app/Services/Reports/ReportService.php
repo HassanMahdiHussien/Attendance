@@ -90,6 +90,9 @@ class ReportService
             abort_unless((int) ($session->facts['branch_id'] ?? 0) === $branchId
                 && in_array($session->status, ['ready', 'manual', 'fallback'], true), 409);
         }
+        if (count($data['attachments'] ?? []) + ($session ? app(ReportFiles::class)->active($session)->count() : 0) > 10) {
+            throw ValidationException::withMessages(['attachments' => __('Maximum 10 files.')]);
+        }
         $data['summary'] = $session && filled($session->facts['summary'] ?? null)
             && ($data['assistant_summary'] ?? null) === $session->facts['summary']
             && ($session->facts['description'] ?? null) === $data['description']
@@ -118,6 +121,7 @@ class ReportService
                 app(AttachmentService::class)->store($report, AttachmentKind::ReportEvidence, $file, $actor);
             }
             if ($session !== null) {
+                app(ReportFiles::class)->send($session, $report);
                 $session->update(['violation_report_id' => $report->id, 'status' => 'sent',
                     'confirmed_fields' => [
                         'employee_ids' => $employeeIds, 'free_employee_names' => $data['free_employee_names'],

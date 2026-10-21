@@ -4,6 +4,20 @@
         <x-ui.card class="space-y-5">
             @if($reportId)<x-ui.alert tone="indigo">{{ __('Report details are ready for review. Complete the fields and save the draft.') }}</x-ui.alert>@endif
             @if($sourceReport?->free_employee_names)<x-ui.alert tone="amber">{{ __('Names not in the employee list') }}: {{ implode(' · ', $sourceReport->free_employee_names) }}. {{ __('Add employees to the list before opening a case') }}</x-ui.alert>@endif
+            @if(!$reportId && !$emailId && !$editingIncident)
+                <div class="rounded-xl border border-dashed border-line p-4 text-center">
+                    <p class="font-semibold">{{ __('Attach an email or document') }}</p>
+                    <p class="mt-1 text-xs text-gray-500">{{ __('Email, PDF, Word or images') }}</p>
+                    <input id="case-files" type="file" wire:model="caseFiles" multiple accept=".eml,.msg,.pdf,.docx,.jpg,.jpeg,.png,.webp" class="peer sr-only">
+                    <label for="case-files" class="ui-button ui-button-secondary mt-3 inline-flex cursor-pointer peer-focus-visible:outline-2">{{ __('Choose files') }}</label>
+                </div>
+                @foreach($caseIntakeFiles as $file)
+                    <div class="flex min-w-0 items-center gap-3 rounded-lg border border-line px-3 py-2 text-sm"><span dir="auto" class="min-w-0 flex-1 truncate">{{ $file->original_name }}</span><bdi dir="ltr" class="text-gray-500">{{ number_format($file->size_bytes / 1024) }} KB</bdi></div>
+                @endforeach
+                @error('caseFiles')<p role="alert" class="text-sm text-red">{{ $message }}</p>@enderror
+                @error('caseFiles.*')<p role="alert" class="text-sm text-red">{{ $message }}</p>@enderror
+                @if($suggestedNames !== [])<p class="text-sm text-gray-600">{{ __('Names mentioned in the files. Match each person in the employee picker:') }} <span dir="auto">{{ implode(' · ', $suggestedNames) }}</span></p>@endif
+            @endif
             <div class="grid gap-4 sm:grid-cols-2">
                 <x-ui.field :label="__('Branch')" for="branch"><x-ui.select id="branch" wire:model.live="branchId" :disabled="$incidentId !== null"><option value="">{{ __('Choose a branch') }}</option>@foreach($branches as $branch)<option value="{{ $branch->id }}">{{ $branch->name }}</option>@endforeach</x-ui.select>@error('branchId')<span class="text-sm text-red-700">{{ $message }}</span>@enderror</x-ui.field>
                 <div><x-ui.people-picker kind="employees" :search="$peopleSearch['employees'] ?? ''" :label="__('Employee')" :items="$people['employees']" :results="$peopleResults['employees']" :free="false" :disabled="$incidentId !== null" />@error('employeeId')<span class="text-sm text-red-700">{{ $message }}</span>@enderror</div>
