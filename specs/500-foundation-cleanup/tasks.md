@@ -11,10 +11,10 @@ Each phase is one implementation run and one commit. After every phase, in WSL `
 
 ## Phase 1 — Docs move (no code)
 
-- [ ] T003 Move `docs/{PRD,PRD-EN,ERD,LAUNCH-CHECKLIST,document-templates}.md`, `docs/laws/`, `docs/Admin_Order_*.pdf` to `docs/upstream/displanary/`
-- [ ] T004 Move discipline ADRs 0002–0005 and 0011 to `docs/upstream/displanary/adr/`; update `docs/adr/README.md`
-- [ ] T005 Move `specs/001-*` … `specs/063-*` to `docs/upstream/displanary/specs/`
-- [ ] T006 Fix links in kept docs (README, CLAUDE.md, AGENTS.md, ROADMAP, ADR 0013, DESIGN.md, PRODUCT.md, WEIRDNESS.md)
+- [x] T003 Move `docs/{PRD,PRD-EN,ERD,LAUNCH-CHECKLIST,document-templates,PLATFORM-PRD}.md`, `docs/Admin_Order_*.pdf` to `docs/upstream/displanary/` (`docs/laws/` moves in T023: backup config, restore drill and seeder read it)
+- [x] T004 Move discipline ADRs 0002–0004 and 0011 (0005 Browsershot stays: printable statements) to `docs/upstream/displanary/adr/`; update `docs/adr/README.md`
+- [x] T005 Move `specs/001-*` … `specs/063-*` to `docs/upstream/displanary/specs/`
+- [x] T006 Fix links in kept docs (README, CLAUDE.md, AGENTS.md, ROADMAP, ADR 0013, DESIGN.md, PRODUCT.md, WEIRDNESS.md)
 
 ## Phase 2 — Screens, routes and entry points (research §3 step-2 rows, §4 step 2)
 
@@ -37,7 +37,7 @@ Each phase is one implementation run and one commit. After every phase, in WSL `
 - [ ] T020 Delete discipline models, jobs (keep `HeartbeatJob`), commands, policies, enums, exceptions, support classes, `lang/*/report_assistant.php`
 - [ ] T021 Trim kept models: `Employee`, `Company`, `User`, `AiGenerationLog`
 - [ ] T022 Trim kept services/policies/providers: `EmployeeImport`, `EmployeePicker`, `EmployeeProfilePolicy`, `UserAccountService`, `AppServiceProvider`, `config/displanery.php`, `Tone`
-- [ ] T023 Delete discipline factories, `DocumentDemoSeeder`, `LawsSeeder`, `database/legal-library/`
+- [ ] T023 Delete discipline factories, `DocumentDemoSeeder`, `LawsSeeder`, `database/legal-library/`; move `docs/laws/` to `docs/upstream/displanary/laws/` and drop it from `config/backup.php` and `BackupRestoreDrill`
 - [ ] T024 Tests: delete domain-only tests, fakes and fixtures; trim mixed audit/tenancy/operations tests
 
 ## Phase 4 — Schema, roles and seed data (research §1, §2, §5)

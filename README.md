@@ -4,7 +4,7 @@ Multi-tenant SaaS for Iraqi companies to run employee disciplinary procedures un
 law. It is the first module of a wider employee-lifecycle platform.
 
 - Build reference: [CLAUDE.md](CLAUDE.md) · deliberate decisions: [WEIRDNESS.md](WEIRDNESS.md)
-- Architecture decisions: [docs/adr](docs/adr/README.md) · schema: [docs/ERD.md](docs/ERD.md)
+- Architecture decisions: [docs/adr](docs/adr/README.md)
 - Feature specs (GitHub spec-kit): [specs/](specs/) · principles: [.specify/memory/constitution.md](.specify/memory/constitution.md)
 
 ## Stack
