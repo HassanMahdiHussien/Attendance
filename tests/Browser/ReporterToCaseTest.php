@@ -51,14 +51,15 @@ test('a reporter checklist reaches the HR inbox and becomes an open case', funct
     $hrPage->navigate('/reports/inbox')->assertPathIs('/reports/inbox')->assertNoJavaScriptErrors()
         ->assertSee('A fight occurred on Line 3.')
         ->press('Convert to case')
-        ->assertPathIs('/cases/new')
+        ->assertPathIs('/cases/from-report/'.$report->id)
         ->assertNoJavaScriptErrors()
-        ->assertSee('Report details are ready for review. Complete the fields and save the draft.')
-        ->fill('description', 'HR confirmed the reported fight on Line 3.')
-        ->select('assigned-hr', $hr->id)
-        ->press('Check for duplicates')
-        ->assertSee('Duplicate check result')
-        ->press('Continue and open case');
+        ->assertSee('Open case from report')
+        ->fill('report-description', 'HR confirmed the reported fight on Line 3.')
+        ->select('report-hr', $hr->id)
+        // Duplicate and conflict checks run on "Open case" and found nothing, so the case opens directly.
+        ->press('Open the case')
+        // Wait for the redirect: the case row exists only once the Livewire request has finished.
+        ->assertSee('The case was opened');
 
     $case = DisciplinaryCase::query()->where('violation_report_id', $report->id)->sole();
     $hrPage->assertPathIs('/cases/'.$case->id)

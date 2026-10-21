@@ -81,6 +81,7 @@ class DisciplinaryCase extends Model
             'outcome' => Outcome::class,
             'defense_acceptance' => DefenseAcceptance::class,
             'include_prior_record' => 'boolean',
+            'violation_time_known' => 'boolean',
             'is_sensitive' => 'boolean',
             'session_majority_reached' => 'boolean',
             'defense_letter_issued_at' => 'datetime',

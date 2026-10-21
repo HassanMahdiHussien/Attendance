@@ -55,7 +55,7 @@ class Inbox extends Component
         $selected = $this->existingCaseIds[$id] ?? '';
         $existing = $selected !== '' ? CaseVisibility::for(auth()->user())->findOrFail($selected) : null;
         if ($existing === null) {
-            $this->redirect('/cases/new?report='.$report->id, navigate: true);
+            $this->redirect('/cases/from-report/'.$report->id, navigate: true);
 
             return;
         }

@@ -185,20 +185,22 @@ class ReportService
                 if ($report->occurred_at === null && empty($facts['violation_time'])) {
                     throw ValidationException::withMessages(['violationTime' => __('Enter an incident date before opening a case.')]);
                 }
-                // A report may name nobody (HR picks the employee on the draft, as before) or record its
-                // employee the older single-column way; only names typed outside the list block conversion.
+                // The explicit mapping lets two typed names resolve to one employee without dropping either name.
                 $reportEmployeeIds = $this->reportEmployeeIds($report);
                 $chosen = $facts['employee_ids'] ?? (! empty($facts['employee_id']) ? [$facts['employee_id']] : $reportEmployeeIds);
                 $selected = array_values(array_unique(array_map('intval', $chosen)));
                 $free = $report->free_employee_names ?? [];
-                if (array_diff($reportEmployeeIds, $selected) !== []
-                    || ($free !== [] && count($selected) < count($reportEmployeeIds) + count($free))) {
+                $resolved = array_map('intval', $facts['resolved_free_employee_ids'] ?? []);
+                $freeResolved = array_key_exists('resolved_free_employee_ids', $facts)
+                    ? count($resolved) === count($free) && array_diff($resolved, $selected) === []
+                    : count($selected) >= count($reportEmployeeIds) + count($free);
+                if (array_diff($reportEmployeeIds, $selected) !== [] || ! $freeResolved) {
                     throw ValidationException::withMessages(['employeeId' => __('Add employees to the list before opening a case')]);
                 }
                 foreach ($selected as $id) {
                     app(EmployeePicker::class)->employee($actor, (int) $report->branch_id, $id);
                 }
-                unset($facts['employee_ids']);
+                unset($facts['employee_ids'], $facts['resolved_free_employee_ids']);
                 if (count($selected) === 1) {
                     $facts['employee_id'] = $selected[0];
                 }

@@ -15,6 +15,7 @@ use App\Livewire\Cases\EditDecisionLetter;
 use App\Livewire\Cases\EditDocument;
 use App\Livewire\Cases\EditRecommendations;
 use App\Livewire\Cases\MyCases;
+use App\Livewire\Cases\OpenFromReport;
 use App\Livewire\Cases\PendingApprovals;
 use App\Livewire\Cases\RecordAppeal;
 use App\Livewire\Cases\RecordSession;
@@ -87,6 +88,7 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/statistics', StatisticsReports::class)->name('statistics.index');
     Route::get('/statistics/exports/{export}', ReportExportDownloadController::class)->name('statistics.exports.download');
     Route::get('/cases/new', CreateCase::class)->name('cases.create');
+    Route::get('/cases/from-report/{report}', OpenFromReport::class)->name('cases.from-report');
     Route::get('/cases/{case}', ShowCase::class)->name('cases.show');
     Route::get('/cases/{case}/session', RecordSession::class)->name('cases.session');
     Route::get('/cases/{case}/recommendations', EditRecommendations::class)->name('cases.recommendations');

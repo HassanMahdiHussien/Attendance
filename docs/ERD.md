@@ -514,6 +514,8 @@ Dashboard settings on `companies`: `hotspot_min_cases` (unsigned tiny integer, d
 
 Dashboard indexes on `cases`: `(company_id, status)`, `(company_id, violation_time)`, `(company_id, branch_id, violation_time)`, and `(company_id, defense_letter_issued_at)`. Incident periods use `violation_time`; procedure metrics use the defense and completion dates.
 
+`cases.violation_time_known` is a boolean defaulting to true. When false, `violation_time` stores the reported date at 00:00 as a database value only; screens and generated text show the date and indicate that the time was not stated.
+
 - Tenant children carry `company_id` directly. Their tenant parent references use composite foreign keys such as `(company_id, branch_id) -> branches(company_id, id)`. Users remain outside the fail-closed model scope so authentication can locate them; authorization must check role and company.
 - `users.primary_role` is one of `platform_admin`, `company_admin`, `hr_staff`, `dept_manager`, `reporter`, `committee_member`, `external_legal_reviewer`, or `hr_partner_staff`. The legacy `company_legal_reviewer` value migrates to an inactive `reporter`.
 - Spatie permissions add abilities, not primary roles: `review_internal_regulation` and `view_all_company_cases` live in `permissions` and `model_has_permissions` with the `web` guard. Teams mode is off.
