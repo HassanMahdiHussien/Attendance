@@ -88,7 +88,8 @@ class DraftDocumentWithAi implements ShouldQueue
             $languages = app(DraftLanguages::class)->for($case->company, $this->type);
             try {
                 $response = $claude->structured('draft_'.$this->type->value, $prompt->schema($languages, $this->type),
-                    $prompt->messages($payload, $languages, $this->type, Cache::get('ai-draft-reasons:'.$this->token, []), $pairs),
+                    $prompt->messages($payload, $languages, $this->type, Cache::get('ai-draft-reasons:'.$this->token, []), $pairs,
+                        $actor->preferredLocale()),
                     ['company_id' => $case->company_id, 'case_id' => $case->id, 'actor_user_id' => $actor->id,
                         'document_id' => $case->documents()->where('document_type', $this->type->value)->where('is_locked', false)->value('id')],
                     (string) config('displanery.ai.drafting_model'), 'high');

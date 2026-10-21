@@ -12,7 +12,7 @@ class IncidentPrivacy
         if ($case->incident_id === null) {
             return $text;
         }
-        $parts = preg_split('/(?<=[.!؟。\n])\s*/u', $text);
+        $parts = preg_split('/(?<=[.!\x{061F}\x{3002}\n])\s*/u', $text);
 
         return trim(implode(' ', array_filter($parts ?: [],
             fn (string $part): bool => ! $this->containsOtherMemberName($case, $part))));
@@ -37,7 +37,8 @@ class IncidentPrivacy
             }
         }
 
-        if (preg_match('/\[other incident member\]|⟦[^⟧]*(?:employee|member|موظف)[^⟧]*⟧/iu', $text)) {
+        // A masked name token in an employee's own description can only stand for someone else in the incident.
+        if (str_contains($text, '[other incident member]') || str_contains($text, '⟦')) {
             return true;
         }
 

@@ -40,7 +40,7 @@ class MyWork
         $filters = DashboardFilters::fromInput($user, ['period' => '6']);
         $counts = $this->metrics->counts($user, $filters);
         $cases = CaseVisibility::for($user)->where('cases.status', '!=', CaseStatus::ArchivedFinal->value)
-            ->with(['employee', 'documents.approvals', 'signatures'])->get();
+            ->with(['employee', 'documents.approvals', 'signatures', 'regulationComparisons', 'draftFailures'])->get();
         $mapped = $this->nextAction->forMany($cases, $user);
         $actions = $cases->map(fn ($case) => ['case' => $case, 'action' => $mapped->get($case->id)])
             ->filter(fn (array $row) => in_array($row['action']?->actor, ['hr', 'committee'], true));

@@ -22,7 +22,7 @@ class DraftPrompt
         ], 'required' => ['languages', 'notes'], 'additionalProperties' => false];
     }
 
-    public function messages(array $payload, array $languages, DocumentType $type, array $reasons = [], array $comparisonPairs = []): array
+    public function messages(array $payload, array $languages, DocumentType $type, array $reasons = [], array $comparisonPairs = [], string $notesLanguage = 'ar'): array
     {
         $instruction = 'Draft only the case-specific prose in '.implode(', ', $languages).
             '. Arabic is authoritative; every other language renders the same claims. Use citations only as [[cite:<id>]] markers from candidate_units. '
@@ -34,7 +34,10 @@ class DraftPrompt
             .'Do not restate prior-record data; the template prints it. The statute prevails over an internal regulation. '
             .'Related cases are internal context only. Never print them or restate them as case facts unless HR entered those facts independently. '
             .'Do not state the operative decision, outcome, or penalty in prose; template wording supplies it. '
-            .'Return short internal notes for missing or unclear information, never in the document body.';
+            .'Return short internal notes for missing or unclear information, never in the document body. '
+            // HR reads these beside the letter: a real draft returned English notes naming payload fields and masking tokens.
+            .'Write the notes in '.($notesLanguage === 'ar' ? 'Arabic' : 'English').' for an HR reviewer, in plain words: at most four, only points HR can check or complete, '
+            .'never field names, JSON keys, ⟦…⟧ tokens or remarks about masking, gender wording or formatting.';
         if ($type === DocumentType::DefenseLetter) {
             $instruction .= ' intake_answers contain human-entered answers as facts; the questions are labels only, not facts. Never turn an unanswered question into an assertion.';
         }

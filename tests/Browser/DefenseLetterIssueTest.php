@@ -30,6 +30,8 @@ test('HR writes, confirms and issues a manual defense letter', function (): void
         // wire:navigate swaps the page after the URL changes; type only once the editor has settled.
         ->waitForEvent('networkidle')
         ->assertNoJavaScriptErrors()
+        ->press('Write it myself')
+        ->waitForEvent('networkidle')
         ->fill('body-en', 'Please provide your response to the recorded incident.')
         ->fill('body-ar', 'طلب دفاع يدوي عن الواقعة المسجلة.')
         // Under full-suite load Livewire's late boot after wire:navigate occasionally cleared the first textarea
@@ -41,7 +43,7 @@ test('HR writes, confirms and issues a manual defense letter', function (): void
         ->assertSee(__('messages.document.draft_saved'));
 
     $document = Document::query()->where('case_id', $case->id)->where('document_type', 'defense_letter')->sole();
-    $page->press('Submit for review')
+    $page->press('Review and continue')
         ->assertPathIs('/cases/'.$case->id.'/documents/'.$document->id.'/confirm')
         ->assertNoJavaScriptErrors()
         ->assertSee('Check names and dates')

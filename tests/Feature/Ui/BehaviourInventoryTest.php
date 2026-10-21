@@ -76,7 +76,7 @@ test('refreshed screens retain their original behavior surface', function (): vo
             ],
             'errors' => ['relatedCaseId', 'relatedReason', 'mapViolationTypeId', 'incidentEmployeeId', 'caseDescription', 'incidentClosureReason'],
             'links' => ['/cases/{{ $other->id }}', '/cases/{{ $member->id }}', '/cases/new?incident_case={{ $record->id }}',
-                '/cases/{{ $record->id }}/session?single=1'],
+                '/cases/{{ $record->id }}/session?single=1', '/cases/{{ $record->id }}/documents/{{ $defenseDraft?->id ?? '],
         ],
         'resources/views/livewire/cases/create-case.blade.php' => [
             'wire' => [['wire:model', 'violationTypeId'], ['wire:model', 'caseFiles']],
@@ -153,7 +153,7 @@ test('report case opening controls remain inventoried', function (): void {
         ['wire:click', 'searchPerson({{ $index }})'],
         ['wire:click', 'startAddingPerson({{ $index }})'],
         ['wire:model', 'newEmployeeName'], ['wire:model', 'newEmployeePosition'],
-        ['wire:model', 'newEmployeeDepartment'], ['wire:model', 'newEmployeeHireDate'],
+        ['wire:model', 'newEmployeeDepartment'], ['wire:model', 'newEmployeeHireDate'], ['wire:model', 'newEmployeeGender'],
         ['wire:click', 'addNewPerson'],
         ['wire:model', 'locationId'], ['wire:model', 'place'], ['wire:model', 'incidentDate'],
         ['wire:model', 'incidentTime'], ['wire:model', 'violationTypeId'], ['wire:model', 'violationType'],

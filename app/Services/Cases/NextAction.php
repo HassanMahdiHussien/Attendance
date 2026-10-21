@@ -151,19 +151,23 @@ class NextAction
             if ($case->incident_id !== null && blank($case->case_specific_description)) {
                 return $this->item('hr', 'confirm_incident_description', $base, $case);
             }
-            $comparison = app(RegulationComparisons::class)->pending($case, DocumentType::DefenseLetter);
+            // Lists (HR home) preload these so a screen of open cases does not cost several queries per case.
+            $comparison = $case->relationLoaded('regulationComparisons')
+                ? $case->regulationComparisons->where('document_type', DocumentType::DefenseLetter->value)
+                    ->whereNull('consumed_at')->sortByDesc('id')->first()
+                : app(RegulationComparisons::class)->pending($case, DocumentType::DefenseLetter);
             if ($comparison?->status === 'suggesting') {
                 return $this->item('waiting', 'comparing_regulation', $base, $case);
             }
             if ($comparison && ! in_array($comparison->status, ['confirmed', 'skipped'], true)) {
                 return $this->item('hr', 'check_regulation_comparison', $base.'/documents/new/edit', $case);
             }
-            $draft = $case->documents()->where('document_type', DocumentType::DefenseLetter->value)
-                ->where('is_locked', false)->latest('id')->first();
+            $draft = ($case->relationLoaded('documents') ? $case->documents : $case->documents()->get())
+                ->where('document_type', DocumentType::DefenseLetter)->where('is_locked', false)->sortByDesc('id')->first();
             if ($draft) {
                 return $this->item('hr', 'defense_draft_ready', $base.'/documents/'.$draft->id.'/edit', $case);
             }
-            $failed = $case->events()->where('event_type', 'ai_draft_failed')->exists();
+            $failed = $case->relationLoaded('draftFailures') ? $case->draftFailures->isNotEmpty() : $case->draftFailures()->exists();
 
             return $this->item('hr', $failed ? 'defense_draft_failed' : 'prepare_defense', $base.'/documents/new/edit', $case);
         }

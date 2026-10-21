@@ -71,6 +71,8 @@ class OpenFromReport extends Component
 
     public string $newEmployeeHireDate = '';
 
+    public string $newEmployeeGender = '';
+
     public function mount(int $report, ReportCaseOpening $opening): void
     {
         Gate::authorize('create', DisciplinaryCase::class);
@@ -148,6 +150,7 @@ class OpenFromReport extends Component
         $this->newEmployeePosition = '';
         $this->newEmployeeDepartment = '';
         $this->newEmployeeHireDate = '';
+        $this->newEmployeeGender = '';
     }
 
     public function addNewPerson(ReportEmployeeQuickAdd $quickAdd): void
@@ -160,9 +163,10 @@ class OpenFromReport extends Component
             'newEmployeePosition' => ['required', 'string', 'max:255'],
             'newEmployeeDepartment' => ['required', 'string', 'max:255'],
             'newEmployeeHireDate' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
+            'newEmployeeGender' => ['required', 'in:male,female'],
         ]);
         $employee = $quickAdd->create($report, auth()->user(), $data['newEmployeeName'],
-            $data['newEmployeePosition'], $data['newEmployeeDepartment'], $data['newEmployeeHireDate']);
+            $data['newEmployeePosition'], $data['newEmployeeDepartment'], $data['newEmployeeHireDate'], $data['newEmployeeGender']);
         $this->people[$this->addingRow]['selected_id'] = $employee->id;
         $this->addingRow = null;
     }

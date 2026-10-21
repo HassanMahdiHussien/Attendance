@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Gate;
 
 class ReportEmployeeQuickAdd
 {
-    public function create(ViolationReport $report, User $actor, string $name, string $position, string $department, string $hireDate): Employee
+    public function create(ViolationReport $report, User $actor, string $name, string $position, string $department, string $hireDate, string $gender): Employee
     {
         Gate::forUser($actor)->authorize('create', Employee::class);
         abort_unless((int) $report->company_id === (int) $actor->company_id, 403);
@@ -23,6 +23,8 @@ class ReportEmployeeQuickAdd
             'position' => $position,
             'department' => $department,
             'hire_date' => $hireDate,
+            // Issued letters need it: Arabic wording follows the employee's grammatical gender.
+            'gender' => $gender,
         ]));
     }
 }
