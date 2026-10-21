@@ -59,7 +59,8 @@
                 @endif
             </x-ui.card>
         @endif
-        <x-ui.stats class="lg:grid-cols-4">
+        <x-ui.stats class="lg:grid-cols-5">
+            <x-ui.stat :label="__('New reports')" :value="\App\Support\Format\Ui::number($work['new_reports_count'])" href="/reports/inbox" />
             @foreach([
                 ['open', __('messages.home.open_cases'), 'open'],
                 ['procedure_due_48h', __('messages.home.due_48h'), 'procedure_due_48h'],
@@ -87,7 +88,7 @@
                                 <x-ui.button size="small" variant="secondary" :href="$row['action']->url">{{ __('messages.home.open_task') }}</x-ui.button>
                             @else
                                 <span class="flap flap-soon justify-center max-sm:col-span-2 max-sm:justify-self-start sm:min-w-[7.5rem]">{{ __('messages.home.new') }}</span>
-                                <div class="min-w-0 flex-1"><div class="font-semibold">{{ $row['label'] }}</div>@if(filled($row['summary'] ?? null))<p dir="auto" class="truncate text-sm text-gray-500">{{ $row['summary'] }}</p>@endif</div>
+                                <div class="min-w-0 flex-1"><div class="font-semibold">@if(isset($row['report']))<bdi class="font-mono">R-{{ str_pad((string) $row['report']->report_number, 4, '0', STR_PAD_LEFT) }}</bdi> · @endif{{ $row['label'] }}</div>@if(filled($row['summary'] ?? null))<p dir="auto" class="truncate text-sm text-gray-500">{{ $row['summary'] }}</p>@endif</div>
                                 <x-ui.button size="small" variant="secondary" :href="$row['url']">{{ __('messages.home.review') }}</x-ui.button>
                             @endif
                         </div>

@@ -4,7 +4,9 @@ namespace App\Models;
 
 use App\Enums\ReportSource;
 use App\Enums\ReportStatus;
+use App\Enums\SequenceKey;
 use App\Models\Concerns\BelongsToCompany;
+use App\Services\SequenceService;
 use App\Support\Search\SearchText;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -13,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Support\Facades\DB;
 
 class ViolationReport extends Model
 {
@@ -28,6 +31,12 @@ class ViolationReport extends Model
 
     protected static function booted(): void
     {
+        static::creating(function (self $report): void {
+            if ($report->report_number === null) {
+                $report->report_number = DB::transaction(fn (): int => app(SequenceService::class)
+                    ->next((int) $report->company_id, SequenceKey::ReportNumber));
+            }
+        });
         static::saving(function (self $report): void {
             $names = $report->violation_type_id ? ViolationType::query()->find($report->violation_type_id)?->names ?? [] : [];
             $report->search_text = SearchText::normalize((string) $report->violation_type.' '.implode(' ', $names).' '.(string) $report->place_freetext);
@@ -43,6 +52,8 @@ class ViolationReport extends Model
             'employees_unknown' => 'boolean',
             'witnesses_none' => 'boolean',
             'witnesses_unknown' => 'boolean',
+            'place_unknown' => 'boolean',
+            'when_unknown' => 'boolean',
         ];
     }
 

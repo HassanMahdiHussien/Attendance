@@ -151,12 +151,15 @@ erDiagram
     }
     VIOLATION_REPORTS {
         bigint id PK
+        int report_number "Sequential per company"
         bigint company_id FK
         bigint branch_id FK
         bigint reporter_user_id FK
         bigint employee_id FK
         bigint location_id FK
         bigint case_id FK
+        boolean place_unknown
+        boolean when_unknown
         string status
     }
     REPORT_WITNESSES {

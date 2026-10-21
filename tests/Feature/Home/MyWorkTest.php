@@ -22,6 +22,19 @@ use App\Support\Tenancy\TenantContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
+test('new reports lead HR actions and have a counter linked to the inbox', function (): void {
+    $company = Company::factory()->create();
+    app(TenantContext::class)->setCompany($company);
+    $hr = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::CompanyAdmin]);
+    DisciplinaryCase::factory()->create(['company_id' => $company->id, 'law_version_id' => Law::factory()->create()->id, 'status' => CaseStatus::Open]);
+    $report = ViolationReport::factory()->create(['company_id' => $company->id, 'status' => 'received']);
+
+    $work = app(MyWork::class)->for($hr);
+    expect($work['actions']->first()['report']->id)->toBe($report->id)
+        ->and($work['new_reports_count'])->toBe(1);
+    $this->actingAs($hr)->get('/home')->assertOk()->assertSee(__('New reports'))->assertSee('R-0001');
+});
+
 test('reporter home shows only their bare report status', function (): void {
     $company = Company::factory()->create();
     app(TenantContext::class)->setCompany($company);

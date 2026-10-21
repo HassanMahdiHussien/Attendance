@@ -5,11 +5,12 @@
             @if($reportId)<x-ui.alert tone="indigo">{{ __('Report details are ready for review. Complete the fields and save the draft.') }}</x-ui.alert>@endif
             @if($sourceReport?->free_employee_names)<x-ui.alert tone="amber">{{ __('Names not in the employee list') }}: {{ implode(' · ', $sourceReport->free_employee_names) }}. {{ __('Add employees to the list before opening a case') }}</x-ui.alert>@endif
             @if(!$reportId && !$emailId && !$editingIncident)
-                <div class="rounded-xl border border-dashed border-line p-4 text-center">
+                <div x-data x-on:dragover.prevent x-on:drop.prevent="$refs.upload.files = $event.dataTransfer.files; $refs.upload.dispatchEvent(new Event('change', { bubbles: true }))" class="rounded-xl border border-dashed border-line p-4 text-center">
                     <p class="font-semibold">{{ __('Attach an email or document') }}</p>
-                    <p class="mt-1 text-xs text-gray-500">{{ __('Email, PDF, Word or images') }}</p>
-                    <input id="case-files" type="file" wire:model="caseFiles" multiple accept=".eml,.msg,.pdf,.docx,.jpg,.jpeg,.png,.webp" class="peer sr-only">
+                    <p class="mt-1 text-xs text-gray-500">{{ __('EML, MSG, PDF, DOCX, JPG, JPEG, PNG or WEBP (10 MB each)') }}</p>
+                    <input x-ref="upload" id="case-files" type="file" wire:model="caseFiles" multiple accept=".eml,.msg,.pdf,.docx,.jpg,.jpeg,.png,.webp" class="peer sr-only">
                     <label for="case-files" class="ui-button ui-button-secondary mt-3 inline-flex cursor-pointer peer-focus-visible:outline-2">{{ __('Choose files') }}</label>
+                    <p class="mt-2 text-xs text-gray-500">{{ __('Drop files here or choose files') }}</p>
                 </div>
                 @foreach($caseIntakeFiles as $file)
                     <div class="flex min-w-0 items-center gap-3 rounded-lg border border-line px-3 py-2 text-sm"><span dir="auto" class="min-w-0 flex-1 truncate">{{ $file->original_name }}</span><bdi dir="ltr" class="text-gray-500">{{ number_format($file->size_bytes / 1024) }} KB</bdi></div>

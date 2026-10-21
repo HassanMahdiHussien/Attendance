@@ -21,7 +21,7 @@
             <a href="/cases/{{ $case->id }}" class="flex min-h-16 items-center gap-3 border-b border-[#EEF0F4] px-5 py-4 text-sm hover:bg-[#FAFAFC] focus-visible:outline-2 focus-visible:outline-primary">
                 <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary-light font-bold text-primary">{{ \App\Support\Format\Initials::for($case->employee?->name ?? '') }}</span>
                 <span class="min-w-0 flex-1 font-bold">{{ $case->employee?->name }}</span>
-                <bdi class="font-mono text-xs text-gray-500">#{{ \App\Support\Format\Ui::number($case->case_number) }}</bdi>
+                <bdi class="font-mono text-xs text-gray-500">#{{ \App\Support\Format\Ui::number(str_pad((string) $case->case_number, 4, '0', STR_PAD_LEFT)) }}</bdi>
                 <x-ui.icon name="chevron" class="h-4 w-4 text-gray-400 rtl:rotate-180" />
             </a>
         @empty

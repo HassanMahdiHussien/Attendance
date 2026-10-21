@@ -44,13 +44,15 @@ class MyWork
         $mapped = $this->nextAction->forMany($cases, $user);
         $actions = $cases->map(fn ($case) => ['case' => $case, 'action' => $mapped->get($case->id)])
             ->filter(fn (array $row) => in_array($row['action']?->actor, ['hr', 'committee'], true));
-        foreach (ViolationReportVisibility::inbox($user)->latest()->get() as $report) {
+        $newReports = ViolationReportVisibility::inbox($user)->latest()->get();
+        foreach ($newReports as $report) {
             $actions->push(['report' => $report, 'label' => __('messages.home.new_report'), 'summary' => Violation::name($report), 'url' => '/reports/inbox', 'tone' => 'indigo']);
         }
         foreach (EmailDraftVisibility::inbox($user)->latest()->get() as $draft) {
             $actions->push(['email' => $draft, 'label' => __('messages.home.new_email'), 'summary' => $draft->subject, 'url' => '/reports/inbox', 'tone' => 'indigo']);
         }
         $actions = $actions->sortBy(fn (array $row) => [
+            isset($row['report']) ? 0 : 1,
             match (($row['action'] ?? null)?->deadlineAlert ?? $row['tone'] ?? 'indigo') {
                 'red' => 0, 'amber' => 1, 'indigo' => 2, default => 3,
             }, ($row['action'] ?? null)?->due?->timestamp ?? PHP_INT_MAX,
@@ -62,7 +64,7 @@ class MyWork
         $setup = app(CompanySetup::class);
         $incomplete = $user->company_id !== null && ! $setup->complete($user->company);
 
-        return ['role' => 'hr', 'counts' => $counts, 'actions' => $actions,
+        return ['role' => 'hr', 'counts' => $counts, 'new_reports_count' => $newReports->count(), 'actions' => $actions,
             'setup_incomplete' => $incomplete,
             'setup' => $incomplete && $user->primary_role === UserRole::CompanyAdmin
                 ? array_values(array_filter($setup->for($user->company), fn (array $item): bool => ! $item['done'])) : [],

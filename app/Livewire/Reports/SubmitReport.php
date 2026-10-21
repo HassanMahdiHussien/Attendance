@@ -13,6 +13,7 @@ use App\Services\Employees\EmployeePicker;
 use App\Services\Reports\ReportAssistant;
 use App\Services\Reports\ReportFiles;
 use App\Services\Reports\ReportService;
+use App\Support\Reports\UnknownAnswer;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -55,6 +56,10 @@ class SubmitReport extends Component
 
     public array $attachments = [];
 
+    public bool $placeUnknown = false;
+
+    public bool $whenUnknown = false;
+
     public bool $chatMode = true;
 
     public string $chatInput = '';
@@ -92,20 +97,24 @@ class SubmitReport extends Component
     public function unknownPlace(): void
     {
         $this->locationId = '';
-        $this->place = __('I do not know');
+        $this->place = '';
+        $this->placeUnknown = true;
     }
 
     public function unknownDate(): void
     {
         $this->occurredAt = '';
-        $this->occurredAtText = __('I do not know');
+        $this->occurredAtText = '';
+        $this->whenUnknown = true;
     }
 
     public function startChat(ReportAssistant $assistant): void
     {
         $this->mount();
         $this->validate(['branchId' => ['required', 'integer'], 'chatInput' => ['nullable', 'string', 'max:5000'],
-            'attachments' => ['array', 'max:10'], 'attachments.*' => ['file', 'max:51200']]);
+            'attachments' => ['array', 'max:10'], 'attachments.*' => ['file', 'max:51200']], [
+                'attachments.*.max' => __('messages.attachment.type_or_size_not_allowed'),
+            ]);
         $session = $assistant->start(auth()->user(), (int) $this->branchId, $this->chatInput, true, $this->attachments !== []);
         if ($this->attachments !== []) {
             app(ReportFiles::class)->add($session, $this->attachments, auth()->user());
@@ -199,9 +208,17 @@ class SubmitReport extends Component
         $facts = $session->facts;
         $this->description = (string) ($facts['description'] ?? $this->description);
         $this->place = (string) ($facts['place'] ?? $this->place);
+        $this->placeUnknown = (bool) ($facts['place_unknown'] ?? false) || UnknownAnswer::matches($this->place);
+        if (UnknownAnswer::matches($this->place)) {
+            $this->place = '';
+        }
         $this->locationId = (string) ($facts['location_id'] ?? $this->locationId);
         $this->occurredAt = (string) ($facts['occurred_at'] ?? $this->occurredAt);
         $this->occurredAtText = (string) ($facts['occurred_at_text'] ?? $this->occurredAtText);
+        $this->whenUnknown = (bool) ($facts['when_unknown'] ?? false) || UnknownAnswer::matches($this->occurredAtText);
+        if (UnknownAnswer::matches($this->occurredAtText)) {
+            $this->occurredAtText = '';
+        }
         $this->howStarted = (string) ($facts['how_started'] ?? $this->howStarted);
         $this->injuriesDamage = (string) ($facts['injuries_damage'] ?? $this->injuriesDamage);
         $this->assistantSummary = (string) ($facts['summary'] ?? $this->assistantSummary);
@@ -265,7 +282,9 @@ class SubmitReport extends Component
             'free_employee_names' => array_values(array_map(fn ($item) => $item['name'], array_filter($employees, fn ($item) => $item['employee_id'] === null))),
             'employees_unknown' => $this->employeesUnknown && $employees === [],
             'location_id' => $data['locationId'] ?: null, 'place_freetext' => $data['place'] ?: null,
+            'place_unknown' => $this->placeUnknown && $data['place'] === '' && $data['locationId'] === '',
             'occurred_at' => $data['occurredAt'] ?: null, 'occurred_at_text' => $data['occurredAtText'] ?: null,
+            'when_unknown' => $this->whenUnknown && $data['occurredAt'] === '' && $data['occurredAtText'] === '',
             'witnesses_none' => $this->witnessesNone && $this->pickedPeople('witnesses') === [],
             'witnesses_unknown' => $this->witnessesUnknown && $this->pickedPeople('witnesses') === [],
             'violation_type' => $data['violationType'],
@@ -295,14 +314,14 @@ class SubmitReport extends Component
             'howStarted' => ['nullable', 'string', 'max:5000'],
             'injuriesDamage' => ['nullable', 'string', 'max:5000'],
             'attachments' => ['array', 'max:10'], 'attachments.*' => ['file', 'max:51200'],
-        ]);
-        if (blank($this->locationId) && blank($this->place)) {
+        ], ['attachments.*.max' => __('messages.attachment.type_or_size_not_allowed')]);
+        if (blank($this->locationId) && blank($this->place) && ! $this->placeUnknown) {
             throw ValidationException::withMessages(['place' => __('messages.report.location_or_place_required')]);
         }
         if ($this->pickedPeople('employees') === [] && ! $this->employeesUnknown) {
             throw ValidationException::withMessages(['people.employees' => __('Name at least one person.')]);
         }
-        if (blank($this->occurredAt) && blank($this->occurredAtText)) {
+        if (blank($this->occurredAt) && blank($this->occurredAtText) && ! $this->whenUnknown) {
             throw ValidationException::withMessages(['occurredAtText' => __('Enter when it happened or choose I do not know.')]);
         }
         if ($this->pickedPeople('witnesses') === [] && ! $this->witnessesNone && ! $this->witnessesUnknown) {

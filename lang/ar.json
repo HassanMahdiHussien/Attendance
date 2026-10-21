@@ -884,6 +884,8 @@
     "Incident group": "مجموعة الواقعة",
     "Add employee to incident": "إضافة موظف إلى الواقعة",
     "Add employee": "إضافة موظف",
+    "Employee selected": "تم اختيار الموظف",
+    "Email (.eml/.msg), PDF, Word or images (10 MB each)": "بريد (.eml/.msg) أو PDF أو Word أو صور (10 ميغابايت لكل ملف)",
     "Description for this employee": "وصف خاص بهذا الموظف",
     "Save description": "حفظ الوصف",
     "Edit shared facts": "تعديل الوقائع المشتركة",
@@ -987,5 +989,11 @@
     "Email, PDF, Word or images": "بريد، PDF، Word أو صور",
     "Choose files": "اختر ملفات",
     "Names mentioned in the files. Match each person in the employee picker:": "الأسماء المذكورة في الملفات. طابق كل شخص في قائمة الموظفين:",
-    "Attachments (email, documents, images or video)": "المرفقات (بريد أو مستندات أو صور أو فيديو)"
+    "Attachments (email, documents, images or video)": "المرفقات (بريد أو مستندات أو صور أو فيديو)",
+    "Drop files here or choose files": "أسقط الملفات هنا أو اختر ملفات",
+    "New reports": "بلاغات جديدة",
+    "Not in the employee list — add": "غير موجود في قائمة الموظفين — أضفه",
+    "Add employee": "إضافة موظف",
+    "Employee selected": "تم اختيار الموظف",
+    "EML, MSG, PDF, DOCX, JPG, JPEG, PNG or WEBP (10 MB each)": "EML وMSG وPDF وDOCX وJPG وJPEG وPNG وWEBP (10 ميغابايت لكل ملف)"
 }

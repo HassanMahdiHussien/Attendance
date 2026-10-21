@@ -211,7 +211,9 @@ class CreateCase extends Component
     public function updatedCaseFiles(CaseFileSuggestions $suggestions): void
     {
         $this->authorizeCreate();
-        $this->validate(['caseFiles' => ['array', 'max:10'], 'caseFiles.*' => ['file', 'max:51200']]);
+        $this->validate(['caseFiles' => ['array', 'max:10'], 'caseFiles.*' => ['file', 'max:51200']], [
+            'caseFiles.*.max' => __('messages.attachment.case_file_type_or_size_not_allowed'),
+        ]);
         $intake = $this->caseFileIntakeId
             ? CaseFileIntake::query()->where('user_id', auth()->id())->findOrFail($this->caseFileIntakeId)
             : CaseFileIntake::create(['company_id' => auth()->user()->company_id, 'user_id' => auth()->id()]);

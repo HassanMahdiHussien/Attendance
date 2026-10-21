@@ -147,6 +147,10 @@ test('report case opening controls remain inventoried', function (): void {
         // The inventory parser stops at the first single quote, so array lookups appear cut at "[".
         ['wire:click', 'selectPerson({{ $index }}, {{ $candidate['],
         ['wire:click', 'searchPerson({{ $index }})'],
+        ['wire:click', 'startAddingPerson({{ $index }})'],
+        ['wire:model', 'newEmployeeName'], ['wire:model', 'newEmployeePosition'],
+        ['wire:model', 'newEmployeeDepartment'], ['wire:model', 'newEmployeeHireDate'],
+        ['wire:click', 'addNewPerson'],
         ['wire:model', 'locationId'], ['wire:model', 'place'], ['wire:model', 'incidentDate'],
         ['wire:model', 'incidentTime'], ['wire:model', 'violationTypeId'], ['wire:model', 'violationType'],
         ['wire:model', 'assignedHrUserId'], ['wire:model', 'description'], ['wire:model', 'responsibleName'],

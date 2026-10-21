@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Models\ViolationReport;
 use App\Services\Reports\ReportAssistant;
 use App\Services\Reports\ReportService;
+use App\Support\Reports\UnknownAnswer;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\UploadedFile;
@@ -23,6 +24,26 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
 use Tests\Fakes\FakeClaudeClient;
+
+test('uncertain answers in Arabic dialects and English are not fact values', function (): void {
+    foreach (['لا أعرف', 'ما أعرف', 'مامعرف', 'ما ادري', 'ماكو فكرة', 'عدنة بس مامعرف',
+        "I don't know", 'not sure'] as $answer) {
+        expect(UnknownAnswer::matches($answer))->toBeTrue();
+    }
+    expect(UnknownAnswer::matches('Gate 3'))->toBeFalse()
+        // A real description may quote someone saying «لا أعرف»; it is a fact, not an unknown answer.
+        ->and(UnknownAnswer::matches('قال الموظف لا أعرف شيئاً عن الموضوع ثم غادر المكان دون إذن'))->toBeFalse();
+
+    $f = reportAssistantFixture();
+    config()->set('services.anthropic.key', 'test-key');
+    Bus::fake([AskReportAssistant::class]);
+    $assistant = app(ReportAssistant::class);
+    $session = $assistant->start($f['reporter'], $f['branch']->id, 'Something happened at work');
+    $session->update(['status' => 'ready', 'pending_aspect' => 'where']);
+    $assistant->answer($session->refresh(), $f['reporter'], 'عدنة بس مامعرف');
+    expect($session->refresh()->facts['place'] ?? null)->toBeNull()
+        ->and($session->facts['place_unknown'])->toBeTrue();
+});
 
 function reportAssistantFixture(): array
 {
@@ -409,7 +430,8 @@ test('the sixth answer is extracted without asking a seventh question', function
         'transcript' => [['role' => 'reporter', 'text' => 'A gate was damaged']]]);
     app(ReportAssistant::class)->answer($session, $f['reporter'], 'I do not know');
     expect($session->fresh()->status)->toBe('pending')
-        ->and($session->fresh()->facts['occurred_at_text'])->toBe('I do not know')
+        ->and($session->fresh()->facts['occurred_at_text'] ?? null)->toBeNull()
+        ->and($session->fresh()->facts['when_unknown'])->toBeTrue()
         ->and($session->fresh()->question_count)->toBe(6);
     Bus::assertDispatched(AskReportAssistant::class);
 });

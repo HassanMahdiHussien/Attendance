@@ -238,7 +238,8 @@ return [
     'attachment' => [
         'pdf_jpg_png_only' => 'يسمح بملفات PDF و JPG و PNG فقط.',
         'type_not_allowed' => 'نوع المرفق غير مسموح.',
-        'type_or_size_not_allowed' => 'نوع المرفق أو حجمه غير مسموح.',
+        'type_or_size_not_allowed' => 'المسموح: EML وMSG وPDF وDOCX وJPG وJPEG وPNG وWEBP وMP4 وMOV. الفيديو حتى 50 ميغابايت، والملفات الأخرى حتى 10 ميغابايت.',
+        'case_file_type_or_size_not_allowed' => 'المسموح: EML وMSG وPDF وDOCX وJPG وJPEG وPNG وWEBP، حتى 10 ميغابايت لكل ملف.',
         'save_failed' => 'تعذر حفظ المرفق.',
     ],
     'appeal' => [

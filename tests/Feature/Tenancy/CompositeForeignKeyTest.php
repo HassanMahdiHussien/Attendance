@@ -117,6 +117,9 @@ test('every tenant foreign key rejects a row from another company through models
         if (isset($attributes['case_number'])) {
             $attributes['case_number'] += 1000000000;
         }
+        if (isset($attributes['report_number'])) {
+            $attributes['report_number'] += 1000000000;
+        }
         if ($key->source_table === 'intake_checks') {
             $attributes['request_token'] = (string) Str::uuid();
         }

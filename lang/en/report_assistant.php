@@ -24,6 +24,6 @@ return [
         'what' => 'What happened', 'type' => 'Violation type', 'description' => 'Description', 'how' => 'How it started',
         'injuries' => 'Injuries and damage', 'attachments' => 'Attachments', 'no_attachments' => 'No attachments',
         'add_files' => 'Add photos or files', 'change_files' => 'Choose other files', 'uploading' => 'Uploading…',
-        'files_hint' => 'Email, PDF, Word, images or video (50 MB for video; 10 MB for other files)',
+        'files_hint' => 'EML, MSG, PDF, DOCX, JPG, JPEG, PNG, WEBP, MP4 or MOV (50 MB for video; 10 MB for other files)',
     ],
 ];
