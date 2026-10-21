@@ -25,7 +25,10 @@ The full requirements are in `docs/attendance/PRD-EN.md`. This file records what
 | Covered-but-working types | Work From Home, Business Travel and Sick Leave mark the day as covered (not absent). |
 | Annual Leave | Covers the day; it comes from the employee's balance in the company system. |
 | No punches + no leave on a working day | Absent. |
-| Rest day | Friday by default; HR changes it per employee (mainly the security team). See open question Q1 for office staff. |
+| Rest days (Q1) | Office: Friday and Saturday. Shift: Friday. Security: an individual rest day HR sets per employee. HR can override any employee. Office Friday work earns overtime and a rest-day entitlement; office Saturday work earns overtime only (PRD §13). A rest day with no punches is never absence. |
+| Compensation vs overtime-equivalent leave (Q2) | `Compensation Leave` consumes a rest-day entitlement (PRD §13). `Overtime Equivelant Leave` is matched against overtime hours / hour credit and never consumes a rest-day entitlement. Which hours it draws from, and in what order, is part of the credit allocation mechanism (Q8). |
+| Annual Leave balance (Q3) | Approved annual leave covers the day. The balance is not checked; the company system already enforces it. |
+| Other leave types (Q4) | Approved Administrative, Unpaid (`Other`), Paternity, Funeral, Bereavement, Marriage and Court leave cover the day. Coverage is a per-type, per-company setting (leave-type mapping). `0200` and any type not yet mapped do **not** cover anything until HR maps them; an unmapped type raises an HR data issue. |
 | Contractors and visitors | Not assessed (no absence/lateness), but their punches are stored and appear in attendance and restaurant reports. |
 | Devices | Each device is check-in only, check-out only, or restaurant. Restaurant punches are counted for meals only. |
 | Interface language | English default, Arabic second, for both modules. |
@@ -38,7 +41,7 @@ The full requirements are in `docs/attendance/PRD-EN.md`. This file records what
 - Dates are `M/D/YYYY` text. Some start dates are implausible (1970) — isolate and flag them.
 - `Leave Duration (WorkDays, Approved)` is empty in every row; use `Leave Duration (Work Days)`.
 - All 1,934 rows without a duration are `Leave Entry`.
-- Leave type `0200` (6 rows, one of 83 days) is unknown — see Q4.
+- Leave type `0200` (6 rows, one of 83 days) is unknown — not counted as cover until HR maps it (Q4).
 - **No description column in this export.** A version with descriptions will be supplied; the AI-interpretation spec waits for it.
 - Approver and manager are names, not IDs or emails.
 
@@ -54,14 +57,11 @@ The full requirements are in `docs/attendance/PRD-EN.md`. This file records what
 
 | # | Question | Needed by |
 |---|---|---|
-| Q1 | Office staff rest days: Friday + Saturday (PRD §6) or Friday only? | 503 |
-| Q2 | `Compensation Leave` vs `Overtime Equivelant Leave`: which consumes a rest-day entitlement and which consumes hour credit/overtime? | 504 / later |
-| Q3 | Annual leave: just accept approved leave as cover (recommended), or also check the balance? | 504 |
-| Q4 | Administrative, Paternity, Funeral, Bereavement, Marriage, Court, Unpaid (`Other`) and `0200`: does approved = covered for all? | 504 |
+| Q1–Q4 | Resolved 2026-10-21 — see §2. | — |
 | Q5 | After merge-back: should an attendance case offer an HR-clicked "open disciplinary report" action, or only show both side by side? | 505 |
 | Q6 | Employee/email/work-pattern file: actual column names (sample pending). | 501 commit mapping |
 | Q7 | Leave export with descriptions; overtime report; holiday email sample. | Later specs |
-| Q8 | PRD §26 items (office departure after 09:00 arrival, overtime thresholds, credit allocation mechanism, …). | 503 onward |
+| Q8 | PRD §26 items (office departure after 09:00 arrival, overtime thresholds, credit allocation mechanism — including which overtime/credit hours `Overtime Equivelant Leave` draws from, …). | 503 onward |
 
 ## 5. Spec sequence
 
@@ -72,7 +72,7 @@ Each spec is one branch and one PR, built with the spec-kit flow (`/speckit-plan
 | **500 foundation-cleanup** | Remove the discipline module, keep and test the shared foundation, amend the constitution | — |
 | **501 employee-record-for-attendance** | Shared employee fields, dated history, full-population Excel/CSV upload with impact preview, missing-employee exit review | 500 |
 | 502 attendance-import | Import batches, raw transactions, device roles, duplicate protection, punch cleanup, restaurant counts, contractors/visitors | 501 |
-| 503 office-attendance | Work-pattern policies (versioned), daily sessions, two time fields, office flexibility, lateness, early departure, short hours, missing punches + HR correction, pending/incomplete days | 502, Q1 |
-| 504 leave-import-and-matching | Leave requests with source + status history, coverage rules, hour allocation, surplus credit, manual cancellation and reversal | 503, Q2–Q4 |
+| 503 office-attendance | Work-pattern policies (versioned), daily sessions, two time fields, office flexibility, lateness, early departure, short hours, missing punches + HR correction, pending/incomplete days | 502 |
+| 504 leave-import-and-matching | Leave requests with source + status history, coverage rules, hour allocation, surplus credit, manual cancellation and reversal, per-company leave-type mapping (coverage flag, unmapped-type alert) | 503 |
 | 505 employee-page-and-dashboard | Attendance section on the employee page, attendance dashboard, search, Excel export and printable statement | 504, Q5 |
 | later | Shift/security inference; holidays (AI extraction + HR approval); overtime & compensatory entitlements; notifications; description AI; admin chat; **merge back into Displanary** | — |

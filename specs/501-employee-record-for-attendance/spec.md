@@ -12,7 +12,7 @@
 
 - **FR-001 New employee fields** (shared by both modules, all nullable unless stated):
   - `work_pattern`: `office` | `shift` | `security`. Required for attendance assessment; an employee with none is listed as "pattern missing" and is not assessed.
-  - `rest_days`: a set of weekdays (stored as a JSON list of ISO weekday numbers). Empty means "use the work pattern's default", which spec 503 defines. Default for all patterns today is Friday (ROADMAP §2; office Saturday is open question Q1).
+  - `rest_days`: a set of weekdays (stored as a JSON list of ISO weekday numbers). Empty means "use the work pattern's default", which spec 503 defines. Defaults (ROADMAP §2, Q1): office Friday + Saturday, shift Friday, security has no default — HR sets each employee's day, and a security employee without one is listed as "rest day missing" and not assessed.
   - `schedule_start` / `schedule_end`: per-employee override of the pattern's working hours. Empty means the pattern default. Changing one never changes the other, the pattern or the rest days (PRD §21.2, test 28).
   - `manager_employee_id`: the direct manager, linked to another employee of the same company. `manager_name` holds the reported name when no employee matches.
   - `fallback_notification_email`: the manager email HR designates for employees without an email (PRD §17).
