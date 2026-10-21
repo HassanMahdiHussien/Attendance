@@ -42,6 +42,7 @@ function aiScreenCase(): array
     $case = DisciplinaryCase::factory()->create(['opened_by_user_id' => $admin->id, 'violation_place_freetext' => 'Warehouse']);
     completeCompanySetup($company);
     $case = app(CaseOpening::class)->open($case, $admin);
+    config()->set('services.anthropic.key', 'test-key');
 
     return compact('company', 'admin', 'law', 'case');
 }

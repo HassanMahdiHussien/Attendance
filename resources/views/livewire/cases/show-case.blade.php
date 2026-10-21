@@ -101,7 +101,7 @@
             @if($canManage && in_array(auth()->user()->primary_role, [\App\Enums\UserRole::CompanyAdmin, \App\Enums\UserRole::HrStaff], true))
                 <div class="grid gap-4 lg:grid-cols-2">
                     @if($canManageAllIncident)<div class="space-y-2"><label for="incident-add" class="block text-sm font-semibold">{{ __('Add employee to incident') }}</label><x-ui.select id="incident-add" wire:model="incidentEmployeeId"><option value="">{{ __('Choose an employee') }}</option>@foreach($incidentEmployees as $employee)<option value="{{ $employee->id }}">{{ $employee->name }}</option>@endforeach</x-ui.select>@error('incidentEmployeeId')<p class="text-sm text-red-700">{{ $message }}</p>@enderror<x-ui.button variant="secondary" wire:click="addIncidentEmployee">{{ __('Add employee') }}</x-ui.button></div>@endif
-                    <div class="space-y-2"><label for="case-specific-description" class="block text-sm font-semibold">{{ __('Description for this employee') }}</label><p class="text-xs text-gray-600">{{ __('Required before drafting this employee’s defense letter. Do not name other incident members.') }}</p><x-ui.textarea id="case-specific-description" wire:model="caseDescription" rows="4" />@error('caseDescription')<p class="text-sm text-red-700">{{ $message }}</p>@enderror@if(!$record->defense_letter_issued_at && !$record->documents()->exists())<x-ui.button variant="secondary" wire:click="saveCaseDescription">{{ __('Save description') }}</x-ui.button>@endif</div>
+                    <div id="incident-description" class="space-y-2" @if(blank($record->case_specific_description)) wire:poll.5s="pollIncidentDescription" @endif><label for="case-specific-description" class="block text-sm font-semibold">{{ __('Description for this employee') }}</label><p class="text-xs text-gray-600">{{ __('Each letter goes to one employee and must not name the others.') }}</p><x-ui.textarea id="case-specific-description" wire:model="caseDescription" rows="4" />@error('caseDescription')<p class="text-sm text-red-700">{{ $message }}</p>@enderror@if(!$record->defense_letter_issued_at && !$record->documents()->exists())<x-ui.button variant="secondary" wire:click="saveCaseDescription">{{ __('Confirm description') }}</x-ui.button>@endif</div>
                 </div>
                 @if($canManageAllIncident && !$record->defense_letter_issued_at && in_array($record->status, [\App\Enums\CaseStatus::Draft, \App\Enums\CaseStatus::Open], true) && !$record->documents()->exists())<a class="ui-link text-sm" href="/cases/new?incident_case={{ $record->id }}">{{ __('Edit shared facts') }}</a>@endif
             @endif
@@ -121,7 +121,7 @@
                     default => __('messages.search.actor_waiting'),
                 };
             @endphp
-            <section class="rounded-xl bg-night p-5 text-white" aria-label="{{ __('messages.search.next_step') }}">
+            <section class="rounded-xl bg-night p-5 text-white" aria-label="{{ __('messages.search.next_step') }}" @if(in_array($nextAction->key, ['defense_drafting', 'comparing_regulation'], true)) wire:poll.5s @endif>
                 <h2 class="text-lg font-semibold leading-snug">{{ $nextAction->label }}</h2>
                 <p class="mt-1 text-sm text-night-soft">{{ $nextActorLabel }}</p>
                 @if($nextAction->due)
@@ -212,7 +212,7 @@
             @if($record->status === \App\Enums\CaseStatus::Draft)<x-ui.button href="/cases/new?draft={{ $record->id }}" variant="secondary">{{ __('Edit facts') }}</x-ui.button>
 <x-ui.button variant="primary" wire:click="open">{{ __('Open case') }}</x-ui.button>
 @endif
-            @if($record->status === \App\Enums\CaseStatus::Open)<x-ui.button href="/cases/{{ $record->id }}/documents/{{ $record->documents->where('document_type', \App\Enums\DocumentType::DefenseLetter)->where('status', \App\Enums\DocumentStatus::Draft)->last()?->id ?? 'new' }}/edit">{{ __('Write defense request letter') }}</x-ui.button>@endif
+            @if($record->status === \App\Enums\CaseStatus::Open)@php $defenseDraft = $record->documents->where('document_type', \App\Enums\DocumentType::DefenseLetter)->where('status', \App\Enums\DocumentStatus::Draft)->last(); @endphp<x-ui.button variant="secondary" href="/cases/{{ $record->id }}/documents/{{ $defenseDraft?->id ?? 'new' }}/edit">{{ $defenseDraft ? __('Open the defense letter draft') : __('Write defense request letter') }}</x-ui.button>@endif
             @if($record->status === \App\Enums\CaseStatus::DefenseLetterCitationCheck)<x-ui.button href="/cases/{{ $record->id }}/documents/{{ $record->documents->where('document_type', \App\Enums\DocumentType::DefenseLetter)->last()?->id }}/edit" variant="secondary">{{ __('Return to editing and check citations') }}</x-ui.button>@endif
             @if($record->status === \App\Enums\CaseStatus::DefenseLetterReadyForReview)<x-ui.button href="/cases/{{ $record->id }}/documents/{{ $record->documents->where('document_type', \App\Enums\DocumentType::DefenseLetter)->last()?->id }}/confirm">{{ __('Confirm document') }}</x-ui.button>@endif
             @if($record->status === \App\Enums\CaseStatus::AwaitingEmployeeResponse)

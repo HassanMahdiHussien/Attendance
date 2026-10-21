@@ -5,11 +5,11 @@ audience: company_admin, hr_staff
 order: 40
 ---
 
-What you need: an open case with confirmed incident facts. For a shared incident, save that employee's own description first.
+What you need: an open case with confirmed incident facts. For a shared incident, confirm that employee's own description first.
 
-1. On the case page, select **Write defense request letter**. Use **Draft with AI** if available, or write each enabled language in **Letter text**. AI uses the facts entered by people; it does not decide what happened.
+1. After opening the case, wait for **Drafting the defense letter…** and then select **Defense letter ready — review**. If the company has an approved internal regulation, confirm its comparison first; drafting then continues. If drafting is unavailable or fails, choose **Draft with AI** to try again or **Write it myself**. AI uses the facts entered by people; it does not decide what happened.
 2. Read **Drafting notes** and the **Citation check**. Check the wording and sources. If a check is not supported, correct the text or use **Reason for overriding the check** and **Record override** where permitted.
-3. Select **Save draft** to refresh **Document preview**, then **Submit for review**. Open **Confirm document** from the case page.
+3. Select **Save draft** to refresh **Document preview**, then **Review and continue** to open the confirmation screen.
 4. Check every language, name, date, and reference. The **Reference number** is proposed at issuance and can be edited for your company's correspondence system. If your company requires it, another user must record **Record second review**.
 5. Select **Confirm and issue**, then obtain the issued PDF for paper printing and delivery. Record the [paper handoff](help:hr/paper-delivery).
 

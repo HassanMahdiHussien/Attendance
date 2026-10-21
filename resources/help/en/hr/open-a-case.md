@@ -13,7 +13,7 @@ On a blank form, select **Attach an email or document**, then **Choose files**. 
 
 1. Choose **Branch** and **Employee**. Select **Additional employees in this incident** if the same event involves others. Each employee gets a separate case within the incident.
 2. Enter **Location** or **Place if not listed**, **Incident date and time**, **Violation type**, and **Incident description**. Add the **Alleged responsible person**, **Person responsible for follow-up**, and **Witnesses, separated by commas** when known.
-3. Select **Save draft**. Answer any open intake questions on the draft case page. For an incident, write a separate **Description for this employee** before that employee's defense letter is drafted.
+3. Select **Save draft**. Answer any open intake questions on the draft case page. When the case opens, the defense letter starts drafting automatically if AI is available. For an incident, review or edit the proposed **Description for this employee** and select **Confirm description**; that employee's letter then starts drafting. Each letter goes to one employee and must not name the others.
 4. Select **Check for duplicates**. Review cases near the incident time, choose **Link the new case as a duplicate report** if appropriate, then select **Continue and open case**.
 
 # Opening a case from a report

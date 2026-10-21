@@ -7,6 +7,17 @@ use Illuminate\Support\Facades\DB;
 
 class IncidentPrivacy
 {
+    public function sharedFactsFor(DisciplinaryCase $case, string $text): string
+    {
+        if ($case->incident_id === null) {
+            return $text;
+        }
+        $parts = preg_split('/(?<=[.!\x{061F}\x{3002}\n])\s*/u', $text);
+
+        return trim(implode(' ', array_filter($parts ?: [],
+            fn (string $part): bool => ! $this->containsOtherMemberName($case, $part))));
+    }
+
     public function containsOtherMemberName(DisciplinaryCase $case, string $text): bool
     {
         if ($case->incident_id === null || $text === '') {
@@ -24,6 +35,11 @@ class IncidentPrivacy
                     return true;
                 }
             }
+        }
+
+        // A masked name token in an employee's own description can only stand for someone else in the incident.
+        if (str_contains($text, '[other incident member]') || str_contains($text, '⟦')) {
+            return true;
         }
 
         return false;

@@ -29,6 +29,8 @@ class EditDocument extends Component
 
     public string $notice = '';
 
+    public bool $manualEditing = false;
+
     public function mount(string $case, ?string $document = null): void
     {
         $record = CaseVisibility::for(auth()->user())->findOrFail($case);
@@ -44,6 +46,12 @@ class EditDocument extends Component
         foreach (array_unique(array_merge(['ar', 'en'], $record->company->enabled_languages)) as $language) {
             $this->bodies[$language] ??= '';
         }
+    }
+
+    public function writeManually(): void
+    {
+        $this->currentCase();
+        $this->manualEditing = true;
     }
 
     public function save(DocumentDrafts $drafts): void

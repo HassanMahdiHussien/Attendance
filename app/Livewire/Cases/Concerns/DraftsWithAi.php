@@ -12,6 +12,7 @@ use App\Models\DisciplinaryCase;
 use App\Models\Document;
 use App\Models\LegalUnit;
 use App\Models\RegulationComparison;
+use App\Services\Cases\IncidentPrivacy;
 use App\Services\Documents\RegulationExclusions;
 use App\Support\Access\CaseVisibility;
 use Illuminate\Support\Collection;
@@ -69,7 +70,13 @@ trait DraftsWithAi
 
     protected function canRequestAi(DisciplinaryCase $case): bool
     {
-        if ($case->status !== $this->aiStage() || $case->ai_request_id !== null || ! Gate::forUser(auth()->user())->allows('manageDocuments', $case)) {
+        if (blank(config('services.anthropic.key')) || $case->status !== $this->aiStage()
+            || $case->ai_request_id !== null || ! Gate::forUser(auth()->user())->allows('manageDocuments', $case)) {
+            return false;
+        }
+        if ($case->incident_id !== null && $this->aiDocumentType() === DocumentType::DefenseLetter
+            && (blank($case->case_specific_description)
+                || app(IncidentPrivacy::class)->containsOtherMemberName($case, $case->case_specific_description))) {
             return false;
         }
         $draft = $case->documents()->where('document_type', $this->aiDocumentType()->value)->where('is_locked', false)->first();

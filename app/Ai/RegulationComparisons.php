@@ -2,6 +2,7 @@
 
 namespace App\Ai;
 
+use App\Enums\CaseStatus;
 use App\Enums\DocumentType;
 use App\Exceptions\TransitionBlocked;
 use App\Models\DisciplinaryCase;
@@ -10,6 +11,7 @@ use App\Models\LegalUnit;
 use App\Models\RegulationComparison;
 use App\Models\User;
 use App\Services\AuditLogger;
+use App\Services\Cases\AutoDefenseDraft;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
@@ -132,6 +134,7 @@ class RegulationComparisons
                     'regulation_unit_id' => $pair->regulation_unit_id, 'verdict' => $pair->verdict,
                     'changed_by_hr' => $pair->changed_by_hr])->all()], $actor);
         });
+        $this->resumeDefense($comparison, $actor);
     }
 
     public function skip(RegulationComparison $comparison, User $actor, string $reason): void
@@ -151,5 +154,18 @@ class RegulationComparisons
                 'confirmed_by' => $actor->id, 'confirmed_at' => now(), 'consumed_at' => $linked ? now() : null])->save();
             app(AuditLogger::class)->log('regulation_comparison.skipped', $comparison, [], $actor);
         });
+        $this->resumeDefense($comparison, $actor);
+    }
+
+    private function resumeDefense(RegulationComparison $comparison, User $actor): void
+    {
+        if ($comparison->document_type !== DocumentType::DefenseLetter->value) {
+            return;
+        }
+        $case = $comparison->disciplinaryCase;
+        if ($case->status === CaseStatus::Open
+            && ! $case->documents()->where('document_type', DocumentType::DefenseLetter->value)->exists()) {
+            app(AutoDefenseDraft::class)->afterOpening($case, $actor);
+        }
     }
 }

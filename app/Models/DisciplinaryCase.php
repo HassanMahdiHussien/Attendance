@@ -182,6 +182,16 @@ class DisciplinaryCase extends Model
         return $this->hasMany(CaseEvent::class, 'case_id');
     }
 
+    public function regulationComparisons(): HasMany
+    {
+        return $this->hasMany(RegulationComparison::class, 'case_id');
+    }
+
+    public function draftFailures(): HasMany
+    {
+        return $this->hasMany(CaseEvent::class, 'case_id')->where('event_type', 'ai_draft_failed');
+    }
+
     public function signatures(): HasMany
     {
         return $this->hasMany(Signature::class, 'case_id');
