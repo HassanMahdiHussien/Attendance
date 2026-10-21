@@ -118,7 +118,11 @@
                     <h2 class="mb-3 font-bold text-ink">{{ __('messages.home.recent_activity') }}</h2>
                     @forelse($work['events'] as $line)
                         @php($event = $line['event'])
-                        <p class="mb-2 text-sm text-gray-500">{{ \App\Support\Format\CaseTimeline::format($event->event_type, $event->event_type === 'status_changed' ? ['to' => $event->payload['to'] ?? ''] : []) }} · <bdi class="font-mono">{{ \App\Support\Format\Ui::number(str_pad((string) ($event->disciplinaryCase?->case_number ?? ''), 4, '0', STR_PAD_LEFT)) }}</bdi> · {{ $event->actorUser?->name ?? __('messages.home.system') }} · <bdi class="font-mono">{{ \App\Support\Format\Ui::date($event->created_at) }} {{ \App\Support\Format\Ui::date($event->created_at, 'H:i') }}</bdi>@if($line['count'] > 1) <span class="font-mono">×{{ \App\Support\Format\Ui::number($line['count']) }}</span>@endif</p>
+                        {{-- What happened reads first; case, person and time sit on a quieter second line. --}}
+                        <div class="border-b border-line py-2.5 last:border-0">
+                            <p class="text-sm text-ink">{{ \App\Support\Format\CaseTimeline::format($event->event_type, $event->event_type === 'status_changed' ? ['to' => $event->payload['to'] ?? ''] : []) }}@if($line['count'] > 1) <span class="text-gray-500">×{{ \App\Support\Format\Ui::number($line['count']) }}</span>@endif</p>
+                            <p class="mt-0.5 text-xs text-gray-500"><bdi class="font-mono">{{ \App\Support\Format\Ui::number(str_pad((string) ($event->disciplinaryCase?->case_number ?? ''), 4, '0', STR_PAD_LEFT)) }}</bdi> · {{ $event->actorUser?->name ?? __('messages.home.system') }} · <bdi>{{ \App\Support\Format\Ui::date($event->created_at) }} {{ \App\Support\Format\Ui::date($event->created_at, 'H:i') }}</bdi></p>
+                        </div>
                     @empty
                         <x-ui.empty :title="__('messages.home.no_activity')" />
                     @endforelse
@@ -162,7 +166,7 @@
         <x-ui.card>
             <div class="mb-3 flex flex-wrap items-center justify-between gap-3"><h2 class="text-lg font-bold">{{ __('My reports') }}</h2><x-ui.button href="/reports/new">{{ __('messages.home.submit_report') }}</x-ui.button></div>
             @forelse($work['reports'] as $report)
-                <div class="flex justify-between gap-2 border-b border-line py-3"><span>{{ __('Report') }} <bdi class="font-mono">{{ \App\Support\Format\Ui::number($report->id) }}</bdi></span><x-ui.badge>{{ match($report->status) { \App\Enums\ReportStatus::Received => __('Received'), \App\Enums\ReportStatus::UnderReview => __('Under review'), default => __('Closed') } }}</x-ui.badge></div>
+                <div class="border-b border-line py-3">@include('livewire.reports.partials.report-row')</div>
             @empty
                 @if($work['emails']->isEmpty())<x-ui.empty :title="__('You have not submitted a report yet.')" />@endif
             @endforelse

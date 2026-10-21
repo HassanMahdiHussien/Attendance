@@ -975,5 +975,7 @@
     "Open cases with selected links": "افتح الحالات مع الروابط المحددة",
     "Edit draft": "عدّل المسودة",
     "Open the case": "فتح الحالة",
-    "Not known if anyone saw it": "لا يُعرف إن رأى أحد ما حدث"
+    "Not known if anyone saw it": "لا يُعرف إن رأى أحد ما حدث",
+    "Show :count earlier events": "عرض :count من الأحداث السابقة",
+    "More actions": "إجراءات أخرى"
 }

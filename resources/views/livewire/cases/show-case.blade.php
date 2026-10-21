@@ -18,7 +18,7 @@
     @endif
     @if($record->legal_review_completed_at)<div class="bg-green-light text-green rounded-2xl p-5">
 <strong>{{ __('Legal consultation completed') }}</strong>
-<p class="whitespace-pre-wrap mt-2">{{ $record->legal_review_note }}</p>
+<p class="whitespace-pre-wrap mt-2" dir="auto">{{ $record->legal_review_note }}</p>
 </div>
 @endif
     @if($record->status === \App\Enums\CaseStatus::AwaitingCommitteeSignatures)
@@ -55,7 +55,7 @@
             </div>
             <div class="min-w-0 overflow-x-auto">
                 <table class="w-full text-sm">
-                    <thead><tr class="text-start text-xs text-night-soft ltr:text-[0.7rem] ltr:uppercase ltr:tracking-[0.14em]">
+                    <thead><tr class="text-start text-xs text-night-soft ltr:uppercase ltr:tracking-[0.14em]">
                         <th scope="col" class="pb-2 pe-4 text-start font-medium">{{ __('Due event') }}</th>
                         <th scope="col" class="hidden pb-2 text-start font-medium sm:table-cell">{{ __('Stage') }}</th>
                         <th scope="col" class="pb-2 pe-4 text-start font-medium">{{ __('Due') }}</th>
@@ -174,56 +174,6 @@
     @if($relatedCases->isNotEmpty())
         <p class="rounded-2xl bg-primary-light p-4 text-sm font-bold">{{ trans_choice('messages.related.count', $relatedCases->count(), ['count' => \App\Support\Format\Ui::number($relatedCases->count())]) }}</p>
     @endif
-    <x-ui.card class="p-5">
-        <h2 class="text-lg font-black">{{ __('messages.related.title') }}</h2>
-        <p class="mt-1 text-sm text-gray-500">{{ __('messages.related.internal_only') }}</p>
-        @forelse($relatedCases as $related)
-            @php $other = $related['case']; @endphp
-            <div class="mt-4 border-t border-gray-200 pt-4">
-                <div class="flex flex-wrap items-center gap-2">
-                    <a class="ui-link font-bold" href="/cases/{{ $other->id }}">{{ __('messages.related.case_number', ['number' => \App\Support\Format\Ui::number($other->case_number)]) }} — {{ $other->employee?->name }}</a>
-                    <x-ui.badge tone="gray">{{ \App\Support\Format\Ui::outcome($other->outcome?->value) }}</x-ui.badge>
-                </div>
-                <p class="mt-1 text-sm text-gray-600">{{ \App\Support\Format\Ui::date($other->violation_time) }} · {{ \App\Support\Format\Violation::name($other) }}</p>
-                @if($related['link']->reason)<p class="mt-1 text-sm">{{ $related['link']->reason }}</p>@endif
-                @if($related['in_error'])
-                    <p class="mt-2 text-sm text-red-700">{{ __('messages.related.in_error', ['reason' => $related['in_error']->reason]) }}</p>
-                @elseif($canLinkRelated)
-                    <div class="mt-2 flex flex-wrap items-end gap-2">
-                        <label class="text-sm">{{ __('messages.related.error_reason') }}
-                            <x-ui.input wire:model="relatedErrorReasons.{{ $related['link']->id }}" maxlength="500" class="block" />
-                        </label>
-                        <x-ui.button variant="secondary" wire:click="markRelatedInError({{ $related['link']->id }})">{{ __('messages.related.mark_in_error') }}</x-ui.button>
-                    </div>
-                    @error('relatedErrorReasons.'.$related['link']->id)<p role="alert" class="text-sm text-red-700">{{ $message }}</p>@enderror
-                @endif
-            </div>
-        @empty
-            <p class="mt-3 text-sm text-gray-500">{{ __('messages.related.none') }}</p>
-        @endforelse
-        @if($canLinkRelated)
-            <div class="mt-5 border-t border-gray-200 pt-4">
-                <h3 class="font-bold">{{ __('messages.related.add') }}</h3>
-                <label class="mt-3 block text-sm">{{ __('messages.related.search') }}
-                    <x-ui.input wire:model.live.debounce.300ms="relatedSearch" class="mt-1 block w-full" />
-                </label>
-                <label class="mt-3 block text-sm">{{ __('messages.related.choose') }}
-                    <x-ui.select wire:model="relatedCaseId" class="mt-1 block w-full">
-                        <option value="">{{ __('messages.related.choose_placeholder') }}</option>
-                        @foreach($relatedCandidates as $candidate)
-                            <option value="{{ $candidate->id }}">{{ \App\Support\Format\Ui::number($candidate->case_number) }} — {{ $candidate->employee?->name }}</option>
-                        @endforeach
-                    </x-ui.select>
-                </label>
-                <label class="mt-3 block text-sm">{{ __('messages.related.reason_optional') }}
-                    <x-ui.input wire:model="relatedReason" maxlength="500" class="mt-1 block w-full" />
-                </label>
-                <x-ui.button class="mt-3" wire:click="linkRelated">{{ __('messages.related.link') }}</x-ui.button>
-                @error('relatedCaseId')<p role="alert" class="text-sm text-red-700">{{ $message }}</p>@enderror
-                @error('relatedReason')<p role="alert" class="text-sm text-red-700">{{ $message }}</p>@enderror
-            </div>
-        @endif
-    </x-ui.card>
     @if($pattern['flagged'])<div class="bg-amber-light text-amber rounded-2xl p-5">{{ __('The alleged responsible person was named in :count other branch cases in the past year.', ['count' => \App\Support\Format\Ui::number($pattern['count'])]) }}</div>
 @endif
     @foreach($conflicts as $conflict)<div class="bg-red-light rounded-2xl p-5">
@@ -394,8 +344,10 @@
 <div class="min-w-0 basis-full sm:basis-0 sm:flex-1">
 <strong>{{ $documentTypes[$document->document_type->value] ?? __('Document') }} — {{ __('Version') }} {{ \App\Support\Format\Ui::number($document->version) }}</strong> @if($document->drafted_by === \App\Enums\DraftedBy::Ai)<span class="rounded-full bg-primary-light text-primary px-2 py-1 text-xs font-bold">AI</span>@endif <p class="text-sm text-gray-500">{{ $documentStatuses[$document->status->value] ?? __('Document') }} · {{ ! $document->is_locked ? __('PDF after issuance') : ($document->pdf_status === 'ready' ? __('PDF ready') : ($document->pdf_status === 'failed' ? __('Could not prepare PDF') : __('PDF preparing'))) }}</p>
 </div>
-@if($document->pdf_status === 'ready')<x-ui.button href="{{ route('documents.pdf', $document) }}" variant="secondary">{{ __('Download PDF') }}</x-ui.button>@endif <x-ui.file-action :item="$documentItems[$loop->index]" :items="$documentItems" :index="$loop->index" :show-download="false" /> @if($canManage && $document->is_locked)<input wire:model="correctionReason" placeholder="{{ __('Correction reason') }}" class="ui-control rounded-xl border p-2">
-<x-ui.button variant="secondary" wire:click="startCorrection({{ $document->id }})">{{ __('Start correction') }}</x-ui.button>
+@if($document->pdf_status === 'ready')<x-ui.button href="{{ route('documents.pdf', $document) }}" variant="secondary">{{ __('Download PDF') }}</x-ui.button>@endif <x-ui.file-action :item="$documentItems[$loop->index]" :items="$documentItems" :index="$loop->index" :show-download="false" /> @if($canManage && $document->is_locked)
+{{-- Corrections are rare: the reason box opens only when HR chooses to correct this document. --}}
+<details class="basis-full" @if($errors->has('correctionReason')) open @endif><summary class="cursor-pointer text-sm font-medium text-primary">{{ __('Start correction') }}</summary><div class="mt-2 flex flex-wrap items-center gap-2"><input wire:model="correctionReason" placeholder="{{ __('Correction reason') }}" class="ui-control rounded-xl border p-2">
+<x-ui.button variant="secondary" wire:click="startCorrection({{ $document->id }})">{{ __('Start correction') }}</x-ui.button></div></details>
 @endif</div>
 @empty<p class="text-gray-500">{{ __('No documents.') }}</p>
 @endforelse @error('correctionReason')<p class="text-red">{{ $message }}</p>
@@ -411,10 +363,65 @@
 </div>
 @empty<p class="text-gray-500">{{ __('No attachments.') }}</p>
 @endforelse</div></section>
+    <x-ui.card class="p-5">
+        <h2 class="text-lg font-black">{{ __('messages.related.title') }}</h2>
+        <p class="mt-1 text-sm text-gray-500">{{ __('messages.related.internal_only') }}</p>
+        @forelse($relatedCases as $related)
+            @php $other = $related['case']; @endphp
+            <div class="mt-4 border-t border-gray-200 pt-4">
+                <div class="flex flex-wrap items-center gap-2">
+                    <a class="ui-link font-bold" href="/cases/{{ $other->id }}">{{ __('messages.related.case_number', ['number' => \App\Support\Format\Ui::number($other->case_number)]) }} — {{ $other->employee?->name }}</a>
+                    <x-ui.badge tone="gray">{{ \App\Support\Format\Ui::outcome($other->outcome?->value) }}</x-ui.badge>
+                </div>
+                <p class="mt-1 text-sm text-gray-600">{{ \App\Support\Format\Ui::date($other->violation_time) }} · {{ \App\Support\Format\Violation::name($other) }}</p>
+                @if($related['link']->reason)<p class="mt-1 text-sm">{{ $related['link']->reason }}</p>@endif
+                @if($related['in_error'])
+                    <p class="mt-2 text-sm text-red-700">{{ __('messages.related.in_error', ['reason' => $related['in_error']->reason]) }}</p>
+                @elseif($canLinkRelated)
+                    <div class="mt-2 flex flex-wrap items-end gap-2">
+                        <label class="text-sm">{{ __('messages.related.error_reason') }}
+                            <x-ui.input wire:model="relatedErrorReasons.{{ $related['link']->id }}" maxlength="500" class="block" />
+                        </label>
+                        <x-ui.button variant="secondary" wire:click="markRelatedInError({{ $related['link']->id }})">{{ __('messages.related.mark_in_error') }}</x-ui.button>
+                    </div>
+                    @error('relatedErrorReasons.'.$related['link']->id)<p role="alert" class="text-sm text-red-700">{{ $message }}</p>@enderror
+                @endif
+            </div>
+        @empty
+            <p class="mt-3 text-sm text-gray-500">{{ __('messages.related.none') }}</p>
+        @endforelse
+        @if($canLinkRelated)
+            {{-- Rarely used, so folded: open it only when there is a case to link. --}}
+            <details class="mt-5 border-t border-gray-200 pt-4" @if($relatedSearch !== '' || $errors->has('relatedCaseId') || $errors->has('relatedReason')) open @endif>
+                <summary class="cursor-pointer font-bold text-primary">{{ __('messages.related.add') }}</summary>
+                <label class="mt-3 block text-sm">{{ __('messages.related.search') }}
+                    <x-ui.input wire:model.live.debounce.300ms="relatedSearch" class="mt-1 block w-full" />
+                </label>
+                <label class="mt-3 block text-sm">{{ __('messages.related.choose') }}
+                    <x-ui.select wire:model="relatedCaseId" class="mt-1 block w-full">
+                        <option value="">{{ __('messages.related.choose_placeholder') }}</option>
+                        @foreach($relatedCandidates as $candidate)
+                            <option value="{{ $candidate->id }}">{{ \App\Support\Format\Ui::number($candidate->case_number) }} — {{ $candidate->employee?->name }}</option>
+                        @endforeach
+                    </x-ui.select>
+                </label>
+                <label class="mt-3 block text-sm">{{ __('messages.related.reason_optional') }}
+                    <x-ui.input wire:model="relatedReason" maxlength="500" class="mt-1 block w-full" />
+                </label>
+                <x-ui.button class="mt-3" wire:click="linkRelated">{{ __('messages.related.link') }}</x-ui.button>
+                @error('relatedCaseId')<p role="alert" class="text-sm text-red-700">{{ $message }}</p>@enderror
+                @error('relatedReason')<p role="alert" class="text-sm text-red-700">{{ $message }}</p>@enderror
+            </details>
+        @endif
+    </x-ui.card>
     <section class="ui-card p-5">
         <h2 class="text-lg font-black mb-4">{{ __('Event timeline') }}</h2>
         <ol class="space-y-4">
             @forelse($record->events->sortByDesc('id') as $event)
+                {{-- A long case has dozens of events; the latest eight answer "what happened last", the rest fold. --}}
+                @if($loop->index === 8)
+                    </ol><details class="mt-4"><summary class="cursor-pointer text-sm font-medium text-primary">{{ __('Show :count earlier events', ['count' => $loop->count - 8]) }}</summary><ol class="mt-4 space-y-4">
+                @endif
                 @php
                     $payload = $event->payload ?? [];
                     $signature = $signatures->get($payload['signature_id'] ?? 0);
@@ -436,5 +443,6 @@
                 <li class="text-gray-500">{{ __('No events.') }}</li>
             @endforelse
         </ol>
+        @if($record->events->count() > 8)</details>@endif
     </section>
 </div>
