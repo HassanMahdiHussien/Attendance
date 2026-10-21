@@ -108,10 +108,11 @@ class PayloadBuilder
         $this->restoration = [];
         $this->names($case);
         $description = $this->description($case);
-        $this->assertPrivate($case, $description.' '.Violation::name($case, 'ar'));
+        $violationType = app(IncidentPrivacy::class)->sharedFactsFor($case, Violation::name($case, 'ar'));
+        $this->assertPrivate($case, $description.' '.$violationType);
 
         return [
-            'violation_type' => $this->minimize(Violation::name($case, 'ar')),
+            'violation_type' => $this->minimize($violationType),
             'incident_description' => $this->minimize($description),
             'candidate_units' => $units->map(fn ($unit) => [
                 'id' => $unit->id, 'kind' => $unit->law->kind->value,
@@ -126,12 +127,15 @@ class PayloadBuilder
         $this->names($case);
         $description = $type === DocumentType::DecisionLetter ? '' : $this->description($case);
         $this->assertPrivate($case, $description);
+        $privacy = app(IncidentPrivacy::class);
+        $violationType = $privacy->sharedFactsFor($case, Violation::name($case, 'ar'));
+        $place = $privacy->sharedFactsFor($case, (string) ($case->location?->name ?? $case->violation_place_freetext));
         $responsible = $case->allegedResponsibleEmployee?->name ?? $case->alleged_responsible_person_freetext ?? '';
         if (app(IncidentPrivacy::class)->containsOtherMemberName($case, $responsible)) {
             $responsible = '';
         }
         $this->assertPrivate($case, implode(' ', array_filter([
-            Violation::name($case, 'ar'), $case->location?->name, $case->violation_place_freetext,
+            $violationType, $place,
             $responsible,
         ])));
         $payload = ['document_type' => $type->value,
@@ -142,8 +146,8 @@ class PayloadBuilder
             ])->all()];
         if ($type !== DocumentType::DecisionLetter) {
             $payload['incident'] = [
-                'violation_type' => $this->minimize(Violation::name($case, 'ar')),
-                'place' => $this->minimize($case->location?->name ?? $case->violation_place_freetext ?? ''),
+                'violation_type' => $this->minimize($violationType),
+                'place' => $this->minimize($place),
                 'time' => $case->violation_time_known ? $case->violation_time : null,
                 'time_stated' => (bool) $case->violation_time_known,
                 'time_text' => $case->violation_time_known ? null : 'time not stated',
@@ -218,11 +222,10 @@ class PayloadBuilder
         if ($case->incident_id === null) {
             return (string) $case->description;
         }
-        if (blank($case->case_specific_description)) {
-            throw new TransitionBlocked(__('messages.incident.case_description_required'));
-        }
 
-        return $case->case_specific_description;
+        return filled($case->case_specific_description)
+            ? $case->case_specific_description
+            : app(IncidentPrivacy::class)->sharedFactsFor($case, (string) $case->description);
     }
 
     public function restore(array $output): array

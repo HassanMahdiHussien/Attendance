@@ -975,7 +975,7 @@
     "The incident date and time must not be in the future.": "يجب ألا يكون تاريخ الواقعة ووقتها في المستقبل.",
     "Time not stated": "الوقت غير مذكور",
     "Open cases with selected links": "افتح الحالات مع الروابط المحددة",
-    "Edit draft": "عدّل المسودة",
+    "Edit draft": "تعديل المسودة",
     "Open the case": "فتح الحالة",
     "Not known if anyone saw it": "لا يُعرف إن رأى أحد ما حدث",
     "Show :count earlier events": "عرض :count من الأحداث السابقة",
@@ -1002,5 +1002,14 @@
     "Review and continue": "راجع وتابع",
     "Write the defense letter": "اكتب كتاب طلب الدفاع",
     "Open the defense letter draft": "افتح مسودة كتاب طلب الدفاع",
-    "Choose": "اختر"
+    "Choose": "اختر",
+    "Show case number on letters": "إظهار رقم الحالة في الكتب",
+    "Edit this employee description (optional)": "تعديل وصف هذا الموظف (اختياري)",
+    "AI drafted": "صياغة آلية",
+    "Written manually": "كتابة يدوية",
+    "The name :name of a committee member matches a case party. Verify that they are different people.": "اسم :name من أعضاء اللجنة يطابق اسم أحد أطراف الحالة. تأكّد أنهما شخصان مختلفان.",
+    "A committee member :name is a party in this case. She cannot attend the committee session. Choose a substitute when recording the session.": ":name من أعضاء لجنة هذا الفرع، وهي طرف في هذه الحالة، لذلك لا يمكنها حضور جلسة اللجنة. اختر بديلاً عنها عند تسجيل الجلسة.",
+    "A committee member :name is a party in this case. He cannot attend the committee session. Choose a substitute when recording the session.": ":name من أعضاء لجنة هذا الفرع، وهو طرف في هذه الحالة، لذلك لا يمكنه حضور جلسة اللجنة. اختر بديلاً عنه عند تسجيل الجلسة.",
+    "A committee member :name is a party in this case and cannot attend the committee session. Choose a substitute when recording the session.": ":name من أعضاء لجنة هذا الفرع وطرف في هذه الحالة، لذلك لا يمكنه حضور جلسة اللجنة. اختر بديلاً عند تسجيل الجلسة.",
+    "The name :name matched a case party and HR verified they are different people.": "طابق اسم :name اسم أحد أطراف الحالة، وقد تأكّدت الموارد البشرية أنهما شخصان مختلفان."
 }

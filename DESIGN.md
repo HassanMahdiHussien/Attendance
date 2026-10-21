@@ -54,7 +54,7 @@ typography:
     letterSpacing: "0.025em"
     fontFeature: "tnum"
   document:
-    fontFamily: "Amiri, serif"
+    fontFamily: "Noto Naskh Arabic, serif"
     fontSize: "1.125rem"
     fontWeight: 400
     lineHeight: 1.8
@@ -119,7 +119,7 @@ components:
 
 Displanery reads like the departures board at Baghdad Central Station. A disciplinary case is a timetable: what is due next, from which stage, and how long until it leaves. The midnight board hangs overhead (the top bar, the departures strip, the next-step panel); everything below it is a calm, light working ground where HR verifies facts, documents and history over long office sessions.
 
-The system is restrained by design. Colour does jobs, not decoration: signal amber marks the single primary action and the current stage, green means done or on time, red means overdue. The signature is the split-flap countdown chip and the route rail of five stations. Printed legal documents keep their own formal Naskh voice (Amiri) and are not styled by this system.
+The system is restrained by design. Colour does jobs, not decoration: signal amber marks the single primary action and the current stage, green means done or on time, red means overdue. The signature is the split-flap countdown chip and the route rail of five stations. Printed legal documents keep their own formal Naskh voice (Noto Naskh Arabic) and are not styled by this system.
 
 The user explicitly rejected a generic SaaS look, playful colour, an old government look and cramped density.
 
@@ -162,7 +162,7 @@ A midnight-and-amber station palette over cool, near-white working surfaces.
 
 **Interface Font:** Readex Pro (with sans-serif)
 **Figures Font:** JetBrains Mono (with monospace), tabular figures
-**Document Font:** Amiri (with serif), legal document previews only
+**Document Font:** Noto Naskh Arabic (with serif), legal document previews only
 
 **Character:** A Kufi-rooted workhorse sans that sets Arabic and Latin at the same weight and rhythm, paired with a station-board mono for every case number, date and countdown.
 

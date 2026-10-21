@@ -24,6 +24,11 @@ class DocumentRenderer
 
     public function render(Document $document, bool $draft = false): string
     {
+        if ($document->is_locked) {
+            $this->snapshot = $document->render_snapshot ?? [];
+
+            return (string) $document->rendered_html;
+        }
         $document->load(['contents', 'disciplinaryCase.employee', 'company']);
         $this->citationGate->assertIssuable($document, $draft);
         $pages = [];
@@ -69,7 +74,8 @@ class DocumentRenderer
             $body = $this->formatter->format($this->citations->replace($document, $content->body, $language));
             $secondary = $content->secondary_body === null ? null
                 : $this->formatter->format($this->citations->replace($document, $content->secondary_body, $language));
-            $pages[] = compact('language', 'letterhead', 'blocks', 'facts', 'extra', 'body', 'secondary', 'logo', 'headerImage')
+            $showCaseNumber = (bool) $document->company->show_case_number_on_letters;
+            $pages[] = compact('language', 'letterhead', 'blocks', 'facts', 'extra', 'body', 'secondary', 'logo', 'headerImage', 'showCaseNumber')
                 + ['options' => array_replace($template['options'], ['header_mode' => $letterhead->header_mode]), 'type' => $document->document_type->value];
             $this->snapshot['template_versions'][$language] = $template['version'];
             $this->snapshot['template_ids'][$language] = $template['id'];

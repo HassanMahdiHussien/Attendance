@@ -1,5 +1,13 @@
 @import 'tailwindcss';
 
+@font-face {
+    font-family: 'Noto Naskh Arabic';
+    src: url('../fonts/NotoNaskhArabic-Variable.ttf') format('truetype');
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+}
+
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 @source '../views/layouts/partials/workspace-navigation.blade.php';
@@ -27,7 +35,7 @@
     --color-green-light: #E4F4EC;
     --font-sans: 'Readex Pro', sans-serif;
     --font-tajawal: 'Readex Pro', sans-serif;
-    --font-amiri: 'Amiri', serif;
+    --font-amiri: 'Noto Naskh Arabic', serif;
     /* Readex Pro second: JetBrains Mono has no Arabic, so Arabic month names in dates fall back to the interface font. */
     --font-mono: 'JetBrains Mono', 'Readex Pro', monospace;
 }

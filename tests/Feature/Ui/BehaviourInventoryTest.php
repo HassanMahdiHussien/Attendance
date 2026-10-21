@@ -52,7 +52,9 @@ test('refreshed screens retain their original behavior surface', function (): vo
         'resources/views/livewire/cases/show-case.blade.php' => [
             'permission_conditions' => ['$canManage && in_array(auth(', '$canManageAllIncident',
                 '$canManageAllIncident && !$record->defense_letter_issued_at && in_array($record->status, [\App\Enums\CaseStatus::Draft, \App\Enums\CaseStatus::Open], true',
-                '$record->incident_id === null || $canManageAllIncident'],
+                '$record->incident_id === null || $canManageAllIncident',
+                '$record->incident_id && $canManage && !$record->defense_letter_issued_at',
+                '!$document->is_locked && $canManage', '$canManage && $document->is_locked'],
             'role_conditions' => ['$canManage && in_array(auth()->user()->primary_role, [\App\Enums\UserRole::CompanyAdmin, \App\Enums\UserRole::HrStaff], true)'],
             'wire' => [
                 ['wire:model', 'incidentEmployeeId'],
@@ -60,7 +62,6 @@ test('refreshed screens retain their original behavior surface', function (): vo
                 ['wire:model', 'incidentClosureReason'],
                 ['wire:click', 'addIncidentEmployee'],
                 ['wire:click', 'saveCaseDescription'],
-                ['wire:poll.5s', 'pollIncidentDescription'],
                 ['wire:key', 'incident-member-{{ $member->id }}'],
                 ['wire:click', 'linkRelated'],
                 ['wire:click', 'markRelatedInError({{ $related['],
@@ -76,7 +77,10 @@ test('refreshed screens retain their original behavior surface', function (): vo
             ],
             'errors' => ['relatedCaseId', 'relatedReason', 'mapViolationTypeId', 'incidentEmployeeId', 'caseDescription', 'incidentClosureReason'],
             'links' => ['/cases/{{ $other->id }}', '/cases/{{ $member->id }}', '/cases/new?incident_case={{ $record->id }}',
-                '/cases/{{ $record->id }}/session?single=1', '/cases/{{ $record->id }}/documents/{{ $defenseDraft?->id ?? '],
+                '/cases/{{ $record->id }}/session?single=1', '/cases/{{ $record->id }}/documents/{{ $defenseDraft?->id ?? ',
+                '/cases/{{ $record->id }}/recommendations/{{ $document->id }}',
+                '/cases/{{ $record->id }}/decision',
+                '/cases/{{ $record->id }}/documents/{{ $document->id }}/edit'],
         ],
         'resources/views/livewire/cases/create-case.blade.php' => [
             'wire' => [['wire:model', 'violationTypeId'], ['wire:model', 'caseFiles']],

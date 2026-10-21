@@ -28,7 +28,7 @@ class PdfGenerator
     {
         $faces = '';
         foreach (['Amiri-Regular.ttf' => ['Displanery Amiri', 400], 'Amiri-Bold.ttf' => ['Displanery Amiri', 700],
-            'NotoNaskhArabic-Variable.ttf' => ['Displanery Naskh', 400]] as $filename => [$family, $weight]) {
+            'NotoNaskhArabic-Variable.ttf' => ['Displanery Naskh', '100 900']] as $filename => [$family, $weight]) {
             $path = resource_path('fonts/'.$filename);
             if (! is_file($path)) {
                 throw new RuntimeException("Missing PDF font {$filename}.");

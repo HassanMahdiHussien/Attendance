@@ -12,7 +12,7 @@ return [
     'date_label' => 'Date:',
     'reference_label' => 'Reference:',
     'salutation' => '{m:Dear Mr|f:Dear Ms} {employee_first_name},',
-    'opening' => 'You have worked with the company since {hire_date} and your current position is {position}. You know your responsibilities.',
+    'opening' => 'You have worked for the company since {hire_date}, currently hold the position of {position}, and are aware of the responsibilities of your position.',
     'deadline_sentence' => 'Please submit your written defense concerning this case by {response_deadline}.',
     'prior_record' => 'Prior record',
     'employee_block' => "Employee name: ................\nPosition: ................\nSignature: ................",

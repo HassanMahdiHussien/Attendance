@@ -163,7 +163,8 @@ class RecordSession extends Component
         Gate::authorize('update', $case);
         $mandate = $case->defense_letter_issued_at ? CommitteeMandate::query()->where('company_id', $case->company_id)
             ->inEffectOn($case->defense_letter_issued_at)->orderByDesc('effective_from')->first() : null;
-        $excluded = collect(app(ConflictClearance::class)->conflicts($case))->filter(fn ($row) => $row['excluded'])
+        $conflicts = app(ConflictClearance::class)->conflicts($case);
+        $excluded = collect($conflicts)->filter(fn ($row) => $row['excluded'])
             ->pluck('member.id')->all();
         $members = $mandate?->poolMembers()->where(fn ($query) => $query->whereNull('branch_id')->orWhere('branch_id', $case->branch_id))
             ->whereNotIn('id', $excluded)->get() ?? collect();
@@ -171,6 +172,6 @@ class RecordSession extends Component
         $incidentCases = $this->incidentId === null ? collect() : app(IncidentService::class)
             ->visibleMembers(Incident::query()->findOrFail($this->incidentId), auth()->user());
 
-        return view('livewire.cases.record-session', compact('case', 'members', 'incidentCases'))->layout('layouts.workspace');
+        return view('livewire.cases.record-session', compact('case', 'members', 'incidentCases', 'conflicts'))->layout('layouts.workspace');
     }
 }

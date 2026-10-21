@@ -140,9 +140,11 @@ class IncidentService
             $case = CaseVisibility::for($actor)->lockForUpdate()->findOrFail($case->id);
             Gate::forUser($actor)->authorize('update', $case);
             if ($case->incident_id === null || $case->defense_letter_issued_at !== null
-                || $case->documents()->exists() || blank($description)
-                || app(IncidentPrivacy::class)->containsOtherMemberName($case, $description)) {
+                || blank($description)) {
                 throw ValidationException::withMessages(['caseDescription' => __('messages.incident.case_description_required')]);
+            }
+            if (app(IncidentPrivacy::class)->containsOtherMemberName($case, $description)) {
+                throw ValidationException::withMessages(['caseDescription' => __('messages.incident.other_member_in_text')]);
             }
             $case->forceFill(['case_specific_description' => $description])->save();
             $this->events->log($case, 'incident_case_description_updated', actor: $actor);

@@ -46,6 +46,7 @@ class CompanySettings extends Page
         $state = [
             'kurdish_enabled' => in_array('ku', $company->enabled_languages, true),
             'requires_second_review' => $company->requires_second_review,
+            'show_case_number_on_letters' => $company->show_case_number_on_letters,
             'hotspot_min_cases' => $company->hotspot_min_cases,
             'hotspot_window_days' => $company->hotspot_window_days,
             'internal_regulation_answer' => $company->internal_regulation_answer,
@@ -65,6 +66,7 @@ class CompanySettings extends Page
         $fields = [
             Checkbox::make('kurdish_enabled')->label(__('Enable Kurdish (optional)')),
             Checkbox::make('requires_second_review')->label(__('Second review before issuance')),
+            Checkbox::make('show_case_number_on_letters')->label(__('Show case number on letters')),
             Radio::make('internal_regulation_answer')->label(__('messages.setup.regulation_question'))
                 ->options(['yes' => __('messages.setup.yes'), 'no' => __('messages.setup.no')])->required()->live(),
             TextInput::make('hotspot_min_cases')->label(__('Repeat alert threshold'))->numeric()->integer()->required()->minValue(2)->maxValue(50),
@@ -125,6 +127,7 @@ class CompanySettings extends Page
                 'hotspot_window_days' => $validated['hotspot_window_days'],
                 'enabled_languages' => ['ar', 'en', ...(($data['kurdish_enabled'] ?? false) ? ['ku'] : [])],
                 'requires_second_review' => (bool) ($data['requires_second_review'] ?? false),
+                'show_case_number_on_letters' => (bool) ($data['show_case_number_on_letters'] ?? false),
                 'internal_regulation_answer' => $validated['internal_regulation_answer'],
                 'internal_regulation_answered_at' => $company->internal_regulation_answer === $validated['internal_regulation_answer']
                     ? $company->internal_regulation_answered_at : now(),

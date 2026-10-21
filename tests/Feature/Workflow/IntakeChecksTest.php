@@ -72,8 +72,12 @@ test('name-only conflicts require an audited HR clearance and employee-linked co
         'person_name' => $case->employee->name, 'employee_id' => null]);
     $linked = CommitteePoolMember::factory()->create(['mandate_id' => $mandate->id,
         'person_name' => $case->employee->name, 'employee_id' => $case->employee_id]);
+    $case->employee->update(['gender' => 'female']);
     $service = app(ConflictClearance::class);
-    expect(collect($service->conflicts($case))->where('excluded', true)->count())->toBe(2);
+    $conflicts = collect($service->conflicts($case));
+    expect($conflicts->where('excluded', true)->count())->toBe(2)
+        ->and($service->notice($conflicts->firstWhere('type', 'name_only')))->toContain('different people')
+        ->and($service->notice($conflicts->firstWhere('type', 'employee_linked')))->toContain('She cannot attend', 'Choose a substitute');
     expect(fn () => $service->clear($case, $linked, 'Checked identity', $hr))->toThrow(ValidationException::class);
     $service->clear($case, $nameOnly, 'Checked identity records', $hr);
     expect(collect($service->conflicts($case))->where('excluded', true)->count())->toBe(1);

@@ -14,6 +14,6 @@ class IraqiDate
     {
         $months = $language === 'en' ? self::EN : self::AR;
 
-        return $date->day.' – '.$months[$date->month].' – '.$date->year;
+        return $date->day.' '.$months[$date->month].' '.$date->year;
     }
 }

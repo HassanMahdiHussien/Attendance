@@ -62,6 +62,7 @@ class Company extends Model
             'has_internal_regulation' => 'boolean',
             'internal_regulation_answered_at' => 'datetime',
             'requires_second_review' => 'boolean',
+            'show_case_number_on_letters' => 'boolean',
             'is_active' => 'boolean',
             'subscription_status' => SubscriptionStatus::class,
             'hotspot_min_cases' => 'integer',

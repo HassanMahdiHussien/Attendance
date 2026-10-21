@@ -102,7 +102,6 @@ return [
         'awaiting_approval' => 'Recommendations awaiting your approval', 'attended_cases' => 'Cases you attended',
         'awaiting_opinion' => 'Consultations awaiting your opinion', 'submit_report' => 'Submit a report',
         'complete_case' => 'Complete and open the case', 'prepare_defense' => 'Prepare the defense letter',
-        'confirm_incident_description' => 'Confirm this employee’s description',
         'check_regulation_comparison' => 'Check the regulation comparison',
         'comparing_regulation' => 'Preparing the regulation comparison…',
         'defense_drafting' => 'Drafting the defense letter…',

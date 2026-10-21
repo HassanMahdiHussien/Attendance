@@ -43,9 +43,9 @@ class AiDrafting
                 throw new TransitionBlocked(__('messages.ai.drafting_unavailable'));
             }
             if ($case->incident_id !== null && $type !== DocumentType::DecisionLetter
-                && (blank($case->case_specific_description)
-                    || app(IncidentPrivacy::class)->containsOtherMemberName($case, $case->case_specific_description))) {
-                throw new TransitionBlocked(__('messages.incident.case_description_required'));
+                && filled($case->case_specific_description)
+                && app(IncidentPrivacy::class)->containsOtherMemberName($case, $case->case_specific_description)) {
+                throw new TransitionBlocked(__('messages.incident.other_member_in_text'));
             }
             if ($type === DocumentType::Recommendations && (blank($case->committee_session_notes)
                 || ! $case->session_majority_reached || $case->outcome === null)) {

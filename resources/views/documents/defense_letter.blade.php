@@ -6,6 +6,7 @@
     <div class="grid-row"><strong>{{ $b['subject_label'] }}</strong><span>{{ $b['subject_value'] }}</span></div>
     <div class="grid-row"><strong>{{ $b['date_label'] }}</strong><span>{{ $f['issue_date'] }}</span></div>
     <div class="grid-row"><strong>{{ $b['reference_label'] ?? ($page['language'] === 'en' ? 'Reference:' : 'العدد:') }}</strong><span>{{ $f['reference_number'] }}</span></div>
+    @if(! empty($page['showCaseNumber']))<div class="grid-row"><strong>{{ $page['language'] === 'en' ? 'Case number:' : 'رقم الحالة:' }}</strong><span>{{ $f['case_number'] }}</span></div>@endif
 </div>
 <p class="block">{{ $b['salutation'] }}</p>
 <p class="block">{{ $b['opening'] }}</p>
