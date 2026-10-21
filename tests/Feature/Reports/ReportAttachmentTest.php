@@ -16,10 +16,12 @@ use App\Models\DisciplinaryCase;
 use App\Models\Employee;
 use App\Models\ReportAssistantSession;
 use App\Models\User;
+use App\Models\ViolationReport;
 use App\Services\Attachments\AttachmentService;
 use App\Services\Cases\CaseFileSuggestions;
 use App\Services\Documents\DocumentText;
 use App\Services\Documents\MsgReader;
+use App\Services\Reports\DraftCleanup;
 use App\Services\Reports\ReportAssistant;
 use App\Services\Reports\ReportFiles;
 use App\Services\Reports\ReportService;
@@ -323,4 +325,41 @@ test('a file reading or an HR file intake cannot point at another company', func
         'reading_status' => 'read', 'created_at' => now()]))->toThrow(QueryException::class)
         ->and(fn () => DB::table('case_file_intakes')->insert(['company_id' => $other->id, 'user_id' => $f['hr']->id,
             'created_at' => now(), 'updated_at' => now()]))->toThrow(QueryException::class);
+});
+
+test('the daily cleanup removes files of drafts nobody sent, and never touches report evidence', function (): void {
+    Storage::fake('local');
+    $f = reportFilesFixture();
+    $old = $f['session'];
+    $oldFile = reportFile($old, 'draft.pdf', '%PDF-1.4 draft');
+    $oldFile->textReading()->create(['company_id' => $old->company_id, 'extracted_text' => 'draft text',
+        'reading_status' => 'read', 'created_at' => now()]);
+    DB::table('report_assistant_sessions')->where('id', $old->id)->update(['created_at' => now()->subDays(2)]);
+    $recent = ReportAssistantSession::factory()->create(['company_id' => $f['company']->id,
+        'user_id' => $f['reporter']->id, 'facts' => ['branch_id' => $f['branch']->id]]);
+    $recentFile = reportFile($recent, 'recent.pdf', '%PDF-1.4 recent');
+    $intake = CaseFileIntake::query()->create(['company_id' => $f['company']->id, 'user_id' => $f['hr']->id]);
+    $intakeFile = Attachment::create(['company_id' => $f['company']->id, 'attachable_type' => $intake->getMorphClass(),
+        'attachable_id' => $intake->id, 'kind' => AttachmentKind::ReportEvidence, 'disk' => 'local',
+        'path' => 'attachments/intake-email.eml', 'original_name' => 'email.eml', 'mime_type' => 'message/rfc822',
+        'size_bytes' => 5, 'uploaded_by' => $f['hr']->id, 'created_at' => now()]);
+    Storage::disk('local')->put($intakeFile->path, 'email');
+    DB::table('case_file_intakes')->where('id', $intake->id)->update(['created_at' => now()->subDays(2)]);
+    $report = ViolationReport::factory()->create(['company_id' => $f['company']->id, 'branch_id' => $f['branch']->id,
+        'reporter_user_id' => $f['reporter']->id]);
+    $evidence = app(AttachmentService::class)->copyEvidence($recentFile, $report);
+
+    $removed = app(DraftCleanup::class)->run();
+
+    expect($removed)->toBe(['files' => 2, 'report_drafts' => 1, 'case_uploads' => 1])
+        ->and(Attachment::query()->whereIn('id', [$oldFile->id, $intakeFile->id])->exists())->toBeFalse()
+        ->and(DB::table('attachment_texts')->where('attachment_id', $oldFile->id)->exists())->toBeFalse()
+        ->and(Storage::disk('local')->exists($oldFile->path))->toBeFalse()
+        ->and(Storage::disk('local')->exists($intakeFile->path))->toBeFalse()
+        ->and(ReportAssistantSession::query()->whereKey($old->id)->exists())->toBeFalse()
+        ->and(Attachment::query()->whereKey($recentFile->id)->exists())->toBeTrue()
+        ->and(Attachment::query()->whereKey($evidence->id)->exists())->toBeTrue()
+        ->and(DB::table('audit_logs')->where('action', 'drafts.files_removed')->where('company_id', $f['company']->id)->exists())->toBeTrue();
+    // The exception is narrow: report evidence still cannot be deleted at the database level.
+    expect(fn () => DB::table('attachments')->where('id', $evidence->id)->delete())->toThrow(QueryException::class);
 });

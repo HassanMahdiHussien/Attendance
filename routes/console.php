@@ -22,6 +22,7 @@ use App\Services\Cases\ExpiredAppealArchiver;
 use App\Services\EmailIntake\EmailIntakeFetcher;
 use App\Services\EmailIntake\EmailSenderVerifier;
 use App\Services\EmailIntake\IntakeMailbox;
+use App\Services\Reports\DraftCleanup;
 use App\Support\HealthPing;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Foundation\Inspiring;
@@ -76,9 +77,9 @@ Schedule::command('cases:send-deadline-alerts')->hourly();
 Schedule::command('cases:archive-expired-appeals')->hourly();
 
 Artisan::command('reports:prune-assistant-drafts', function (): void {
-    DB::table('report_assistant_sessions')->whereNull('violation_report_id')
-        ->where('created_at', '<', now()->subDay())->delete();
-})->purpose('Remove abandoned report assistant drafts');
+    $removed = app(DraftCleanup::class)->run();
+    $this->info("Removed {$removed['report_drafts']} report drafts, {$removed['case_uploads']} case upload forms and {$removed['files']} files.");
+})->purpose('Remove abandoned report drafts and case upload forms with their files');
 
 Schedule::command('reports:prune-assistant-drafts')->dailyAt('03:00')->timezone('Asia/Baghdad');
 
