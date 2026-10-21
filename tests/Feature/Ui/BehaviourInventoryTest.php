@@ -60,6 +60,7 @@ test('refreshed screens retain their original behavior surface', function (): vo
                 ['wire:model', 'incidentClosureReason'],
                 ['wire:click', 'addIncidentEmployee'],
                 ['wire:click', 'saveCaseDescription'],
+                ['wire:poll.5s', 'pollIncidentDescription'],
                 ['wire:key', 'incident-member-{{ $member->id }}'],
                 ['wire:click', 'linkRelated'],
                 ['wire:click', 'markRelatedInError({{ $related['],
@@ -117,6 +118,9 @@ test('refreshed screens retain their original behavior surface', function (): vo
                 ['wire:click', 'startDocumentComparison'],
                 ['wire:click', 'startManualComparison'],
             ],
+        ],
+        'resources/views/livewire/cases/edit-document.blade.php' => [
+            'wire' => [['wire:click', 'writeManually']],
         ],
     ];
 

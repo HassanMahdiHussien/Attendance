@@ -7,6 +7,17 @@ use Illuminate\Support\Facades\DB;
 
 class IncidentPrivacy
 {
+    public function sharedFactsFor(DisciplinaryCase $case, string $text): string
+    {
+        if ($case->incident_id === null) {
+            return $text;
+        }
+        $parts = preg_split('/(?<=[.!؟。\n])\s*/u', $text);
+
+        return trim(implode(' ', array_filter($parts ?: [],
+            fn (string $part): bool => ! $this->containsOtherMemberName($case, $part))));
+    }
+
     public function containsOtherMemberName(DisciplinaryCase $case, string $text): bool
     {
         if ($case->incident_id === null || $text === '') {
@@ -24,6 +35,10 @@ class IncidentPrivacy
                     return true;
                 }
             }
+        }
+
+        if (preg_match('/\[other incident member\]|⟦[^⟧]*(?:employee|member|موظف)[^⟧]*⟧/iu', $text)) {
+            return true;
         }
 
         return false;

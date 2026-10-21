@@ -993,7 +993,13 @@
     "Drop files here or choose files": "أسقط الملفات هنا أو اختر ملفات",
     "New reports": "بلاغات جديدة",
     "Not in the employee list — add": "غير موجود في قائمة الموظفين — أضفه",
-    "Add employee": "إضافة موظف",
-    "Employee selected": "تم اختيار الموظف",
-    "EML, MSG, PDF, DOCX, JPG, JPEG, PNG or WEBP (10 MB each)": "EML وMSG وPDF وDOCX وJPG وJPEG وPNG وWEBP (10 ميغابايت لكل ملف)"
+    "EML, MSG, PDF, DOCX, JPG, JPEG, PNG or WEBP (10 MB each)": "EML وMSG وPDF وDOCX وJPG وJPEG وPNG وWEBP (10 ميغابايت لكل ملف)",
+    "Each letter goes to one employee and must not name the others.": "كل كتاب يخص موظفاً واحداً ويجب ألا يذكر الآخرين.",
+    "Confirm description": "تأكيد الوصف",
+    "Draft with AI or write it myself": "صياغة بالذكاء الاصطناعي أو الكتابة بنفسي",
+    "Write it myself": "اكتب بنفسي",
+    "AI draft — review the letter before continuing": "مسودة بالذكاء الاصطناعي — راجع الكتاب قبل المتابعة",
+    "Review and continue": "راجع وتابع",
+    "Write the defense letter": "اكتب كتاب طلب الدفاع",
+    "Open the defense letter draft": "افتح مسودة كتاب طلب الدفاع"
 }

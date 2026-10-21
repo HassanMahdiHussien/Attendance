@@ -88,6 +88,21 @@ class PayloadBuilder
         return $minimized;
     }
 
+    public function incidentDescriptionFacts(DisciplinaryCase $case): array
+    {
+        $this->restoration = [];
+        $this->names($case);
+        $privacy = app(IncidentPrivacy::class);
+
+        return [
+            'description' => $this->minimize($privacy->sharedFactsFor($case, (string) $case->description)),
+            'violation_type' => $this->minimize($privacy->sharedFactsFor($case, (string) $case->violation_type)),
+            'place' => $this->minimize($privacy->sharedFactsFor($case,
+                (string) ($case->location?->name ?? $case->violation_place_freetext))),
+            'time' => (string) $case->violation_time,
+        ];
+    }
+
     public function comparison(DisciplinaryCase $case, Collection $units): array
     {
         $this->restoration = [];

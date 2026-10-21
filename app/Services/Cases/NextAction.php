@@ -2,6 +2,7 @@
 
 namespace App\Services\Cases;
 
+use App\Ai\RegulationComparisons;
 use App\Enums\ApprovalDecision;
 use App\Enums\CaseStatus as S;
 use App\Enums\DocumentStatus;
@@ -143,6 +144,29 @@ class NextAction
         if ($status === S::ArchivedFinal) {
             return null;
         }
+        if ($status === S::Open) {
+            if (! $case->exists) {
+                return $this->item('hr', 'prepare_defense', $base, $case);
+            }
+            if ($case->incident_id !== null && blank($case->case_specific_description)) {
+                return $this->item('hr', 'confirm_incident_description', $base, $case);
+            }
+            $comparison = app(RegulationComparisons::class)->pending($case, DocumentType::DefenseLetter);
+            if ($comparison?->status === 'suggesting') {
+                return $this->item('waiting', 'comparing_regulation', $base, $case);
+            }
+            if ($comparison && ! in_array($comparison->status, ['confirmed', 'skipped'], true)) {
+                return $this->item('hr', 'check_regulation_comparison', $base.'/documents/new/edit', $case);
+            }
+            $draft = $case->documents()->where('document_type', DocumentType::DefenseLetter->value)
+                ->where('is_locked', false)->latest('id')->first();
+            if ($draft) {
+                return $this->item('hr', 'defense_draft_ready', $base.'/documents/'.$draft->id.'/edit', $case);
+            }
+            $failed = $case->events()->where('event_type', 'ai_draft_failed')->exists();
+
+            return $this->item('hr', $failed ? 'defense_draft_failed' : 'prepare_defense', $base.'/documents/new/edit', $case);
+        }
         if ($status === S::AwaitingEmployeeResponse) {
             $received = $case->relationLoaded('signatures')
                 ? $case->signatures->contains(fn ($signature) => $signature->purpose->value === 'defense_letter_receipt')
@@ -167,7 +191,8 @@ class NextAction
         [$key, $url, $actor] = match ($status) {
             S::Draft => ['complete_case', $base, 'hr'],
             S::Open => ['prepare_defense', $base, 'hr'],
-            S::AiDraftingDefenseLetter, S::AiDraftingRecommendations => ['ai_drafting', $base, 'hr'],
+            S::AiDraftingDefenseLetter => ['defense_drafting', $base, 'waiting'],
+            S::AiDraftingRecommendations => ['ai_drafting', $base, 'hr'],
             S::AiVerifyAndClose => [$case->ai_request_document_type === DocumentType::DecisionLetter->value ? 'ai_drafting_decision' : 'ai_drafting', $base, 'hr'],
             S::DefenseLetterCitationCheck, S::RecommendationsCitationCheck, S::DecisionLetterCitationCheck => ['check_citations', $base, 'hr'],
             S::DefenseLetterReadyForReview, S::DecisionLetterReadyForReview => ['review_issue', $base, 'hr'],
@@ -206,6 +231,9 @@ class NextAction
             'issue_defense' => $this->documentConfirmationTarget($case, DocumentType::DefenseLetter),
             'print_recommendations' => $this->documentConfirmationTarget($case, DocumentType::Recommendations),
             'check_citations' => $this->citationTarget($case),
+            'confirm_incident_description' => '#incident-description',
+            'defense_drafting' => null,
+            'comparing_regulation' => null,
             'waiting_response', 'waiting_approvals', 'waiting_lawyer', 'appeal_window',
             'response_window_opening', 'signature_collection_opening', 'appeal_window_opening', 'archiving_case' => null,
             'prepare_defense', 'ai_drafting', 'ai_drafting_decision', 'review_issue' => $url === '/cases/'.$case->id ? '#next-actions' : $url,

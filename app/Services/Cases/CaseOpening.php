@@ -21,7 +21,7 @@ class CaseOpening
 
     public function open(DisciplinaryCase $draft, User $actor): DisciplinaryCase
     {
-        return DB::transaction(function () use ($draft, $actor): DisciplinaryCase {
+        $opened = DB::transaction(function () use ($draft, $actor): DisciplinaryCase {
             $case = DisciplinaryCase::query()->lockForUpdate()->findOrFail($draft->id);
             Gate::forUser($actor)->authorize('update', $case);
             if ($case->status !== CaseStatus::Draft || ! in_array($actor->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)
@@ -49,6 +49,7 @@ class CaseOpening
                 throw new TransitionBlocked(__('messages.case.effective_law_missing'));
             }
             $case->law_version_id = $law->id;
+            $case->opened_by_user_id = $actor->id;
             $case->save();
             $opened = $this->workflow->transition($case, CaseStatus::Open, $actor, 'HR opened case');
             $this->insights->linkPriors($opened);
@@ -60,5 +61,8 @@ class CaseOpening
 
             return $opened;
         });
+        app(AutoDefenseDraft::class)->afterOpening($opened, $actor);
+
+        return $opened;
     }
 }

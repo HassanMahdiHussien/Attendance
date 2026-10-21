@@ -18,6 +18,7 @@ use App\Models\ResponseTranscription;
 use App\Models\Signature;
 use App\Models\User;
 use App\Models\ViolationType;
+use App\Services\Cases\AutoDefenseDraft;
 use App\Services\Cases\CaseAssignment;
 use App\Services\Cases\CaseClosure;
 use App\Services\Cases\CaseInsights;
@@ -40,6 +41,7 @@ use App\Support\Access\CaseVisibility;
 use App\Support\Format\Ui;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
@@ -123,6 +125,9 @@ class ShowCase extends Component
         $this->expectedStatus = $record->status->value;
         $this->assigneeId = (string) $record->assigned_hr_user_id;
         $this->caseDescription = (string) $record->case_specific_description;
+        if ($record->incident_id !== null && $this->caseDescription === '') {
+            $this->caseDescription = (string) Cache::get('incident-description-proposal:'.$record->id, '');
+        }
     }
 
     public function addIncidentEmployee(IncidentService $incidents): void
@@ -141,7 +146,21 @@ class ShowCase extends Component
         $case = $this->editable('update');
         $this->validate(['caseDescription' => ['required', 'string', 'max:50000']]);
         $incidents->updateCaseDescription($case, $this->caseDescription, auth()->user());
+        Cache::forget('incident-description-proposal:'.$case->id);
+        app(AutoDefenseDraft::class)->afterOpening($case->fresh(), auth()->user());
         $this->notice = __('Case description saved');
+    }
+
+    public function pollIncidentDescription(): void
+    {
+        if ($this->caseDescription !== '') {
+            return;
+        }
+        $case = CaseVisibility::for(auth()->user())->findOrFail($this->caseId);
+        Gate::authorize('view', $case);
+        if ($case->incident_id !== null && blank($case->case_specific_description)) {
+            $this->caseDescription = (string) Cache::get('incident-description-proposal:'.$case->id, '');
+        }
     }
 
     public function mapViolationType(CaseViolationTypes $types): void
@@ -200,7 +219,7 @@ class ShowCase extends Component
             throw ValidationException::withMessages(['notice' => __('messages.case.possible_duplicate')]);
         }
         $opening->open($case, auth()->user());
-        $this->expectedStatus = CaseStatus::Open->value;
+        $this->expectedStatus = $case->fresh()->status->value;
         $this->notice = __('messages.case.opened');
     }
 
