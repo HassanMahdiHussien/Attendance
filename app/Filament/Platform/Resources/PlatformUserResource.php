@@ -4,8 +4,6 @@ namespace App\Filament\Platform\Resources;
 
 use App\Enums\UserRole;
 use App\Filament\Platform\Resources\PlatformUserResource\Pages;
-use App\Models\HrPartner;
-use App\Models\LawFirmPartner;
 use App\Models\User;
 use App\Services\UserAccountService;
 use Filament\Actions\Action;
@@ -38,8 +36,6 @@ class PlatformUserResource extends Resource
     {
         return User::query()->whereIn('primary_role', [
             UserRole::PlatformAdmin->value,
-            UserRole::ExternalLegalReviewer->value,
-            UserRole::HrPartnerStaff->value,
         ]);
     }
 
@@ -51,15 +47,7 @@ class PlatformUserResource extends Resource
             TextInput::make('password')->label(__('Password'))->password()->required(fn (string $operation): bool => $operation === 'create')->dehydrated(fn (?string $state): bool => filled($state)),
             Select::make('primary_role')->label(__('Role'))->options([
                 UserRole::PlatformAdmin->value => __('Platform administrator'),
-                UserRole::ExternalLegalReviewer->value => __('External legal reviewer'),
-                UserRole::HrPartnerStaff->value => __('HR partner staff'),
             ])->required()->live(),
-            Select::make('law_firm_partner_id')->label(__('Law firm'))->options(fn (): array => LawFirmPartner::query()->pluck('name', 'id')->all())
-                ->visible(fn ($get): bool => $get('primary_role') === UserRole::ExternalLegalReviewer->value)
-                ->required(fn ($get): bool => $get('primary_role') === UserRole::ExternalLegalReviewer->value),
-            Select::make('hr_partner_id')->label(__('HR partner'))->options(fn (): array => HrPartner::query()->pluck('name', 'id')->all())
-                ->visible(fn ($get): bool => $get('primary_role') === UserRole::HrPartnerStaff->value)
-                ->required(fn ($get): bool => $get('primary_role') === UserRole::HrPartnerStaff->value),
         ]);
     }
 
@@ -71,8 +59,6 @@ class PlatformUserResource extends Resource
             TextColumn::make('primary_role')->label(__('Role'))
                 ->formatStateUsing(fn ($state): string => [
                     UserRole::PlatformAdmin->value => __('Platform administrator'),
-                    UserRole::ExternalLegalReviewer->value => __('External legal reviewer'),
-                    UserRole::HrPartnerStaff->value => __('HR partner staff'),
                 ][$state instanceof \BackedEnum ? $state->value : $state]),
             TextColumn::make('is_active')->label(__('Status'))->formatStateUsing(fn (bool $state): string => $state ? __('Active') : __('Inactive')),
         ])->recordActions([

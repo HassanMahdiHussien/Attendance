@@ -36,12 +36,7 @@ class CompanyResource extends Resource
     {
         return $schema->components([
             TextInput::make('name')->label(__('Company name'))->required()->maxLength(255),
-            TextInput::make('letterhead_logo_path')->label(__('Logo path')),
-            TextInput::make('letterhead_address')->label(__('Letterhead address')),
-            TextInput::make('letterhead_phone')->label(__('Letterhead phone')),
-            TextInput::make('letterhead_email')->label(__('Letterhead email'))->email(),
             Checkbox::make('kurdish_enabled')->label(__('Enable Kurdish (optional)')),
-            Checkbox::make('requires_second_review')->label(__('Second review before issuance')),
             Select::make('subscription_status')->label(__('Subscription status'))
                 ->options(collect(SubscriptionStatus::cases())->mapWithKeys(fn (SubscriptionStatus $status) => [$status->value => match ($status) {
                     SubscriptionStatus::Trial => __('Trial'),
@@ -49,9 +44,9 @@ class CompanyResource extends Resource
                     SubscriptionStatus::Suspended => __('Suspended'),
                     SubscriptionStatus::Cancelled => __('Cancelled'),
                 }])->all())->required()->default(SubscriptionStatus::Trial->value),
-            TextInput::make('first_admin_name')->label(__('First company admin name'))->required(fn (string $operation): bool => $operation === 'create'),
-            TextInput::make('first_admin_email')->label(__('First company admin email'))->email()->required(fn (string $operation): bool => $operation === 'create'),
-            TextInput::make('first_admin_password')->label(__('First company admin password'))->password()->required(fn (string $operation): bool => $operation === 'create'),
+            TextInput::make('first_hr_user_name')->label(__('First HR user name'))->required(fn (string $operation): bool => $operation === 'create'),
+            TextInput::make('first_hr_user_email')->label(__('First HR user email'))->email()->required(fn (string $operation): bool => $operation === 'create'),
+            TextInput::make('first_hr_user_password')->label(__('First HR user password'))->password()->required(fn (string $operation): bool => $operation === 'create'),
         ]);
     }
 

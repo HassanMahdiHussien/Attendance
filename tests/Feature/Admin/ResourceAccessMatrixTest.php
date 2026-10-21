@@ -4,8 +4,6 @@ use App\Enums\UserRole;
 use App\Filament\Admin\Pages\CompanySettings;
 use App\Filament\Admin\Resources\BranchResource;
 use App\Filament\Admin\Resources\BranchResource\Pages\CreateBranch;
-use App\Filament\Admin\Resources\CommitteeMandateResource;
-use App\Filament\Admin\Resources\CommitteeMandateResource\Pages\CreateMandate;
 use App\Filament\Admin\Resources\EmployeeResource;
 use App\Filament\Admin\Resources\EmployeeResource\Pages\CreateEmployee;
 use App\Filament\Admin\Resources\LocationResource;
@@ -23,14 +21,13 @@ test('admin create permissions agree on Livewire components and direct URLs for 
     Filament::setCurrentPanel(Filament::getPanel('admin'));
 
     $resources = [
-        [BranchResource::class, CreateBranch::class, false],
-        [LocationResource::class, CreateLocation::class, true],
-        [EmployeeResource::class, CreateEmployee::class, true],
-        [UserResource::class, CreateUser::class, true],
-        [CommitteeMandateResource::class, CreateMandate::class, false],
+        [BranchResource::class, CreateBranch::class],
+        [LocationResource::class, CreateLocation::class],
+        [EmployeeResource::class, CreateEmployee::class],
+        [UserResource::class, CreateUser::class],
     ];
 
-    foreach ([UserRole::CompanyAdmin, UserRole::HrStaff, UserRole::PlatformAdmin] as $role) {
+    foreach ([UserRole::HrStaff, UserRole::PlatformAdmin] as $role) {
         $actor = User::factory()->create([
             'primary_role' => $role,
             'company_id' => $role === UserRole::PlatformAdmin ? null : $company->id,
@@ -38,18 +35,17 @@ test('admin create permissions agree on Livewire components and direct URLs for 
         $this->actingAs($actor);
         Filament::setTenant($company);
 
-        foreach ($resources as [$resource, $page, $hrAllowed]) {
-            $allowed = $role !== UserRole::HrStaff || $hrAllowed;
+        foreach ($resources as [$resource, $page]) {
             app(TenantContext::class)->setCompany($company);
-            Livewire::test($page)->assertStatus($allowed ? 200 : 403);
+            Livewire::test($page)->assertStatus(200);
             $url = $resource::getUrl('create', panel: 'admin', tenant: $company);
-            expect($this->get($url)->status())->toBe($allowed ? 200 : 403);
+            expect($this->get($url)->status())->toBe(200);
         }
 
         app(TenantContext::class)->setCompany($company);
-        Livewire::test(CompanySettings::class)->assertStatus($role === UserRole::HrStaff ? 403 : 200);
+        Livewire::test(CompanySettings::class)->assertStatus(200);
         $settingsUrl = CompanySettings::getUrl(panel: 'admin', tenant: $company);
-        expect($this->get($settingsUrl)->status())->toBe($role === UserRole::HrStaff ? 403 : 200);
+        expect($this->get($settingsUrl)->status())->toBe(200);
     }
 
     Filament::setTenant(null);

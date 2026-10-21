@@ -1,48 +1,38 @@
 <?php
 
-use App\Enums\CaseStatus;
 use App\Enums\UserRole;
 use App\Models\Company;
-use App\Models\DisciplinaryCase;
-use App\Models\Law;
+use App\Models\Employee;
 use App\Models\User;
+use App\Support\Tenancy\TenantContext;
 
-test('the 375 pixel bottom navigation and More sheet navigate the workspace', function (): void {
+test('the phone navigation opens the employee list and More sheet', function (): void {
     $company = Company::factory()->create();
-    completeCompanySetup($company);
-    $admin = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::CompanyAdmin]);
+    $admin = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::HrStaff]);
 
-    $page = visitBound('/login')->on()->mobile()->resize(375, 812)->assertNoJavaScriptErrors()
+    visitBound('/login')->on()->mobile()->resize(375, 812)->assertNoJavaScriptErrors()
         ->fill('email', $admin->email)->fill('password', 'password')->press('Log in')
-        ->assertPathIs('/home')->assertNoJavaScriptErrors();
-    $page->click('nav.fixed a[href="/cases"]')
-        ->assertPathIs('/cases')->assertNoJavaScriptErrors()
+        ->assertPathIs('/home')->assertNoJavaScriptErrors()
+        ->click('nav.fixed a[href="/employees"]')
+        ->assertPathIs('/employees')->assertNoJavaScriptErrors()
         ->click('nav.fixed button[aria-controls="workspace-more"]')
-        ->assertVisible('#workspace-more')
-        ->click('#workspace-more a[href="/reports/inbox"]')
-        ->assertPathIs('/reports/inbox')
-        ->assertNoJavaScriptErrors();
+        ->assertVisible('#workspace-more');
 });
 
-test('the Arabic case page fits a 375 pixel viewport', function (): void {
+test('the Arabic employee page fits a phone viewport', function (): void {
     $company = Company::factory()->create();
-    completeCompanySetup($company);
+    app(TenantContext::class)->setCompany($company);
+    $employee = Employee::factory()->create();
     $admin = User::factory()->create([
         'company_id' => $company->id,
-        'primary_role' => UserRole::CompanyAdmin,
+        'primary_role' => UserRole::HrStaff,
         'locale' => 'ar',
     ]);
-    $case = DisciplinaryCase::factory()->create([
-        'company_id' => $company->id,
-        'opened_by_user_id' => $admin->id,
-        'law_version_id' => Law::factory()->create()->id,
-        'status' => CaseStatus::Open,
-    ]);
 
-    $page = visitBound('/login')->on()->mobile()->resize(375, 812)->assertNoJavaScriptErrors()
+    visitBound('/login')->on()->mobile()->resize(375, 812)->assertNoJavaScriptErrors()
         ->fill('email', $admin->email)->fill('password', 'password')->press('Log in')
-        ->assertPathIs('/home')->assertNoJavaScriptErrors();
-    $page->navigate('/cases/'.$case->id)->assertPathIs('/cases/'.$case->id)
+        ->assertPathIs('/home')->assertNoJavaScriptErrors()
+        ->navigate('/employees/'.$employee->id)->assertPathIs('/employees/'.$employee->id)
         ->assertNoJavaScriptErrors()
         ->assertScript('document.documentElement.dir', 'rtl')
         ->assertScript('document.documentElement.scrollWidth <= window.innerWidth');

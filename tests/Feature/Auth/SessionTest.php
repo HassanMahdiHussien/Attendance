@@ -82,14 +82,14 @@ test('inactive user is logged out before every page response', function (string 
 
 test('inactive company user is logged out before every page response', function (string $path, string $login): void {
     $company = Company::factory()->create(['is_active' => false]);
-    $user = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::CompanyAdmin]);
+    $user = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::HrStaff]);
     $this->actingAs($user)->get($path)->assertRedirect($login);
     $this->assertGuest();
 })->with('session request paths');
 
 test('inactive company and user are refused on admin tenant and direct panel URLs', function (bool $deactivateCompany, string $pathSuffix): void {
     $company = Company::factory()->create();
-    $user = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::CompanyAdmin]);
+    $user = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::HrStaff]);
     if ($deactivateCompany) {
         $company->update(['is_active' => false]);
     } else {
@@ -106,7 +106,7 @@ test('inactive company and user are refused on admin tenant and direct panel URL
 
 test('deactivation through the account service deletes database sessions', function (): void {
     $company = Company::factory()->create();
-    $actor = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::CompanyAdmin]);
+    $actor = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::HrStaff]);
     $user = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::HrStaff]);
     DB::table('sessions')->insert(['id' => 'test-session', 'user_id' => $user->id, 'payload' => 'x', 'last_activity' => now()->timestamp]);
     app(UserAccountService::class)->update($user, ['is_active' => false], $actor);
@@ -142,7 +142,7 @@ test('platform users expire after 30 minutes of inactivity', function (): void {
 
 test('inactive users and companies are refused on Livewire panel updates', function (bool $deactivateCompany): void {
     $company = Company::factory()->create();
-    $user = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::CompanyAdmin]);
+    $user = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::HrStaff]);
     $this->actingAs($user);
     $snapshot = panelSnapshot($this, '/admin/'.$company->id.'/auth-panel-probe');
     if ($deactivateCompany) {

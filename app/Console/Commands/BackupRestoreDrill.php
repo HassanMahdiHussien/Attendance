@@ -25,18 +25,7 @@ class BackupRestoreDrill extends Command
 
     private const VOLATILE = ['sessions', 'cache', 'cache_locks', 'jobs', 'job_batches', 'failed_jobs'];
 
-    private const APPEND_ONLY = ['case_events', 'audit_logs', 'ai_generation_logs'];
-
-    private const FILES = [
-        'companies' => ['letterhead_logo_path' => null, 'internal_regulation_file_path' => null],
-        'committee_mandates' => ['source_file_path' => null],
-        'attachments' => ['path' => null],
-        'documents' => ['pdf_file_path' => 'pdf_sha256'],
-        'laws' => ['source_file_path' => 'source_sha256'],
-        'legal_import_runs' => ['source_path' => 'source_sha256'],
-        'legal_import_pages' => ['image_path' => 'image_sha256'],
-        'company_letterheads' => ['logo_path' => 'logo_sha256', 'header_image_path' => 'header_image_sha256'],
-    ];
+    private const APPEND_ONLY = ['audit_logs', 'ai_generation_logs'];
 
     public function handle(HealthPing $ping): int
     {
@@ -163,9 +152,7 @@ class BackupRestoreDrill extends Command
 
                 DB::purge('restore_drill');
                 $rows = $this->verifyDatabase($scratchName);
-                $fileCount = $this->verifyFiles($zip);
                 $this->table(['Table', 'Restored', 'Live'], $rows);
-                $this->info("Verified {$fileCount} referenced files in the archive.");
             } finally {
                 $zip->close();
             }
@@ -284,10 +271,6 @@ class BackupRestoreDrill extends Command
         }
         $this->assertRejected(fn () => $drill->table('audit_logs')->where('id', $appendRow->id)->delete());
         $this->assertRejected(fn () => $drill->table('audit_logs')->where('id', $appendRow->id)->update(['action' => '__drill_update__']));
-        $document = $drill->table('documents')->where('is_locked', 1)->first();
-        if ($document) {
-            $this->assertRejected(fn () => $drill->table('documents')->where('id', $document->id)->update(['reference_number' => '__drill__']));
-        }
 
         return $rows;
     }
@@ -316,47 +299,5 @@ class BackupRestoreDrill extends Command
             throw new RuntimeException('A restored trigger check failed for another reason.');
         }
         throw new RuntimeException('A restored immutability trigger did not reject a write.');
-    }
-
-    private function verifyFiles(ZipArchive $zip): int
-    {
-        $drill = DB::connection('restore_drill');
-        $count = 0;
-        foreach (self::FILES as $table => $columns) {
-            if (! $drill->getSchemaBuilder()->hasTable($table)) {
-                continue;
-            }
-            foreach ($drill->table($table)->cursor() as $row) {
-                foreach ($columns as $pathColumn => $hashColumn) {
-                    $path = $row->$pathColumn ?? null;
-                    if (! is_string($path) || $path === '' || $path === 'pending') {
-                        continue;
-                    }
-                    if (str_contains($path, '..') || str_starts_with($path, '/')) {
-                        throw new RuntimeException('Stored file path is unsafe.');
-                    }
-                    $entry = str_starts_with($path, 'docs/laws/') ? $path : 'storage/app/private/'.$path;
-                    $index = $zip->locateName($entry);
-                    if ($index === false) {
-                        throw new RuntimeException('Referenced file missing from archive.');
-                    }
-                    $count++;
-                    if ($hashColumn && ! empty($row->$hashColumn)) {
-                        $stream = $zip->getStream($entry);
-                        if ($stream === false) {
-                            throw new RuntimeException('Referenced file cannot be decrypted.');
-                        }
-                        $hash = hash_init('sha256');
-                        hash_update_stream($hash, $stream);
-                        fclose($stream);
-                        if (! hash_equals(strtolower($row->$hashColumn), hash_final($hash))) {
-                            throw new RuntimeException('Referenced file hash differs from the restored row.');
-                        }
-                    }
-                }
-            }
-        }
-
-        return $count;
     }
 }

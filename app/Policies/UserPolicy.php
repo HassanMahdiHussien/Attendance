@@ -9,13 +9,13 @@ class UserPolicy
 {
     public function viewAny(User $user): bool
     {
-        return in_array($user->primary_role, [UserRole::PlatformAdmin, UserRole::CompanyAdmin, UserRole::HrStaff], true);
+        return in_array($user->primary_role, [UserRole::PlatformAdmin, UserRole::HrStaff], true);
     }
 
     public function view(User $actor, User $subject): bool
     {
-        return $actor->primary_role === UserRole::PlatformAdmin || ($actor->company_id !== null && $actor->company_id === $subject->company_id
-            && ($actor->primary_role === UserRole::CompanyAdmin || ($actor->primary_role === UserRole::HrStaff && in_array($subject->primary_role, [UserRole::Reporter, UserRole::DeptManager], true))));
+        return $actor->primary_role === UserRole::PlatformAdmin || ($actor->primary_role === UserRole::HrStaff
+            && $actor->company_id !== null && $actor->company_id === $subject->company_id);
     }
 
     public function create(User $user): bool

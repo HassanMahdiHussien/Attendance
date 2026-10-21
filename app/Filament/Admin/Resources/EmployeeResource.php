@@ -7,7 +7,6 @@ use App\Models\Branch;
 use App\Models\Employee;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
-use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -46,8 +45,6 @@ class EmployeeResource extends Resource
             TextInput::make('position_en')->label(__('English position')),
             DatePicker::make('hire_date')->label(__('Hire date'))->required(),
             TextInput::make('email')->label(__('Email address'))->email(),
-            Checkbox::make('is_general_manager')->label(__('General Manager'))
-                ->helperText(__('Only one active General Manager may be selected; clear the current one first.')),
         ]);
     }
 

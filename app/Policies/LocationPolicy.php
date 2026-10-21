@@ -10,7 +10,7 @@ class LocationPolicy
 {
     public function viewAny(User $user): bool
     {
-        return in_array($user->primary_role, [UserRole::PlatformAdmin, UserRole::CompanyAdmin, UserRole::HrStaff], true);
+        return in_array($user->primary_role, [UserRole::PlatformAdmin, UserRole::HrStaff], true);
     }
 
     public function view(User $user, Location $location): bool

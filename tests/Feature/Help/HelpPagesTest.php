@@ -2,8 +2,6 @@
 
 use App\Enums\UserRole;
 use App\Models\Company;
-use App\Models\HrPartner;
-use App\Models\LawFirmPartner;
 use App\Models\User;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
@@ -15,20 +13,16 @@ test('guests cannot open help pages or screenshots', function (): void {
 });
 
 test('all roles can read both language pages and use query string search', function (): void {
-    foreach (UserRole::cases() as $role) {
+    foreach ([UserRole::PlatformAdmin, UserRole::HrStaff] as $role) {
         foreach (['en', 'ar'] as $locale) {
             $attributes = ['primary_role' => $role, 'locale' => $locale];
-            if (in_array($role, [UserRole::CompanyAdmin, UserRole::HrStaff, UserRole::DeptManager, UserRole::Reporter, UserRole::CommitteeMember], true)) {
+            if ($role === UserRole::HrStaff) {
                 $attributes['company_id'] = Company::factory()->create()->id;
-            } elseif ($role === UserRole::ExternalLegalReviewer) {
-                $attributes['law_firm_partner_id'] = LawFirmPartner::factory()->create()->id;
-            } elseif ($role === UserRole::HrPartnerStaff) {
-                $attributes['hr_partner_id'] = HrPartner::factory()->create()->id;
             }
             $user = User::factory()->create($attributes);
             $this->actingAs($user)->get('/help')->assertOk();
             $this->actingAs($user)->get('/help/getting-started/welcome')->assertOk();
-            $this->actingAs($user)->get('/help?q='.rawurlencode($locale === 'ar' ? 'الاجراءات' : 'disciplinary'))->assertOk();
+            $this->actingAs($user)->get('/help?q='.rawurlencode($locale === 'ar' ? 'الموظفون' : 'employees'))->assertOk();
         }
     }
 });
@@ -54,11 +48,11 @@ test('image route accepts only manifest names and supported locales', function (
 });
 
 test('workspace menus and both panels expose help', function (): void {
-    $response = $this->actingAs(User::factory()->create(['company_id' => Company::factory()->create()->id, 'primary_role' => UserRole::CompanyAdmin]))
+    $response = $this->actingAs(User::factory()->create(['company_id' => Company::factory()->create()->id, 'primary_role' => UserRole::HrStaff]))
         ->get('/help')->assertOk()->assertSee('workspace-account-menu')->assertSee('workspace-more');
     expect(substr_count($response->getContent(), 'href="'.route('help.index').'"'))->toBeGreaterThanOrEqual(2);
     $company = Company::factory()->create();
-    $admin = User::factory()->create(['primary_role' => UserRole::CompanyAdmin, 'company_id' => $company->id]);
+    $admin = User::factory()->create(['primary_role' => UserRole::HrStaff, 'company_id' => $company->id]);
     $this->actingAs($admin)->get('/admin/'.$company->id)->assertOk()->assertSee(route('help.index'), false);
     $platform = User::factory()->create(['primary_role' => UserRole::PlatformAdmin, 'company_id' => null]);
     $this->actingAs($platform)->get('/platform')->assertOk()->assertSee(route('help.index'), false);

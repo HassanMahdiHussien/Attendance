@@ -10,16 +10,14 @@ use RuntimeException;
 
 class HelpLibrary
 {
-    private const SECTIONS = ['getting-started', 'reporting', 'hr', 'committee', 'legal', 'partner', 'admin', 'platform', 'rules', 'faq'];
+    private const SECTIONS = ['getting-started', 'hr'];
 
     public function __construct(private readonly ?string $root = null) {}
 
     public function sections(): array
     {
         return array_map(fn (string $slug): array => ['slug' => $slug, 'name' => __(match ($slug) {
-            'getting-started' => 'Getting started', 'reporting' => 'Reporting', 'hr' => 'HR',
-            'committee' => 'Committee', 'legal' => 'Legal', 'partner' => 'Partner',
-            'admin' => 'Administration', 'platform' => 'Platform', 'rules' => 'Rules', 'faq' => 'FAQ',
+            'getting-started' => 'Getting started', 'hr' => 'HR',
         })], self::SECTIONS);
     }
 

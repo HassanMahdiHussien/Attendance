@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\SequenceKey;
 use App\Models\CompanySequence;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -15,7 +16,7 @@ class CompanySequenceFactory extends Factory
     {
         return [
             'company_id' => app(TenantContext::class)->companyId(),
-            'sequence_key' => 'case',
+            'sequence_key' => SequenceKey::EmployeeCode,
             'next_value' => 1,
         ];
     }

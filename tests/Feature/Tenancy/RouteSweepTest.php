@@ -1,88 +1,56 @@
 <?php
 
 use App\Enums\UserRole;
-use App\Models\Attachment;
 use App\Models\Branch;
-use App\Models\CommitteeMandate;
 use App\Models\Company;
-use App\Models\DisciplinaryCase;
-use App\Models\Document;
 use App\Models\Employee;
-use App\Models\HrPartner;
-use App\Models\Law;
-use App\Models\LawFirmPartner;
-use App\Models\LegalImportPage;
-use App\Models\LegalImportRun;
 use App\Models\Location;
-use App\Models\ReportExport;
 use App\Models\User;
-use App\Models\ViolationReport;
-use App\Models\ViolationType;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
-// CLAUDE.md §16.1: a Company A user can never fetch Company B's data through any route, not just the ones the UI links to.
-// Every parameterised GET route must be listed here, so a new route fails this test until someone decides how to sweep it.
+// CLAUDE.md §16.1: a Company A user cannot fetch Company B's data through any route, including routes the UI does not link to.
+// Every parameterised GET route must be listed here so a new route fails until its tenant boundary is swept.
 const SWEEP_EXCLUDED = [
-    // Framework asset and upload-preview routes: no tenant data behind the parameter.
+    // Livewire asset parameters select framework CSS or JavaScript, not tenant records.
     '#^livewire-[^/]+/(css|js)/#',
+    // Livewire upload previews use temporary upload tokens, not application records.
     '#^livewire-[^/]+/preview-file/#',
-    // Filament's built-in exporter/importer downloads: the app uses neither, so no exports/imports tables exist (guarded below).
+    // Filament's built-in exporter and importer routes have no application records; their tables are checked below.
     '#^filament/(exports|imports)/#',
 ];
 
-test('Filament exporter and importer tables stay absent while their download routes are excluded from the sweep', function (): void {
+test('framework exporter and importer tables remain absent', function (): void {
     expect(Schema::hasTable('exports'))->toBeFalse()
         ->and(Schema::hasTable('imports'))->toBeFalse();
 });
 
-test('a company admin cannot reach another company\'s records through any parameterised GET route', function (): void {
+test('a company user cannot reach another company through any parameterised GET route', function (): void {
     $context = app(TenantContext::class);
     $a = Company::factory()->create();
     $b = Company::factory()->create();
-    $actor = User::factory()->create(['company_id' => $a->id, 'primary_role' => UserRole::CompanyAdmin]);
-    $marker = 'سري-للشركة-ب-'.uniqid();
+    $actor = User::factory()->create(['company_id' => $a->id, 'primary_role' => UserRole::HrStaff]);
+    $marker = 'private-company-b-'.uniqid();
 
-    $context->setAllCompanies();
-    $statute = Law::factory()->create();
-    $records = $context->runForCompany($b, function () use ($b, $statute, $marker): array {
+    $records = $context->runForCompany($b, function () use ($b, $marker): array {
         $branch = Branch::factory()->create(['company_id' => $b->id, 'name' => $marker]);
         $employee = Employee::factory()->create(['company_id' => $b->id, 'branch_id' => $branch->id, 'name' => $marker]);
-        $case = DisciplinaryCase::factory()->create(['employee_id' => $employee->id, 'branch_id' => $branch->id,
-            'law_version_id' => $statute->id]);
-        $document = Document::factory()->create(['case_id' => $case->id]);
+        $user = User::factory()->create(['company_id' => $b->id, 'primary_role' => UserRole::HrStaff, 'name' => $marker]);
+        $location = Location::factory()->create(['company_id' => $b->id, 'branch_id' => $branch->id]);
         Storage::disk('local')->put('sweep/'.$marker.'.txt', $marker);
-        $attachment = Attachment::factory()->create(['attachable_type' => 'case', 'attachable_id' => $case->id, 'path' => 'sweep/'.$marker.'.txt']);
-        $regulation = Law::factory()->create(['company_id' => $b->id, 'kind' => 'internal_regulation',
-            'category' => 'regulation', 'name' => $marker]);
-        $userB = User::factory()->create(['company_id' => $b->id, 'primary_role' => UserRole::HrStaff, 'name' => $marker]);
-        $run = LegalImportRun::create(['law_id' => $regulation->id, 'company_id' => $b->id, 'source_path' => 'sweep/source.pdf',
-            'source_sha256' => str_repeat('c', 64), 'mode' => 'auto', 'state' => 'completed', 'started_by' => $userB->id,
-            'started_at' => now()]);
-        Storage::disk('local')->put('sweep/page.png', $marker);
-        LegalImportPage::create(['run_id' => $run->id, 'page_number' => 1, 'image_path' => 'sweep/page.png',
-            'image_sha256' => hash('sha256', $marker)]);
 
         return [
-            'company' => $b->id, 'tenant' => $b->id, 'case' => $case->id, 'document' => $document->id,
-            'attachment' => $attachment->id, 'employee' => $employee->id, 'run' => $run->id, 'page' => 1,
-            'export' => ReportExport::factory()->create(['company_id' => $b->id, 'requested_by' => $userB->id])->id,
-            'report' => ViolationReport::factory()->create(['company_id' => $b->id, 'branch_id' => $branch->id,
-                'reporter_user_id' => $userB->id, 'description' => $marker])->id,
+            'company' => $b->id, 'tenant' => $b->id, 'employee' => $employee->id,
             'path' => 'sweep/'.$marker.'.txt',
             // Help paths name shared static content, never a tenant record.
             'section' => 'missing', 'slug' => 'missing', 'locale' => 'xx', 'name' => 'missing',
             'record' => [
-                'branches' => $branch->id, 'employees' => $employee->id, 'users' => $userB->id,
-                'locations' => Location::factory()->create(['company_id' => $b->id, 'branch_id' => $branch->id])->id,
-                'violation-types' => ViolationType::factory()->create(['company_id' => $b->id])->id,
-                'committee-mandates' => CommitteeMandate::factory()->create(['company_id' => $b->id])->id,
-                'companies' => $b->id, 'laws' => $regulation->id, 'platform-users' => $userB->id,
-                'hr-partners' => HrPartner::factory()->create()->id,
-                'law-firm-partners' => LawFirmPartner::factory()->create()->id,
+                'branches' => $branch->id, 'employees' => $employee->id,
+                'users' => $user->id, 'locations' => $location->id,
+                'companies' => $b->id, 'platform-users' => $user->id,
             ],
         ];
     });
@@ -121,12 +89,12 @@ test('a company admin cannot reach another company\'s records through any parame
             $visited++;
             $body = (string) $response->getContent();
             if ($response->getStatusCode() === 200 || str_contains($body, $marker)) {
-                $leaks[] = $route->uri().' → '.$response->getStatusCode();
+                $leaks[] = $route->uri().' -> '.$response->getStatusCode();
             }
         });
 
-    // Guards against a filter change that silently sweeps nothing.
-    expect($visited)->toBeGreaterThan(40)
+    // A filter change must not silently remove every tenant route from the sweep.
+    expect($visited)->toBeGreaterThan(10)
         ->and(array_values(array_unique($unmapped)))->toBe([])
         ->and($leaks)->toBe([]);
 });

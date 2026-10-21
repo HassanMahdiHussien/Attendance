@@ -2,7 +2,7 @@
 
 @section('code', '403')
 @section('heading', __('You do not have access to this page'))
-@section('message', __('Your account cannot open this page. If you think it should, ask your company admin to change your access.'))
+@section('message', __('Your account cannot open this page. Ask your HR team to review your access.'))
 @section('localeSwitch')
     @include('errors.locale-switch')
 @endsection

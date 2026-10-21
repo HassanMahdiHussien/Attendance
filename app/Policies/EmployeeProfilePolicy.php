@@ -6,14 +6,12 @@ use App\Enums\UserRole;
 use App\Models\Employee;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\DB;
 
 class EmployeeProfilePolicy
 {
     public function search(User $viewer): bool
     {
-        return $viewer->is_active && in_array($viewer->primary_role, [UserRole::CompanyAdmin,
-            UserRole::HrStaff, UserRole::PlatformAdmin, UserRole::HrPartnerStaff], true);
+        return $viewer->is_active && in_array($viewer->primary_role, [UserRole::HrStaff, UserRole::PlatformAdmin], true);
     }
 
     public function view(User $viewer, Employee $employee): bool
@@ -29,9 +27,7 @@ class EmployeeProfilePolicy
 
         return match ($viewer->primary_role) {
             UserRole::PlatformAdmin => true,
-            UserRole::CompanyAdmin, UserRole::HrStaff => (int) $viewer->company_id === $companyId,
-            UserRole::HrPartnerStaff => DB::table('company_hr_partner')->where('company_id', $companyId)
-                ->where('hr_partner_id', $viewer->hr_partner_id)->where('full_case_access', true)->exists(),
+            UserRole::HrStaff => (int) $viewer->company_id === $companyId,
             default => false,
         };
     }
@@ -45,10 +41,7 @@ class EmployeeProfilePolicy
 
         return match ($viewer->primary_role) {
             UserRole::PlatformAdmin => $query->withoutGlobalScopes(),
-            UserRole::CompanyAdmin, UserRole::HrStaff => $query->where('employees.company_id', $viewer->company_id),
-            UserRole::HrPartnerStaff => $query->withoutGlobalScopes()->whereIn('employees.company_id',
-                DB::table('company_hr_partner')->select('company_id')->where('hr_partner_id', $viewer->hr_partner_id)
-                    ->where('full_case_access', true)),
+            UserRole::HrStaff => $query->where('employees.company_id', $viewer->company_id),
             default => $query->whereRaw('1 = 0'),
         };
     }

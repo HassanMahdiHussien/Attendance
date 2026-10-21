@@ -13,6 +13,5 @@
     @include('layouts.partials.workspace-navigation')
     <main class="mx-auto w-full max-w-7xl min-w-0 px-4 pb-28 pt-6 sm:px-8 xl:pb-10">{{ $slot }}</main>
     <x-ui.toast />
-    <x-ui.file-viewer />
 </body>
 </html>

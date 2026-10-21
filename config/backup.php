@@ -19,10 +19,8 @@ return [
         'name' => 'displanery',
         'source' => [
             'files' => [
-                'include' => [storage_path('app/private'), base_path('docs/laws')],
+                'include' => [storage_path('app/private')],
                 'exclude' => [
-                    storage_path('app/private/legal-library/previews'),
-                    storage_path('app/private/report-exports'),
                     storage_path('app/private/livewire-tmp'),
                 ],
                 'follow_links' => false,

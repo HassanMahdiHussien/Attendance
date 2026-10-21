@@ -3,7 +3,6 @@
 namespace App\Livewire;
 
 use App\Enums\UserRole;
-use App\Services\Home\MyWork;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 
@@ -22,6 +21,6 @@ class Home extends Component
     {
         $this->mount();
 
-        return view('livewire.home', ['work' => app(MyWork::class)->for(auth()->user())])->layout('layouts.workspace');
+        return view('livewire.home')->layout('layouts.workspace');
     }
 }

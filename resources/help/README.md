@@ -13,10 +13,10 @@ order: 10
 ---
 ```
 
-Use `audience: all` for everyone, or list roles separated by commas, such as `company_admin, hr_staff`. `order` controls the position within a section. Write the guide below the second `---`. Use `#` for headings, `1.` for steps, and `**text**` for a bold button label. Copy button names exactly from the screen.
+Use `audience: all` for everyone, or list roles separated by commas, such as `hr_staff`. `order` controls the position within a section. Write the guide below the second `---`. Use `#` for headings, `1.` for steps, and `**text**` for a bold button label. Copy button names exactly from the screen.
 
-To add a guide, create a file with the same section and file name in both `en` and `ar`. Write each language naturally. Link to another guide with `[read more](help:getting-started/welcome)`. Refer to a screenshot with `![Description](shots/home)`. The screenshot name must be listed in `resources/help/screenshots.php` and its image must exist for both languages.
+To add a guide, create a file with the same section and file name in both `en` and `ar`. Write each language naturally. Link to another guide with `[read more](help:getting-started/welcome)`. Before referring to a screenshot, capture it in both languages; its name must be listed in `resources/help/screenshots.php`.
 
-On a local development machine with the demo data, regenerate screenshots with `php artisan help:screenshots` or one image with `php artisan help:screenshots --only=home`. Review both languages after a UI change. The command never runs outside the local environment. Screenshots contain only seeded demo data.
+On a local development machine with the demo data, capture screenshots with `php artisan help:screenshots` or one image with `php artisan help:screenshots --only=home`. Review both languages after a UI change. The command never runs outside the local environment. Screenshots contain only seeded demo data.
 
 Editing on a deployed server requires deploying the changed files. After deployment, the Help Center notices article changes without a build step. Run the Help tests before deployment; they check both languages, links, and screenshots.

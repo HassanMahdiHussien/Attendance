@@ -22,7 +22,8 @@ class SetupChecklist extends Widget
         $company = Filament::getTenant();
 
         return $company !== null
-            && in_array(auth()->user()?->primary_role, [UserRole::CompanyAdmin, UserRole::PlatformAdmin], true)
+            && in_array(auth()->user()?->primary_role, [UserRole::HrStaff, UserRole::PlatformAdmin], true)
+            && auth()->user()->canAccessTenant($company)
             && ! app(CompanySetup::class)->complete($company);
     }
 

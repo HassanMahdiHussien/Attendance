@@ -8,7 +8,6 @@ use App\Models\Employee;
 use App\Models\User;
 use App\Support\Search\SearchText;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class EmployeePicker
@@ -22,12 +21,7 @@ class EmployeePicker
     {
         $branch = Branch::query()->where('company_id', $actor->company_id)->where('is_active', true)->findOrFail($branchId);
         abort_unless($actor->is_active && $actor->company?->is_active, 403);
-        if (in_array($actor->primary_role, [UserRole::Reporter, UserRole::DeptManager], true)) {
-            abort_unless(DB::table('branch_user')->where('company_id', $actor->company_id)
-                ->where('user_id', $actor->id)->where('branch_id', $branch->id)->exists(), 403);
-        } else {
-            abort_unless(in_array($actor->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true), 403);
-        }
+        abort_unless($actor->primary_role === UserRole::HrStaff, 403);
 
         return Employee::query()->where('company_id', $actor->company_id)->where('branch_id', $branchId)->where('is_active', true);
     }

@@ -15,7 +15,7 @@ test('guest, workspace, and both panel dashboards show the shared mark', functio
     $this->get('/login')->assertOk()->assertSee('data-brand-mark', false);
 
     $company = Company::factory()->create();
-    $admin = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::CompanyAdmin]);
+    $admin = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::HrStaff]);
     $this->actingAs($admin)->get('/home')->assertOk()->assertSee('data-brand-mark', false);
     $this->get('/admin/'.$company->id)->assertOk()->assertSee('data-brand-mark', false)
         ->assertSee(__('Quick links'));
@@ -56,8 +56,8 @@ test('notification mail uses the inline mark and Arabic boilerplate', function (
     foreach (['en', 'ar'] as $locale) {
         app()->setLocale($locale);
         $html = (string) (new MailMessage)
-            ->line('A case needs your attention.')
-            ->action('Open case', 'https://example.test/cases/1')
+            ->line('An employee record needs your attention.')
+            ->action('Open employee', 'https://example.test/employees/1')
             ->render();
 
         expect($html)->toContain('data-brand-mark', 'background-color: #F2B33D',
@@ -76,7 +76,7 @@ test('operations mail uses the same branded HTML layout', function (): void {
 
 test('admin shortcuts use registered destinations and stay within admin permissions', function (): void {
     $company = Company::factory()->create();
-    $admin = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::CompanyAdmin]);
+    $admin = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::HrStaff]);
     actingInAdminTenant($this, $admin, $company);
 
     expect(AdminShortcuts::canView())->toBeTrue();
@@ -87,7 +87,7 @@ test('admin shortcuts use registered destinations and stay within admin permissi
     $hr = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::HrStaff]);
     actingInAdminTenant($this, $hr, $company);
     expect(AdminShortcuts::canView())->toBeTrue();
-    expect(collect(app(AdminShortcuts::class)->links())->pluck('label'))->not->toContain(__('Company settings'));
+    expect(collect(app(AdminShortcuts::class)->links())->pluck('label'))->toContain(__('Company settings'));
 });
 
 test('brand marks have one web component and one email rendering', function (): void {

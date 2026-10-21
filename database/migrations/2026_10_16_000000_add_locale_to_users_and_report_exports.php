@@ -11,18 +11,10 @@ return new class extends Migration
         Schema::table('users', function (Blueprint $table): void {
             $table->string('locale', 2)->default('en');
         });
-
-        Schema::table('report_exports', function (Blueprint $table): void {
-            $table->string('locale', 2)->default('en');
-        });
     }
 
     public function down(): void
     {
-        Schema::table('report_exports', function (Blueprint $table): void {
-            $table->dropColumn('locale');
-        });
-
         Schema::table('users', function (Blueprint $table): void {
             $table->dropColumn('locale');
         });

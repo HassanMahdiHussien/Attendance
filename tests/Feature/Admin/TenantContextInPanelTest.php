@@ -1,14 +1,10 @@
 <?php
 
-use App\Enums\UserRole;
-use App\Filament\Admin\Resources\CommitteeMandateResource\Pages\ViewMandate;
-use App\Filament\Admin\Resources\CommitteeMandateResource\RelationManagers\PoolMembersRelationManager;
 use App\Filament\Admin\Resources\EmployeeResource;
 use App\Filament\Admin\Resources\EmployeeResource\Pages\CreateEmployee;
 use App\Filament\Admin\Resources\EmployeeResource\Pages\ListEmployees;
 use App\Filament\Admin\Resources\UserResource\Pages\CreateUser;
 use App\Models\Branch;
-use App\Models\CommitteeMandate;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\User;
@@ -119,52 +115,13 @@ test('platform admin tenant switch changes Livewire table and direct URL scope',
     expect($this->get($url)->status())->toBeIn([403, 404]);
 });
 
-test('relation manager stores pool members in the selected company', function (): void {
-    $mandate = CommitteeMandate::factory()->create(['effective_from' => '2026-10-10']);
-    $branch = Branch::factory()->create();
-    $foreignUser = User::factory()->create(['company_id' => $this->secondCompany->id, 'primary_role' => UserRole::CommitteeMember]);
-    $memberUser = User::factory()->create(['company_id' => $this->firstCompany->id, 'primary_role' => UserRole::CommitteeMember]);
-
-    actingInAdminTenant($this, $this->platformAdmin, $this->firstCompany);
-    $component = Livewire::test(PoolMembersRelationManager::class, [
-        'ownerRecord' => $mandate,
-        'pageClass' => ViewMandate::class,
-    ]);
-    actingInAdminTenant($this, $this->platformAdmin, $this->firstCompany);
-    $options = $component->instance()->form->getFlatComponents()['user_id']->getOptions();
-    expect($options)->toHaveKey($memberUser->id)->not->toHaveKey($foreignUser->id);
-
-    actingInAdminTenant($this, $this->platformAdmin, $this->firstCompany);
-    $component->callTableAction('create', null, [
-        'role_type' => 'legal',
-        'person_name' => 'عضو قانوني',
-        'branch_id' => $branch->id,
-        'user_id' => $memberUser->id,
-    ]);
-    $this->assertDatabaseHas('committee_pool_members', [
-        'company_id' => $this->firstCompany->id,
-        'mandate_id' => $mandate->id,
-        'branch_id' => $branch->id,
-        'user_id' => $memberUser->id,
-    ]);
-
-    $hr = User::factory()->create(['company_id' => $this->firstCompany->id, 'primary_role' => UserRole::HrStaff]);
-    actingInAdminTenant($this, $hr, $this->firstCompany);
-    $hrComponent = Livewire::test(PoolMembersRelationManager::class, [
-        'ownerRecord' => $mandate,
-        'pageClass' => ViewMandate::class,
-    ]);
-    actingInAdminTenant($this, $hr, $this->firstCompany);
-    $hrComponent->assertTableActionHidden('create');
-});
-
-test('company user form employee and branch selectors stay within the tenant', function (): void {
+test('company user form employee selector stays within the tenant', function (): void {
     $branch = Branch::factory()->create();
     $employee = Employee::factory()->create(['branch_id' => $branch->id]);
-    [$foreignBranch, $foreignEmployee] = app(TenantContext::class)->runForCompany($this->secondCompany, function (): array {
+    $foreignEmployee = app(TenantContext::class)->runForCompany($this->secondCompany, function (): Employee {
         $otherBranch = Branch::factory()->create();
 
-        return [$otherBranch, Employee::factory()->create(['branch_id' => $otherBranch->id])];
+        return Employee::factory()->create(['branch_id' => $otherBranch->id]);
     });
 
     actingInAdminTenant($this, $this->platformAdmin, $this->firstCompany);
@@ -172,5 +129,4 @@ test('company user form employee and branch selectors stay within the tenant', f
     actingInAdminTenant($this, $this->platformAdmin, $this->firstCompany);
     $fields = $component->instance()->form->getFlatComponents(withHidden: true);
     expect($fields['employee_id']->getOptions())->toHaveKey($employee->id)->not->toHaveKey($foreignEmployee->id);
-    expect($fields['branch_ids']->getOptions())->toHaveKey($branch->id)->not->toHaveKey($foreignBranch->id);
 });

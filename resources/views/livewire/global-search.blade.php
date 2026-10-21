@@ -17,7 +17,7 @@
         </div>
         <div id="global-search-results" x-ref="results" role="listbox" x-show="open && queryLength()" class="mt-2 max-h-[70vh] overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-xl sm:absolute sm:inset-x-0 sm:z-50">
             @php($resultIndex = 0)
-            @foreach(['cases' => __('messages.search.cases'), 'employees' => __('messages.search.employees'), 'reports' => __('messages.search.reports')] as $group => $heading)
+            @foreach(['employees' => __('messages.search.employees')] as $group => $heading)
                 @if(count($groups[$group]))
                     <div role="group" aria-label="{{ $heading }}">
                         <p class="px-3 pb-1 pt-3 text-xs font-black text-gray-500">{{ $heading }}</p>

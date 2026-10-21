@@ -25,7 +25,7 @@ php artisan serve --port=8001
 
 The `attendance` database must exist and be granted to the `.env` user (one-time, with sudo).
 The seed creates the anonymised pilot company and two local accounts, `platform.admin@example.test`
-(Platform Admin) and `company.admin@example.test` (pilot company admin). Both use `SEED_DEFAULT_PASSWORD`.
+(Platform Admin) and `hr@example.test` (pilot HR user). Both use `SEED_DEFAULT_PASSWORD`.
 
 ## Gates (run before every commit)
 

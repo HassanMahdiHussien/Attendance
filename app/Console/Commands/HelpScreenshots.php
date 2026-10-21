@@ -31,8 +31,7 @@ class HelpScreenshots extends Command
 
             return self::FAILURE;
         }
-        if (! User::query()->where('email', 'company.admin@example.test')
-            ->whereHas('company', fn ($query) => $query->where('name', LocalUsersSeeder::DEMO_COMPANY_NAME))->exists()) {
+        if (! User::query()->whereHas('company', fn ($query) => $query->where('name', LocalUsersSeeder::DEMO_COMPANY_NAME))->exists()) {
             $this->error('The seeded demo company is missing.');
 
             return self::FAILURE;

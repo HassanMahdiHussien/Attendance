@@ -2,31 +2,16 @@
 
 namespace App\Providers;
 
-use App\Ai\ClaudeClient;
-use App\Ai\SdkClaudeClient;
 use App\Enums\UserRole;
 use App\Filament\Auth\LoginResponse;
-use App\LegalLibrary\BatchClient;
-use App\LegalLibrary\ClaudePageReader;
-use App\LegalLibrary\PageReader;
-use App\LegalLibrary\SdkBatchClient;
 use App\Listeners\AuditAuthEvents;
-use App\Models\CaseFileIntake;
 use App\Models\Company;
-use App\Models\DisciplinaryCase;
-use App\Models\Document;
-use App\Models\EmailDraft;
-use App\Models\ReportAssistantSession;
-use App\Models\ViolationReport;
-use App\Services\EmailIntake\ImapMailbox;
-use App\Services\EmailIntake\IntakeMailbox;
 use App\Support\HealthPing;
 use App\Support\Tenancy\TenantContext;
 use Filament\Facades\Filament;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
-use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Queue;
@@ -43,11 +28,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->bind(IntakeMailbox::class, ImapMailbox::class);
         $this->app->scoped(TenantContext::class, fn () => new TenantContext);
-        $this->app->bind(PageReader::class, ClaudePageReader::class);
-        $this->app->bind(BatchClient::class, SdkBatchClient::class);
-        $this->app->bind(ClaudeClient::class, SdkClaudeClient::class);
     }
 
     /**
@@ -77,7 +58,7 @@ class AppServiceProvider extends ServiceProvider
         });
         Event::listen(BackupHasFailed::class, fn () => app(HealthPing::class)->failure('backup', 'Backup failed'));
         Gate::define('importEmployees', fn ($user, Company $company): bool => $user->is_active
-            && in_array($user->primary_role, [UserRole::CompanyAdmin, UserRole::PlatformAdmin], true)
+            && in_array($user->primary_role, [UserRole::HrStaff, UserRole::PlatformAdmin], true)
             && Filament::getTenant() instanceof Company
             && (int) Filament::getTenant()->id === (int) $company->id
             && $user->canAccessTenant($company));
@@ -85,14 +66,6 @@ class AppServiceProvider extends ServiceProvider
         foreach ([Login::class, Logout::class, Failed::class] as $event) {
             Event::listen($event, [AuditAuthEvents::class, 'handle']);
         }
-        Relation::morphMap([
-            'violation_report' => ViolationReport::class,
-            'email_draft' => EmailDraft::class,
-            'case' => DisciplinaryCase::class,
-            'document' => Document::class,
-            'report_assistant_session' => ReportAssistantSession::class,
-            'case_file_intake' => CaseFileIntake::class,
-        ]);
         // Worker jobs must never inherit another job's tenant. Sync jobs run inside the caller's
         // request, so clearing there would wipe the caller's own context; jobs scope themselves.
         $clearForWorkerJobs = function ($event): void {

@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\UserRole;
 use App\Models\Branch;
 use App\Models\BranchUser;
 use App\Models\User;
@@ -18,7 +19,10 @@ class BranchUserFactory extends Factory
         return [
             'branch_id' => Branch::factory(),
             'company_id' => app(TenantContext::class)->companyId(),
-            'user_id' => User::factory(),
+            'user_id' => User::factory()->state(fn (): array => [
+                'company_id' => app(TenantContext::class)->companyId(),
+                'primary_role' => UserRole::HrStaff,
+            ]),
         ];
     }
 }

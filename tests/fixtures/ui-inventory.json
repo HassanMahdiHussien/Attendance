@@ -1,6 +1,7 @@
 {
   "resources/views/layouts/workspace.blade.php": {
-    "controls": ["workspace-more", "workspace-settings"]
+    "controls": ["workspace-account-menu", "workspace-more", "workspace-platform", "workspace-settings"],
+    "routes": ["help.index", "locale.update"]
   },
   "resources/views/livewire/auth/login.blade.php": {
     "wire": [
@@ -23,870 +24,30 @@
     ],
     "can": [],
     "role_conditions": [],
+    "permission_calls": [],
+    "permission_conditions": [],
     "file_bindings": [],
     "routes": [],
-    "links": [],
-    "permission_calls": [],
-    "permission_conditions": []
-  },
-  "resources/views/livewire/cases/board.blade.php": {
-    "wire": [
-      [
-        "wire:click",
-        "clearFilters"
-      ],
-      [
-        "wire:click",
-        "nextPage"
-      ],
-      [
-        "wire:click",
-        "previousPage"
-      ],
-      [
-        "wire:click",
-        "removeBranchFilter"
-      ],
-      [
-        "wire:click",
-        "removeSearchFilter"
-      ],
-      [
-        "wire:click",
-        "removeStageFilter"
-      ],
-      [
-        "wire:key",
-        "case-{{ $case->id }}"
-      ],
-      [
-        "wire:model.live",
-        "branch"
-      ],
-      [
-        "wire:model.live",
-        "stage"
-      ],
-      [
-        "wire:model.live.debounce.300ms",
-        "search"
-      ]
-    ],
-    "errors": [],
-    "can": [],
-    "role_conditions": [],
-    "file_bindings": [],
-    "routes": [
-      "employees.show"
-    ],
-    "links": [
-      "/cases/new",
-      "/cases/{{ $case->id }}"
-    ],
-    "permission_calls": [],
-    "permission_conditions": []
-  },
-  "resources/views/livewire/cases/confirm-document.blade.php": {
-    "viewer_controls": ["<x-ui.file-action"],
-    "wire": [
-      [
-        "wire:click",
-        "confirmLeave"
-      ],
-      [
-        "wire:click",
-        "issue"
-      ],
-      [
-        "wire:click",
-        "markReviewed"
-      ],
-      [
-        "wire:click",
-        "sendBack"
-      ],
-      [
-        "wire:model",
-        "leaveChecked"
-      ],
-      [
-        "wire:model.live",
-        "reference"
-      ]
-    ],
-    "errors": [
-      "leaveChecked",
-      "notice",
-      "reference"
-    ],
-    "can": [],
-    "role_conditions": [],
-    "file_bindings": [],
-    "routes": [
-      "documents.pdf",
-      "documents.preview"
-    ],
-    "links": [
-      "/cases/{{ $record->id }}"
-    ],
-    "permission_calls": [],
-    "permission_conditions": []
-  },
-  "resources/views/livewire/cases/create-case.blade.php": {
-    "viewer_controls": ["<x-ui.file-action"],
-    "wire": [
-      [
-        "wire:click",
-        "checkDuplicates"
-      ],
-      [
-        "wire:click",
-        "open"
-      ],
-      [
-        "wire:click",
-        "save"
-      ],
-      [
-        "wire:model",
-        "assignedHrUserId"
-      ],
-      [
-        "wire:model",
-        "description"
-      ],
-      [
-        "wire:model",
-        "duplicateCaseId"
-      ],
-      [
-        "wire:model",
-        "includePriorRecord"
-      ],
-      [
-        "wire:model",
-        "locationId"
-      ],
-      [
-        "wire:model",
-        "place"
-      ],
-      [
-        "wire:model",
-        "violationTime"
-      ],
-      [
-        "wire:model",
-        "violationType"
-      ],
-      [
-        "wire:model.live",
-        "branchId"
-      ]
-    ],
-    "errors": [
-      "branchId",
-      "employeeId",
-      "place",
-      "violationTime",
-      "violationType"
-    ],
-    "can": [],
-    "role_conditions": [],
-    "file_bindings": [],
-    "routes": [],
-    "links": [
-      "/attachments/{{ $attachment->id }}",
-      "/cases/{{ $duplicate["
-    ],
-    "permission_calls": [],
-    "permission_conditions": []
-  },
-  "resources/views/livewire/cases/edit-decision-letter.blade.php": {
-    "wire": [
-      [
-        "wire:click",
-        "confirmLeave"
-      ],
-      [
-        "wire:click",
-        "save"
-      ],
-      [
-        "wire:click",
-        "submit"
-      ],
-      [
-        "wire:model",
-        "leaveChecked"
-      ],
-      [
-        "wire:model",
-        "reasons.{{ $language }}"
-      ]
-    ],
-    "errors": [
-      "leaveChecked",
-      "notice"
-    ],
-    "can": [],
-    "role_conditions": [],
-    "file_bindings": [],
-    "routes": [],
-    "links": [
-      "/cases/{{ $case->id }}"
-    ],
-    "permission_calls": [],
-    "permission_conditions": []
-  },
-  "resources/views/livewire/cases/edit-document.blade.php": {
-    "viewer_controls": ["<x-ui.file-action"],
-    "wire": [
-      [
-        "wire:click",
-        "back"
-      ],
-      [
-        "wire:click",
-        "save"
-      ],
-      [
-        "wire:click",
-        "submit"
-      ],
-      [
-        "wire:key",
-        "language-{{ $language }}"
-      ],
-      [
-        "wire:model.live.debounce.1000ms",
-        "bodies.{{ $language }}"
-      ]
-    ],
-    "errors": [
-      "notice"
-    ],
-    "can": [],
-    "role_conditions": [],
-    "file_bindings": [],
-    "routes": [
-      "documents.preview"
-    ],
-    "links": [
-      "/cases/{{ $record->id }}"
-    ],
-    "permission_calls": [],
-    "permission_conditions": []
-  },
-  "resources/views/livewire/cases/edit-recommendations.blade.php": {
-    "viewer_controls": ["<x-ui.file-action"],
-    "wire": [
-      [
-        "wire:click",
-        "save"
-      ],
-      [
-        "wire:click",
-        "submit"
-      ],
-      [
-        "wire:key",
-        "language-{{ $language }}"
-      ],
-      [
-        "wire:model.live.debounce.1000ms",
-        "findings.{{ $language }}"
-      ],
-      [
-        "wire:model.live.debounce.1000ms",
-        "recommendations.{{ $language }}"
-      ]
-    ],
-    "errors": [
-      "notice"
-    ],
-    "can": [],
-    "role_conditions": [],
-    "file_bindings": [],
-    "routes": [
-      "documents.preview"
-    ],
-    "links": [
-      "/cases/{{ $case->id }}"
-    ],
-    "permission_calls": [],
-    "permission_conditions": []
-  },
-  "resources/views/livewire/cases/my-cases.blade.php": {
-    "wire": [],
-    "errors": [],
-    "can": [],
-    "role_conditions": [],
-    "file_bindings": [],
-    "routes": [],
-    "links": [
-      "/cases/{{ $case->id }}"
-    ],
-    "permission_calls": [],
-    "permission_conditions": []
-  },
-  "resources/views/livewire/cases/partials/ai-editor-controls.blade.php": {
-    "wire": [
-      [
-        "wire:click",
-        "$set("
-      ],
-      [
-        "wire:click",
-        "closeCitationPicker"
-      ],
-      [
-        "wire:click",
-        "openCitationPicker"
-      ],
-      [
-        "wire:click",
-        "requestAiDraft"
-      ],
-      [
-        "wire:click",
-        "selectCitation({{ $unit->id }})"
-      ],
-      [
-        "wire:key",
-        "picker-unit-{{ $unit->id }}"
-      ],
-      [
-        "wire:model.live.debounce.300ms",
-        "citationSearch"
-      ]
-    ],
-    "errors": [],
-    "can": [],
-    "role_conditions": [],
-    "file_bindings": [],
-    "routes": [],
-    "links": [],
-    "permission_calls": [],
-    "permission_conditions": []
-  },
-  "resources/views/livewire/cases/partials/citation-review.blade.php": {
-    "wire": [
-      [
-        "wire:click",
-        "overrideCitation({{ $citation->id }})"
-      ],
-      [
-        "wire:click",
-        "recheckCitations"
-      ],
-      [
-        "wire:click",
-        "replaceCitation({{ $citation->legal_unit_id }})"
-      ],
-      [
-        "wire:key",
-        "citation-{{ $citation->id }}"
-      ],
-      [
-        "wire:model",
-        "overrideReasons.{{ $citation->id }}"
-      ]
-    ],
-    "errors": [],
-    "can": [],
-    "role_conditions": [],
-    "file_bindings": [],
-    "routes": [],
-    "links": [],
-    "permission_calls": [],
-    "permission_conditions": []
-  },
-  "resources/views/livewire/cases/pending-approvals.blade.php": {
-    "wire": [],
-    "errors": [],
-    "can": [],
-    "role_conditions": [],
-    "file_bindings": [],
-    "routes": [],
-    "links": [
-      "/committee/approvals/{{ $document->id }}"
-    ],
-    "permission_calls": [],
-    "permission_conditions": []
-  },
-  "resources/views/livewire/cases/record-appeal.blade.php": {
-    "wire": [
-      [
-        "wire:click",
-        "file"
-      ],
-      [
-        "wire:click",
-        "resolve"
-      ],
-      [
-        "wire:model",
-        "filedAt"
-      ],
-      [
-        "wire:model",
-        "outcome"
-      ]
-    ],
-    "errors": [
-      "filedAt",
-      "notice",
-      "outcome"
-    ],
-    "can": [],
-    "role_conditions": [],
-    "file_bindings": [],
-    "routes": [],
-    "links": [
-      "/cases/{{ $case->id }}"
-    ],
-    "permission_calls": [],
-    "permission_conditions": []
-  },
-  "resources/views/livewire/cases/record-session.blade.php": {
-    "wire": [
-      [
-        "wire:click",
-        "save"
-      ],
-      [
-        "wire:key",
-        "member-{{ $member->id }}"
-      ],
-      [
-        "wire:model",
-        "chairId"
-      ],
-      [
-        "wire:model",
-        "defenseAcceptance"
-      ],
-      [
-        "wire:model",
-        "minutes"
-      ],
-      [
-        "wire:model",
-        "minutesTypedBy"
-      ],
-      [
-        "wire:model",
-        "outcome"
-      ],
-      [
-        "wire:model",
-        "votes.{{ $member->id }}"
-      ],
-      [
-        "wire:model.live",
-        "selected.{{ $member->id }}"
-      ]
-    ],
-    "errors": [
-      "notice"
-    ],
-    "can": [],
-    "role_conditions": [],
-    "file_bindings": [],
-    "routes": [],
-    "links": [
-      "/cases/{{ $case->id }}"
-    ],
-    "permission_calls": [],
-    "permission_conditions": []
-  },
-  "resources/views/livewire/cases/review-approval.blade.php": {
-    "wire": [
-      [
-        "wire:click",
-        "approve"
-      ],
-      [
-        "wire:click",
-        "reject"
-      ],
-      [
-        "wire:model",
-        "category"
-      ],
-      [
-        "wire:model",
-        "comment"
-      ]
-    ],
-    "errors": [
-      "comment",
-      "notice"
-    ],
-    "can": [],
-    "role_conditions": [],
-    "file_bindings": [],
-    "routes": [],
-    "links": [
-      "/committee"
-    ],
-    "permission_calls": [],
-    "permission_conditions": []
-  },
-  "resources/views/livewire/cases/review-consultation.blade.php": {
-    "viewer_controls": ["<x-ui.file-action"],
-    "wire": [
-      [
-        "wire:click",
-        "complete"
-      ],
-      [
-        "wire:model",
-        "note"
-      ]
-    ],
-    "errors": [
-      "note",
-      "notice"
-    ],
-    "can": [],
-    "role_conditions": [],
-    "file_bindings": [],
-    "routes": [
-      "attachments.download",
-      "documents.pdf"
-    ],
-    "links": [
-      "/my-cases"
-    ],
-    "permission_calls": [],
-    "permission_conditions": []
-  },
-  "resources/views/livewire/cases/show-case.blade.php": {
-    "viewer_controls": ["<x-ui.file-action", "data-file-list="],
-    "wire": [
-      [
-        "wire:click",
-        "assign"
-      ],
-      [
-        "wire:click",
-        "cancelConsultation"
-      ],
-      [
-        "wire:click",
-        "clearConflict({{ $conflict["
-      ],
-      [
-        "wire:click",
-        "closeWithoutPenalty"
-      ],
-      [
-        "wire:click",
-        "confirmResponse"
-      ],
-      [
-        "wire:click",
-        "correctResponse"
-      ],
-      [
-        "wire:click",
-        "markNoResponse"
-      ],
-      [
-        "wire:click",
-        "open"
-      ],
-      [
-        "wire:click",
-        "recordDecisionSignatures"
-      ],
-      [
-        "wire:click",
-        "recordHandOff"
-      ],
-      [
-        "wire:click",
-        "requestConsultation"
-      ],
-      [
-        "wire:click",
-        "requestResponseReading"
-      ],
-      [
-        "wire:click",
-        "startCorrection({{ $document->id }})"
-      ],
-      [
-        "wire:click",
-        "uploadResponse"
-      ],
-      [
-        "wire:model",
-        "assigneeId"
-      ],
-      [
-        "wire:model",
-        "attemptLocation"
-      ],
-      [
-        "wire:model",
-        "attemptedAt"
-      ],
-      [
-        "wire:model",
-        "attemptedBy"
-      ],
-      [
-        "wire:model",
-        "clearanceReason"
-      ],
-      [
-        "wire:model",
-        "consultationCancelReason"
-      ],
-      [
-        "wire:model",
-        "correctionReason"
-      ],
-      [
-        "wire:model",
-        "decisionSignaturePresence.general_manager"
-      ],
-      [
-        "wire:model",
-        "decisionSignaturePresence.union"
-      ],
-      [
-        "wire:model",
-        "handoffPurpose"
-      ],
-      [
-        "wire:model",
-        "responseCorrectionReason"
-      ],
-      [
-        "wire:model",
-        "responseOrigin"
-      ],
-      [
-        "wire:model",
-        "responseScan"
-      ],
-      [
-        "wire:model",
-        "responseScanSafe"
-      ],
-      [
-        "wire:model",
-        "responseText"
-      ],
-      [
-        "wire:model",
-        "signedAt"
-      ],
-      [
-        "wire:model",
-        "witnessOne"
-      ],
-      [
-        "wire:model",
-        "witnessScan"
-      ],
-      [
-        "wire:model",
-        "witnessTwo"
-      ],
-      [
-        "wire:model.live",
-        "handoffStatus"
-      ]
-    ],
-    "errors": [
-      "assigneeId",
-      "clearanceReason",
-      "consultationCancelReason",
-      "correctionReason",
-      "notice",
-      "responseCorrectionReason",
-      "responseScan",
-      "responseScanSafe",
-      "responseText",
-      "scan"
-    ],
-    "can": [],
-    "role_conditions": [
-      "$record->legal_review_requested_at && !$record->legal_review_completed_at && !$record->legal_review_cancelled_at && auth()->user()->primary_role === \\App\\Enums\\UserRole::CompanyAdmin",
-      "$record->status !== \\App\\Enums\\CaseStatus::ArchivedFinal && !$record->legal_review_requested_at && in_array(auth()->user()->primary_role, [\\App\\Enums\\UserRole::CompanyAdmin, \\App\\Enums\\UserRole::HrStaff, \\App\\Enums\\UserRole::CommitteeMember], true)",
-      "auth()->user()->primary_role === \\App\\Enums\\UserRole::ExternalLegalReviewer && $record->legal_review_requested_at"
-    ],
-    "file_bindings": [
-      [
-        [
-          "wire:model",
-          "responseScan"
-        ]
-      ],
-      [
-        [
-          "wire:model",
-          "witnessScan"
-        ]
-      ]
-    ],
-    "routes": [
-      "attachments.download",
-      "documents.pdf",
-      "employees.show"
-    ],
-    "links": [
-      "/cases/new?draft={{ $record->id }}",
-      "/cases/{{ $prior[",
-      "/cases/{{ $record->id }}/appeal",
-      "/cases/{{ $record->id }}/consultation",
-      "/cases/{{ $record->id }}/decision",
-      "/cases/{{ $record->id }}/documents/{{ $record->documents->where(",
-      "/cases/{{ $record->id }}/recommendations",
-      "/cases/{{ $record->id }}/session",
-      "/cases/{{ $record->id }}/signed-scan"
-    ],
-    "permission_calls": [
-      "auth()->user()->can('update', $record)"
-    ],
-    "permission_conditions": [
-      "$canManage",
-      "$canManage && $conflict['type'] === 'name_only' && $conflict['excluded']",
-      "$canManage && $document->is_locked",
-      "$canManage && $record->status === \\App\\Enums\\CaseStatus::AiIngestedResponse",
-      "$responseScanAttachment && $record->status === \\App\\Enums\\CaseStatus::ResponseScannedUploaded && $canManage"
-    ],
-    "anchors": [
-      "next-actions",
-      "next-appeal",
-      "next-consultation",
-      "next-decision-signatures",
-      "next-documents",
-      "next-handoff",
-      "next-response-scan"
-    ]
-  },
-  "resources/views/livewire/cases/signed-scan.blade.php": {
-    "viewer_controls": ["<x-ui.file-action"],
-    "wire": [
-      [
-        "wire:click",
-        "cancelConsultation"
-      ],
-      [
-        "wire:click",
-        "close"
-      ],
-      [
-        "wire:click",
-        "override"
-      ],
-      [
-        "wire:click",
-        "recordReadPresence"
-      ],
-      [
-        "wire:click",
-        "upload"
-      ],
-      [
-        "wire:click",
-        "uploadForReading"
-      ],
-      [
-        "wire:model",
-        "presence.{{ $attendee->id }}"
-      ],
-      [
-        "wire:model",
-        "reason"
-      ],
-      [
-        "wire:model",
-        "scan"
-      ]
-    ],
-    "errors": [
-      "notice",
-      "reason",
-      "scan"
-    ],
-    "can": [],
-    "role_conditions": [
-      "auth()->user()->primary_role === \\App\\Enums\\UserRole::CompanyAdmin",
-      "auth()->user()->primary_role === \\App\\Enums\\UserRole::CompanyAdmin && $checks->contains(fn ($check) => $check->presence_check === \\App\\Enums\\PresenceCheck::BoxAppearsEmpty)"
-    ],
-    "file_bindings": [
-      [
-        [
-          "wire:model",
-          "scan"
-        ]
-      ]
-    ],
-    "routes": [
-      "attachments.download"
-    ],
-    "links": [
-      "/cases/{{ $case->id }}"
-    ],
-    "permission_calls": [],
-    "permission_conditions": []
-  },
-  "resources/views/livewire/dashboard/case-drilldown.blade.php": {
-    "wire": [],
-    "errors": [],
-    "can": [],
-    "role_conditions": [],
-    "file_bindings": [],
-    "routes": [
-      "employees.show"
-    ],
-    "links": [
-      "/cases/{{ $case->id }}"
-    ],
-    "permission_calls": [],
-    "permission_conditions": []
+    "links": []
   },
   "resources/views/livewire/dashboard/hr-dashboard.blade.php": {
-    "wire": [
-      [
-        "wire:model.live",
-        "branch"
-      ],
-      [
-        "wire:model.live",
-        "from"
-      ],
-      [
-        "wire:model.live",
-        "period"
-      ],
-      [
-        "wire:model.live",
-        "to"
-      ]
-    ],
+    "wire": [],
     "errors": [],
     "can": [],
     "role_conditions": [],
+    "permission_calls": [],
+    "permission_conditions": [],
     "file_bindings": [],
     "routes": [],
-    "links": [
-      "/cases/{{ $alert[",
-      "/dashboard/cases?{{ http_build_query($filterQuery + ["
-    ],
-    "permission_calls": [],
-    "permission_conditions": []
+    "links": []
   },
   "resources/views/livewire/employees/employee-index.blade.php": {
     "wire": [
       [
+        "wire:model.live",
+        "companyId"
+      ],
+      [
         "wire:model.live.debounce.300ms",
         "search"
       ]
@@ -894,266 +55,87 @@
     "errors": [],
     "can": [],
     "role_conditions": [],
+    "permission_calls": [],
+    "permission_conditions": [],
     "file_bindings": [],
     "routes": [
       "employees.show"
     ],
-    "links": [],
-    "permission_calls": [],
-    "permission_conditions": []
+    "links": []
   },
   "resources/views/livewire/employees/employee-page.blade.php": {
-    "viewer_controls": ["<x-ui.file-action"],
     "wire": [],
     "errors": [],
     "can": [],
     "role_conditions": [],
+    "permission_calls": [],
+    "permission_conditions": [],
     "file_bindings": [],
     "routes": [
-      "cases.show",
-      "documents.pdf",
       "employees.index"
     ],
-    "links": [],
+    "links": []
+  },
+  "resources/views/livewire/global-search.blade.php": {
+    "wire": [
+      [
+        "wire:model.live.debounce.250ms",
+        "query"
+      ]
+    ],
+    "errors": [],
+    "can": [],
+    "role_conditions": [],
     "permission_calls": [],
-    "permission_conditions": []
+    "permission_conditions": [],
+    "file_bindings": [],
+    "routes": [],
+    "links": []
+  },
+  "resources/views/livewire/help/article.blade.php": {
+    "wire": [],
+    "errors": [],
+    "can": [],
+    "role_conditions": [],
+    "permission_calls": [],
+    "permission_conditions": [],
+    "file_bindings": [],
+    "routes": [
+      "help.index"
+    ],
+    "links": []
+  },
+  "resources/views/livewire/help/index.blade.php": {
+    "wire": [
+      [
+        "wire:model.live",
+        "all"
+      ],
+      [
+        "wire:model.live.debounce.300ms",
+        "q"
+      ]
+    ],
+    "errors": [
+      "q"
+    ],
+    "can": [],
+    "role_conditions": [],
+    "permission_calls": [],
+    "permission_conditions": [],
+    "file_bindings": [],
+    "routes": [],
+    "links": []
   },
   "resources/views/livewire/home.blade.php": {
     "wire": [],
     "errors": [],
     "can": [],
     "role_conditions": [],
+    "permission_calls": [],
+    "permission_conditions": [],
     "file_bindings": [],
     "routes": [],
-    "links": [
-      "/cases/new",
-      "/committee",
-      "/employees",
-      "/home/cases/{{ $row[",
-      "/my-cases",
-      "/reports/inbox",
-      "/reports/new",
-      "/statistics"
-    ],
-    "permission_calls": [],
-    "permission_conditions": []
-  },
-  "resources/views/livewire/reports/inbox.blade.php": {
-    "viewer_controls": ["<x-ui.file-action"],
-    "wire": [
-      [
-        "wire:click",
-        "convert({{ $report->id }})"
-      ],
-      [
-        "wire:click",
-        "convertEmail({{ $email->id }})"
-      ],
-      [
-        "wire:click",
-        "dismiss({{ $report->id }})"
-      ],
-      [
-        "wire:click",
-        "dismissEmail({{ $email->id }})"
-      ],
-      [
-        "wire:click",
-        "linkEmail({{ $email->id }})"
-      ],
-      [
-        "wire:key",
-        "email-{{ $email->id }}"
-      ],
-      [
-        "wire:key",
-        "report-{{ $report->id }}"
-      ],
-      [
-        "wire:model",
-        "emailCaseIds.{{ $email->id }}"
-      ],
-      [
-        "wire:model",
-        "emailReasons.{{ $email->id }}"
-      ],
-      [
-        "wire:model",
-        "existingCaseIds.{{ $report->id }}"
-      ],
-      [
-        "wire:model",
-        "reasons.{{ $report->id }}"
-      ]
-    ],
-    "errors": [],
-    "can": [],
-    "role_conditions": [],
-    "file_bindings": [],
-    "routes": [],
-    "links": [
-      "/attachments/{{ $attachment->id }}"
-    ],
-    "permission_calls": [],
-    "permission_conditions": []
-  },
-  "resources/views/livewire/reports/my-reports.blade.php": {
-    "wire": [],
-    "errors": [],
-    "can": [],
-    "role_conditions": [],
-    "file_bindings": [],
-    "routes": [],
-    "links": [
-      "/reports/new"
-    ],
-    "permission_calls": [],
-    "permission_conditions": []
-  },
-  "resources/views/livewire/reports/submit-report.blade.php": {
-    "wire": [
-      [
-        "wire:click",
-        "confirmSend"
-      ],
-      [
-        "wire:click",
-        "editReview"
-      ],
-      [
-        "wire:model",
-        "attachments"
-      ],
-      [
-        "wire:model",
-        "description"
-      ],
-      [
-        "wire:model",
-        "locationId"
-      ],
-      [
-        "wire:model",
-        "occurredAt"
-      ],
-      [
-        "wire:model",
-        "place"
-      ],
-      [
-        "wire:model",
-        "violationType"
-      ],
-      [
-        "wire:model.live",
-        "branchId"
-      ],
-      [
-        "wire:submit",
-        "submit"
-      ]
-    ],
-    "errors": [
-      "attachments.*",
-      "branchId",
-      "description",
-      "occurredAt",
-      "place",
-      "violationType"
-    ],
-    "can": [],
-    "role_conditions": [],
-    "file_bindings": [
-      [
-        [
-          "wire:model",
-          "attachments"
-        ]
-      ]
-    ],
-    "routes": [],
-    "links": [],
-    "permission_calls": [],
-    "permission_conditions": []
-  },
-  "resources/views/livewire/statistics/reports.blade.php": {
-    "wire": [
-      [
-        "wire:click",
-        "$set("
-      ],
-      [
-        "wire:click",
-        "export("
-      ],
-      [
-        "wire:click",
-        "preview"
-      ],
-      [
-        "wire:model.live",
-        "branch"
-      ],
-      [
-        "wire:model.live",
-        "companyId"
-      ],
-      [
-        "wire:model.live",
-        "employeeId"
-      ],
-      [
-        "wire:model.live",
-        "from"
-      ],
-      [
-        "wire:model.live",
-        "month"
-      ],
-      [
-        "wire:model.live",
-        "period"
-      ],
-      [
-        "wire:model.live",
-        "quarter"
-      ],
-      [
-        "wire:model.live",
-        "to"
-      ],
-      [
-        "wire:model.live",
-        "year"
-      ]
-    ],
-    "errors": [],
-    "can": [],
-    "role_conditions": [
-      "in_array($key, ['periodic', 'hotspots'], true) || $personReportsAvailable || auth()->user()->primary_role !== \\App\\Enums\\UserRole::HrPartnerStaff",
-      "in_array(auth()->user()->primary_role, [\\App\\Enums\\UserRole::PlatformAdmin, \\App\\Enums\\UserRole::HrPartnerStaff], true)"
-    ],
-    "file_bindings": [],
-    "routes": [
-      "statistics.exports.download"
-    ],
-    "links": [],
-    "permission_calls": [],
-    "permission_conditions": []
-  },
-  "resources/views/livewire/partials/intake-check.blade.php": {
-    "wire": [
-      ["wire:click", "checkDescription"],
-      ["wire:model", "existingIntakeAnswers.{{ $question->id }}"],
-      ["wire:model", "intakeAnswers.{{ $index }}"]
-    ],
-    "errors": ["description"],
-    "can": [],
-    "role_conditions": [],
-    "file_bindings": [],
-    "routes": [],
-    "links": [],
-    "permission_calls": [],
-    "permission_conditions": []
+    "links": []
   }
 }
