@@ -30,16 +30,19 @@ test('an unmatched report person can be added and selected in the same screen', 
         ->set('newEmployeePosition', 'Operator')
         ->set('newEmployeeDepartment', 'Production')
         ->set('newEmployeeHireDate', '2025-01-10')
+        ->call('addNewPerson')->assertHasErrors(['newEmployeeGender'])
+        ->set('newEmployeeGender', 'female')
         ->call('addNewPerson')->assertHasNoErrors();
     $employee = Employee::query()->where('name', 'New Person')->firstOrFail();
     expect($employee->company_id)->toBe($f['company']->id)
         ->and($employee->branch_id)->toBe($f['branch']->id)
-        ->and($employee->employee_code)->not->toBeEmpty();
+        ->and($employee->employee_code)->not->toBeEmpty()
+        ->and($employee->gender->value)->toBe('female');
     $foreign = Company::factory()->create();
     app(TenantContext::class)->runForCompany($foreign, function () use ($f, $foreign): void {
         $outsider = User::factory()->create(['company_id' => $foreign->id, 'primary_role' => 'hr_staff']);
         expect(fn () => app(ReportEmployeeQuickAdd::class)->create($f['report'], $outsider,
-            'Other', 'Operator', 'Production', '2025-01-10'))->toThrow(HttpException::class);
+            'Other', 'Operator', 'Production', '2025-01-10', 'male'))->toThrow(HttpException::class);
     });
 });
 

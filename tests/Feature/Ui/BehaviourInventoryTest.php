@@ -149,7 +149,7 @@ test('report case opening controls remain inventoried', function (): void {
         ['wire:click', 'searchPerson({{ $index }})'],
         ['wire:click', 'startAddingPerson({{ $index }})'],
         ['wire:model', 'newEmployeeName'], ['wire:model', 'newEmployeePosition'],
-        ['wire:model', 'newEmployeeDepartment'], ['wire:model', 'newEmployeeHireDate'],
+        ['wire:model', 'newEmployeeDepartment'], ['wire:model', 'newEmployeeHireDate'], ['wire:model', 'newEmployeeGender'],
         ['wire:click', 'addNewPerson'],
         ['wire:model', 'locationId'], ['wire:model', 'place'], ['wire:model', 'incidentDate'],
         ['wire:model', 'incidentTime'], ['wire:model', 'violationTypeId'], ['wire:model', 'violationType'],

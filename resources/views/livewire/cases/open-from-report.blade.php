@@ -43,6 +43,7 @@
                                             <x-ui.field :label="__('Position')" for="quick-position"><x-ui.input id="quick-position" wire:model="newEmployeePosition" />@error('newEmployeePosition')<p role="alert" class="text-sm text-red">{{ $message }}</p>@enderror</x-ui.field>
                                             <x-ui.field :label="__('Department')" for="quick-department"><x-ui.input id="quick-department" wire:model="newEmployeeDepartment" />@error('newEmployeeDepartment')<p role="alert" class="text-sm text-red">{{ $message }}</p>@enderror</x-ui.field>
                                             <x-ui.field :label="__('Hire date')" for="quick-hire"><x-ui.input id="quick-hire" type="date" wire:model="newEmployeeHireDate" />@error('newEmployeeHireDate')<p role="alert" class="text-sm text-red">{{ $message }}</p>@enderror</x-ui.field>
+                                            <x-ui.field :label="__('Gender')" for="quick-gender"><x-ui.select id="quick-gender" wire:model="newEmployeeGender"><option value="">{{ __('Choose') }}</option><option value="male">{{ __('Male') }}</option><option value="female">{{ __('Female') }}</option></x-ui.select>@error('newEmployeeGender')<p role="alert" class="text-sm text-red">{{ $message }}</p>@enderror</x-ui.field>
                                             <div class="self-end"><x-ui.button type="button" variant="secondary" wire:click="addNewPerson">{{ __('Add employee') }}</x-ui.button></div>
                                         </div>
                                     @endif
