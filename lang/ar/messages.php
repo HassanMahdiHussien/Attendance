@@ -102,7 +102,6 @@ return [
         'awaiting_approval' => 'توصيات تنتظر موافقتك', 'attended_cases' => 'حالات حضرتها',
         'awaiting_opinion' => 'استشارات تنتظر رأيك', 'submit_report' => 'تقديم بلاغ',
         'complete_case' => 'أكمل الحالة وافتحها', 'prepare_defense' => 'حضّر كتاب طلب الدفاع',
-        'confirm_incident_description' => 'أكّد وصف هذا الموظف',
         'check_regulation_comparison' => 'تحقق من مقارنة النظام الداخلي',
         'comparing_regulation' => 'جارٍ إعداد مقارنة النظام الداخلي…',
         'defense_drafting' => 'جارٍ صياغة كتاب طلب الدفاع…',

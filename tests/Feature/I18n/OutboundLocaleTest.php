@@ -115,7 +115,7 @@ test('statistical PDF markup follows the request locale', function (): void {
     app()->setLocale('en');
     expect(view('reports.pdf', $data)->render())->toContain('<html lang="en" dir="ltr">', '12', '1 Jan 2026');
     app()->setLocale('ar');
-    expect(view('reports.pdf', $data)->render())->toContain('<html lang="ar" dir="rtl">', '12', '1 – كانون الثاني – 2026');
+    expect(view('reports.pdf', $data)->render())->toContain('<html lang="ar" dir="rtl">', '12', '1 كانون الثاني 2026');
 });
 
 test('operational mail remains English under an Arabic request locale', function (): void {

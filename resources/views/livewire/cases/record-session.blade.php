@@ -4,6 +4,9 @@
         @if($case->confirmedResponseText())<section class="rounded-2xl bg-gray-50 p-4"><h2 class="font-bold">{{ __('Transcribed text — the scan is the original') }}</h2><p class="whitespace-pre-wrap" dir="auto">{{ $case->confirmedResponseText() }}</p></section>@endif
         @if($notice)<x-ui.alert tone="amber" role="status">{{ $notice }} @if($case->session_majority_reached && $case->status === \App\Enums\CaseStatus::CommitteeSessionHeld)<x-ui.button href="/cases/{{ $case->id }}" variant="secondary">{{ __('Write recommendations') }}</x-ui.button>@endif</x-ui.alert>@endif
         @error('notice')<x-ui.alert tone="red">{{ $message }}</x-ui.alert>@enderror
+        @foreach($conflicts as $conflict)
+            @if($conflict['excluded'])<p class="rounded-xl border border-line bg-gray-50 p-3 text-sm">{{ app(\App\Services\Cases\ConflictClearance::class)->notice($conflict) }}</p>@endif
+        @endforeach
         <div class="space-y-2">
             @foreach($members as $member)
                 <div class="flex flex-wrap items-center gap-4 rounded-2xl bg-gray-50 p-3" wire:key="member-{{ $member->id }}">

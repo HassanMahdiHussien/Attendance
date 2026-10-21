@@ -41,6 +41,7 @@ class DocumentFacts
             'hire_date' => IraqiDate::format($this->date($employee->hire_date, 'employee.hire_date'), $language),
             'issue_date' => IraqiDate::format($issueDate, $language),
             'reference_number' => $reference,
+            'case_number' => str_pad((string) $case->case_number, 4, '0', STR_PAD_LEFT),
             'response_deadline' => IraqiDate::format($issueDate->startOfDay()->addDays((int) config('displanery.deadlines.response_days')), $language),
             'complaint_date' => IraqiDate::format($this->date($case->violation_time, 'case.violation_time'), $language)
                 .($case->violation_time_known ? '' : ' ('.($language === 'ar' ? 'الوقت غير مذكور' : 'time not stated').')'),

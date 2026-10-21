@@ -35,6 +35,10 @@ class DraftPrompt
             .'Related cases are internal context only. Never print them or restate them as case facts unless HR entered those facts independently. '
             .'Do not state the operative decision, outcome, or penalty in prose; template wording supplies it. '
             .'Return short internal notes for missing or unclear information, never in the document body. '
+            .'Write to this employee directly in the second person using their recorded grammatical gender in every language. Restate reported facts formally from the company perspective, never copying the reporter voice or first-person wording. Describe a stated place naturally, without filler such as "the site registered as". State only what the human facts say this employee did. If this employee\'s act is not stated, stay factual and add a drafting note asking HR to clarify; never invent an act. '
+            // A real draft opened with the reporter's general claim that "some operators" break the rule, which is about other people, not this employee.
+            .'Leave out general statements about other people or common practice; write only this employee\'s own act. '
+            .'The template already prints the salutation, the opening about the employee\'s position, the response deadline and the signature blocks: never repeat them in the body and never add notes about them. '
             // HR reads these beside the letter: a real draft returned English notes naming payload fields and masking tokens.
             .'Write the notes in '.($notesLanguage === 'ar' ? 'Arabic' : 'English').' for an HR reviewer, in plain words: at most four, only points HR can check or complete, '
             .'never field names, JSON keys, ⟦…⟧ tokens or remarks about masking, gender wording or formatting.';

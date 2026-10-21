@@ -513,7 +513,7 @@ erDiagram
 
 The existing `companies.letterhead_logo_path`, `letterhead_address`, `letterhead_phone`, and `letterhead_email` columns are deprecated. Current settings are versioned in `company_letterheads`; the old columns are retained for migration compatibility.
 
-Dashboard settings on `companies`: `hotspot_min_cases` (unsigned tiny integer, default 3; validated 2–50) and `hotspot_window_days` (unsigned small integer, default 90; validated 7–365). Dashboard and notification deadline hours both use the global `displanery.deadlines.approaching_hours` setting.
+Dashboard settings on `companies`: `hotspot_min_cases` (unsigned tiny integer, default 3; validated 2–50) and `hotspot_window_days` (unsigned small integer, default 90; validated 7–365). `show_case_number_on_letters` is a boolean defaulting to false; it controls the header of newly rendered letters. Dashboard and notification deadline hours both use the global `displanery.deadlines.approaching_hours` setting.
 
 Dashboard indexes on `cases`: `(company_id, status)`, `(company_id, violation_time)`, `(company_id, branch_id, violation_time)`, and `(company_id, defense_letter_issued_at)`. Incident periods use `violation_time`; procedure metrics use the defense and completion dates.
 

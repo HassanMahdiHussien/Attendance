@@ -41,8 +41,24 @@ function renderingFixture(string $gender = 'male'): array
 
 test('Iraqi dates use the specified month names and Western digits', function (): void {
     $date = CarbonImmutable::parse('2026-06-18');
-    expect(IraqiDate::format($date, 'ar'))->toBe('18 – حزيران – 2026')
-        ->and(IraqiDate::format($date, 'en'))->toBe('18 – June – 2026');
+    expect(IraqiDate::format($date, 'ar'))->toBe('18 حزيران 2026')
+        ->and(IraqiDate::format($date, 'en'))->toBe('18 June 2026');
+});
+
+test('case number setting affects new letters while issued HTML stays frozen', function (): void {
+    Queue::fake();
+    [$company, $actor, $document] = renderingFixture();
+    $renderer = app(DocumentRenderer::class);
+    expect($renderer->render($document, true))->not->toContain('Case number:');
+    $company->update(['show_case_number_on_letters' => true]);
+    $html = $renderer->render($document, true);
+    expect($html)->toContain('Case number:', 'رقم الحالة:')
+        ->toContain(str_pad((string) $document->disciplinaryCase->case_number, 4, '0', STR_PAD_LEFT));
+    $issued = app(DocumentIssuer::class)->issue($document, $actor);
+    $frozen = $issued->rendered_html;
+    $company->update(['show_case_number_on_letters' => false]);
+    expect($issued->fresh()->rendered_html)->toBe($frozen)
+        ->and($renderer->render($issued->fresh()))->toBe($frozen);
 });
 
 test('template validation rejects unknown tokens, malformed gender groups and missing required facts', function (): void {
@@ -123,7 +139,7 @@ test('new frozen citation renderings use Western article digits', function (): v
 test('female grammar is selected and unspecified gender blocks issuance', function (): void {
     Queue::fake();
     [, $actor, $document] = renderingFixture('female');
-    expect(app(DocumentRenderer::class)->render($document, true))->toContain('عزيزتي السيدة', 'أنتِ تعملين', 'Dear Ms');
+    expect(app(DocumentRenderer::class)->render($document, true))->toContain('عزيزتي السيدة', 'تعملين في الشركة', 'Dear Ms');
     $document->disciplinaryCase->employee->update(['gender' => EmployeeGender::Unspecified]);
     $this->actingAs($actor)->get(route('documents.preview', $document))->assertStatus(422)
         ->assertSee('employee.gender');

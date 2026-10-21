@@ -15,7 +15,7 @@ A multi-tenant SaaS for Iraqi companies to run employee disciplinary procedures 
 - **Backend:** Laravel (PHP), latest LTS
 - **DB:** MySQL, multi-tenant via `company_id` on every core table (shared schema, not separate DBs)
 - **File storage:** local disk on a private VPS (`flysystem` local driver), NOT S3/cloud
-- **PDF generation:** Browsershot (Spatie) — headless Chromium, NOT DomPDF/mPDF (they mishandle Arabic/Kurdish RTL). Documents are Blade HTML/CSS templates with proper `dir="rtl"`/`dir="ltr"` per section, embedded Arabic font (Amiri or Noto Naskh Arabic), and Kurdish glyph coverage (Noto Sans Arabic or a dedicated Kurdish font) — test this in the first week.
+- **PDF generation:** Browsershot (Spatie) — headless Chromium, NOT DomPDF/mPDF (they mishandle Arabic/Kurdish RTL). Documents are Blade HTML/CSS templates with proper `dir="rtl"`/`dir="ltr"` per section, embedded Noto Naskh Arabic for Arabic and Kurdish, and the existing Latin face for English.
 - **AI (drafting + alerts):** Claude API (Anthropic). Used for both legal drafting (defense letters, recommendations, decision letters — from human-supplied facts/decisions only) and legal-reference alerts (citing curated law articles). Never supplies facts or makes the decision. See Section 3b.
 - **Notifications:** Email (SMTP) + WhatsApp Business API (WhatsApp is phase 2, not MVP) — both are alert-only, never official legal delivery.
 - **Employee portal:** none in Phase 1 (discipline). Employees have no login in this phase; the discipline interaction is 100% paper-based. **This is a Phase-1 scope limit, not a permanent rule** — the wider platform (`docs/PLATFORM-PRD.md`) gives every employee a Flutter app account (phone + OTP) in a later phase. Design the `employees` table so a `users` account can be attached later without migration pain. Even once employees have the app, official discipline delivery stays paper-based.
@@ -164,7 +164,7 @@ draft (from a reporter's submission or an email-forward — not yet a real case;
 
 ## 9. Build order (suggested session breakdown for Claude Code)
 
-0. **Project setup (first session):** `laravel new`, git init on a private repo, install Livewire, Filament v4, `spatie/laravel-permission`, Pint; MySQL connection; queue (database driver) and scheduler wired; Arabic RTL layout + Tajawal/Amiri fonts per Section 18. Ask before each `composer require` (Section 13).
+0. **Project setup (first session):** `laravel new`, git init on a private repo, install Livewire, Filament v4, `spatie/laravel-permission`, Pint; MySQL connection; queue (database driver) and scheduler wired; Arabic RTL layout + Readex Pro/Noto Naskh Arabic fonts per Section 18. Ask before each `composer require` (Section 13).
 1. **Migrations + models:** companies, branches (with `jurisdiction`), employees, committee_mandates, committee_pool, violation_reports, cases, case_events/audit_log, documents (with immutability/versioning), signatures. See `docs/ERD.md` for the full schema.
 2. **Auth + roles/permissions** (internal users only, per Section 8) + **Filament admin screens**: companies, branches, employees, users and reporter accounts, committee mandates/pools (Section 2).
 3. **Case workflow engine:** the state machine in Section 7, including duplicate-report detection, conflict-of-interest checks, and the repeat-responsible-person pattern check (Section 3).
@@ -309,9 +309,9 @@ FILESYSTEM_DISK=local       # NOT s3 — see ADR 0006
 
 - Midnight shell overhead (top bar `#0E1A2B`, departures strip `#16263D`), light working ground `#F2F4F7`, white panels with `#DDE1E7` hairlines.
 - **Signal amber `#F2B33D` only for the one primary action and the current stage** (the Two Amber Points Rule); route navy `#1D3A63` for links and focus; red / green / ochre only for deadline and status meaning.
-- **Fonts:** Readex Pro for all interface text (Arabic and Latin); JetBrains Mono for case numbers, dates and countdowns; Amiri only for legal document previews.
+- **Fonts:** Readex Pro for all interface text (Arabic and Latin); JetBrains Mono for case numbers, dates and countdowns; Noto Naskh Arabic for legal document previews.
 - **Signature elements:** the departures strip of due events with split-flap countdown chips, and the five-station route rail (opened → defense letter → response → committee → decision). Deadlines are always the most visible thing on a working screen.
-- **The document confirmation/issuance screen** stays visually distinct: the document preview sits in its own light card in Amiri, reinforcing "this is the actual legal document".
+- **The document confirmation/issuance screen** stays visually distinct: the document preview sits in its own light card in Noto Naskh Arabic, reinforcing "this is the actual legal document".
 - The Filament admin panel shares the same top bar, colours and font (`resources/css/filament/theme.css`).
 
 Superseded: the earlier indigo/Tajawal mockup (`docs/design/dashboard-mockup.html`) and the rejected navy/bronze "official seal" direction. Don't resurrect either without a new explicit request.

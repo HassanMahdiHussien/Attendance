@@ -1,10 +1,10 @@
 <?php
 
 use App\Ai\ClaudeClient;
+use App\Ai\PayloadBuilder;
 use App\Enums\CaseStatus;
 use App\Enums\DocumentType;
 use App\Jobs\DraftDocumentWithAi;
-use App\Jobs\ProposeIncidentDescription;
 use App\Jobs\SuggestRegulationComparison;
 use App\Livewire\Cases\EditDocument;
 use App\Livewire\Cases\ShowCase;
@@ -20,14 +20,13 @@ use App\Services\Cases\IncidentService;
 use App\Services\Cases\NextAction;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Bus;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Tests\Fakes\FakeClaudeClient;
 
 function autoDefenseFixture(bool $key = true): array
 {
-    Bus::fake([DraftDocumentWithAi::class, ProposeIncidentDescription::class, SuggestRegulationComparison::class]);
+    Bus::fake([DraftDocumentWithAi::class, SuggestRegulationComparison::class]);
     config()->set('services.anthropic.key', $key ? 'test-key' : '');
     $company = Company::factory()->create();
     app(TenantContext::class)->setCompany($company);
@@ -123,44 +122,84 @@ test('approved regulation waits for comparison confirmation then queues the lett
     Bus::assertDispatchedTimes(DraftDocumentWithAi::class, 1);
 });
 
-test('incident proposal excludes other members and a leaking proposal is dropped', function (): void {
+test('incident opening queues defense drafts without employee descriptions', function (): void {
     $f = autoDefenseFixture();
     $first = Employee::factory()->create(['company_id' => $f['company']->id, 'branch_id' => $f['case']->branch_id]);
     $second = Employee::factory()->create(['company_id' => $f['company']->id,
         'branch_id' => $f['case']->branch_id, 'name' => 'Other Employee']);
     $incident = app(IncidentService::class)->createForEmployees([$first->id, $second->id], [
         'branch_id' => $f['case']->branch_id, 'violation_time' => now(), 'violation_type' => 'Incident',
-        'violation_place_freetext' => 'Warehouse', 'description' => 'Other Employee was present at the warehouse.',
+        'violation_place_freetext' => 'Warehouse',
+        'description' => 'Other Employee was at the warehouse. A report was received.',
     ], $f['hr']);
     app(IncidentService::class)->openDrafts($incident, $f['hr']);
     $case = $incident->cases()->where('employee_id', $first->id)->firstOrFail();
-    $fake = new FakeClaudeClient;
-    $fake->push(['description' => 'An incident was recorded at the warehouse.']);
-    $fake->push(['description' => 'Other Employee was present at the warehouse.']);
-    app()->instance(ClaudeClient::class, $fake);
-    $job = new ProposeIncidentDescription($case->id, $f['company']->id, $f['hr']->id);
-    app()->call([$job, 'handle']);
-    expect($fake->requests[0]['messages'][0]['content'])->not->toContain('Other Employee')
-        ->and($fake->requests[0]['logContext']['actor_user_id'])->toBe($f['hr']->id)
-        ->and(Cache::get('incident-description-proposal:'.$case->id))->toBe('An incident was recorded at the warehouse.');
-    Cache::forget('incident-description-proposal:'.$case->id);
-    app()->call([$job, 'handle']);
-    expect(Cache::get('incident-description-proposal:'.$case->id))->toBeNull();
+    Bus::assertDispatchedTimes(DraftDocumentWithAi::class, 2);
+    expect($case->case_specific_description)->toBeNull()
+        ->and($case->status)->toBe(CaseStatus::AiDraftingDefenseLetter);
+    $payload = app(PayloadBuilder::class)->build($case, DocumentType::DefenseLetter, collect());
+    expect($payload['incident']['description'])->toContain('A report was received.')
+        ->not->toContain('Other Employee');
 });
 
-test('confirming an incident description queues its defense draft', function (): void {
-    $f = autoDefenseFixture();
+test('an incident description naming another member is refused', function (): void {
+    $f = autoDefenseFixture(false);
+    $first = Employee::factory()->create(['company_id' => $f['company']->id, 'branch_id' => $f['case']->branch_id]);
+    $second = Employee::factory()->create(['company_id' => $f['company']->id,
+        'branch_id' => $f['case']->branch_id, 'name' => 'Other Employee']);
+    $incident = app(IncidentService::class)->createForEmployees([$first->id, $second->id], [
+        'branch_id' => $f['case']->branch_id, 'violation_time' => now(), 'violation_type' => 'Incident',
+        'violation_place_freetext' => 'Warehouse', 'description' => 'A report was received.',
+    ], $f['hr']);
+    $case = app(IncidentService::class)->openDrafts($incident, $f['hr']);
+    Livewire::actingAs($f['hr'])->test(ShowCase::class, ['case' => (string) $case->id])
+        ->set('caseDescription', 'Other Employee was there.')->call('saveCaseDescription')
+        ->assertHasErrors('caseDescription');
+    expect($case->fresh()->case_specific_description)->toBeNull();
+});
+
+test('an optional incident description can be saved after a draft exists', function (): void {
+    $f = autoDefenseFixture(false);
     $first = Employee::factory()->create(['company_id' => $f['company']->id, 'branch_id' => $f['case']->branch_id]);
     $second = Employee::factory()->create(['company_id' => $f['company']->id, 'branch_id' => $f['case']->branch_id]);
     $incident = app(IncidentService::class)->createForEmployees([$first->id, $second->id], [
         'branch_id' => $f['case']->branch_id, 'violation_time' => now(), 'violation_type' => 'Incident',
-        'violation_place_freetext' => 'Warehouse', 'description' => 'Employees were at the warehouse.',
+        'violation_place_freetext' => 'Warehouse', 'description' => 'A report was received.',
     ], $f['hr']);
     $case = app(IncidentService::class)->openDrafts($incident, $f['hr']);
-    Bus::assertNotDispatched(DraftDocumentWithAi::class);
-    expect(app(NextAction::class)->for($case, $f['hr'])->key)->toBe('confirm_incident_description');
+    Livewire::actingAs($f['hr'])->test(EditDocument::class, ['case' => (string) $case->id, 'document' => 'new'])
+        ->call('writeManually')->set('bodies.ar', 'وقائع مسجلة.')->set('bodies.en', 'Recorded facts.')
+        ->call('save');
     Livewire::actingAs($f['hr'])->test(ShowCase::class, ['case' => (string) $case->id])
-        ->set('caseDescription', 'The employee was at the warehouse.')->call('saveCaseDescription');
+        ->set('caseDescription', 'The employee was present.')->call('saveCaseDescription')->assertHasNoErrors();
+    expect($case->fresh()->case_specific_description)->toBe('The employee was present.');
+});
+
+test('saving an optional description queues a defense draft when none exists', function (): void {
+    $f = autoDefenseFixture(false);
+    $first = Employee::factory()->create(['company_id' => $f['company']->id, 'branch_id' => $f['case']->branch_id]);
+    $second = Employee::factory()->create(['company_id' => $f['company']->id, 'branch_id' => $f['case']->branch_id]);
+    $incident = app(IncidentService::class)->createForEmployees([$first->id, $second->id], [
+        'branch_id' => $f['case']->branch_id, 'violation_time' => now(), 'violation_type' => 'Incident',
+        'violation_place_freetext' => 'Warehouse', 'description' => 'A report was received.',
+    ], $f['hr']);
+    $case = app(IncidentService::class)->openDrafts($incident, $f['hr']);
+    config()->set('services.anthropic.key', 'test-key');
+    Livewire::actingAs($f['hr'])->test(ShowCase::class, ['case' => (string) $case->id])
+        ->set('caseDescription', 'The employee was present.')->call('saveCaseDescription')->assertHasNoErrors();
     Bus::assertDispatchedTimes(DraftDocumentWithAi::class, 1);
-    expect($case->fresh()->defense_letter_issued_at)->toBeNull();
+});
+
+test('documents appear before actions and a draft row opens only the editor', function (): void {
+    $f = autoDefenseFixture();
+    $case = app(CaseOpening::class)->open($f['case'], $f['hr']);
+    $fake = new FakeClaudeClient;
+    $fake->push(['languages' => ['ar' => ['body' => 'وقائع مسجلة.'],
+        'en' => ['body' => 'Recorded facts.']], 'notes' => []]);
+    app()->instance(ClaudeClient::class, $fake);
+    app()->call([new DraftDocumentWithAi($case->id, $f['company']->id, $f['hr']->id,
+        DocumentType::DefenseLetter, $case->fresh()->ai_request_id), 'handle']);
+    $html = Livewire::actingAs($f['hr'])->test(ShowCase::class, ['case' => (string) $case->id])->html();
+    expect(strpos($html, 'id="next-documents"'))->toBeLessThan(strpos($html, 'id="next-actions"'));
+    expect($html)->toContain(__('Edit draft'))->not->toContain(__('Download PDF'));
 });

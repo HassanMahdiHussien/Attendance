@@ -99,10 +99,7 @@
                 @endforeach
             </div>
             @if($canManage && in_array(auth()->user()->primary_role, [\App\Enums\UserRole::CompanyAdmin, \App\Enums\UserRole::HrStaff], true))
-                <div class="grid gap-4 lg:grid-cols-2">
-                    @if($canManageAllIncident)<div class="space-y-2"><label for="incident-add" class="block text-sm font-semibold">{{ __('Add employee to incident') }}</label><x-ui.select id="incident-add" wire:model="incidentEmployeeId"><option value="">{{ __('Choose an employee') }}</option>@foreach($incidentEmployees as $employee)<option value="{{ $employee->id }}">{{ $employee->name }}</option>@endforeach</x-ui.select>@error('incidentEmployeeId')<p class="text-sm text-red-700">{{ $message }}</p>@enderror<x-ui.button variant="secondary" wire:click="addIncidentEmployee">{{ __('Add employee') }}</x-ui.button></div>@endif
-                    <div id="incident-description" class="space-y-2" @if(blank($record->case_specific_description)) wire:poll.5s="pollIncidentDescription" @endif><label for="case-specific-description" class="block text-sm font-semibold">{{ __('Description for this employee') }}</label><p class="text-xs text-gray-600">{{ __('Each letter goes to one employee and must not name the others.') }}</p><x-ui.textarea id="case-specific-description" wire:model="caseDescription" rows="4" />@error('caseDescription')<p class="text-sm text-red-700">{{ $message }}</p>@enderror@if(!$record->defense_letter_issued_at && !$record->documents()->exists())<x-ui.button variant="secondary" wire:click="saveCaseDescription">{{ __('Confirm description') }}</x-ui.button>@endif</div>
-                </div>
+                @if($canManageAllIncident)<div class="max-w-md space-y-2"><label for="incident-add" class="block text-sm font-semibold">{{ __('Add employee to incident') }}</label><x-ui.select id="incident-add" wire:model="incidentEmployeeId"><option value="">{{ __('Choose an employee') }}</option>@foreach($incidentEmployees as $employee)<option value="{{ $employee->id }}">{{ $employee->name }}</option>@endforeach</x-ui.select>@error('incidentEmployeeId')<p class="text-sm text-red-700">{{ $message }}</p>@enderror<x-ui.button variant="secondary" wire:click="addIncidentEmployee">{{ __('Add employee') }}</x-ui.button></div>@endif
                 @if($canManageAllIncident && !$record->defense_letter_issued_at && in_array($record->status, [\App\Enums\CaseStatus::Draft, \App\Enums\CaseStatus::Open], true) && !$record->documents()->exists())<a class="ui-link text-sm" href="/cases/new?incident_case={{ $record->id }}">{{ __('Edit shared facts') }}</a>@endif
             @endif
         </x-ui.card>
@@ -136,6 +133,35 @@
             </section>
         @endif
     </div>
+    <section id="next-documents" class="ui-card scroll-mt-20 p-5">
+<h2 class="text-lg font-black mb-4">{{ __('Documents and versions') }}</h2>
+@php $documentItems = $record->documents->sortByDesc('created_at')->values()->map(fn ($row) => \App\Support\Files\FileItem::forDocument($row))->all(); @endphp
+@forelse($record->documents->sortByDesc('created_at')->values() as $document)<div class="border-t py-4 flex flex-wrap items-center gap-3">
+<div class="min-w-0 basis-full sm:basis-0 sm:flex-1">
+<strong>{{ $documentTypes[$document->document_type->value] ?? __('Document') }} — {{ $document->is_locked ? __('Version').' '.\App\Support\Format\Ui::number($document->version) : __('Draft') }}</strong> @if(!$document->is_locked)<span class="text-xs text-gray-500">{{ $document->drafted_by === \App\Enums\DraftedBy::Ai ? __('AI drafted') : __('Written manually') }}</span>@endif @if($document->is_locked)<p class="text-sm text-gray-500">{{ $documentStatuses[$document->status->value] ?? __('Document') }} · {{ $document->pdf_status === 'ready' ? __('PDF ready') : ($document->pdf_status === 'failed' ? __('Could not prepare PDF') : __('PDF preparing')) }}</p>@endif
+</div>
+@if(!$document->is_locked && $canManage)
+    @if($document->document_type === \App\Enums\DocumentType::Recommendations)<x-ui.button href="/cases/{{ $record->id }}/recommendations/{{ $document->id }}" variant="secondary">{{ __('Edit draft') }}</x-ui.button>
+    @elseif($document->document_type === \App\Enums\DocumentType::DecisionLetter)<x-ui.button href="/cases/{{ $record->id }}/decision" variant="secondary">{{ __('Edit draft') }}</x-ui.button>
+    @else<x-ui.button href="/cases/{{ $record->id }}/documents/{{ $document->id }}/edit" variant="secondary">{{ __('Edit draft') }}</x-ui.button>@endif
+@endif
+@if($document->is_locked && $document->pdf_status === 'ready')<x-ui.button href="{{ route('documents.pdf', $document) }}" variant="secondary">{{ __('Download PDF') }}</x-ui.button>@endif @if($document->is_locked)<x-ui.file-action :item="$documentItems[$loop->index]" :items="$documentItems" :index="$loop->index" :show-download="false" />@endif @if($canManage && $document->is_locked)
+{{-- Corrections are rare: the reason box opens only when HR chooses to correct this document. --}}
+<details class="basis-full" @if($errors->has('correctionReason')) open @endif><summary class="cursor-pointer text-sm font-medium text-primary">{{ __('Start correction') }}</summary><div class="mt-2 flex flex-wrap items-center gap-2"><input wire:model="correctionReason" placeholder="{{ __('Correction reason') }}" class="ui-control rounded-xl border p-2">
+<x-ui.button variant="secondary" wire:click="startCorrection({{ $document->id }})">{{ __('Start correction') }}</x-ui.button></div></details>
+@endif</div>
+@empty<p class="text-gray-500">{{ __('No documents.') }}</p>
+@endforelse @error('correctionReason')<p class="text-red">{{ $message }}</p>
+@enderror</section>
+    @if($record->incident_id && $canManage && !$record->defense_letter_issued_at)
+        <details id="incident-description" class="ui-card p-5" @if($errors->has('caseDescription')) open @endif>
+            <summary class="cursor-pointer font-semibold">{{ __('Edit this employee description (optional)') }}</summary>
+            <p class="mt-2 text-sm text-gray-600">{{ __('Each letter goes to one employee and must not name the others.') }}</p>
+            <x-ui.textarea id="case-specific-description" wire:model="caseDescription" rows="4" class="mt-3" />
+            @error('caseDescription')<p role="alert" class="text-sm text-red-700">{{ $message }}</p>@enderror
+            <x-ui.button variant="secondary" wire:click="saveCaseDescription" class="mt-3">{{ __('Save description') }}</x-ui.button>
+        </details>
+    @endif
     @if($intakeQuestions->isNotEmpty())
         <x-ui.card class="space-y-3">
             <h2 class="font-bold">{{ __('messages.intake.open_points') }}</h2>
@@ -176,9 +202,8 @@
     @endif
     @if($pattern['flagged'])<div class="bg-amber-light text-amber rounded-2xl p-5">{{ __('The alleged responsible person was named in :count other branch cases in the past year.', ['count' => \App\Support\Format\Ui::number($pattern['count'])]) }}</div>
 @endif
-    @foreach($conflicts as $conflict)<div class="bg-red-light rounded-2xl p-5">
-<strong class="text-red">{{ __('Committee conflict: :name', ['name' => $conflict['member']->person_name]) }}</strong>
-<p class="text-sm">{{ $conflict['type'] === 'employee_linked' ? __('Direct link to a case party — a replacement is required.') : ($conflict['excluded'] ? __('A name match requires HR identity verification.') : __('The name match was verified.')) }}</p>
+    @foreach($conflicts as $conflict)<div class="rounded-xl border border-line bg-gray-50 p-5">
+<p class="text-sm">{{ app(\App\Services\Cases\ConflictClearance::class)->notice($conflict) }}</p>
 @if($canManage && $conflict['type'] === 'name_only' && $conflict['excluded'])<input wire:model="clearanceReason" placeholder="{{ __('Identity verification reason') }}" class="ui-control rounded-xl border p-2 mt-2">
 <x-ui.button variant="secondary" wire:click="clearConflict({{ $conflict['member']->id }})">{{ __('Record verification') }}</x-ui.button>
 @error('clearanceReason')<p class="text-red">{{ $message }}</p>
@@ -337,21 +362,6 @@
         @endif
     </section>
 </div>
-    <section id="next-documents" class="ui-card scroll-mt-20 p-5">
-<h2 class="text-lg font-black mb-4">{{ __('Documents and versions') }}</h2>
-@php $documentItems = $record->documents->sortByDesc('created_at')->values()->map(fn ($row) => \App\Support\Files\FileItem::forDocument($row))->all(); @endphp
-@forelse($record->documents->sortByDesc('created_at')->values() as $document)<div class="border-t py-4 flex flex-wrap items-center gap-3">
-<div class="min-w-0 basis-full sm:basis-0 sm:flex-1">
-<strong>{{ $documentTypes[$document->document_type->value] ?? __('Document') }} — {{ __('Version') }} {{ \App\Support\Format\Ui::number($document->version) }}</strong> @if($document->drafted_by === \App\Enums\DraftedBy::Ai)<span class="rounded-full bg-primary-light text-primary px-2 py-1 text-xs font-bold">AI</span>@endif <p class="text-sm text-gray-500">{{ $documentStatuses[$document->status->value] ?? __('Document') }} · {{ ! $document->is_locked ? __('PDF after issuance') : ($document->pdf_status === 'ready' ? __('PDF ready') : ($document->pdf_status === 'failed' ? __('Could not prepare PDF') : __('PDF preparing'))) }}</p>
-</div>
-@if($document->pdf_status === 'ready')<x-ui.button href="{{ route('documents.pdf', $document) }}" variant="secondary">{{ __('Download PDF') }}</x-ui.button>@endif <x-ui.file-action :item="$documentItems[$loop->index]" :items="$documentItems" :index="$loop->index" :show-download="false" /> @if($canManage && $document->is_locked)
-{{-- Corrections are rare: the reason box opens only when HR chooses to correct this document. --}}
-<details class="basis-full" @if($errors->has('correctionReason')) open @endif><summary class="cursor-pointer text-sm font-medium text-primary">{{ __('Start correction') }}</summary><div class="mt-2 flex flex-wrap items-center gap-2"><input wire:model="correctionReason" placeholder="{{ __('Correction reason') }}" class="ui-control rounded-xl border p-2">
-<x-ui.button variant="secondary" wire:click="startCorrection({{ $document->id }})">{{ __('Start correction') }}</x-ui.button></div></details>
-@endif</div>
-@empty<p class="text-gray-500">{{ __('No documents.') }}</p>
-@endforelse @error('correctionReason')<p class="text-red">{{ $message }}</p>
-@enderror</section>
     <section class="ui-card p-5">
 <h2 class="text-lg font-black mb-4">{{ __('Attachments') }}</h2>
 @php $attachmentItems = $attachments->values()->map(fn ($row) => \App\Support\Files\FileItem::forAttachment($row))->all(); @endphp

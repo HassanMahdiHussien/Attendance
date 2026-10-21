@@ -5,10 +5,8 @@ namespace App\Services\Cases;
 use App\Ai\AiDrafting;
 use App\Enums\CaseStatus;
 use App\Enums\DocumentType;
-use App\Jobs\ProposeIncidentDescription;
 use App\Models\DisciplinaryCase;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -24,16 +22,6 @@ class AutoDefenseDraft
         }
         $actor = User::query()->where('company_id', $case->company_id)->find($case->opened_by_user_id);
         if (! $actor || ! $actor->is_active) {
-            return;
-        }
-        if ($case->incident_id !== null && blank($case->case_specific_description)) {
-            $dispatch = fn () => ProposeIncidentDescription::dispatch($case->id, $case->company_id, $actor->id);
-            if (DB::transactionLevel() > 0) {
-                DB::afterCommit($dispatch);
-            } else {
-                $dispatch();
-            }
-
             return;
         }
         try {

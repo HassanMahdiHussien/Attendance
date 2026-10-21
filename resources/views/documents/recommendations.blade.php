@@ -2,6 +2,7 @@
 <div class="grid">
     <div class="grid-row"><strong>{{ $b['reference_label'] ?? ($page['language'] === 'en' ? 'Reference:' : 'العدد:') }}</strong><span>{{ $f['reference_number'] }}</span></div>
     <div class="grid-row"><strong>{{ $page['language'] === 'en' ? 'Date:' : 'التاريخ:' }}</strong><span>{{ $f['issue_date'] }}</span></div>
+    @if(! empty($page['showCaseNumber']))<div class="grid-row"><strong>{{ $page['language'] === 'en' ? 'Case number:' : 'رقم الحالة:' }}</strong><span>{{ $f['case_number'] }}</span></div>@endif
 </div>
 <p class="block">{{ $b['mandate_sentence'] }}</p>
 @if(!empty($b['lead_in']))<p class="block">{{ $b['lead_in'] }}</p>@endif

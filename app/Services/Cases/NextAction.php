@@ -148,9 +148,6 @@ class NextAction
             if (! $case->exists) {
                 return $this->item('hr', 'prepare_defense', $base, $case);
             }
-            if ($case->incident_id !== null && blank($case->case_specific_description)) {
-                return $this->item('hr', 'confirm_incident_description', $base, $case);
-            }
             // Lists (HR home) preload these so a screen of open cases does not cost several queries per case.
             $comparison = $case->relationLoaded('regulationComparisons')
                 ? $case->regulationComparisons->where('document_type', DocumentType::DefenseLetter->value)
@@ -235,7 +232,6 @@ class NextAction
             'issue_defense' => $this->documentConfirmationTarget($case, DocumentType::DefenseLetter),
             'print_recommendations' => $this->documentConfirmationTarget($case, DocumentType::Recommendations),
             'check_citations' => $this->citationTarget($case),
-            'confirm_incident_description' => '#incident-description',
             'defense_drafting' => null,
             'comparing_regulation' => null,
             'waiting_response', 'waiting_approvals', 'waiting_lawyer', 'appeal_window',

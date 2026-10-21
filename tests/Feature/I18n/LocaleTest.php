@@ -55,7 +55,7 @@ test('UI numbers and dates follow the active locale in Baghdad time', function (
 
     app()->setLocale('ar');
     expect(Ui::number(123))->toBe('123');
-    expect(Ui::date('2026-10-08 22:00:00 UTC'))->toBe('9 – تشرين الأول – 2026');
+    expect(Ui::date('2026-10-08 22:00:00 UTC'))->toBe('9 تشرين الأول 2026');
 });
 
 test('changing the UI locale leaves document wording and AI language instructions intact', function (): void {
@@ -72,6 +72,13 @@ test('changing the UI locale leaves document wording and AI language instruction
     app()->setLocale('en');
 
     expect($render())->toBe($arabicInterface);
+});
+
+test('the drafting prompt addresses only the employee and flags missing individual facts', function (): void {
+    $content = (new DraftPrompt)->messages(['incident' => ['employee_gender' => 'female']],
+        ['ar', 'en'], DocumentType::DefenseLetter)[0]['content'];
+    expect($content)->toContain('second person', 'company perspective', 'this employee',
+        'never invent an act', 'drafting note', 'Arabic is authoritative');
 });
 
 test('an Arabic user keeps the locale through a real Livewire update and translated action error', function (): void {

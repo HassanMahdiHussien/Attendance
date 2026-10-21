@@ -3,6 +3,7 @@
 namespace App\Services\Cases;
 
 use App\Enums\CaseStatus;
+use App\Enums\EmployeeGender;
 use App\Enums\UserRole;
 use App\Models\CaseConflictClearance;
 use App\Models\CommitteeMandate;
@@ -18,6 +19,25 @@ use Illuminate\Validation\ValidationException;
 class ConflictClearance
 {
     public function __construct(private CaseEventLogger $events) {}
+
+    public function notice(array $conflict): string
+    {
+        $member = $conflict['member'];
+        if ($conflict['type'] === 'name_only') {
+            return $conflict['excluded']
+                ? __('The name :name of a committee member matches a case party. Verify that they are different people.', ['name' => $member->person_name])
+                : __('The name :name matched a case party and HR verified they are different people.', ['name' => $member->person_name]);
+        }
+
+        $gender = $member->employee?->gender;
+        $key = match ($gender) {
+            EmployeeGender::Female => 'A committee member :name is a party in this case. She cannot attend the committee session. Choose a substitute when recording the session.',
+            EmployeeGender::Male => 'A committee member :name is a party in this case. He cannot attend the committee session. Choose a substitute when recording the session.',
+            default => 'A committee member :name is a party in this case and cannot attend the committee session. Choose a substitute when recording the session.',
+        };
+
+        return __($key, ['name' => $member->person_name]);
+    }
 
     public function conflicts(DisciplinaryCase $case): array
     {

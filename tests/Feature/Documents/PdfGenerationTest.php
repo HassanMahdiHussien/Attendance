@@ -25,6 +25,8 @@ test('real Chrome renders embedded fonts and a bilingual A4 PDF from frozen HTML
             'body' => $body, 'is_authoritative' => $language === 'ar']);
     }
     $issued = app(DocumentIssuer::class)->issue($document, $actor);
+    $fontHtml = app(PdfGenerator::class)->htmlWithFonts($issued->rendered_html);
+    expect($fontHtml)->toContain("font-family:'Displanery Naskh';font-weight:100 900", 'data:font/ttf;base64,');
     expect(strpos($issued->rendered_html, 'lang="ar"'))->toBeLessThan(strpos($issued->rendered_html, 'lang="en"'));
     expect(substr_count($issued->rendered_html, 'CONFIDENTIAL'))->toBe(2);
     try {

@@ -75,8 +75,8 @@ trait DraftsWithAi
             return false;
         }
         if ($case->incident_id !== null && $this->aiDocumentType() === DocumentType::DefenseLetter
-            && (blank($case->case_specific_description)
-                || app(IncidentPrivacy::class)->containsOtherMemberName($case, $case->case_specific_description))) {
+            && filled($case->case_specific_description)
+            && app(IncidentPrivacy::class)->containsOtherMemberName($case, $case->case_specific_description)) {
             return false;
         }
         $draft = $case->documents()->where('document_type', $this->aiDocumentType()->value)->where('is_locked', false)->first();
