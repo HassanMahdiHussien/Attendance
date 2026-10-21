@@ -14,5 +14,7 @@
 | 0010 | Native production runtime and independent encrypted backups | Accepted |
 | 0011 | Single local reading for company regulations, with the lawyer as the second check | Accepted |
 | 0012 | Ubuntu 26.04 and PHP 8.5 in production | Accepted |
+| 0013 | Attendance as a separate repo copied from Displanary, designed to merge back | Accepted |
+| 0014 | English is the default interface language | Accepted |
 
 Never delete an ADR. If a decision is reversed, write a new ADR that says "supersedes NNNN" and explains why.
