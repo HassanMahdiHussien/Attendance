@@ -845,5 +845,19 @@
     "Whoops!": "عذراً!",
     "Regards,": "مع التحية،",
     "All rights reserved.": "جميع الحقوق محفوظة.",
-    "If the :actionText button does not work, copy this link into your browser:": "إذا لم يعمل زر «:actionText»، انسخ هذا الرابط والصقه في متصفحك:"
+    "If the :actionText button does not work, copy this link into your browser:": "إذا لم يعمل زر «:actionText»، انسخ هذا الرابط والصقه في متصفحك:",
+    "Selected people": "الأشخاص المختارون",
+    "Search by name or employee number": "ابحث بالاسم أو رقم الموظف",
+    "Search results": "نتائج البحث",
+    ":count matches": "عدد النتائج: :count",
+    "Remove :name": "إزالة :name",
+    "Add :name as a name not in the list": "إضافة :name كاسم غير موجود في القائمة",
+    "Choose a person or enter a name": "اختر شخصاً أو أدخل اسماً",
+    "Witnesses": "الشهود",
+    "Names not in the employee list": "أسماء غير موجودة في قائمة الموظفين",
+    "Add employees to the list before opening a case": "أضف الموظفين إلى القائمة قبل فتح الحالة",
+    "Review report before sending": "مراجعة البلاغ قبل الإرسال",
+    "Edit report": "تعديل البلاغ",
+    "Confirm and send": "تأكيد وإرسال",
+    "Attachments": "المرفقات"
 }

@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Models\ViolationReport;
 use App\Models\ViolationType;
 use App\Services\CaseEventLogger;
+use App\Services\Employees\EmployeePicker;
 use App\Services\Intake\IntakeQuestionService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -31,6 +32,7 @@ class CaseDrafts
                 $data = array_replace($data, app(CaseViolationTypes::class)->selected((int) $data['violation_type_id'], null, (int) $actor->company_id));
             }
             $this->checkFacts($data, $actor);
+            $data['witnesses'] = app(EmployeePicker::class)->selections($actor, (int) $data['branch_id'], $data['witnesses'] ?? [], true);
             $branch = Branch::query()->findOrFail($data['branch_id']);
             $case = DisciplinaryCase::create($this->facts($data) + [
                 'company_id' => $actor->company_id, 'opened_by_user_id' => $actor->id,
@@ -70,6 +72,7 @@ class CaseDrafts
                 $data = array_replace($data, app(CaseViolationTypes::class)->selected((int) $data['violation_type_id'], null, (int) $actor->company_id));
             }
             $this->checkFacts($data, $actor);
+            $data['witnesses'] = app(EmployeePicker::class)->selections($actor, (int) $data['branch_id'], $data['witnesses'] ?? [], true);
             $case->update($this->facts($data));
             $case->witnesses()->delete();
             foreach ($data['witnesses'] ?? [] as $witness) {

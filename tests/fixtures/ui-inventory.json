@@ -161,10 +161,6 @@
       ],
       [
         "wire:model",
-        "employeeId"
-      ],
-      [
-        "wire:model",
         "includePriorRecord"
       ],
       [
@@ -177,14 +173,6 @@
       ],
       [
         "wire:model",
-        "responsibleEmployeeId"
-      ],
-      [
-        "wire:model",
-        "responsibleName"
-      ],
-      [
-        "wire:model",
         "violationTime"
       ],
       [
@@ -192,20 +180,8 @@
         "violationType"
       ],
       [
-        "wire:model",
-        "witnessNames"
-      ],
-      [
         "wire:model.live",
         "branchId"
-      ],
-      [
-        "wire:model.live.debounce.300ms",
-        "employeeSearch"
-      ],
-      [
-        "wire:model.live.debounce.300ms",
-        "responsibleSearch"
       ]
     ],
     "errors": [
@@ -1037,16 +1013,20 @@
   "resources/views/livewire/reports/submit-report.blade.php": {
     "wire": [
       [
+        "wire:click",
+        "confirmSend"
+      ],
+      [
+        "wire:click",
+        "editReview"
+      ],
+      [
         "wire:model",
         "attachments"
       ],
       [
         "wire:model",
         "description"
-      ],
-      [
-        "wire:model",
-        "employeeId"
       ],
       [
         "wire:model",
@@ -1062,31 +1042,11 @@
       ],
       [
         "wire:model",
-        "responsibleEmployeeId"
-      ],
-      [
-        "wire:model",
-        "responsibleName"
-      ],
-      [
-        "wire:model",
         "violationType"
-      ],
-      [
-        "wire:model",
-        "witnessNames"
       ],
       [
         "wire:model.live",
         "branchId"
-      ],
-      [
-        "wire:model.live.debounce.300ms",
-        "employeeSearch"
-      ],
-      [
-        "wire:model.live.debounce.300ms",
-        "responsibleSearch"
       ],
       [
         "wire:submit",

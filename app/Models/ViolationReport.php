@@ -38,6 +38,7 @@ class ViolationReport extends Model
         return [
             'source' => ReportSource::class,
             'status' => ReportStatus::class,
+            'free_employee_names' => 'array',
         ];
     }
 

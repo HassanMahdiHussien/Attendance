@@ -114,3 +114,4 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 - Filament's top bar and navigation are disabled in both panels; the workspace navigation partial renders through the panel body hook so all three surfaces share one header and phone menu. (2026-10-18)
 - PDF text-layer kaf repair learns words only from current verified units of other statutes, never this run's AI reading, so the two readings remain independent evidence.
 - A multi-employee incident copies shared intake facts to its cases but requires a separate case-specific description and minutes for legal drafting; shared text may name another employee and cannot safely be printed in that employee's letter. (2026-10-15)
+- Free employee names stay on the report; HR selects real employee records before conversion, with at least one record for each reported person. The report keeps the original names as submitted evidence. (2026-10-18)
