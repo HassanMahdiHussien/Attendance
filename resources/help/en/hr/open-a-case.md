@@ -9,6 +9,8 @@ What you need: company setup completed, an employee and branch, and enough incid
 
 ![The new case form](shots/new-case)
 
+On a blank form, select **Attach an email or document**, then **Choose files**. The form proposes details from readable files. Review every field and match names shown beside the employee picker; a name is never selected automatically. The files are saved with the draft case, including files that could not be read.
+
 1. Choose **Branch** and **Employee**. Select **Additional employees in this incident** if the same event involves others. Each employee gets a separate case within the incident.
 2. Enter **Location** or **Place if not listed**, **Incident date and time**, **Violation type**, and **Incident description**. Add the **Alleged responsible person**, **Person responsible for follow-up**, and **Witnesses, separated by commas** when known.
 3. Select **Save draft**. Answer any open intake questions on the draft case page. For an incident, write a separate **Description for this employee** before that employee's defense letter is drafted.

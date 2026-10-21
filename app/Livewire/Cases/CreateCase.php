@@ -2,18 +2,22 @@
 
 namespace App\Livewire\Cases;
 
+use App\Enums\AttachmentKind;
 use App\Enums\CaseStatus;
 use App\Enums\UserRole;
 use App\Livewire\Concerns\ChecksDescription;
 use App\Livewire\Concerns\PicksPeople;
 use App\Models\Branch;
+use App\Models\CaseFileIntake;
 use App\Models\DisciplinaryCase;
 use App\Models\Incident;
 use App\Models\IntakeQuestion;
 use App\Models\Location;
 use App\Models\User;
 use App\Models\ViolationType;
+use App\Services\Attachments\AttachmentService;
 use App\Services\Cases\CaseDrafts;
+use App\Services\Cases\CaseFileSuggestions;
 use App\Services\Cases\CaseInsights;
 use App\Services\Cases\CaseOpening;
 use App\Services\Cases\IncidentService;
@@ -28,12 +32,22 @@ use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 class CreateCase extends Component
 {
     use ChecksDescription;
     use PicksPeople;
+    use WithFileUploads;
+
+    public array $caseFiles = [];
+
+    #[Locked]
+    public ?int $caseFileIntakeId = null;
+
+    public array $suggestedNames = [];
 
     public string $branchId = '';
 
@@ -172,6 +186,16 @@ class CreateCase extends Component
                 : $drafts->create($data, auth()->user())));
         }
         $this->draftId = $draft->id;
+        if ($this->caseFileIntakeId !== null) {
+            $intake = CaseFileIntake::query()->where('user_id', auth()->id())->findOrFail($this->caseFileIntakeId);
+            $targets = $draft->incident_id ? $draft->incident->cases : collect([$draft]);
+            foreach ($targets as $target) {
+                foreach ($intake->attachments as $file) {
+                    app(AttachmentService::class)->copyEvidence($file, $target);
+                }
+            }
+            $this->caseFileIntakeId = null;
+        }
         $this->incidentId = $draft->incident_id;
         if ($this->incidentId !== null) {
             $this->people['employees'] = array_slice($this->people['employees'], 0, 1);
@@ -182,6 +206,33 @@ class CreateCase extends Component
         $this->reportId = null;
         $this->checkedDuplicates = false;
         $this->dispatch('draft-saved');
+    }
+
+    public function updatedCaseFiles(CaseFileSuggestions $suggestions): void
+    {
+        $this->authorizeCreate();
+        $this->validate(['caseFiles' => ['array', 'max:10'], 'caseFiles.*' => ['file', 'max:51200']]);
+        $intake = $this->caseFileIntakeId
+            ? CaseFileIntake::query()->where('user_id', auth()->id())->findOrFail($this->caseFileIntakeId)
+            : CaseFileIntake::create(['company_id' => auth()->user()->company_id, 'user_id' => auth()->id()]);
+        $this->caseFileIntakeId = $intake->id;
+        if ($intake->attachments()->count() + count($this->caseFiles) > 10) {
+            throw ValidationException::withMessages(['caseFiles' => __('Maximum 10 files.')]);
+        }
+        foreach ($this->caseFiles as $file) {
+            app(AttachmentService::class)->store($intake, AttachmentKind::ReportEvidence, $file, auth()->user());
+        }
+        $this->caseFiles = [];
+        try {
+            $values = $suggestions->analyse($intake, auth()->user(), $this->branchId !== '' ? (int) $this->branchId : null);
+            $this->description = $this->description ?: ($values['description'] ?? '');
+            $this->place = $this->place ?: ($values['place'] ?? '');
+            $this->violationTime = $this->violationTime ?: ($values['violation_time'] ?? '');
+            $this->violationTypeId = $this->violationTypeId ?: ($values['violation_type_id'] ?? '');
+            $this->suggestedNames = array_values(array_unique(array_merge($this->suggestedNames, $values['names'] ?? [])));
+        } catch (\Throwable) {
+            // A reading failure keeps the uploaded evidence and the form remains editable.
+        }
     }
 
     public function checkDuplicates(CaseDrafts $drafts, CaseInsights $insights, IncidentService $incidents): void
@@ -227,6 +278,8 @@ class CreateCase extends Component
 
         return view('livewire.cases.create-case', [
             'email' => $this->emailId ? EmailDraftVisibility::inbox(auth()->user())->with('attachments')->findOrFail($this->emailId) : null,
+            'caseIntakeFiles' => $this->caseFileIntakeId
+                ? CaseFileIntake::query()->where('user_id', auth()->id())->findOrFail($this->caseFileIntakeId)->attachments : collect(),
             'sourceReport' => $this->reportId ? ViolationReportVisibility::inbox(auth()->user())->findOrFail($this->reportId) : null,
             'branches' => Branch::query()->where('company_id', auth()->user()->company_id)->where('is_active', true)->get(),
             'peopleResults' => $this->peopleResults($picker),

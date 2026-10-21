@@ -11,6 +11,7 @@ use App\Models\ViolationType;
 use App\Services\Cases\CaseViolationTypes;
 use App\Services\Employees\EmployeePicker;
 use App\Services\Reports\ReportAssistant;
+use App\Services\Reports\ReportFiles;
 use App\Services\Reports\ReportService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\DB;
@@ -103,11 +104,45 @@ class SubmitReport extends Component
     public function startChat(ReportAssistant $assistant): void
     {
         $this->mount();
-        $this->validate(['branchId' => ['required', 'integer'], 'chatInput' => ['required', 'string', 'max:5000']]);
-        $session = $assistant->start(auth()->user(), (int) $this->branchId, $this->chatInput);
+        $this->validate(['branchId' => ['required', 'integer'], 'chatInput' => ['nullable', 'string', 'max:5000'],
+            'attachments' => ['array', 'max:10'], 'attachments.*' => ['file', 'max:51200']]);
+        $session = $assistant->start(auth()->user(), (int) $this->branchId, $this->chatInput, true, $this->attachments !== []);
+        if ($this->attachments !== []) {
+            app(ReportFiles::class)->add($session, $this->attachments, auth()->user());
+            $assistant->filesAdded($session->refresh());
+        } else {
+            $assistant->advance($session);
+        }
         $this->assistantSessionId = $session->id;
+        $this->attachments = [];
         $this->chatInput = '';
-        $this->syncAssistant($session);
+        $this->syncAssistant($session->refresh());
+    }
+
+    public function updatedAttachments(): void
+    {
+        if ($this->assistantSessionId === null || $this->attachments === []) {
+            return;
+        }
+        $assistant = app(ReportAssistant::class);
+        $session = $assistant->owned($this->assistantSessionId, auth()->user());
+        app(ReportFiles::class)->add($session, $this->attachments, auth()->user());
+        $this->attachments = [];
+        if (! $this->reviewing) {
+            $assistant->filesAdded($session->refresh());
+        }
+    }
+
+    public function removeUpload(int $index): void
+    {
+        unset($this->attachments[$index]);
+        $this->attachments = array_values($this->attachments);
+    }
+
+    public function removeSessionFile(int $id): void
+    {
+        $session = app(ReportAssistant::class)->owned((int) $this->assistantSessionId, auth()->user());
+        app(ReportFiles::class)->remove($session, $id, auth()->user());
     }
 
     public function answerChat(ReportAssistant $assistant): void
@@ -259,7 +294,7 @@ class SubmitReport extends Component
             'description' => ['required', 'string'],
             'howStarted' => ['nullable', 'string', 'max:5000'],
             'injuriesDamage' => ['nullable', 'string', 'max:5000'],
-            'attachments' => ['array'], 'attachments.*' => ['file', 'max:10240'],
+            'attachments' => ['array', 'max:10'], 'attachments.*' => ['file', 'max:51200'],
         ]);
         if (blank($this->locationId) && blank($this->place)) {
             throw ValidationException::withMessages(['place' => __('messages.report.location_or_place_required')]);
@@ -302,6 +337,8 @@ class SubmitReport extends Component
             'violationTypes' => ViolationType::query()->where('is_active', true)->orderBy('sort_order')->get(),
             'peopleResults' => $this->peopleResults($picker),
             'assistantSession' => $this->assistantSessionId !== null ? app(ReportAssistant::class)->owned($this->assistantSessionId, auth()->user()) : null,
+            'sessionFiles' => $this->assistantSessionId !== null
+                ? app(ReportFiles::class)->active(app(ReportAssistant::class)->owned($this->assistantSessionId, auth()->user())) : collect(),
         ])->layout('layouts.workspace');
     }
 

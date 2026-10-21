@@ -12,6 +12,7 @@ return [
         'witnesses' => 'هل رأى أحد ما حدث؟',
     ],
     'progress' => ['who' => 'من', 'what' => 'ماذا', 'where' => 'أين', 'when' => 'متى', 'witnesses' => 'الشهود'],
+    'found' => ['who' => 'الأشخاص', 'what' => 'ما حدث', 'when' => 'متى', 'where' => 'المكان'],
     'review' => [
         'summary' => 'الملخص', 'summary_ai' => 'ملخص كتبه المساعد — تحقق منه',
         'people' => 'الأشخاص', 'employees' => 'الموظفون المعنيون', 'employees_unknown' => 'غير معروفين',
@@ -22,6 +23,6 @@ return [
         'what' => 'ما حدث', 'type' => 'نوع المخالفة', 'description' => 'الوصف', 'how' => 'كيف بدأ',
         'injuries' => 'الإصابات والأضرار', 'attachments' => 'المرفقات', 'no_attachments' => 'لا توجد مرفقات',
         'add_files' => 'أضف صوراً أو ملفات', 'change_files' => 'اختر ملفات أخرى', 'uploading' => 'جارٍ الرفع…',
-        'files_hint' => 'PDF أو صور، حتى 10 ميغابايت للملف',
+        'files_hint' => 'بريد، PDF، Word، صور أو فيديو (50 ميغابايت للفيديو، و10 ميغابايت لغيره)',
     ],
 ];

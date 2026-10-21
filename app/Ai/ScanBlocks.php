@@ -27,11 +27,15 @@ class ScanBlocks
 
             return ['type' => 'document', 'source' => ['type' => 'base64', 'mediaType' => 'application/pdf', 'data' => base64_encode($bytes)]];
         }
-        if (! in_array($mime, ['image/png', 'image/jpeg'], true)) {
+        if (! in_array($mime, ['image/png', 'image/jpeg', 'image/webp'], true)) {
             throw ValidationException::withMessages(['scan' => __('messages.ai.scan_type_invalid')]);
         }
         try {
-            $image = $mime === 'image/png' ? imagecreatefrompng($path) : imagecreatefromjpeg($path);
+            $image = match ($mime) {
+                'image/png' => imagecreatefrompng($path),
+                'image/webp' => imagecreatefromwebp($path),
+                default => imagecreatefromjpeg($path),
+            };
         } catch (\ErrorException) {
             // GD raises a warning (an exception under Laravel) for a corrupt file before returning false.
             $image = false;
@@ -47,7 +51,7 @@ class ScanBlocks
             $image = $smaller;
         }
         ob_start();
-        if ($mime === 'image/png') {
+        if ($mime === 'image/png' || $mime === 'image/webp') {
             imagepng($image);
         } else {
             imagejpeg($image, null, 90);
@@ -55,6 +59,6 @@ class ScanBlocks
         $bytes = ob_get_clean();
         imagedestroy($image);
 
-        return ['type' => 'image', 'source' => ['type' => 'base64', 'mediaType' => $mime, 'data' => base64_encode($bytes)]];
+        return ['type' => 'image', 'source' => ['type' => 'base64', 'mediaType' => $mime === 'image/webp' ? 'image/png' : $mime, 'data' => base64_encode($bytes)]];
     }
 }

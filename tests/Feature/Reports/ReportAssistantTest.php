@@ -204,6 +204,36 @@ test('an invented place, person or summary date is never stored', function (): v
     expect($session->refresh()->facts['summary'] ?? null)->toBeNull();
 });
 
+test('a proposed incident time must be stated in the source, with written months and 12-hour times accepted', function (): void {
+    $assistant = app(ReportAssistant::class);
+    expect($assistant->confirmsDateTime('2026-10-08T21:30', 'On Thursday, October 8, 2026, at approximately 9:30 PM the batch failed.'))->toBeTrue()
+        ->and($assistant->confirmsDateTime('2026-10-08T21:30', 'وقع ذلك يوم 8 تشرين الأول 2026 قرابة الساعة 9:30 مساءً'))->toBeTrue()
+        ->and($assistant->confirmsDateTime('2026-10-13T10:00', 'بتاريخ 13-10-2026 الساعة العاشرة'))->toBeTrue()
+        // The email's sent date (9 October 08:15) is not the incident time, and an invented hour is refused.
+        ->and($assistant->confirmsDateTime('2026-10-09T08:15', 'October 8, 2026, about 9:30 PM'))->toBeFalse()
+        ->and($assistant->confirmsDateTime('2026-10-08T14:00', 'October 8, 2026, about 9:30 PM'))->toBeFalse();
+});
+
+test('once everything a defense letter needs is known the chat ends even if the model offers another question', function (): void {
+    $f = reportAssistantFixture();
+    config()->set('services.anthropic.key', 'test-key');
+    Bus::fake([AskReportAssistant::class]);
+    $assistant = app(ReportAssistant::class);
+    $session = $assistant->start($f['reporter'], $f['branch']->id,
+        'مرتضى صلاح وعلي كريم: عبور علب كوكا كولا في خط العلب الجديد بتاريخ 13-10-2026، لا يوجد شهود');
+    $builder = app(PayloadBuilder::class);
+    $assistant->acceptTurn($session, reportTurn([
+        'what' => 'عبور علب كوكا كولا', 'place_text' => 'خط العلب الجديد', 'when_text' => '13-10-2026',
+        'people' => [['ref' => 'مرتضى صلاح', 'role' => 'involved'], ['ref' => 'علي كريم', 'role' => 'involved']], 'no_witnesses' => true,
+    ], ['missing' => [], 'done' => false, 'next_question' => ['text' => 'في أي خط حدث عبور العلب؟', 'quick_replies' => []]]),
+        $assistant->context($session, $builder), $builder);
+    $session->refresh();
+    expect($session->status)->toBe('ready')
+        ->and($session->pending_aspect)->toBeNull()
+        ->and($session->question_count)->toBe(0)
+        ->and(collect($session->transcript)->pluck('text'))->not->toContain('في أي خط حدث عبور العلب؟');
+});
+
 test('a defect found afterwards needs no witness question and finishes once the defense letter has what it needs', function (): void {
     $f = reportAssistantFixture();
     config()->set('services.anthropic.key', 'test-key');
@@ -404,7 +434,7 @@ test('a stalled queued turn opens the form', function (): void {
     $f = reportAssistantFixture();
     $session = ReportAssistantSession::factory()->create(['company_id' => $f['company']->id,
         'user_id' => $f['reporter']->id, 'status' => 'pending', 'facts' => ['branch_id' => $f['branch']->id]]);
-    DB::table('report_assistant_sessions')->where('id', $session->id)->update(['updated_at' => now()->subMinutes(2)]);
+    DB::table('report_assistant_sessions')->where('id', $session->id)->update(['updated_at' => now()->subMinutes(16)]);
     expect(app(ReportAssistant::class)->poll($session->id, $f['reporter'])->status)->toBe('fallback');
 });
 

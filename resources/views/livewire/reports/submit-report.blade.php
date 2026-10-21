@@ -15,7 +15,7 @@
             // A chat report's type is only its description repeated (HR classifies it), so it shows only when it adds something.
             $freeType = $violationType !== '' && $violationType !== mb_substr($description, 0, 255) ? $violationType : null;
             $listedType = collect([$violationTypes->firstWhere('id', (int) $violationTypeId)?->name(), $freeType])->filter()->implode(' · ');
-            $files = collect($attachments)->map(fn ($file) => $file->getClientOriginalName());
+            $files = $sessionFiles->pluck('original_name')->concat(collect($attachments)->map(fn ($file) => $file->getClientOriginalName()));
             $row = 'grid gap-x-4 gap-y-0.5 py-2.5 sm:grid-cols-[8.5rem_minmax(0,1fr)]';
         @endphp
         <section class="ui-card overflow-hidden" aria-labelledby="review-title">
@@ -53,9 +53,10 @@
                         {{-- Evidence can be added here, so the chat path never needs the plain form for photos. --}}
                         <div class="{{ $row }}"><dt class="text-sm text-gray-600">{{ $r('attachments') }}</dt><dd class="grid justify-items-start gap-1.5">
                             @if($files->isNotEmpty())<span dir="auto">{{ $files->implode(' · ') }}</span>@endif
-                            <input id="review-attachments" type="file" wire:model="attachments" multiple accept=".pdf,.jpg,.jpeg,.png" class="peer sr-only">
+                            <input id="review-attachments" type="file" wire:model="attachments" multiple accept=".eml,.msg,.pdf,.docx,.jpg,.jpeg,.png,.webp,.mp4,.mov" class="peer sr-only">
                             <label for="review-attachments" class="inline-flex cursor-pointer items-center gap-1.5 rounded text-sm font-medium text-primary hover:underline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary"><x-ui.icon name="plus" class="h-4! w-4!" />{{ $files->isEmpty() ? $r('add_files') : $r('change_files') }}</label>
                             <span wire:loading wire:target="attachments" class="text-sm text-gray-600">{{ $r('uploading') }}</span>
+                            @error('attachments')<p role="alert" class="text-sm text-red">{{ $message }}</p>@enderror
                             @error('attachments.*')<p role="alert" class="text-sm text-red">{{ $message }}</p>@enderror
                             <span class="text-xs text-gray-500">{{ $r('files_hint') }}</span>
                         </dd></div>
@@ -74,11 +75,21 @@
                     @if($branches->isEmpty())<p role="alert" class="rounded-lg bg-signal-light p-3 text-sm">{{ __('Your account is not assigned to any branch yet. Ask HR to add your branch before submitting a report.') }}</p>@endif
                     <div class="grid gap-1">
                         <h2 id="chat-start-title" class="text-lg font-semibold"><label for="chat-first">{{ __('What happened?') }}</label></h2>
-                        <p class="max-w-[60ch] text-gray-600">{{ __('Write what you saw in your own words, as you would tell a colleague. Then I will ask short questions about anything missing.') }}</p>
+                        <p class="max-w-[60ch] text-gray-600">{{ __('Write what happened, or attach an email, document or photos.') }}</p>
                     </div>
                     <div class="rounded-xl border border-line transition-shadow focus-within:border-primary focus-within:ring-4 focus-within:ring-primary-light">
                         <textarea id="chat-first" wire:model="chatInput" rows="5" dir="auto" placeholder="{{ __('Example: two workers had a fight on production line 1 this morning…') }}" class="block w-full resize-y rounded-xl border-0 bg-transparent px-4 py-3 text-base leading-loose placeholder:text-gray-400 focus:outline-none"></textarea>
                     </div>
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-t border-line px-3 py-2">
+                        <input id="chat-start-files" type="file" wire:model="attachments" multiple accept=".eml,.msg,.pdf,.docx,.jpg,.jpeg,.png,.webp,.mp4,.mov" class="peer sr-only">
+                        <label for="chat-start-files" class="ui-link cursor-pointer text-sm peer-focus-visible:outline-2">{{ __('Attach files') }}</label>
+                        <span class="text-xs text-gray-500">{{ __('Email, PDF, Word, images or video up to 50 MB') }}</span>
+                    </div>
+                    @foreach($attachments as $index => $file)
+                        <div class="flex min-w-0 items-center gap-3 rounded-lg border border-line px-3 py-2 text-sm"><span dir="auto" class="min-w-0 flex-1 truncate">{{ $file->getClientOriginalName() }}</span><bdi dir="ltr" class="text-gray-500">{{ number_format($file->getSize() / 1024) }} KB</bdi><button type="button" wire:click="removeUpload({{ $index }})" class="ui-link" aria-label="{{ __('Remove file') }}">×</button></div>
+                    @endforeach
+                    @error('attachments')<p role="alert" class="text-sm text-red">{{ $message }}</p>@enderror
+                    @error('attachments.*')<p role="alert" class="text-sm text-red">{{ $message }}</p>@enderror
                     @error('chatInput')<p role="alert" class="text-sm text-red">{{ $message }}</p>@enderror
                     <div class="text-sm text-gray-600">{{ __('It helps to mention, if you know:') }}<ul class="mt-1 list-disc space-y-0.5 ps-5"><li>{{ __('who was involved, where and when it happened') }}</li><li>{{ __('whether anyone saw it happen') }}</li></ul></div>
                     <div class="flex flex-wrap justify-between gap-3 {{ $branches->count() > 1 ? 'items-end' : 'items-center' }}">
@@ -104,7 +115,6 @@
                 {{-- The five required answers as the route rail: answered stations fill, the one being asked is the amber point. --}}
                 <ol dir="{{ $lang === 'ar' ? 'rtl' : 'ltr' }}" class="grid grid-cols-5 border-b border-line px-2 pb-3 pt-4 text-center text-xs sm:text-sm" aria-label="{{ __('Report progress') }}">
                     @foreach(\App\Services\Reports\ReportAssistant::REQUIRED as $index => $aspect)
-                        {{-- A block, not inline @php(…): an inline one pairs with a later @endphp and swallows the template. --}}
                         @php $done = ! in_array($aspect, $missing, true); @endphp
                         <li class="relative min-w-0" aria-current="{{ $aspect === $current ? 'step' : 'false' }}">
                             @if($index > 0)<span class="absolute top-[0.6875rem] h-[3px] w-full -translate-y-1/2 end-1/2 {{ $done && ! in_array(\App\Services\Reports\ReportAssistant::REQUIRED[$index - 1], $missing, true) ? 'bg-night' : 'bg-line' }}" aria-hidden="true"></span>@endif
@@ -137,15 +147,31 @@
                             <button type="button" class="{{ $chip }}" wire:click="quickReply('unknown')">{{ trans('report_assistant.chip.unknown', locale: $lang) }}</button>
                         </div>
                         <div class="flex items-end gap-2 rounded-xl border border-line p-1.5 transition-shadow focus-within:border-primary focus-within:ring-4 focus-within:ring-primary-light">
+                            <input id="chat-more-files" type="file" wire:model="attachments" multiple accept=".eml,.msg,.pdf,.docx,.jpg,.jpeg,.png,.webp,.mp4,.mov" class="peer sr-only">
+                            <label for="chat-more-files" class="grid h-10 w-10 flex-none cursor-pointer place-items-center rounded-lg bg-bg text-primary peer-focus-visible:outline-2" aria-label="{{ __('Attach files') }}"><x-ui.icon name="plus" class="h-4! w-4!" /></label>
                             <label for="chat-answer" class="sr-only">{{ __('Your answer') }}</label>
                             <textarea id="chat-answer" wire:model="chatInput" rows="1" dir="auto" placeholder="{{ __('Type your answer…') }}" class="block max-h-40 min-h-10 min-w-0 flex-1 resize-none border-0 bg-transparent px-2 py-2 leading-relaxed placeholder:text-gray-400 focus:outline-none" x-data x-init="$el.focus()" x-on:input="$el.style.height = 'auto'; $el.style.height = Math.min($el.scrollHeight, 160) + 'px'" x-on:keydown.enter="if (! $event.shiftKey) { $event.preventDefault(); $el.form.requestSubmit() }"></textarea>
                             <button type="submit" class="ui-button ui-button-primary h-10 w-10 flex-none p-0" aria-label="{{ __('Send') }}"><x-ui.icon name="arrow" class="h-[1.125rem]! w-[1.125rem]! ltr:rotate-180" stroke-width="2.2" /></button>
                         </div>
+                        @foreach($sessionFiles as $file)
+                            <div class="flex min-w-0 items-center gap-3 rounded-lg border border-line px-3 py-2 text-sm"><span dir="auto" class="min-w-0 flex-1 truncate">{{ $file->original_name }}</span><bdi dir="ltr" class="text-gray-500">{{ number_format($file->size_bytes / 1024) }} KB</bdi><button type="button" wire:click="removeSessionFile({{ $file->id }})" class="ui-link" aria-label="{{ __('Remove file') }}">×</button></div>
+                        @endforeach
+                        @error('attachments')<p role="alert" class="text-sm text-red">{{ $message }}</p>@enderror
                         @error('chatInput')<p role="alert" class="text-sm text-red">{{ $message }}</p>@enderror
                         <p class="text-xs text-gray-500">{{ __('Question :count of 6 at most', ['count' => max(1, $assistantSession->question_count)]) }}</p>
                     </form>
                 @elseif($finished)
                     <div class="mx-4 mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-green-light px-4 py-3.5 sm:mx-5"><span class="inline-flex items-center gap-2 font-semibold text-green"><x-ui.icon name="check" stroke-width="2.4" />{{ __('Everything needed is here') }}</span><x-ui.button type="button" wire:click="continueToReview">{{ __('Review report') }}</x-ui.button></div>
+                @endif
+                @if(!($assistantSession->status === 'ready' && $assistantSession->pending_aspect))
+                    <div class="grid gap-2 border-t border-line px-4 py-3 sm:px-5">
+                        <input id="chat-any-files" type="file" wire:model="attachments" multiple accept=".eml,.msg,.pdf,.docx,.jpg,.jpeg,.png,.webp,.mp4,.mov" class="peer sr-only">
+                        <label for="chat-any-files" class="ui-link inline-flex cursor-pointer items-center gap-2 text-sm peer-focus-visible:outline-2"><x-ui.icon name="plus" class="h-4! w-4!" />{{ __('Attach files') }}</label>
+                        @foreach($sessionFiles as $file)
+                            <div class="flex min-w-0 items-center gap-3 rounded-lg border border-line px-3 py-2 text-sm"><span dir="auto" class="min-w-0 flex-1 truncate">{{ $file->original_name }}</span><bdi dir="ltr" class="text-gray-500">{{ number_format($file->size_bytes / 1024) }} KB</bdi><button type="button" wire:click="removeSessionFile({{ $file->id }})" class="ui-link" aria-label="{{ __('Remove file') }}">×</button></div>
+                        @endforeach
+                        @error('attachments')<p role="alert" class="text-sm text-red">{{ $message }}</p>@enderror
+                    </div>
                 @endif
                 <div class="flex flex-wrap items-center justify-between gap-2 border-t border-line px-4 py-3 text-sm text-gray-600 sm:px-5"><span>{{ __('Prefer a form?') }}</span><button type="button" wire:click="usePlainForm" class="ui-link">{{ __('Fill in the form instead') }}</button></div>
             </section>
@@ -188,8 +214,8 @@
         </x-ui.field>
         <x-ui.field :label="__('How it started (optional)')" for="report-how-started"><textarea id="report-how-started" wire:model="howStarted" rows="2" dir="auto" class="ui-control"></textarea></x-ui.field>
         <x-ui.field :label="__('Injuries or damage (optional)')" for="report-injuries"><textarea id="report-injuries" wire:model="injuriesDamage" rows="2" dir="auto" class="ui-control"></textarea></x-ui.field>
-        <x-ui.field :label="__('Attachments (PDF or images, up to 10 MB per file)')" error="attachments.*" for="report-attachments">
-            <input id="report-attachments" type="file" wire:model="attachments" multiple accept=".pdf,.jpg,.jpeg,.png" class="ui-control">@error('attachments.*')<span class="sr-only">{{ $message }}</span>@enderror
+        <x-ui.field :label="__('Attachments (email, documents, images or video)')" error="attachments.*" for="report-attachments">
+            <input id="report-attachments" type="file" wire:model="attachments" multiple accept=".eml,.msg,.pdf,.docx,.jpg,.jpeg,.png,.webp,.mp4,.mov" class="ui-control">@error('attachments.*')<span class="sr-only">{{ $message }}</span>@enderror
         </x-ui.field>
         <x-ui.button type="submit">{{ __('Send report') }}</x-ui.button>
     </x-ui.card>

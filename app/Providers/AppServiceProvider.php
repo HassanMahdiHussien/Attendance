@@ -11,10 +11,12 @@ use App\LegalLibrary\ClaudePageReader;
 use App\LegalLibrary\PageReader;
 use App\LegalLibrary\SdkBatchClient;
 use App\Listeners\AuditAuthEvents;
+use App\Models\CaseFileIntake;
 use App\Models\Company;
 use App\Models\DisciplinaryCase;
 use App\Models\Document;
 use App\Models\EmailDraft;
+use App\Models\ReportAssistantSession;
 use App\Models\ViolationReport;
 use App\Services\EmailIntake\ImapMailbox;
 use App\Services\EmailIntake\IntakeMailbox;
@@ -88,6 +90,8 @@ class AppServiceProvider extends ServiceProvider
             'email_draft' => EmailDraft::class,
             'case' => DisciplinaryCase::class,
             'document' => Document::class,
+            'report_assistant_session' => ReportAssistantSession::class,
+            'case_file_intake' => CaseFileIntake::class,
         ]);
         // Worker jobs must never inherit another job's tenant. Sync jobs run inside the caller's
         // request, so clearing there would wipe the caller's own context; jobs scope themselves.
