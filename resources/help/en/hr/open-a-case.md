@@ -26,6 +26,9 @@ Select **Convert to case** on a report in **Reports inbox**. The screen shows th
 
 Good to know:
 
+- On a blank case form, drop several files onto the attachment area or use the picker.
+- On the report opening screen, **Not in the employee list — add** opens a small employee form in place. Enter position, department and hire date; the report branch is fixed, and the employee number is generated when left blank.
+
 - Opening can be blocked by incomplete company setup, missing required facts, or no approved law effective for the branch.
 - The case page may show **Prior record**, a repeat alleged responsible person, or a committee conflict. An employee-linked committee conflict requires a replacement; a name-only match needs HR verification with a reason.
 - The duplicate review uses the incident time within 48 hours. A separate case remains possible after review.

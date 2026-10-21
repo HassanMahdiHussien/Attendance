@@ -94,7 +94,7 @@
             <div class="flex flex-wrap gap-3">
                 @foreach($incidentMembers as $member)
                     <a href="/cases/{{ $member->id }}" class="rounded-lg border border-gray-200 px-3 py-2 text-sm {{ $member->id === $record->id ? 'bg-primary-light' : 'bg-white' }}" wire:key="incident-member-{{ $member->id }}">
-                        <bdi class="font-mono">#{{ \App\Support\Format\Ui::number($member->case_number) }}</bdi> · {{ $member->employee?->name }} · {{ \App\Support\Format\Ui::stage($member->status) }}
+                        <bdi class="font-mono">#{{ \App\Support\Format\Ui::number(str_pad((string) $member->case_number, 4, '0', STR_PAD_LEFT)) }}</bdi> · {{ $member->employee?->name }} · {{ \App\Support\Format\Ui::stage($member->status) }}
                     </a>
                 @endforeach
             </div>

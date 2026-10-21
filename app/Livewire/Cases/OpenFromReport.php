@@ -9,9 +9,12 @@ use App\Models\User;
 use App\Models\ViolationReport;
 use App\Models\ViolationType;
 use App\Services\Employees\EmployeePicker;
+use App\Services\Employees\ReportEmployeeQuickAdd;
 use App\Services\Reports\ReportCaseOpening;
 use App\Support\Access\CaseVisibility;
 use App\Support\Access\ViolationReportVisibility;
+use App\Support\Dates\ReportedDate;
+use App\Support\Reports\UnknownAnswer;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Gate;
@@ -58,6 +61,18 @@ class OpenFromReport extends Component
 
     public array $duplicateLinks = [];
 
+    public ?int $addingRow = null;
+
+    public string $newEmployeeName = '';
+
+    public string $newEmployeePosition = '';
+
+    public string $newEmployeeDepartment = '';
+
+    public string $newEmployeeHireDate = '';
+
+    public string $newEmployeeGender = '';
+
     public function mount(int $report, ReportCaseOpening $opening): void
     {
         Gate::authorize('create', DisciplinaryCase::class);
@@ -72,18 +87,16 @@ class OpenFromReport extends Component
         $this->reportId = $source->id;
         $this->people = $opening->people($source, auth()->user());
         $this->locationId = (string) $source->location_id;
-        $unknown = [__('I do not know'), trans('report_assistant.chip.unknown', [], 'ar'),
-            trans('report_assistant.chip.unknown', [], 'en')];
-        $this->place = in_array(trim((string) $source->place_freetext), $unknown, true) ? '' : (string) $source->place_freetext;
+        $this->place = UnknownAnswer::matches((string) $source->place_freetext) ? '' : (string) $source->place_freetext;
         if ($source->occurred_at) {
             $date = CarbonImmutable::parse($source->occurred_at);
             $this->incidentDate = $date->format('Y-m-d');
             $this->incidentTime = $date->format('H:i');
-        } elseif (preg_match('/^\d{4}-\d{2}-\d{2}$/', trim((string) $source->occurred_at_text))) {
-            $this->incidentDate = trim($source->occurred_at_text);
-        } elseif (preg_match('/^\d{2}-\d{2}-\d{4}$/', trim((string) $source->occurred_at_text))) {
-            $reportedDate = \DateTimeImmutable::createFromFormat('!d-m-Y', trim($source->occurred_at_text));
-            $this->incidentDate = $reportedDate ? $reportedDate->format('Y-m-d') : '';
+        } elseif ($reportedDate = ReportedDate::parse((string) $source->occurred_at_text,
+            CarbonImmutable::parse($source->created_at, 'Asia/Baghdad'))) {
+            $this->incidentDate = $reportedDate->format('Y-m-d');
+            $this->incidentTime = preg_match('/\d{1,2}:\d{2}/', (string) $source->occurred_at_text)
+                ? $reportedDate->format('H:i') : '';
         }
         $this->violationTypeId = (string) $source->violation_type_id;
         $this->violationType = (string) $source->violation_type;
@@ -126,6 +139,36 @@ class OpenFromReport extends Component
         abort_unless(isset($this->people[$index]), 404);
         $this->searchingRow = $index;
         $this->peopleSearch['employees'] = $this->people[$index]['name'];
+    }
+
+    public function startAddingPerson(int $index): void
+    {
+        $this->source();
+        abort_unless(isset($this->people[$index]) && ($this->people[$index]['linked_id'] ?? null) === null, 404);
+        $this->addingRow = $index;
+        $this->newEmployeeName = $this->people[$index]['kind'] === 'free' ? $this->people[$index]['name'] : '';
+        $this->newEmployeePosition = '';
+        $this->newEmployeeDepartment = '';
+        $this->newEmployeeHireDate = '';
+        $this->newEmployeeGender = '';
+    }
+
+    public function addNewPerson(ReportEmployeeQuickAdd $quickAdd): void
+    {
+        $report = $this->source();
+        abort_unless($this->draftId === null && $this->addingRow !== null && isset($this->people[$this->addingRow])
+            && ($this->people[$this->addingRow]['linked_id'] ?? null) === null, 409);
+        $data = $this->validate([
+            'newEmployeeName' => ['required', 'string', 'max:255'],
+            'newEmployeePosition' => ['required', 'string', 'max:255'],
+            'newEmployeeDepartment' => ['required', 'string', 'max:255'],
+            'newEmployeeHireDate' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
+            'newEmployeeGender' => ['required', 'in:male,female'],
+        ]);
+        $employee = $quickAdd->create($report, auth()->user(), $data['newEmployeeName'],
+            $data['newEmployeePosition'], $data['newEmployeeDepartment'], $data['newEmployeeHireDate'], $data['newEmployeeGender']);
+        $this->people[$this->addingRow]['selected_id'] = $employee->id;
+        $this->addingRow = null;
     }
 
     public function addPerson(string $kind, int $id, EmployeePicker $picker): void
@@ -198,9 +241,17 @@ class OpenFromReport extends Component
         Gate::authorize('create', DisciplinaryCase::class);
         $report = $this->source()->load(['reporter', 'branch', 'location', 'employees', 'witnesses',
             'attachments', 'intakeQuestions', 'assistantSession', 'allegedResponsibleEmployee']);
+        $draftNumbers = collect();
+        if ($this->draftId !== null) {
+            $draft = CaseVisibility::for(auth()->user())->findOrFail($this->draftId);
+            $draftNumbers = $draft->incident_id
+                ? CaseVisibility::for(auth()->user())->where('incident_id', $draft->incident_id)->get(['id', 'case_number'])
+                : collect([$draft]);
+        }
 
         return view('livewire.cases.open-from-report', [
             'report' => $report,
+            'draftNumbers' => $draftNumbers,
             'searchResults' => $this->searchingRow !== null ? $picker->search(auth()->user(), (int) $report->branch_id, $this->peopleSearch['employees']) : [],
             'responsibleResults' => $picker->search(auth()->user(), (int) $report->branch_id, $this->responsibleSearch),
             'locations' => Location::query()->where('branch_id', $report->branch_id)->where('is_active', true)->get(),

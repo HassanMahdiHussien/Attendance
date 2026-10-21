@@ -16,9 +16,55 @@ use App\Models\Law;
 use App\Models\ReportAssistantSession;
 use App\Models\User;
 use App\Models\ViolationReport;
+use App\Services\Employees\ReportEmployeeQuickAdd;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
+use Symfony\Component\HttpKernel\Exception\HttpException;
+
+test('an unmatched report person can be added and selected in the same screen', function (): void {
+    $f = openReportFixture(['free_employee_names' => ['New Person']]);
+    $this->actingAs($f['hr']);
+    Livewire::test(OpenFromReport::class, ['report' => $f['report']->id])
+        ->call('startAddingPerson', 1)
+        ->set('newEmployeePosition', 'Operator')
+        ->set('newEmployeeDepartment', 'Production')
+        ->set('newEmployeeHireDate', '2025-01-10')
+        ->call('addNewPerson')->assertHasErrors(['newEmployeeGender'])
+        ->set('newEmployeeGender', 'female')
+        ->call('addNewPerson')->assertHasNoErrors();
+    $employee = Employee::query()->where('name', 'New Person')->firstOrFail();
+    expect($employee->company_id)->toBe($f['company']->id)
+        ->and($employee->branch_id)->toBe($f['branch']->id)
+        ->and($employee->employee_code)->not->toBeEmpty()
+        ->and($employee->gender->value)->toBe('female');
+    $foreign = Company::factory()->create();
+    app(TenantContext::class)->runForCompany($foreign, function () use ($f, $foreign): void {
+        $outsider = User::factory()->create(['company_id' => $foreign->id, 'primary_role' => 'hr_staff']);
+        expect(fn () => app(ReportEmployeeQuickAdd::class)->create($f['report'], $outsider,
+            'Other', 'Operator', 'Production', '2025-01-10', 'male'))->toThrow(HttpException::class);
+    });
+});
+
+test('report numbers advance per company and are visible when opening a case', function (): void {
+    $f = openReportFixture();
+    $second = ViolationReport::factory()->create([
+        'company_id' => $f['company']->id, 'branch_id' => $f['branch']->id,
+        'reporter_user_id' => $f['reporter']->id, 'description' => 'Another incident',
+    ]);
+    expect($second->report_number)->toBe($f['report']->report_number + 1);
+    $this->actingAs($f['hr']);
+    Livewire::test(OpenFromReport::class, ['report' => $f['report']->id])
+        ->assertSee('R-'.str_pad((string) $f['report']->report_number, 4, '0', STR_PAD_LEFT));
+});
+
+test('a reported written date prefills the case date without inventing a time', function (): void {
+    $f = openReportFixture(['occurred_at' => null, 'occurred_at_text' => '20 تشرين الأول 2026',
+        'created_at' => '2026-10-21 10:00:00']);
+    $this->actingAs($f['hr']);
+    Livewire::test(OpenFromReport::class, ['report' => $f['report']->id])
+        ->assertSet('incidentDate', '2026-10-20')->assertSet('incidentTime', '');
+});
 
 function openReportFixture(array $attributes = []): array
 {

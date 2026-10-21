@@ -6,7 +6,8 @@
         $assistantSummary = $report->assistantSession && filled($report->assistantSession->facts['summary'] ?? null)
             && $report->summary === $report->assistantSession->facts['summary'];
     @endphp
-    <x-ui.page-header :title="__('Open case from report :number', ['number' => \App\Support\Format\Ui::number($report->id)])" />
+    <x-ui.page-header :title="__('Open case from report :number', ['number' => 'R-'.str_pad((string) $report->report_number, 4, '0', STR_PAD_LEFT)])" />
+    @if($draftNumbers->isNotEmpty())<p class="font-mono text-sm">{{ __('Case number') }}: @foreach($draftNumbers as $draftNumber)<bdi>{{ \App\Support\Format\Ui::number(str_pad((string) $draftNumber->case_number, 4, '0', STR_PAD_LEFT)) }}</bdi>{{ $loop->last ? '' : ' · ' }}@endforeach</p>@endif
     <p class="text-sm text-gray-600">{{ __('Review the report, match each named person, then open the case.') }}</p>
     <div class="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <main class="min-w-0 space-y-5">
@@ -29,10 +30,22 @@
                                     @foreach($person['candidates'] as $candidate)
                                         <button type="button" wire:click="selectPerson({{ $index }}, {{ $candidate['id'] }})" class="rounded-lg border px-3 py-1.5 text-start text-sm {{ (int) $person['selected_id'] === (int) $candidate['id'] ? 'border-green bg-green-light' : 'border-line' }}"><bdi>{{ $candidate['name'] }}</bdi><span class="block text-xs text-gray-600"><bdi>{{ $candidate['code'] }}</bdi></span></button>
                                     @endforeach
+                                    @if($person['selected_id'] && !collect($person['candidates'])->contains('id', $person['selected_id']))<span class="rounded border border-line bg-bg px-3 py-1.5 text-sm">{{ __('Employee selected') }}</span>@endif
                                     @if($person['linked_id'])<span class="text-sm text-green">{{ __('Linked employee') }}</span>@elseif(!$person['selected_id'] && $person['candidates'] === [])<span class="text-sm text-amber-700">{{ __('No employee match found') }}</span>@endif
-                                    @if(!$person['linked_id'])<button type="button" class="ui-link text-sm" wire:click="searchPerson({{ $index }})">{{ __('Search by name or employee number') }}</button>@endif
+                                    @if(!$person['linked_id'])<button type="button" class="ui-link text-sm" wire:click="searchPerson({{ $index }})">{{ __('Search by name or employee number') }}</button><button type="button" class="ui-link text-sm" wire:click="startAddingPerson({{ $index }})">{{ __('Not in the employee list — add') }}</button>@endif
                                     @if($searchingRow === $index)
                                         <div class="w-full"><x-ui.people-picker kind="employees" :label="__('Employee')" :items="[]" :results="$searchResults" :search="$peopleSearch['employees']" :free="false" /></div>
+                                    @endif
+                                    @if($addingRow === $index)
+                                        <div class="grid w-full gap-3 rounded-lg border border-line bg-bg p-4 sm:grid-cols-2">
+                                            <x-ui.field :label="__('Name')" for="quick-name"><x-ui.input id="quick-name" wire:model="newEmployeeName" dir="auto" />@error('newEmployeeName')<p role="alert" class="text-sm text-red">{{ $message }}</p>@enderror</x-ui.field>
+                                            <x-ui.field :label="__('Branch')" for="quick-branch"><x-ui.input id="quick-branch" :value="$report->branch?->name" disabled /></x-ui.field>
+                                            <x-ui.field :label="__('Position')" for="quick-position"><x-ui.input id="quick-position" wire:model="newEmployeePosition" />@error('newEmployeePosition')<p role="alert" class="text-sm text-red">{{ $message }}</p>@enderror</x-ui.field>
+                                            <x-ui.field :label="__('Department')" for="quick-department"><x-ui.input id="quick-department" wire:model="newEmployeeDepartment" />@error('newEmployeeDepartment')<p role="alert" class="text-sm text-red">{{ $message }}</p>@enderror</x-ui.field>
+                                            <x-ui.field :label="__('Hire date')" for="quick-hire"><x-ui.input id="quick-hire" type="date" wire:model="newEmployeeHireDate" />@error('newEmployeeHireDate')<p role="alert" class="text-sm text-red">{{ $message }}</p>@enderror</x-ui.field>
+                                            <x-ui.field :label="__('Gender')" for="quick-gender"><x-ui.select id="quick-gender" wire:model="newEmployeeGender"><option value="">{{ __('Choose') }}</option><option value="male">{{ __('Male') }}</option><option value="female">{{ __('Female') }}</option></x-ui.select>@error('newEmployeeGender')<p role="alert" class="text-sm text-red">{{ $message }}</p>@enderror</x-ui.field>
+                                            <div class="self-end"><x-ui.button type="button" variant="secondary" wire:click="addNewPerson">{{ __('Add employee') }}</x-ui.button></div>
+                                        </div>
                                     @endif
                                     @error('people.'.$index)<p role="alert" class="w-full text-sm text-red">{{ $message }}</p>@enderror
                                 </div>
@@ -40,7 +53,6 @@
                         @endforeach
                         @error('people')<p role="alert" class="text-sm text-red">{{ $message }}</p>@enderror
                     </div>
-                    @if(collect($people)->contains(fn ($person) => ! $person['selected_id']))<a class="ui-link text-sm" href="/admin/employees/create" target="_blank" rel="noopener">{{ __('Add a new employee') }}</a>@endif
                 </div>
                 <div class="space-y-4 p-5">
                     <h2 class="text-lg font-semibold">{{ __('Case details') }}</h2>

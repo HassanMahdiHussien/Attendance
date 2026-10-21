@@ -50,6 +50,8 @@ test('all UI translation keys exist in both catalogue layers and UI code contain
                 'app/LegalLibrary/WordLigatureRepair.php', 'app/LegalLibrary/TextLayerRepair.php', 'app/LegalLibrary/PageFurniture.php' => true,
                 // Matches the reporter's own Arabic replies (none / I don't know / today) and states the Arabic summary opening.
                 'app/Services/Reports/ReportAssistant.php' => true,
+                'app/Support/Reports/UnknownAnswer.php' => true,
+                'app/Support/Dates/ReportedDate.php' => true,
                 'app/Support/Text/ArabicText.php', 'app/Support/Search/SearchText.php' => str_contains($line, 'strtr('),
                 'app/Console/Commands/SearchBenchmark.php' => str_contains($line, 'أحمد') || str_contains($line, 'احمد'),
                 'app/Ai/CandidateUnits.php' => str_contains($line, 'array_diff('),

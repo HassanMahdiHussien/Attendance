@@ -51,14 +51,15 @@
                         @if($howStarted !== '')<div class="{{ $row }}"><dt class="text-sm text-gray-600">{{ $r('how') }}</dt><dd dir="auto" class="leading-relaxed">{{ $howStarted }}</dd></div>@endif
                         @if($injuriesDamage !== '')<div class="{{ $row }}"><dt class="text-sm text-gray-600">{{ $r('injuries') }}</dt><dd dir="auto" class="leading-relaxed">{{ $injuriesDamage }}</dd></div>@endif
                         {{-- Evidence can be added here, so the chat path never needs the plain form for photos. --}}
-                        <div class="{{ $row }}"><dt class="text-sm text-gray-600">{{ $r('attachments') }}</dt><dd class="grid justify-items-start gap-1.5">
+                        <div class="{{ $row }}"><dt class="text-sm text-gray-600">{{ $r('attachments') }}</dt><dd x-data x-on:dragover.prevent x-on:drop.prevent="$refs.upload.files = $event.dataTransfer.files; $refs.upload.dispatchEvent(new Event('change', { bubbles: true }))" class="grid justify-items-start gap-1.5 rounded-lg border border-dashed border-line p-3">
                             @if($files->isNotEmpty())<span dir="auto">{{ $files->implode(' · ') }}</span>@endif
-                            <input id="review-attachments" type="file" wire:model="attachments" multiple accept=".eml,.msg,.pdf,.docx,.jpg,.jpeg,.png,.webp,.mp4,.mov" class="peer sr-only">
+                            <input x-ref="upload" id="review-attachments" type="file" wire:model="attachments" multiple accept=".eml,.msg,.pdf,.docx,.jpg,.jpeg,.png,.webp,.mp4,.mov" class="peer sr-only">
                             <label for="review-attachments" class="inline-flex cursor-pointer items-center gap-1.5 rounded text-sm font-medium text-primary hover:underline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary"><x-ui.icon name="plus" class="h-4! w-4!" />{{ $files->isEmpty() ? $r('add_files') : $r('change_files') }}</label>
                             <span wire:loading wire:target="attachments" class="text-sm text-gray-600">{{ $r('uploading') }}</span>
                             @error('attachments')<p role="alert" class="text-sm text-red">{{ $message }}</p>@enderror
                             @error('attachments.*')<p role="alert" class="text-sm text-red">{{ $message }}</p>@enderror
-                            <span class="text-xs text-gray-500">{{ $r('files_hint') }}</span>
+                            <span class="text-xs text-gray-500">{{ __('report_assistant.review.files_hint') }}</span>
+                            <span class="text-xs text-gray-500">{{ __('Drop files here or choose files') }}</span>
                         </dd></div>
                     </dl>
                 </section>
@@ -80,10 +81,11 @@
                     <div class="rounded-xl border border-line transition-shadow focus-within:border-primary focus-within:ring-4 focus-within:ring-primary-light">
                         <textarea id="chat-first" wire:model="chatInput" rows="5" dir="auto" placeholder="{{ __('Example: two workers had a fight on production line 1 this morning…') }}" class="block w-full resize-y rounded-xl border-0 bg-transparent px-4 py-3 text-base leading-loose placeholder:text-gray-400 focus:outline-none"></textarea>
                     </div>
-                    <div class="flex flex-wrap items-center justify-between gap-2 border-t border-line px-3 py-2">
-                        <input id="chat-start-files" type="file" wire:model="attachments" multiple accept=".eml,.msg,.pdf,.docx,.jpg,.jpeg,.png,.webp,.mp4,.mov" class="peer sr-only">
+                    <div x-data x-on:dragover.prevent x-on:drop.prevent="$refs.upload.files = $event.dataTransfer.files; $refs.upload.dispatchEvent(new Event('change', { bubbles: true }))" class="flex flex-wrap items-center justify-between gap-2 border border-dashed border-line px-3 py-2">
+                        <input x-ref="upload" id="chat-start-files" type="file" wire:model="attachments" multiple accept=".eml,.msg,.pdf,.docx,.jpg,.jpeg,.png,.webp,.mp4,.mov" class="peer sr-only">
                         <label for="chat-start-files" class="ui-link cursor-pointer text-sm peer-focus-visible:outline-2">{{ __('Attach files') }}</label>
-                        <span class="text-xs text-gray-500">{{ __('Email, PDF, Word, images or video up to 50 MB') }}</span>
+                        <span class="text-xs text-gray-500">{{ __('report_assistant.review.files_hint') }}</span>
+                        <span class="text-xs text-gray-500">{{ __('Drop files here or choose files') }}</span>
                     </div>
                     @foreach($attachments as $index => $file)
                         <div class="flex min-w-0 items-center gap-3 rounded-lg border border-line px-3 py-2 text-sm"><span dir="auto" class="min-w-0 flex-1 truncate">{{ $file->getClientOriginalName() }}</span><bdi dir="ltr" class="text-gray-500">{{ number_format($file->getSize() / 1024) }} KB</bdi><button type="button" wire:click="removeUpload({{ $index }})" class="ui-link" aria-label="{{ __('Remove file') }}">×</button></div>
@@ -146,8 +148,8 @@
                             @if($assistantSession->pending_aspect === 'when')<button type="button" class="{{ $chip }}" wire:click="quickReply('today')">{{ trans('report_assistant.chip.today', locale: $lang) }}</button><button type="button" class="{{ $chip }}" wire:click="quickReply('yesterday')">{{ trans('report_assistant.chip.yesterday', locale: $lang) }}</button>@endif
                             <button type="button" class="{{ $chip }}" wire:click="quickReply('unknown')">{{ trans('report_assistant.chip.unknown', locale: $lang) }}</button>
                         </div>
-                        <div class="flex items-end gap-2 rounded-xl border border-line p-1.5 transition-shadow focus-within:border-primary focus-within:ring-4 focus-within:ring-primary-light">
-                            <input id="chat-more-files" type="file" wire:model="attachments" multiple accept=".eml,.msg,.pdf,.docx,.jpg,.jpeg,.png,.webp,.mp4,.mov" class="peer sr-only">
+                        <div x-data x-on:dragover.prevent x-on:drop.prevent="$refs.upload.files = $event.dataTransfer.files; $refs.upload.dispatchEvent(new Event('change', { bubbles: true }))" class="flex items-end gap-2 rounded-xl border border-dashed border-line p-1.5 transition-shadow focus-within:border-primary focus-within:ring-4 focus-within:ring-primary-light">
+                            <input x-ref="upload" id="chat-more-files" type="file" wire:model="attachments" multiple accept=".eml,.msg,.pdf,.docx,.jpg,.jpeg,.png,.webp,.mp4,.mov" class="peer sr-only">
                             <label for="chat-more-files" class="grid h-10 w-10 flex-none cursor-pointer place-items-center rounded-lg bg-bg text-primary peer-focus-visible:outline-2" aria-label="{{ __('Attach files') }}"><x-ui.icon name="plus" class="h-4! w-4!" /></label>
                             <label for="chat-answer" class="sr-only">{{ __('Your answer') }}</label>
                             <textarea id="chat-answer" wire:model="chatInput" rows="1" dir="auto" placeholder="{{ __('Type your answer…') }}" class="block max-h-40 min-h-10 min-w-0 flex-1 resize-none border-0 bg-transparent px-2 py-2 leading-relaxed placeholder:text-gray-400 focus:outline-none" x-data x-init="$el.focus()" x-on:input="$el.style.height = 'auto'; $el.style.height = Math.min($el.scrollHeight, 160) + 'px'" x-on:keydown.enter="if (! $event.shiftKey) { $event.preventDefault(); $el.form.requestSubmit() }"></textarea>
@@ -158,15 +160,17 @@
                         @endforeach
                         @error('attachments')<p role="alert" class="text-sm text-red">{{ $message }}</p>@enderror
                         @error('chatInput')<p role="alert" class="text-sm text-red">{{ $message }}</p>@enderror
+                        <p class="text-xs text-gray-500">{{ __('Drop files here or choose files') }} · {{ __('report_assistant.review.files_hint') }}</p>
                         <p class="text-xs text-gray-500">{{ __('Question :count of 6 at most', ['count' => max(1, $assistantSession->question_count)]) }}</p>
                     </form>
                 @elseif($finished)
                     <div class="mx-4 mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-green-light px-4 py-3.5 sm:mx-5"><span class="inline-flex items-center gap-2 font-semibold text-green"><x-ui.icon name="check" stroke-width="2.4" />{{ __('Everything needed is here') }}</span><x-ui.button type="button" wire:click="continueToReview">{{ __('Review report') }}</x-ui.button></div>
                 @endif
                 @if(!($assistantSession->status === 'ready' && $assistantSession->pending_aspect))
-                    <div class="grid gap-2 border-t border-line px-4 py-3 sm:px-5">
-                        <input id="chat-any-files" type="file" wire:model="attachments" multiple accept=".eml,.msg,.pdf,.docx,.jpg,.jpeg,.png,.webp,.mp4,.mov" class="peer sr-only">
+                    <div x-data x-on:dragover.prevent x-on:drop.prevent="$refs.upload.files = $event.dataTransfer.files; $refs.upload.dispatchEvent(new Event('change', { bubbles: true }))" class="grid gap-2 border border-dashed border-line px-4 py-3 sm:px-5">
+                        <input x-ref="upload" id="chat-any-files" type="file" wire:model="attachments" multiple accept=".eml,.msg,.pdf,.docx,.jpg,.jpeg,.png,.webp,.mp4,.mov" class="peer sr-only">
                         <label for="chat-any-files" class="ui-link inline-flex cursor-pointer items-center gap-2 text-sm peer-focus-visible:outline-2"><x-ui.icon name="plus" class="h-4! w-4!" />{{ __('Attach files') }}</label>
+                        <p class="text-xs text-gray-500">{{ __('Drop files here or choose files') }} · {{ __('report_assistant.review.files_hint') }}</p>
                         @foreach($sessionFiles as $file)
                             <div class="flex min-w-0 items-center gap-3 rounded-lg border border-line px-3 py-2 text-sm"><span dir="auto" class="min-w-0 flex-1 truncate">{{ $file->original_name }}</span><bdi dir="ltr" class="text-gray-500">{{ number_format($file->size_bytes / 1024) }} KB</bdi><button type="button" wire:click="removeSessionFile({{ $file->id }})" class="ui-link" aria-label="{{ __('Remove file') }}">×</button></div>
                         @endforeach
@@ -215,7 +219,10 @@
         <x-ui.field :label="__('How it started (optional)')" for="report-how-started"><textarea id="report-how-started" wire:model="howStarted" rows="2" dir="auto" class="ui-control"></textarea></x-ui.field>
         <x-ui.field :label="__('Injuries or damage (optional)')" for="report-injuries"><textarea id="report-injuries" wire:model="injuriesDamage" rows="2" dir="auto" class="ui-control"></textarea></x-ui.field>
         <x-ui.field :label="__('Attachments (email, documents, images or video)')" error="attachments.*" for="report-attachments">
-            <input id="report-attachments" type="file" wire:model="attachments" multiple accept=".eml,.msg,.pdf,.docx,.jpg,.jpeg,.png,.webp,.mp4,.mov" class="ui-control">@error('attachments.*')<span class="sr-only">{{ $message }}</span>@enderror
+            <div x-data x-on:dragover.prevent x-on:drop.prevent="$refs.upload.files = $event.dataTransfer.files; $refs.upload.dispatchEvent(new Event('change', { bubbles: true }))" class="rounded-lg border border-dashed border-line p-3">
+                <input x-ref="upload" id="report-attachments" type="file" wire:model="attachments" multiple accept=".eml,.msg,.pdf,.docx,.jpg,.jpeg,.png,.webp,.mp4,.mov" class="ui-control">
+                <p class="mt-2 text-xs text-gray-500">{{ __('Drop files here or choose files') }} · {{ trans('report_assistant.review.files_hint') }}</p>
+            </div>@error('attachments.*')<span class="sr-only">{{ $message }}</span>@enderror
         </x-ui.field>
         <x-ui.button type="submit">{{ __('Send report') }}</x-ui.button>
     </x-ui.card>

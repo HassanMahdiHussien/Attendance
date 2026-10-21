@@ -18,6 +18,9 @@ You can select **Attach files** under **What happened?** and start with files al
 
 Good to know:
 
+- Drop several files onto any attachment area or use its picker. Email, PDF, Word, photos and video are accepted; the screen states the size limits.
+- A reply meaning “I do not know” is marked unknown and is not recorded as a place, date, person or event. Your report reference looks like **R-0001**.
+
 - The assistant never adds facts you did not give. A date you wrote is kept as you wrote it, and a time you did not give is left empty.
 - If you prefer, select **Fill in the form instead** to use the plain form. If the assistant cannot finish, the form opens with your answers kept.
 - A report cannot be changed after sending. HR reviews it before opening a case. You can follow its status in [track your reports](help:reporting/track-your-reports).

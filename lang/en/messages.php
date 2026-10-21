@@ -238,7 +238,8 @@ return [
     'attachment' => [
         'pdf_jpg_png_only' => 'Only PDF, JPG, and PNG files are allowed.',
         'type_not_allowed' => 'This attachment type is not allowed.',
-        'type_or_size_not_allowed' => 'This attachment type or size is not allowed.',
+        'type_or_size_not_allowed' => 'Allowed: EML, MSG, PDF, DOCX, JPG, JPEG, PNG, WEBP, MP4 and MOV. Video up to 50 MB; other files up to 10 MB.',
+        'case_file_type_or_size_not_allowed' => 'Allowed: EML, MSG, PDF, DOCX, JPG, JPEG, PNG and WEBP, up to 10 MB each.',
         'save_failed' => 'The attachment could not be saved.',
     ],
     'appeal' => [

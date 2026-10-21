@@ -37,6 +37,17 @@ use Livewire\Livewire;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\Fakes\FakeClaudeClient;
 
+test('all intake attachment controls accept multiple dropped files and identify allowed sizes', function (): void {
+    $report = file_get_contents(resource_path('views/livewire/reports/submit-report.blade.php'));
+    $case = file_get_contents(resource_path('views/livewire/cases/create-case.blade.php'));
+    expect(substr_count($report, 'x-on:drop.prevent'))->toBe(5)
+        ->and(substr_count($report, 'wire:model="attachments" multiple'))->toBe(5)
+        ->and(substr_count($case, 'x-on:drop.prevent'))->toBe(1)
+        ->and($case)->toContain('wire:model="caseFiles" multiple')
+        ->and(trans('messages.attachment.type_or_size_not_allowed', [], 'en'))->toContain('50 MB')
+        ->and(trans('messages.attachment.type_or_size_not_allowed', [], 'en'))->toContain('10 MB');
+});
+
 function reportFilesFixture(): array
 {
     $company = Company::factory()->create();
@@ -53,6 +64,20 @@ function reportFilesFixture(): array
 
     return compact('company', 'branch', 'reporter', 'hr', 'employee', 'session');
 }
+
+test('a refused attachment explains allowed formats and sizes', function (): void {
+    app()->setLocale('en');
+    $f = reportFilesFixture();
+    try {
+        app(AttachmentService::class)->store($f['session'], AttachmentKind::ReportEvidence,
+            UploadedFile::fake()->createWithContent('program.exe', 'not evidence'), $f['reporter']);
+        $this->fail('The attachment should have been refused.');
+    } catch (ValidationException $exception) {
+        expect($exception->errors()['attachments'][0])->toContain('PDF')
+            ->and($exception->errors()['attachments'][0])->toContain('50 MB')
+            ->and($exception->errors()['attachments'][0])->toContain('10 MB');
+    }
+});
 
 function reportFile(ReportAssistantSession $session, string $name, string $bytes): Attachment
 {

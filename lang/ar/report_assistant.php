@@ -23,6 +23,6 @@ return [
         'what' => 'ما حدث', 'type' => 'نوع المخالفة', 'description' => 'الوصف', 'how' => 'كيف بدأ',
         'injuries' => 'الإصابات والأضرار', 'attachments' => 'المرفقات', 'no_attachments' => 'لا توجد مرفقات',
         'add_files' => 'أضف صوراً أو ملفات', 'change_files' => 'اختر ملفات أخرى', 'uploading' => 'جارٍ الرفع…',
-        'files_hint' => 'بريد، PDF، Word، صور أو فيديو (50 ميغابايت للفيديو، و10 ميغابايت لغيره)',
+        'files_hint' => 'EML وMSG وPDF وDOCX وJPG وJPEG وPNG وWEBP وMP4 وMOV (50 ميغابايت للفيديو، و10 ميغابايت لغيره)',
     ],
 ];

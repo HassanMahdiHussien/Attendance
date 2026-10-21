@@ -5,6 +5,9 @@
         $names = collect([$report->employee->name]);
     }
     $place = $report->location?->name ?? $report->place_freetext;
+    if (\App\Support\Reports\UnknownAnswer::matches((string) $place)) {
+        $place = null;
+    }
     [$label, $tone] = match ($report->status) {
         \App\Enums\ReportStatus::Received => [__('Received'), 'indigo'],
         \App\Enums\ReportStatus::UnderReview => [__('Under review'), 'amber'],
@@ -20,7 +23,7 @@
             @forelse($names->take(4) as $name)<span dir="auto" class="rounded border border-line bg-bg px-2 leading-relaxed">{{ $name }}</span>@empty<span class="text-gray-600">{{ __('Employees not named') }}</span>@endforelse
             @if($names->count() > 4)<span class="text-gray-600">+{{ $names->count() - 4 }}</span>@endif
         </div>
-        <p class="text-sm text-gray-600">@if($place)<bdi dir="auto">{{ $place }}</bdi> · @endif<bdi class="font-mono text-xs">{{ \App\Support\Format\Ui::date($report->occurred_at ?? $report->created_at) }}</bdi> · {{ __('Report') }} <bdi class="font-mono text-xs">{{ \App\Support\Format\Ui::number($report->id) }}</bdi></p>
+        <p class="text-sm text-gray-600">@if($place)<bdi dir="auto">{{ $place }}</bdi> · @endif<bdi class="font-mono text-xs">{{ \App\Support\Format\Ui::date($report->occurred_at ?? $report->created_at) }}</bdi> · {{ __('Report') }} <bdi class="font-mono text-xs">R-{{ str_pad((string) $report->report_number, 4, '0', STR_PAD_LEFT) }}</bdi></p>
     </div>
     <x-ui.badge :tone="$tone">{{ $label }}</x-ui.badge>
 </div>

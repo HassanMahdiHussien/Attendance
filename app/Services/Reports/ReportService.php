@@ -21,6 +21,7 @@ use App\Services\Cases\IncidentService;
 use App\Services\Employees\EmployeePicker;
 use App\Services\Intake\IntakeQuestionService;
 use App\Support\Access\ViolationReportVisibility;
+use App\Support\Reports\UnknownAnswer;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
@@ -29,6 +30,15 @@ class ReportService
 {
     public function submit(array $data, User $actor): ViolationReport
     {
+        foreach (['place_freetext' => 'place_unknown', 'occurred_at_text' => 'when_unknown'] as $field => $flag) {
+            if (is_string($data[$field] ?? null) && UnknownAnswer::matches($data[$field])) {
+                $data[$field] = null;
+                $data[$flag] = true;
+            }
+        }
+        if (UnknownAnswer::matches((string) ($data['alleged_responsible_person_freetext'] ?? ''))) {
+            $data['alleged_responsible_person_freetext'] = null;
+        }
         abort_unless($actor->is_active && $actor->company?->is_active
             && in_array($actor->primary_role, [UserRole::Reporter, UserRole::DeptManager], true), 403);
         $branchId = (int) $data['branch_id'];
@@ -46,8 +56,11 @@ class ReportService
             Employee::query()->where('company_id', $actor->company_id)->where('branch_id', $branchId)->where('is_active', true)->findOrFail($id);
         }
         $data['witnesses'] = app(EmployeePicker::class)->selections($actor, $branchId, $data['witnesses'] ?? [], true);
+        if (collect($data['witnesses'])->contains(fn (array $witness): bool => UnknownAnswer::matches($witness['name']))) {
+            throw ValidationException::withMessages(['witnesses' => __('Name a witness or choose none.')]);
+        }
         $data['free_employee_names'] = array_values(array_map(function ($name): string {
-            if (! is_string($name) || trim($name) === '' || mb_strlen(trim($name)) > 255) {
+            if (! is_string($name) || trim($name) === '' || mb_strlen(trim($name)) > 255 || UnknownAnswer::matches($name)) {
                 throw ValidationException::withMessages(['free_employee_names' => __('Choose a person or enter a name')]);
             }
 
@@ -56,13 +69,13 @@ class ReportService
         if ($employeeIds === [] && $data['free_employee_names'] === [] && ! ($data['employees_unknown'] ?? false)) {
             throw ValidationException::withMessages(['people.employees' => __('Name at least one person.')]);
         }
-        if (blank($data['description'] ?? null)) {
+        if (blank($data['description'] ?? null) || UnknownAnswer::matches((string) $data['description'])) {
             throw ValidationException::withMessages(['description' => __('Describe what happened in a few words.')]);
         }
-        if (blank($data['place_freetext'] ?? null) && empty($data['location_id'])) {
+        if (blank($data['place_freetext'] ?? null) && empty($data['location_id']) && ! ($data['place_unknown'] ?? false)) {
             throw ValidationException::withMessages(['place' => __('Enter where it happened or choose I do not know.')]);
         }
-        if (blank($data['occurred_at'] ?? null) && blank($data['occurred_at_text'] ?? null)) {
+        if (blank($data['occurred_at'] ?? null) && blank($data['occurred_at_text'] ?? null) && ! ($data['when_unknown'] ?? false)) {
             throw ValidationException::withMessages(['occurredAtText' => __('Enter when it happened or choose I do not know.')]);
         }
         if ($data['witnesses'] === [] && ! ($data['witnesses_none'] ?? false) && ! ($data['witnesses_unknown'] ?? false)) {
@@ -102,7 +115,7 @@ class ReportService
 
         return DB::transaction(function () use ($data, $actor, $branchId, $employeeIds, $session): ViolationReport {
             $report = ViolationReport::create(array_intersect_key($data, array_flip([
-                'employee_id', 'employees_unknown', 'location_id', 'place_freetext', 'occurred_at', 'occurred_at_text',
+                'employee_id', 'employees_unknown', 'location_id', 'place_freetext', 'place_unknown', 'occurred_at', 'occurred_at_text', 'when_unknown',
                 'witnesses_none', 'witnesses_unknown', 'summary', 'how_started', 'injuries_damage',
                 'violation_type', 'violation_type_id',
                 'alleged_responsible_employee_id', 'alleged_responsible_person_freetext', 'description', 'free_employee_names',

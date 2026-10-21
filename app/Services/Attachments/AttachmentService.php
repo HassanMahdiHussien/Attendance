@@ -48,9 +48,12 @@ class AttachmentService
             throw ValidationException::withMessages(['attachments' => __('messages.attachment.type_or_size_not_allowed')]);
         }
         $nameExtension = strtolower($file->getClientOriginalExtension());
+        if ($parent instanceof CaseFileIntake && in_array($nameExtension, ['mp4', 'mov'], true)) {
+            throw ValidationException::withMessages(['caseFiles' => __('messages.attachment.case_file_type_or_size_not_allowed')]);
+        }
         $sizeLimit = in_array($nameExtension, ['mp4', 'mov'], true) ? 50 : 10;
         if ($file->getSize() > $sizeLimit * 1024 * 1024) {
-            throw ValidationException::withMessages(['attachments' => __('messages.attachment.type_or_size_not_allowed')]);
+            throw ValidationException::withMessages([($parent instanceof CaseFileIntake ? 'caseFiles' : 'attachments') => __($parent instanceof CaseFileIntake ? 'messages.attachment.case_file_type_or_size_not_allowed' : 'messages.attachment.type_or_size_not_allowed')]);
         }
         $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($file->getRealPath());
         $extension = $kind === AttachmentKind::ReportEvidence && ! $parent instanceof EmailDraft
@@ -62,7 +65,7 @@ class AttachmentService
         if ($extension === null) {
             $message = $kind === AttachmentKind::ReportEvidence && ! $parent instanceof EmailDraft
                 ? 'messages.attachment.type_or_size_not_allowed' : 'messages.attachment.pdf_jpg_png_only';
-            throw ValidationException::withMessages(['attachments' => __($message)]);
+            throw ValidationException::withMessages([($parent instanceof CaseFileIntake ? 'caseFiles' : 'attachments') => __($parent instanceof CaseFileIntake ? 'messages.attachment.case_file_type_or_size_not_allowed' : $message)]);
         }
         $digest = hash_file('sha256', $file->getRealPath());
         $path = $parent instanceof EmailDraft

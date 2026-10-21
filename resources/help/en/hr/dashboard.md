@@ -16,6 +16,8 @@ What you need: HR or company administrator access with the **Dashboard** item vi
 
 Good to know:
 
+- New reports appear first in **Needs action** and have their own counter linking to the inbox.
+
 - Dashboard counts and patterns reflect the selected branch and period and the cases you can see.
 - An alert is a prompt to review the case; the case page shows the actual due events and recorded action. See [case board](help:hr/case-board) and [deadlines](help:rules/deadlines).
 - **Statistical reports** provides a separate preview and export workflow.
