@@ -9,6 +9,7 @@ use App\Livewire\Cases\Concerns\DraftsWithAi;
 use App\Models\DisciplinaryCase;
 use App\Models\Document;
 use App\Services\Documents\DocumentDrafts;
+use App\Services\Documents\DraftPreview;
 use App\Support\Access\CaseVisibility;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Gate;
@@ -30,6 +31,12 @@ class EditDocument extends Component
     public string $notice = '';
 
     public bool $manualEditing = false;
+
+    public ?string $previewToken = null;
+
+    public int $previewVersion = 0;
+
+    public bool $hasUnsavedChanges = false;
 
     public function mount(string $case, ?string $document = null): void
     {
@@ -63,6 +70,22 @@ class EditDocument extends Component
         $this->documentId = $document->id;
         $this->expectedStatus = $case->fresh()->status->value;
         $this->notice = __('messages.document.draft_saved');
+        $this->previewToken = null;
+        $this->hasUnsavedChanges = false;
+    }
+
+    public function updatedBodies(): void
+    {
+        $case = $this->currentCase();
+        $document = $this->documentId ? $case->documents()->findOrFail($this->documentId) : null;
+        if (! $document || $document->is_locked) {
+            return;
+        }
+        $this->validate(['bodies.*' => ['nullable', 'string', 'max:50000']]);
+        [$token, $dirty] = app(DraftPreview::class)->refresh($document, auth()->user(), $this->bodies);
+        $this->previewToken = $token;
+        $this->hasUnsavedChanges = $dirty;
+        $this->previewVersion++;
     }
 
     public function submit(DocumentDrafts $drafts): void
@@ -111,6 +134,8 @@ class EditDocument extends Component
     protected function loadAiBodies(Document $document): void
     {
         $this->bodies = $document->contents->pluck('body', 'language_code')->all();
+        $this->previewToken = null;
+        $this->hasUnsavedChanges = false;
     }
 
     private function currentCase(): DisciplinaryCase

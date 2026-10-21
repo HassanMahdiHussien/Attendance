@@ -22,7 +22,7 @@ class DocumentRenderer
         return $this->snapshot;
     }
 
-    public function render(Document $document, bool $draft = false): string
+    public function render(Document $document, bool $draft = false, ?array $contents = null): string
     {
         if ($document->is_locked) {
             $this->snapshot = $document->render_snapshot ?? [];
@@ -30,7 +30,7 @@ class DocumentRenderer
             return (string) $document->rendered_html;
         }
         $document->load(['contents', 'disciplinaryCase.employee', 'company']);
-        $this->citationGate->assertIssuable($document, $draft);
+        $this->citationGate->assertIssuable($document, $draft, $contents);
         $pages = [];
         $this->snapshot = ['renderer' => 'v1', 'template_versions' => [], 'template_ids' => [],
             'letterhead_versions' => [], 'letterhead_ids' => [], 'logo_sha256' => []];
@@ -39,10 +39,12 @@ class DocumentRenderer
         $languages = array_values(array_unique(array_merge(['ar', 'en'], $document->company->enabled_languages)));
         foreach ($languages as $language) {
             $content = $document->contents->firstWhere('language_code', $language);
-            if (! $content || blank($content->body)) {
+            $bodyText = $contents[$language]['body'] ?? $content?->body;
+            $secondaryText = $contents[$language]['secondary_body'] ?? $content?->secondary_body;
+            if (! $content || blank($bodyText)) {
                 throw new MissingDocumentFact("content.{$language}.body");
             }
-            if ($document->document_type === DocumentType::Recommendations && blank($content->secondary_body)) {
+            if ($document->document_type === DocumentType::Recommendations && blank($secondaryText)) {
                 throw new MissingDocumentFact("content.{$language}.secondary_body");
             }
             $letterhead = CompanyLetterhead::query()->where('company_id', $document->company_id)
@@ -71,9 +73,9 @@ class DocumentRenderer
             if ($letterhead->header_mode === 'image' && ! $headerImage) {
                 throw new MissingDocumentFact("letterhead.{$language}.header_image");
             }
-            $body = $this->formatter->format($this->citations->replace($document, $content->body, $language));
-            $secondary = $content->secondary_body === null ? null
-                : $this->formatter->format($this->citations->replace($document, $content->secondary_body, $language));
+            $body = $this->formatter->format($this->citations->replace($document, $bodyText, $language));
+            $secondary = $secondaryText === null ? null
+                : $this->formatter->format($this->citations->replace($document, $secondaryText, $language));
             $showCaseNumber = (bool) $document->company->show_case_number_on_letters;
             $pages[] = compact('language', 'letterhead', 'blocks', 'facts', 'extra', 'body', 'secondary', 'logo', 'headerImage', 'showCaseNumber')
                 + ['options' => array_replace($template['options'], ['header_mode' => $letterhead->header_mode]), 'type' => $document->document_type->value];
