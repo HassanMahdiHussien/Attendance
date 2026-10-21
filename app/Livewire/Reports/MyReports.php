@@ -20,7 +20,7 @@ class MyReports extends Component
         $this->mount();
 
         return view('livewire.reports.my-reports', [
-            'reports' => ViolationReportVisibility::for(auth()->user())->latest()->get(),
+            'reports' => ViolationReportVisibility::for(auth()->user())->with(['employees', 'employee', 'location'])->latest()->get(),
             'emails' => EmailDraftVisibility::for(auth()->user())->with('disciplinaryCase')->latest('received_at')->get(),
         ])->layout('layouts.workspace');
     }

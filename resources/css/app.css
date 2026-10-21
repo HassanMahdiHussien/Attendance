@@ -46,6 +46,12 @@
     .help-prose table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; }
     .help-prose th, .help-prose td { border: 1px solid var(--color-line); padding: .5rem; text-align: start; }
     .ui-card { @apply min-w-0 bg-white; border: 1px solid var(--color-line); border-radius: .75rem; box-shadow: 0 1px 2px rgb(14 26 43 / .05); }
+    /* The report assistant's typing indicator: motion only says "a reply is coming". */
+    .report-typing { display: inline-flex; gap: 4px; padding-block: .35rem; }
+    .report-typing i { width: 7px; height: 7px; border-radius: 9999px; background: #8A94A3; animation: report-typing 1.2s infinite ease-out; }
+    .report-typing i:nth-child(2) { animation-delay: .15s; }
+    .report-typing i:nth-child(3) { animation-delay: .3s; }
+    @media (prefers-reduced-motion: reduce) { .report-typing i { animation: none; opacity: .6; } }
     .ui-badge { @apply inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold leading-tight; }
     .ui-badge-red { @apply bg-red-light text-red; }
     .ui-badge-amber { @apply bg-signal-light text-amber; }
@@ -104,4 +110,9 @@
     html { scrollbar-color: #B8C1CD transparent; }
     :focus-visible { outline-color: var(--color-primary); }
     .font-mono { font-variant-numeric: tabular-nums; }
+}
+
+@keyframes report-typing {
+    0%, 60%, 100% { opacity: .25; transform: translateY(0); }
+    30% { opacity: 1; transform: translateY(-2px); }
 }

@@ -124,7 +124,7 @@ class CreateCase extends Component
                 ->map(fn ($e) => ['employee_id' => $e->id, 'name' => $e->name])->values()->all();
             $this->locationId = (string) $report->location_id;
             $this->place = (string) $report->place_freetext;
-            $this->violationTime = Carbon::parse($report->occurred_at)->format('Y-m-d\TH:i');
+            $this->violationTime = $report->occurred_at ? Carbon::parse($report->occurred_at)->format('Y-m-d\TH:i') : '';
             $this->violationType = $report->violation_type;
             $this->violationTypeId = (string) $report->violation_type_id;
             $this->description = $report->description;

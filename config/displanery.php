@@ -27,6 +27,7 @@ return [
         'max_message_bytes' => 25 * 1024 * 1024,
     ],
     'ai' => ['legal_reading_model' => env('LEGAL_READING_MODEL', 'claude-sonnet-5-5'),
+        'report_assistant_model' => env('REPORT_ASSISTANT_MODEL', 'claude-haiku-5-5'),
         'legal_reading_effort' => env('LEGAL_READING_EFFORT', 'low'),
         'reading_model' => env('SCAN_READING_MODEL', 'claude-opus-5-5'),
         'drafting_model' => env('DRAFTING_MODEL', 'claude-opus-5-5'),

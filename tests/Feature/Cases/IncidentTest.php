@@ -149,7 +149,7 @@ test('a reporter can name several branch employees while the legacy employee poi
     $report = app(ReportService::class)->submit([
         'branch_id' => $f['branch']->id, 'employee_ids' => $f['employees']->pluck('id')->all(),
         'occurred_at' => now(), 'violation_type' => 'Incident', 'description' => 'Shared report facts',
-        'place_freetext' => 'Office',
+        'place_freetext' => 'Office', 'witnesses_none' => true,
     ], $reporter);
 
     expect($report->employee_id)->toBe($f['employees'][0]->id)

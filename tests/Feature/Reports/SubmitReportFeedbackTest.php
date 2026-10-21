@@ -4,6 +4,7 @@ use App\Livewire\Reports\SubmitReport;
 use App\Models\Branch;
 use App\Models\BranchUser;
 use App\Models\Company;
+use App\Models\Employee;
 use App\Models\User;
 use App\Support\Tenancy\TenantContext;
 use Livewire\Livewire;
@@ -21,10 +22,12 @@ test('a sent report confirms itself and an unassigned reporter is told to ask HR
 
     $reporter = User::factory()->create(['company_id' => $company->id, 'primary_role' => 'reporter']);
     BranchUser::factory()->create(['company_id' => $company->id, 'branch_id' => $branch->id, 'user_id' => $reporter->id]);
+    $employee = Employee::factory()->create(['company_id' => $company->id, 'branch_id' => $branch->id]);
     $this->actingAs($reporter);
     Livewire::test(SubmitReport::class)
         ->assertDontSee($notice)
         ->set('branchId', (string) $branch->id)->set('place', 'Line 3')
+        ->call('addPerson', 'employees', $employee->id)->set('witnessesNone', true)
         ->set('occurredAt', '2026-10-09T03:00')->set('violationType', 'Fight')
         ->set('description', 'A fight occurred')
         ->call('submit')->assertHasNoErrors()->assertSet('reviewing', true)
@@ -38,9 +41,11 @@ test('report validation speaks Arabic with field names and refuses a future inci
     $branch = Branch::factory()->create(['company_id' => $company->id]);
     $reporter = User::factory()->create(['company_id' => $company->id, 'primary_role' => 'reporter', 'locale' => 'ar']);
     BranchUser::factory()->create(['company_id' => $company->id, 'branch_id' => $branch->id, 'user_id' => $reporter->id]);
+    // A second branch, because a reporter with a single branch has it chosen automatically.
+    BranchUser::factory()->create(['company_id' => $company->id, 'branch_id' => Branch::factory()->create(['company_id' => $company->id])->id, 'user_id' => $reporter->id]);
     $this->actingAs($reporter);
     app()->setLocale('ar');
-    $component = Livewire::test(SubmitReport::class)->call('submit')->assertHasErrors(['branchId', 'occurredAt', 'description']);
+    $component = Livewire::test(SubmitReport::class)->call('submit')->assertHasErrors(['branchId', 'description']);
     expect($component->errors()->first('branchId'))->toBe('حقل الفرع مطلوب.');
 
     Livewire::test(SubmitReport::class)

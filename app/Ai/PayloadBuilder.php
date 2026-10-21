@@ -5,6 +5,7 @@ namespace App\Ai;
 use App\Documents\IraqiDate;
 use App\Enums\DocumentType;
 use App\Exceptions\TransitionBlocked;
+use App\Models\Branch;
 use App\Models\CaseWitness;
 use App\Models\CommitteePoolMember;
 use App\Models\DisciplinaryCase;
@@ -21,6 +22,59 @@ use Illuminate\Support\Facades\DB;
 class PayloadBuilder
 {
     private array $restoration = [];
+
+    private array $reportEmployeeTokens = [];
+
+    public function reportConversation(int $companyId, User $reporter, array $transcript, ?int $branchId = null): array
+    {
+        $this->restoration = [];
+        $this->reportEmployeeTokens = [];
+        $index = 0;
+        foreach (Employee::query()->where('company_id', $companyId)
+            ->when($branchId !== null, fn ($query) => $query->orderByRaw('branch_id = ? DESC', [$branchId]))->get() as $employee) {
+            $token = '⟦employee_'.(++$index).'⟧';
+            $this->reportEmployeeTokens[$token] = (int) $employee->id;
+            foreach ([$employee->name, $employee->name_en, $employee->employee_code] as $name) {
+                if (trim((string) $name) !== '') {
+                    $this->restoration[$token] = $employee->name;
+                    $names[$name] ??= $token;
+                }
+            }
+        }
+        $branchIndex = 0;
+        foreach (Branch::query()->where('company_id', $companyId)->get() as $branch) {
+            if (trim((string) $branch->name) !== '') {
+                $token = '⟦branch_'.(++$branchIndex).'⟧';
+                $names[$branch->name] = $token;
+                $this->restoration[$token] = $branch->name;
+            }
+        }
+        if (trim((string) $reporter->name) !== '') {
+            $names[$reporter->name] = '⟦reporter⟧';
+            $this->restoration['⟦reporter⟧'] = $reporter->name;
+        }
+        $names = $names ?? [];
+        uksort($names, fn ($a, $b) => mb_strlen($b) <=> mb_strlen($a));
+
+        return array_map(function (array $line) use ($names): array {
+            $value = (string) ($line['text'] ?? '');
+            foreach ($names as $name => $token) {
+                $value = preg_replace('/(?<![\p{L}\p{M}])'.preg_quote($name, '/').'(?![\p{L}\p{M}])/iu', $token, $value);
+            }
+
+            $value = $this->minimize($value);
+            $value = preg_replace('/\b(?:salary|wage|راتب|الراتب|أجر)\s*[:=]?\s*\d[\d,.]*/iu', '⟦مبلغ⟧', $value);
+            $value = preg_replace('/\b\d[\d,.]*\s*(?:IQD|د\\.?ع|دينار|USD|\$)\b/iu', '⟦مبلغ⟧', $value);
+            $value = preg_replace('/\b(?:id|identifier|هوية|رقم وظيفي)\s*[:#-]?\s*\d+/iu', '⟦معرّف⟧', $value);
+
+            return ['role' => $line['role'], 'text' => $value];
+        }, $transcript);
+    }
+
+    public function reportEmployeeId(string $token): ?int
+    {
+        return $this->reportEmployeeTokens[$token] ?? null;
+    }
 
     public function minimizeIntake(array $input): array
     {
@@ -205,10 +259,19 @@ class PayloadBuilder
             // Whole words only: a short name such as "علي" must not rewrite part of "عليه".
             $value = preg_replace('/(?<![\p{L}\p{M}])'.preg_quote($name, '/').'(?![\p{L}\p{M}])/iu', $token, $value);
         }
+        // «13-10-2026» has a phone number's shape, and masking it hid the date from a reporter who wrote it
+        // three times. Dates are fenced off before the phone patterns run and put back afterwards.
+        $dates = [];
+        $value = preg_replace_callback('~(?<!\p{N})(?:\p{N}{1,2}[-/.]\p{N}{1,2}[-/.]\p{N}{4}|\p{N}{4}[-/.]\p{N}{1,2}[-/.]\p{N}{1,2})(?:\s+\p{N}{1,2}:\p{N}{2})?(?!\p{N})~u',
+            function (array $match) use (&$dates): string {
+                $dates[] = $match[0];
+
+                return "\u{E000}".(count($dates) - 1)."\u{E001}";
+            }, $value);
         $value = preg_replace('/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/u', '⟦بريد⟧', $value);
         $value = preg_replace('/(?<!\p{N})[+\p{N}][\p{N}\s()\-]{6,}\p{N}/u', '⟦رقم⟧', $value);
         $value = preg_replace('/[\p{N}]{7,}/u', '⟦رقم⟧', $value);
 
-        return $value;
+        return preg_replace_callback('/\x{E000}(\d+)\x{E001}/u', fn (array $match): string => $dates[(int) $match[1]], $value);
     }
 }

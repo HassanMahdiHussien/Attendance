@@ -27,9 +27,9 @@ class FakeClaudeClient implements BatchClient, ClaudeClient
         $this->responses[] = $response;
     }
 
-    public function structured(string $touchpoint, array $schema, array $messages, array $logContext, string $model, string $effort): array
+    public function structured(string $touchpoint, array $schema, array $messages, array $logContext, string $model, string $effort, array $options = []): array
     {
-        $this->requests[] = compact('touchpoint', 'schema', 'messages', 'logContext', 'model', 'effort');
+        $this->requests[] = compact('touchpoint', 'schema', 'messages', 'logContext', 'model', 'effort', 'options');
         $response = array_shift($this->responses);
         $log = AiGenerationLog::create([
             'company_id' => $logContext['company_id'] ?? null,
@@ -37,7 +37,9 @@ class FakeClaudeClient implements BatchClient, ClaudeClient
             'document_id' => $logContext['document_id'] ?? null,
             'actor_user_id' => $logContext['actor_user_id'] ?? null,
             'touchpoint' => $touchpoint, 'model' => $model,
-            'input' => json_encode((new SdkClaudeClient)->safeMessages($messages, $logContext['attachment_id'] ?? null), JSON_UNESCAPED_UNICODE),
+            'input' => json_encode((new SdkClaudeClient)->safeMessages(isset($options['system'])
+                ? [['role' => 'system', 'content' => $options['system']], ...$messages] : $messages,
+                $logContext['attachment_id'] ?? null), JSON_UNESCAPED_UNICODE),
             'output' => is_array($response) ? json_encode($response, JSON_UNESCAPED_UNICODE) : null,
             'status' => $response instanceof Throwable ? 'failed' : 'succeeded',
             'error' => $response instanceof Throwable ? $response->getMessage() : null,

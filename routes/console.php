@@ -75,6 +75,13 @@ Artisan::command('cases:archive-expired-appeals', function (): void {
 Schedule::command('cases:send-deadline-alerts')->hourly();
 Schedule::command('cases:archive-expired-appeals')->hourly();
 
+Artisan::command('reports:prune-assistant-drafts', function (): void {
+    DB::table('report_assistant_sessions')->whereNull('violation_report_id')
+        ->where('created_at', '<', now()->subDay())->delete();
+})->purpose('Remove abandoned report assistant drafts');
+
+Schedule::command('reports:prune-assistant-drafts')->dailyAt('03:00')->timezone('Asia/Baghdad');
+
 Schedule::command('backup:run')->dailyAt('01:00')->timezone('Asia/Baghdad')
     ->when(fn () => config('displanery.backups.enabled'))->withoutOverlapping();
 Schedule::command('backup:clean')->dailyAt('02:30')->timezone('Asia/Baghdad')

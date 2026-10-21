@@ -19,7 +19,26 @@ use Throwable;
 
 class SdkClaudeClient implements ClaudeClient
 {
-    public function structured(string $touchpoint, array $schema, array $messages, array $logContext, string $model, string $effort): array
+    /**
+     * Structured output rejects size keywords ("For 'array' type, property 'maxItems' is not supported"),
+     * which made every intake-question call fail with HTTP 400. Callers keep them as documentation and
+     * enforce the limits when validating the answer; only the copy sent to the API is stripped.
+     */
+    public static function apiSchema(array $schema): array
+    {
+        foreach (['maxItems', 'minItems', 'maxLength', 'minLength'] as $keyword) {
+            unset($schema[$keyword]);
+        }
+        foreach ($schema as $key => $value) {
+            if (is_array($value)) {
+                $schema[$key] = self::apiSchema($value);
+            }
+        }
+
+        return $schema;
+    }
+
+    public function structured(string $touchpoint, array $schema, array $messages, array $logContext, string $model, string $effort, array $options = []): array
     {
         $key = (string) config('services.anthropic.key');
         $started = microtime(true);
@@ -36,8 +55,10 @@ class SdkClaudeClient implements ClaudeClient
             // Streamed: a bilingual legal draft at high effort can run for minutes, longer than a
             // single blocking request should be held open.
             $stream = (new Client(apiKey: $key))->messages->createStream(
-                model: $model, maxTokens: 16000, messages: $messages,
-                outputConfig: ['effort' => $effort, 'format' => ['type' => 'json_schema', 'schema' => $schema]],
+                model: $model, maxTokens: $options['max_tokens'] ?? 16000, messages: $messages,
+                system: isset($options['system']) ? [['type' => 'text', 'text' => $options['system'],
+                    'cacheControl' => ['type' => 'ephemeral']]] : null,
+                outputConfig: ['effort' => $effort, 'format' => ['type' => 'json_schema', 'schema' => self::apiSchema($schema)]],
             );
             $accumulator = MessageAccumulator::forMessages();
             foreach ($stream as $event) {
@@ -71,7 +92,9 @@ class SdkClaudeClient implements ClaudeClient
                 'company_id' => $logContext['company_id'] ?? null, 'case_id' => $logContext['case_id'] ?? null,
                 'document_id' => $logContext['document_id'] ?? null, 'actor_user_id' => $logContext['actor_user_id'] ?? null,
                 'touchpoint' => $touchpoint, 'model' => $model,
-                'input' => json_encode($this->safeMessages($messages, $logContext['attachment_id'] ?? null), JSON_UNESCAPED_UNICODE), 'output' => $output,
+                'input' => json_encode($this->safeMessages(isset($options['system'])
+                    ? [['role' => 'system', 'content' => $options['system']], ...$messages] : $messages,
+                    $logContext['attachment_id'] ?? null), JSON_UNESCAPED_UNICODE), 'output' => $output,
                 'status' => $status, 'error' => $error, 'input_tokens' => $inputTokens,
                 'output_tokens' => $outputTokens, 'duration_ms' => (int) round((microtime(true) - $started) * 1000),
                 'created_at' => now(),

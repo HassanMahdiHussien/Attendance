@@ -39,7 +39,20 @@
                         @error('mapViolationTypeIds.'.$report->id)<p class="text-sm text-red-700">{{ $message }}</p>@enderror
                     @endif
                     <p dir="auto" class="text-sm text-gray-600">{{ $report->description }}</p>
+                    <dl class="grid gap-2 text-sm sm:grid-cols-2">
+                        <div><dt class="font-semibold">{{ __('Branch') }}</dt><dd>{{ $report->branch?->name }}</dd></div>
+                        <div><dt class="font-semibold">{{ __('Place if not listed') }}</dt><dd dir="auto">{{ $report->location?->name ?? $report->place_freetext ?? __('I do not know') }}</dd></div>
+                        <div><dt class="font-semibold">{{ __('Incident date and time') }}</dt><dd dir="auto">{{ $report->occurred_at ?? $report->occurred_at_text ?? __('I do not know') }}</dd></div>
+                        <div><dt class="font-semibold">{{ __('Witnesses') }}</dt><dd dir="auto">{{ $report->witnesses->pluck('name')->implode(' · ') ?: ($report->witnesses_none ? __('None') : ($report->witnesses_unknown ? __('I do not know') : '')) }}</dd></div>
+                        @if($report->alleged_responsible_employee_id || $report->alleged_responsible_person_freetext)<div><dt class="font-semibold">{{ __('Alleged responsible person') }}</dt><dd dir="auto">{{ $report->allegedResponsibleEmployee?->name ?? $report->alleged_responsible_person_freetext }}</dd></div>@endif
+                    </dl>
+                    @if($report->summary)<div class="rounded-lg bg-primary-light p-3"><h3 class="font-semibold">{{ __('Reporter summary') }}</h3><p dir="auto" class="whitespace-pre-line text-sm">{{ $report->summary }}</p></div>@endif
+                    @if($report->occurred_at_text)<p dir="auto" class="text-sm text-gray-600">{{ __('Date as reported') }}: {{ $report->occurred_at_text }}</p>@endif
+                    @if($report->how_started)<p dir="auto" class="text-sm text-gray-600">{{ __('How it started (optional)') }}: {{ $report->how_started }}</p>@endif
+                    @if($report->injuries_damage)<p dir="auto" class="text-sm text-gray-600">{{ __('Injuries or damage (optional)') }}: {{ $report->injuries_damage }}</p>@endif
+                    @if($report->assistantSession)<details class="rounded-lg border border-line p-3"><summary class="cursor-pointer font-semibold">{{ __('Full report conversation') }}</summary><div class="mt-3 space-y-2">@foreach($report->assistantSession->transcript as $line)<p dir="auto" class="whitespace-pre-line text-sm"><strong>{{ $line['role'] === 'reporter' ? __('Reporter') : __('Assistant') }}:</strong> {{ $line['text'] }}</p>@endforeach</div></details>@endif
                     @if($report->employees->isNotEmpty())<p class="text-sm text-gray-600">{{ __('Employees named in report') }}: {{ $report->employees->pluck('name')->implode(' · ') }}</p>@endif
+                    @if($report->employees_unknown)<p class="text-sm text-gray-600">{{ __('Employee identity') }}: {{ __('I do not know') }}</p>@endif
                     @if($report->free_employee_names)<p class="text-sm text-gray-600">{{ __('Names not in the employee list') }}: {{ implode(' · ', $report->free_employee_names) }}</p><x-ui.alert tone="amber">{{ __('Add employees to the list before opening a case') }}</x-ui.alert>@endif
                     @if($report->intakeQuestions->isNotEmpty())
                         <div class="space-y-1"><h3 class="font-semibold">{{ __('messages.intake.open_points') }}</h3>

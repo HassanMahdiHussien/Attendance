@@ -56,6 +56,16 @@ class EmployeePicker
         return $this->scope($actor, $branchId)->findOrFail($id);
     }
 
+    public function mentioned(User $actor, int $branchId, string $text): array
+    {
+        return $this->scope($actor, $branchId)->get(['id', 'name', 'name_en', 'employee_code'])
+            ->filter(fn (Employee $employee) => collect([$employee->name, $employee->name_en])
+                ->contains(fn ($name) => is_string($name) && mb_strlen($name) >= 3
+                    && mb_stripos($text, $name) !== false))
+            ->map(fn (Employee $employee) => ['id' => $employee->id, 'name' => $employee->name,
+                'name_en' => $employee->name_en, 'code' => $employee->employee_code])->values()->all();
+    }
+
     public function selections(User $actor, int $branchId, array $items, bool $allowFree): array
     {
         $result = [];

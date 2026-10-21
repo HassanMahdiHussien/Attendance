@@ -15,7 +15,7 @@ class CaseInsights
 {
     public function duplicateCandidates(DisciplinaryCase|ViolationReport $source): array
     {
-        if ($source->employee_id === null) {
+        if ($source->employee_id === null || ($source instanceof ViolationReport && $source->occurred_at === null)) {
             return ['cases' => collect(), 'reports' => collect()];
         }
         $when = CarbonImmutable::parse($source instanceof DisciplinaryCase ? $source->violation_time : $source->occurred_at);

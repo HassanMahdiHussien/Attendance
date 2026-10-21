@@ -37,6 +37,7 @@ use App\Models\LegalUnitApproval;
 use App\Models\Location;
 use App\Models\RegulationComparison;
 use App\Models\RegulationComparisonPair;
+use App\Models\ReportAssistantSession;
 use App\Models\ReportWitness;
 use App\Models\ResponseTranscription;
 use App\Models\Signature;
@@ -56,6 +57,7 @@ test('every tenant foreign key rejects a row from another company through models
         'branch_user' => BranchUser::class, 'committee_mandates' => CommitteeMandate::class,
         'committee_pool_members' => CommitteePoolMember::class, 'violation_reports' => ViolationReport::class,
         'report_witnesses' => ReportWitness::class, 'cases' => DisciplinaryCase::class,
+        'report_assistant_sessions' => ReportAssistantSession::class,
         'case_witnesses' => CaseWitness::class, 'case_events' => CaseEvent::class,
         'case_links' => CaseLink::class, 'case_link_annotations' => CaseLinkAnnotation::class,
         'committee_session_attendances' => CommitteeSessionAttendance::class,
