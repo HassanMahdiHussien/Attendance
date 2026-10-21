@@ -20,7 +20,7 @@
   - `hire_date` is the joining date for attendance; no new column.
 - **FR-002 Effective-dated history**:
   - New table `employee_versions`: one row per change, holding `company_id`, `employee_id`, `effective_from`, the full set of attendance-relevant values (`branch_id`, `department`, `work_pattern`, `rest_days`, `schedule_start`, `schedule_end`, `manager_employee_id`, `manager_name`), `changed_by`, `source` (`manual` | `import` | `chat`), and the `employee_import_batch_id` when it came from an upload.
-  - A service `EmployeeHistory::asOf(Employee, date)` returns the values in effect on that date. The `employees` row keeps the values in effect *today*, so all existing discipline code keeps working unchanged.
+  - A service `EmployeeHistory::asOf(Employee, date)` returns the values in effect on that date. The `employees` row keeps the values in effect *today*, so existing code — and Displanary after merge-back — keeps working unchanged.
   - A change dated in the past or future creates a version row; it never edits an existing version. A correction to a wrongly entered version creates a new version with a reason.
   - Each change raises an `EmployeeVersionChanged` event carrying the employee and the earliest affected date. No listener is added in this spec; spec 503 uses it to recalculate affected days.
   - Existing employees get one initial version, effective from their `hire_date`, in the migration.
@@ -36,11 +36,12 @@
   - An active employee missing from a full list gets `exit_status = pending_review` and appears in an HR "Exit review" list with the batch that raised it.
   - The proposed last working day is the employee's last recorded attendance date. Attendance data arrives in spec 502, so until then the field starts empty and HR enters a date.
   - HR confirms the last working day (or dismisses the review if the employee was left out by mistake). Confirming sets `exit_status = confirmed` and `last_working_day`; `is_active` becomes false after that date. History, cases and documents are untouched.
-  - Existing warnings still apply: an open disciplinary case and a linked user account are shown before confirmation.
+  - A linked user account is shown as a warning before confirmation (existing behaviour).
   - An employee who reappears in a later full list while `pending_review` is cleared automatically, with an audit entry.
 - **FR-005 Manual edits from the employee screens**: the Filament employee form gains the new fields and an "effective from" date (default today). Saving creates a version through the same service as the import. The employee page shows a short "Changes" history: date, field, before → after, by whom, source.
 - **FR-006 Permissions**: the same users who can import and edit employees today (`importEmployees` and the employee resource policy) can use the new fields, the full-list upload and exit review. No new role.
 - **FR-007 Audit**: every version, upload, exit-review decision and dismissal writes an `audit_logs` row with before/after values. `employee_versions` and `employee_import_batches` are append-only and protected by triggers, like the existing audit tables.
+- **FR-007b Merge-back log**: `employees`, the employee import and the employee screens are shared foundation code. Every edit to them is added to `docs/upstream/FOUNDATION-CHANGES.md`. `employee_versions` and `EmployeeHistory` are foundation (Displanary will need them too) and stay under `App\Models` / `App\Services\Employees`.
 - **FR-008 Language**: every new label, message, preview heading and validation message exists in `en` and `ar`. Screens are designed in English first (ADR 0014) and checked in Arabic RTL. Employee IDs, emails and times display LTR inside Arabic text.
 - **FR-009 Tests (Pest)**:
   - Tenant isolation for `employee_versions`, `employee_import_batches` and exit review (Company A cannot read or change Company B's rows).
@@ -51,7 +52,7 @@
   - Leading zeros and long numeric IDs survive CSV and `.xlsx`.
   - Changing `schedule_end` alone leaves `schedule_start`, `rest_days` and `work_pattern` unchanged.
   - The preview's counts and diffs equal what commit actually writes.
-  - Existing employee import, discipline and document tests still pass; translations (en + ar) complete; Pint and the full suite pass.
+  - Existing employee import tests still pass; translations (en + ar) complete; Pint and the full suite pass.
 
 ## Out of scope
 
@@ -60,4 +61,4 @@ Attendance transactions, devices, work-pattern policies and their defaults (502�
 ## Open for review
 
 - Real employee-file headers (ROADMAP Q6) — only the alias list depends on them.
-- `position` and `department` are required by today's import. The attendance employee file may not have `position`; proposed: keep the existing value when the column is missing, and allow it empty for employees created by a full list, flagged in the preview. Needs confirmation because discipline documents print the position.
+- `position` and `department` are required by today's import. The attendance employee file may not have `position`; proposed: keep the existing value when the column is missing, and allow it empty for employees created by a full list, flagged in the preview. Needs confirmation because Displanary's documents print the position after merge-back.
