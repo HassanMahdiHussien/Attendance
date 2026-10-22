@@ -16,7 +16,7 @@
 - [x] T009 Feature tests: PRD §25 6, 10, 11, 12; absences for employees without punches; outage rule and no reopen; back-dated rest day / policy changes; exit confirmation; isolation
 
 ## Step 3 — Screens
-- [ ] T010 Daily attendance, review queue, office policy, day detail; translations, UI inventory, route sweep, help article; Livewire tests + browser smoke test
+- [x] T010 Daily attendance, review queue, office policy, day detail; translations, UI inventory, route sweep, help article; Livewire tests + browser smoke test
 
 ## Step 4 — Verification (orchestrator)
 - [ ] T011 Real sample on the smoke DB, docs (WEIRDNESS, FOUNDATION-CHANGES), PR

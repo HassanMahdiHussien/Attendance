@@ -105,3 +105,42 @@ test('attendance screen labels for dynamic states and fields exist in both langu
             ->and(data_get($arabic, 'attendance_ui.'.$label))->not->toBeNull();
     }
 });
+
+test('office attendance dynamic labels exist in both languages', function (): void {
+    $english = File::getRequire(lang_path('en/messages.php'));
+    $arabic = File::getRequire(lang_path('ar/messages.php'));
+    $labels = [
+        ...array_map(fn (string $state): string => 'statuses.'.$state, [
+            'pending', 'present', 'missing_punch', 'absent', 'rest_day', 'not_employed', 'pattern_missing', 'device_outage',
+        ]),
+        ...array_map(fn (string $field): string => 'minutes.'.$field, [
+            'elapsed_minutes', 'presence_minutes', 'late_minutes', 'early_minutes',
+            'exit_minutes', 'short_minutes', 'balance_minutes',
+        ]),
+        ...array_map(fn (string $field): string => 'policy_fields.'.$field, [
+            'office_start', 'flex_minutes', 'workday_minutes', 'min_presence_minutes',
+            'close_grace_minutes', 'exits_count_toward_balance', 'office_rest_days',
+        ]),
+        ...array_map(fn (string $field): string => 'change_fields.'.$field, [
+            'work_date', 'branch_id', 'status', 'first_in', 'last_out', 'elapsed_minutes',
+            'presence_minutes', 'late_minutes', 'early_minutes', 'exit_minutes',
+            'short_minutes', 'balance_minutes', 'required_leave_at', 'intervals',
+            'exits', 'policy_id', 'inputs', 'reviewed',
+        ]),
+        ...array_map(fn (string $field): string => 'inputs.'.$field, [
+            'policy_version', 'work_pattern', 'hire_date', 'exit_status', 'last_working_day',
+            'branch_id', 'schedule_start', 'schedule_end', 'rest_days', 'reason',
+        ]),
+        ...array_map(fn (string $decision): string => 'decisions_list.'.$decision, [
+            'confirm_absence', 'withdraw_confirmation',
+        ]),
+        ...array_map(fn (int $day): string => 'weekdays.'.$day, range(1, 7)),
+        ...array_map(fn (string $trigger): string => 'triggers.'.$trigger, [
+            'punches', 'coverage', 'exit', 'employee', 'policy', 'review', 'pending', 'unknown',
+        ]),
+    ];
+    foreach ($labels as $label) {
+        expect(data_get($english, 'office_ui.'.$label))->not->toBeNull()
+            ->and(data_get($arabic, 'office_ui.'.$label))->not->toBeNull();
+    }
+});
