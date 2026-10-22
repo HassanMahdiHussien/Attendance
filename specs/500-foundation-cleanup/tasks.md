@@ -60,7 +60,7 @@ Phases 2–4 landed as one commit: Phase 2 alone could not pass the suite becaus
 
 ## Phase 6 — Verification (orchestrator)
 
-- [ ] T035 `migrate:fresh --seed` on the dev DB `attendance`
-- [ ] T036 Grep: no references to removed classes, tables, routes, translation keys
-- [ ] T037 Browser smoke test: platform admin creates company, branch and HR user; HR logs in, switches to Arabic, imports a CSV, opens an employee page, searches
+- [x] T035 `migrate:fresh --seed` (on `testing_attendance_smoke`: the dev DB `attendance` needs the product owner's sudo to create)
+- [x] T036 Grep: no references to removed classes, tables, routes, translation keys
+- [x] T037 Browser smoke test: HR logs in, sees the placeholder, lists employees, opens an employee page, searches, switches to Arabic (RTL), reaches users / CSV import / company settings, gets 403 on /platform; platform admin reaches the create-company form (first HR user). CSV upload and company creation are covered by the Pest suite, not clicked through
 - [ ] T038 Open PR
