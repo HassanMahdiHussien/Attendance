@@ -27,14 +27,20 @@ class LeaveImport
         $this->authorize($company);
         $sheet = $this->file->inspect($file);
         $mapping = $this->file->validateMapping($mapping, $sheet['headers']);
-        $counts = ['rows' => 0, 'errors' => 0, 'duplicates' => 0, 'unknown_employees' => 0, 'unmapped_types' => 0, 'new' => 0, 'changed' => 0, 'unchanged' => 0];
+        $counts = ['rows' => 0, 'errors' => 0, 'duplicates' => 0, 'unknown_employees' => 0,
+            'unmapped_types' => 0, 'invalid_dates' => 0, 'new' => 0, 'changed' => 0, 'unchanged' => 0];
         $samples = ['errors' => [], 'duplicates' => [], 'unknown' => []];
+        $statusCounts = array_fill_keys(['approved', 'pending', 'draft', 'rejected'], 0);
+        $typeCounts = [];
+        $unmappedTypeCounts = [];
+        $otherTypeCount = 0;
+        $missingFromFull = 0;
         $first = null;
         $last = null;
         $this->keys->open();
         try {
             $chunk = [];
-            $flush = function () use (&$chunk, &$counts, &$samples, $company): void {
+            $flush = function () use (&$chunk, &$counts, &$samples, &$unmappedTypeCounts, $company): void {
                 if ($chunk === []) {
                     return;
                 }
@@ -62,9 +68,11 @@ class LeaveImport
                 $seen = [];
                 foreach ($chunk as $row) {
                     $id = $row['external_id'];
+                    $firstObservation = false;
                     if ($id !== '') {
                         $key = hash('sha256', $id);
-                        if (! isset($new[$key]) || isset($seen[$key])) {
+                        $firstObservation = isset($new[$key]) && ! isset($seen[$key]);
+                        if (! $firstObservation) {
                             $counts['duplicates']++;
                             $this->sample($samples['duplicates'], ['row' => $row['number']], 50);
                         }
@@ -78,8 +86,15 @@ class LeaveImport
                     $mapped = $knownTypes->has($typeKey) ? (bool) $knownTypes->get($typeKey) : $this->types->suggested($typeKey)['mapped'];
                     if (! $mapped) {
                         $counts['unmapped_types']++;
+                        $label = $row['values']['type_name'].($row['values']['other_type_name'] === null
+                            ? '' : ' / '.$row['values']['other_type_name']);
+                        if (isset($unmappedTypeCounts[$label])) {
+                            $unmappedTypeCounts[$label]++;
+                        } elseif (count($unmappedTypeCounts) < 50) {
+                            $unmappedTypeCounts[$label] = 1;
+                        }
                     }
-                    if ($id !== '') {
+                    if ($firstObservation) {
                         $current = $existing->get($id);
                         if ($current === null) {
                             $counts['new']++;
@@ -109,6 +124,18 @@ class LeaveImport
                     $counts['errors']++;
                     $this->sample($samples['errors'], ['row' => $row['number'], 'codes' => $row['errors']], 50);
                 }
+                if (in_array('invalid_dates', $row['errors'], true)) {
+                    $counts['invalid_dates']++;
+                }
+                $statusCounts[$row['values']['status']]++;
+                $typeName = $row['values']['type_name'].($row['values']['other_type_name'] === null ? '' : ' / '.$row['values']['other_type_name']);
+                if (isset($typeCounts[$typeName])) {
+                    $typeCounts[$typeName]++;
+                } elseif (count($typeCounts) < 50) {
+                    $typeCounts[$typeName] = 1;
+                } else {
+                    $otherTypeCount++;
+                }
                 $date = $row['values']['start_date'];
                 if ($date !== null) {
                     $first = $first === null ? $date : min($first, $date);
@@ -120,16 +147,31 @@ class LeaveImport
                 }
             }
             $flush();
+            $scope = $this->scope($scope, $sheet['snapshot_at'], $first, $last);
+            if ($scope['scope'] === 'full') {
+                $missingFromFull = DB::table('leave_requests as requests')
+                    ->where('requests.company_id', $company->id)->where('requests.source', 'company_report')
+                    ->whereBetween('requests.start_date', [$scope['period_from'], $scope['period_to']])
+                    ->where('requests.latest_snapshot_at', '<=', $scope['snapshot_at'])
+                    ->whereNotExists(function ($query): void {
+                        $query->selectRaw('1')->from('attendance_preview_keys as seen')
+                            ->where('seen.category', 'leave')
+                            ->whereRaw('seen.fingerprint = SHA2(requests.external_id, 256)');
+                    })->count();
+            }
         } finally {
             $this->keys->close();
         }
-        $scope = $this->scope($scope, $sheet['snapshot_at'], $first, $last);
         $prior = ImportBatch::query()->where('company_id', $company->id)->where('file_sha256', $sheet['hash'])->first();
 
         return [
             'hash' => $sheet['hash'], 'headers' => $sheet['headers'], 'header_signature' => $sheet['header_signature'],
             'suggested_scope' => ['snapshot_at' => $sheet['snapshot_at'], 'period_from' => $first, 'period_to' => $last],
-            'scope' => $scope, 'counts' => $counts, 'samples' => $samples, 'already_imported' => $prior?->id,
+            'scope' => $scope, 'counts' => $counts + ['versions' => $counts['new'] + $counts['changed'],
+                'missing_from_full' => $missingFromFull], 'status_counts' => $statusCounts,
+            'type_counts' => $typeCounts, 'other_type_count' => $otherTypeCount,
+            'unmapped_type_counts' => $unmappedTypeCounts,
+            'samples' => $samples, 'already_imported' => $prior?->id,
             'token' => $prior === null ? $this->token($company, $sheet['hash'], $mapping, $scope) : null,
         ];
     }

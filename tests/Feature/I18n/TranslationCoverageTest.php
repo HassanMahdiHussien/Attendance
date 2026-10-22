@@ -3,6 +3,7 @@
 use App\Services\Attendance\TransactionFile;
 use App\Services\Employees\ColumnMapping;
 use App\Services\Employees\EmployeeHistory;
+use App\Services\Leave\LeaveFile;
 use Illuminate\Support\Facades\File;
 
 test('all UI translation keys exist in both catalogue layers and UI code contains no Arabic prose', function (): void {
@@ -142,5 +143,29 @@ test('office attendance dynamic labels exist in both languages', function (): vo
     foreach ($labels as $label) {
         expect(data_get($english, 'office_ui.'.$label))->not->toBeNull()
             ->and(data_get($arabic, 'office_ui.'.$label))->not->toBeNull();
+    }
+});
+
+test('leave screen dynamic labels exist in both languages', function (): void {
+    $english = File::getRequire(lang_path('en/messages.php'));
+    $arabic = File::getRequire(lang_path('ar/messages.php'));
+    $labels = [
+        ...array_map(fn (string $field): string => 'fields.'.$field, LeaveFile::FIELDS),
+        ...array_map(fn (string $field): string => 'fields.'.$field, ['employee_id', 'leave_type_id', 'status', 'flags']),
+        ...array_map(fn (string $status): string => 'statuses.'.$status, ['approved', 'pending', 'draft', 'rejected', 'cancelled']),
+        ...array_map(fn (string $state): string => 'states.'.$state, ['queued', 'processing', 'completed', 'failed']),
+        ...array_map(fn (string $failure): string => 'failures.'.$failure, ['invalid_file', 'stored_file_unavailable', 'processing_failed']),
+        ...array_map(fn (string $kind): string => 'target_kinds.'.$kind, ['absence', 'late', 'early', 'exit']),
+        ...array_map(fn (string $kind): string => 'decision_kinds.'.$kind, ['cancel', 'confirm_distribution', 'fix_dates', 'reverse_deduction', 'withdraw']),
+        ...array_map(fn (string $kind): string => 'consumes_values.'.$kind, ['none', 'rest_day_entitlement', 'overtime_or_credit']),
+        ...array_map(fn (string $kind): string => 'explanations.'.$kind, ['leave_same_day', 'leave_credit_applied', 'unknown']),
+        ...array_map(fn (string $kind): string => 'flags.'.$kind, ['unmapped_type', 'invalid_dates', 'duration_mismatch', 'missing_from_report', 'nothing_to_reconcile']),
+        ...array_map(fn (string $kind): string => 'issue_types.'.$kind, ['leave_unknown_employee', 'leave_invalid_dates', 'leave_unknown_status', 'leave_invalid_duration', 'leave_duration_mismatch', 'leave_request_missing', 'leave_with_attendance_nothing_to_reconcile']),
+        ...array_map(fn (string $kind): string => 'counts.'.$kind, ['rows', 'errors', 'duplicates', 'unknown_employees', 'unmapped_types', 'invalid_dates', 'new', 'changed', 'unchanged', 'versions', 'missing_from_full', 'requests', 'through_row']),
+        ...array_map(fn (string $kind): string => 'row_errors.'.$kind, ['required', 'too_long', 'invalid_dates', 'duration_mismatch', 'unknown_status', 'invalid_duration', 'missing_duration', 'column_count']),
+    ];
+    foreach ($labels as $label) {
+        expect(data_get($english, 'leave_ui.'.$label))->not->toBeNull()
+            ->and(data_get($arabic, 'leave_ui.'.$label))->not->toBeNull();
     }
 });

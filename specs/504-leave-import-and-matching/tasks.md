@@ -16,7 +16,7 @@
 - [x] T009 Tests: PRD §25 2, 13, 14, 15, 23; half-day on absence; 2.5-day distribution; mismatch; cancellation refill; HR reversal stickiness; day changes move allocations; replay idempotent; isolation
 
 ## Step 3 — Screens
-- [ ] T010 Leave upload, requests, request detail, leave types, credit ledger; day detail "Leave and reconciliation"; translations, UI inventory, route sweep, help; Livewire + browser smoke tests
+- [x] T010 Leave upload, requests, request detail, leave types, credit ledger; day detail "Leave and reconciliation"; translations, UI inventory, route sweep, help; Livewire + browser smoke tests
 
 ## Step 4 — Verification (orchestrator)
 - [ ] T011 Real leave sample on the smoke DB; docs; PR

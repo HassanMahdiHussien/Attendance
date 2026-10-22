@@ -12,6 +12,7 @@ use App\Livewire\Home;
 use App\Models\Attendance\ImportBatch;
 use App\Models\Company;
 use App\Models\EmployeeImportBatch;
+use App\Models\Leave\ImportBatch as LeaveImportBatch;
 use App\Services\AuditLogger;
 use Filament\Facades\Filament;
 use Illuminate\Http\RedirectResponse;
@@ -71,6 +72,18 @@ Route::middleware('auth')->group(function (): void {
 
         return Storage::disk('local')->download($record->file_path, $record->file_name);
     })->name('attendance.import.file');
+    Route::get('/admin/{company}/leave-imports/{leaveBatch}/file', function (Company $company, int $leaveBatch) {
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+        // A foreign tenant's URL must not reveal whether a batch exists.
+        abort_unless(auth()->user()->canAccessTenant($company), 404);
+        Filament::setTenant($company);
+        $record = LeaveImportBatch::query()->where('company_id', $company->id)->findOrFail($leaveBatch);
+        Gate::authorize('viewOriginal', $record);
+        abort_unless(Storage::disk('local')->exists($record->file_path), 404);
+        app(AuditLogger::class)->log('leave.import.file.downloaded', $record, ['batch_id' => $record->id]);
+
+        return Storage::disk('local')->download($record->file_path, $record->file_name);
+    })->name('leave.import.file');
     Route::post('/logout', function (Request $request): RedirectResponse {
         Auth::logout();
         $request->session()->invalidate();
