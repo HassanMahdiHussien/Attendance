@@ -6,6 +6,7 @@ use App\Enums\SequenceKey;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Employee;
+use App\Models\EmployeeImportBatch;
 use App\Models\User;
 use App\Services\AuditLogger;
 use App\Services\SequenceService;
@@ -15,11 +16,34 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class EmployeeImport
 {
     public function __construct(private CsvReader $reader, private SequenceService $sequences, private AuditLogger $audit, private EmployeeHistory $history) {}
+
+    public function inspect(Company $company, UploadedFile $file): array
+    {
+        Gate::authorize('importEmployees', $company);
+
+        return app(SpreadsheetReader::class)->read($file);
+    }
+
+    public function previewMapped(Company $company, UploadedFile $file, string $mode, string $effectiveDate, array $mapping): ImportPreview
+    {
+        Gate::authorize('importEmployees', $company);
+
+        return app(MappedEmployeeImport::class)->preview($company, $file, $mode, $effectiveDate, $mapping);
+    }
+
+    public function commitMapped(Company $company, UploadedFile $file, User $actor, string $mode, string $effectiveDate, array $mapping, string $token): array
+    {
+        Gate::authorize('importEmployees', $company);
+        abort_unless((int) auth()->id() === (int) $actor->id, 403);
+
+        return app(MappedEmployeeImport::class)->commit($company, $file, $actor, $mode, $effectiveDate, $mapping, $token);
+    }
 
     public function preview(Company $company, UploadedFile $file, bool $lock = false): ImportPreview
     {
@@ -128,12 +152,17 @@ class EmployeeImport
             throw ValidationException::withMessages(['sourceFile' => __('messages.employee_import.file_changed')]);
         }
 
+        $storedPath = null;
         try {
-            return DB::transaction(function () use ($company, $file, $actor, $expectedHash): array {
+            return DB::transaction(function () use ($company, $file, $actor, $expectedHash, &$storedPath): array {
                 Company::query()->whereKey($company->id)->lockForUpdate()->firstOrFail();
                 Gate::authorize('importEmployees', $company);
                 if (! hash_equals($expectedHash, hash_file('sha256', $file->getRealPath()))) {
                     throw ValidationException::withMessages(['sourceFile' => __('messages.employee_import.file_changed')]);
+                }
+                $prior = EmployeeImportBatch::query()->where('company_id', $company->id)->where('file_sha256', $expectedHash)->first();
+                if ($prior !== null) {
+                    return ['committed' => false, 'preview' => $this->preview($company, $file, true), 'alreadyImported' => true];
                 }
                 $preview = $this->preview($company, $file, true);
                 if (! hash_equals($expectedHash, $preview->hash)) {
@@ -142,6 +171,21 @@ class EmployeeImport
                 if ($preview->errors() > 0) {
                     return ['committed' => false, 'preview' => $preview];
                 }
+                $storedPath = Storage::disk('local')->putFileAs('employee-imports/'.$company->id, $file, bin2hex(random_bytes(16)).'.csv');
+                if ($storedPath === false) {
+                    throw ValidationException::withMessages(['sourceFile' => __('messages.employee_import.storage_failed')]);
+                }
+                $sheet = app(SpreadsheetReader::class)->read($file);
+                $batch = EmployeeImportBatch::create([
+                    'company_id' => $company->id, 'uploaded_by' => $actor->id, 'mode' => 'partial',
+                    'effective_date' => today()->toDateString(), 'file_path' => $storedPath,
+                    'file_name' => basename(str_replace('\\', '/', $file->getClientOriginalName())), 'file_sha256' => $preview->hash,
+                    'mapping' => app(ColumnMapping::class)->suggest($sheet['headers']),
+                    'counts' => ['new' => $preview->added(), 'changed' => count(array_filter($preview->rows, fn (array $row): bool => $row['diff'] !== [])),
+                        'unchanged' => count(array_filter($preview->rows, fn (array $row): bool => $row['diff'] === [] && $row['employee_id'] !== null)), 'missing' => 0],
+                    'summary' => ['codes' => array_values(array_filter(array_column(array_column($preview->rows, 'values'), 'employee_code'))),
+                        'changed_fields' => array_values(array_unique(Arr::flatten(array_column($preview->rows, 'diff'))))],
+                ]);
                 $used = Employee::withoutGlobalScopes()->where('company_id', $company->id)->pluck('employee_code')
                     ->mapWithKeys(fn (string $code): array => [$this->normalise($code) => true])->all();
                 foreach ($preview->rows as $row) {
@@ -155,7 +199,7 @@ class EmployeeImport
                         continue;
                     }
                     $employee = Employee::withoutGlobalScopes()->where('company_id', $company->id)->findOrFail($row['employee_id']);
-                    $this->history->record($employee, Arr::except($row['values'], ['employee_code']), today(), 'import', $actor);
+                    $this->history->record($employee, Arr::except($row['values'], ['employee_code']), today(), 'import', $actor, batchId: $batch->id);
                     if ($row['diff'] !== []) {
                         $changed[] = ['id' => $employee->id, 'fields' => $row['diff']];
                     }
@@ -178,6 +222,7 @@ class EmployeeImport
                         today(),
                         'import',
                         $actor,
+                        batchId: $batch->id,
                     );
                 }
                 $this->audit->log('employees.imported', $company, [
@@ -185,9 +230,12 @@ class EmployeeImport
                     'changed' => $changed,
                 ], $actor);
 
-                return ['committed' => true, 'preview' => $preview, 'added' => $preview->added(), 'updated' => $preview->updated()];
+                return ['committed' => true, 'preview' => $preview, 'added' => $preview->added(), 'updated' => $preview->updated(), 'batch' => $batch];
             });
         } catch (QueryException $exception) {
+            if ($storedPath !== null) {
+                Storage::disk('local')->delete($storedPath);
+            }
             if ((int) ($exception->errorInfo[1] ?? 0) !== 1062) {
                 throw $exception;
             }
@@ -198,6 +246,11 @@ class EmployeeImport
             }
 
             return ['committed' => false, 'preview' => $preview];
+        } catch (\Throwable $exception) {
+            if ($storedPath !== null) {
+                Storage::disk('local')->delete($storedPath);
+            }
+            throw $exception;
         }
     }
 

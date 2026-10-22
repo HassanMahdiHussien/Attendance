@@ -53,7 +53,7 @@ class EmployeeHistory
         return DB::transaction(function () use ($identity, $values, $effectiveFrom, $source, $actor, $reason, $batchId): Employee {
             $employee = Employee::create($identity);
             // Required identity fields need a present-day baseline even when a change starts in the future.
-            $this->record($employee, $this->valuesFrom($employee), today(), 'initial', $actor);
+            $this->record($employee, $this->valuesFrom($employee), today(), 'initial', $actor, batchId: $batchId);
             $this->record($employee, $values, $effectiveFrom, $source, $actor, $reason, $batchId);
 
             return $employee->fresh();
@@ -64,7 +64,7 @@ class EmployeeHistory
     {
         return DB::transaction(function () use ($employee, $values, $effectiveFrom, $source, $actor, $reason, $batchId): ?EmployeeVersion {
             $employee = Employee::query()->whereKey($employee->id)->lockForUpdate()->firstOrFail();
-            $this->ensureInitial($employee, $actor);
+            $this->ensureInitial($employee, $actor, $source === 'initial' ? $batchId : null);
             $date = CarbonImmutable::parse($effectiveFrom)->startOfDay();
             $before = $this->asOf($employee, $date);
             $changes = [];
@@ -131,7 +131,7 @@ class EmployeeHistory
         return $values;
     }
 
-    private function ensureInitial(Employee $employee, ?User $actor): void
+    private function ensureInitial(Employee $employee, ?User $actor, ?int $batchId): void
     {
         if ($employee->versions()->exists()) {
             return;
@@ -148,6 +148,7 @@ class EmployeeHistory
             'previous' => [],
             'source' => 'initial',
             'changed_by' => $actor?->id,
+            'employee_import_batch_id' => $batchId,
         ]);
         $this->audit->log('employee.version.recorded', $employee, [
             'effective_from' => $version->effective_from->toDateString(),

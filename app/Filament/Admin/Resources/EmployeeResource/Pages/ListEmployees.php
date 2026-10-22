@@ -14,7 +14,7 @@ class ListEmployees extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Action::make('importEmployees')->label(__('Import from CSV'))
+            Action::make('importEmployees')->label(__('messages.employee_import_ui.title'))
                 ->visible(fn (): bool => ImportEmployees::canAccess())
                 ->url(fn (): string => EmployeeResource::getUrl('import')),
             Action::make('exitReview')->label(__('Exit review'))

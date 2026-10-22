@@ -4,6 +4,7 @@ use App\Enums\UserRole;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Employee;
+use App\Models\EmployeeImportBatch;
 use App\Models\Location;
 use App\Models\User;
 use App\Support\Tenancy\TenantContext;
@@ -40,10 +41,12 @@ test('a company user cannot reach another company through any parameterised GET 
         $employee = Employee::factory()->create(['company_id' => $b->id, 'branch_id' => $branch->id, 'name' => $marker]);
         $user = User::factory()->create(['company_id' => $b->id, 'primary_role' => UserRole::HrStaff, 'name' => $marker]);
         $location = Location::factory()->create(['company_id' => $b->id, 'branch_id' => $branch->id]);
+        $batch = EmployeeImportBatch::factory()->create(['company_id' => $b->id, 'uploaded_by' => $user->id]);
         Storage::disk('local')->put('sweep/'.$marker.'.txt', $marker);
 
         return [
             'company' => $b->id, 'tenant' => $b->id, 'employee' => $employee->id,
+            'batch' => $batch->id,
             'path' => 'sweep/'.$marker.'.txt',
             // Help paths name shared static content, never a tenant record.
             'section' => 'missing', 'slug' => 'missing', 'locale' => 'xx', 'name' => 'missing',

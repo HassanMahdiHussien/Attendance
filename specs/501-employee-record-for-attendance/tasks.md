@@ -24,17 +24,17 @@ Each run ends green in WSL `~/attendance`: `php artisan test --compact` (Unit, F
 
 ## Run 2 — Import engine and import screen
 
-- [ ] T016 `SpreadsheetReader` (csv + xlsx, field-aware conversion)
-- [ ] T017 `ColumnMapping` + `config/employee_import.php` aliases (HC headers, Arabic aliases); saved mappings by header signature
-- [ ] T018 Preview: modes, effective date, mapping, new/changed/unchanged, missing employees, manager resolution, warnings, errors, already-imported
-- [ ] T019 Commit: confirmation token, hash idempotency, stored file, batch, versions, pending-review and reappearance, one transaction
-- [ ] T020 Original file download route + policy + audit
-- [ ] T021 Import page: upload → mapping step → preview → commit
-- [ ] T022 Help article, translations, UI inventory
-- [ ] T023 Tests: HC-shaped xlsx fixture generated with openspout, CSV, idempotency, preview == commit, missing employee never deactivated, reappearance, leading zeros / long IDs / serial dates / `#N/A`, download access, route sweep, browser import flow
+- [x] T016 `SpreadsheetReader` (csv + xlsx, field-aware conversion)
+- [x] T017 `ColumnMapping` + `config/employee_import.php` aliases (HC headers, Arabic aliases); saved mappings by header signature
+- [x] T018 Preview: modes, effective date, mapping, new/changed/unchanged, missing employees, manager resolution, warnings, errors, already-imported
+- [x] T019 Commit: confirmation token, hash idempotency, stored file, batch, versions, pending-review and reappearance, one transaction
+- [x] T020 Original file download route + policy + audit
+- [x] T021 Import page: upload → mapping step → preview → commit
+- [x] T022 Help article, translations, UI inventory
+- [x] T023 Tests: HC-shaped xlsx fixture generated with openspout, CSV, idempotency, preview == commit, missing employee never deactivated, reappearance, leading zeros / long IDs / serial dates / `#N/A`, download access, route sweep, browser import flow
 
 ## Run 3 — Docs and verification (orchestrator)
 
 - [ ] T024 `FOUNDATION-CHANGES.md`, `WEIRDNESS.md`
-- [ ] T025 Preview the real `HC.xlsx` on the dev DB; report counts, warnings and errors to the product owner before committing it
+- [x] T025 Preview the real `HC.xlsx` (smoke DB, not committed): 1,015 rows, 0 errors, 20 warnings (manager code not in the file), 995 manager links, all codes 8-digit text, 726 Arabic names + 289 English fallbacks
 - [ ] T026 Open PR

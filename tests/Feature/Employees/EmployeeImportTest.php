@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Employee;
+use App\Models\EmployeeImportBatch;
 use App\Models\EmployeeVersion;
 use App\Models\User;
 use App\Services\Employees\EmployeeImport;
@@ -172,7 +173,8 @@ test('legacy CSV commits create history and optional department and position do 
     expect($existing->fresh()->department)->toBe('Original department')
         ->and($existing->fresh()->position)->toBe('Original position')
         ->and(Employee::query()->where('employee_code', 'KEEP-2')->firstOrFail()->position)->toBeNull()
-        ->and(EmployeeVersion::query()->where('employee_id', $existing->id)->where('source', 'import')->exists())->toBeTrue();
+        ->and(EmployeeVersion::query()->where('employee_id', $existing->id)->where('source', 'import')->exists())->toBeTrue()
+        ->and(EmployeeImportBatch::query()->count())->toBe(1);
 });
 
 test('5,000 rows are accepted and 5,001 are rejected', function (): void {

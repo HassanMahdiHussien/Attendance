@@ -5,6 +5,7 @@ namespace App\Services\Employees;
 use App\Enums\EmployeeExitStatus;
 use App\Models\Company;
 use App\Models\Employee;
+use App\Models\EmployeeImportBatch;
 use App\Models\User;
 use App\Services\AuditLogger;
 use Carbon\CarbonImmutable;
@@ -25,9 +26,9 @@ class ExitReview
         return Employee::query()->where('company_id', $company->id)->where('exit_status', EmployeeExitStatus::PendingReview->value);
     }
 
-    public function start(Employee $employee, User $actor): void
+    public function start(Employee $employee, User $actor, ?EmployeeImportBatch $batch = null): void
     {
-        $this->decide($employee, $actor, function (Employee $employee): void {
+        $this->decide($employee, $actor, function (Employee $employee) use ($batch): void {
             if (! $employee->is_active) {
                 throw ValidationException::withMessages(['employee' => __('messages.exit_review.inactive')]);
             }
@@ -36,7 +37,19 @@ class ExitReview
             }
             $employee->exit_status = EmployeeExitStatus::PendingReview;
             $employee->last_working_day = null;
+            $employee->exit_review_batch_id = $batch?->id;
         }, 'started');
+    }
+
+    public function reappear(Employee $employee, EmployeeImportBatch $batch, User $actor): void
+    {
+        $this->decide($employee, $actor, function (Employee $employee): void {
+            if ($employee->exit_status !== EmployeeExitStatus::PendingReview) {
+                return;
+            }
+            $employee->exit_status = EmployeeExitStatus::None;
+            $employee->exit_review_batch_id = null;
+        }, 'reappeared', 'Included in import batch '.$batch->id);
     }
 
     public function confirm(Employee $employee, CarbonInterface|string $lastWorkingDay, User $actor): void
