@@ -156,6 +156,8 @@ return [
             'leave_invalid_duration' => 'Leave duration needs review',
             'leave_import_row_error' => 'Leave import row error',
             'leave_request_missing' => 'Request missing from a full leave report',
+            'leave_with_attendance_nothing_to_reconcile' => 'Approved leave meets attendance with no balance to reconcile',
+            'leave_duration_mismatch' => 'Leave duration does not match working days',
         ],
     ],
     'attendance_ui' => [
@@ -296,6 +298,18 @@ return [
         'already_imported' => 'This leave report has already been imported.',
         'storage_failed' => 'The original leave report could not be stored.',
         'request_reappeared' => 'The request reappeared in a later leave report.',
+    ],
+    'leave_reconciliation' => [
+        'invalid_distribution' => 'Choose valid working dates for this leave request.',
+        'invalid_dates' => 'Enter valid leave dates and a whole or half-day duration.',
+        'invalid_target' => 'Choose an absence, lateness, early departure or exit target.',
+        'no_deduction' => 'There is no current credit deduction to reverse on this day.',
+        'already_withdrawn' => 'This leave decision has already been withdrawn.',
+        'reason_required' => 'A reason is required.',
+        'invalid_mapping' => 'Choose a valid leave-type mapping and give a reason.',
+        'invalid_expiry' => 'Choose a valid credit expiry and give a reason.',
+        'distribution_resolved' => 'The leave distribution was confirmed or corrected.',
+        'issue_resolved' => 'The leave source or attendance day changed.',
     ],
     'locale' => [
         'arabic' => 'Arabic',

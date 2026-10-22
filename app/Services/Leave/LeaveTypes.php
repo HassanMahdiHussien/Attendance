@@ -2,15 +2,49 @@
 
 namespace App\Services\Leave;
 
+use App\Models\Attendance\DataIssue;
 use App\Models\Company;
+use App\Models\Leave\LeaveRequest;
 use App\Models\Leave\LeaveType;
+use App\Models\User;
 use App\Services\Attendance\DataIssues;
+use App\Services\AuditLogger;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
 
 class LeaveTypes
 {
-    public function __construct(private DataIssues $issues) {}
+    public function __construct(private DataIssues $issues, private AuditLogger $audit, private ReconciliationTriggers $triggers) {}
+
+    public function map(LeaveType $type, bool $covers, string $consumes, string $reason, User $actor): LeaveType
+    {
+        $company = Company::findOrFail($type->company_id);
+        abort_unless(auth()->id() === $actor->id && app(TenantContext::class)->companyId() === $company->id, 403);
+        Gate::forUser($actor)->authorize('manageLeave', $company);
+        if (trim($reason) === '' || ! in_array($consumes, ['none', 'rest_day_entitlement', 'overtime_or_credit'], true)) {
+            throw ValidationException::withMessages(['type' => __('messages.leave_reconciliation.invalid_mapping')]);
+        }
+
+        return DB::transaction(function () use ($type, $covers, $consumes, $reason, $actor, $company): LeaveType {
+            $type = LeaveType::query()->whereKey($type->id)->lockForUpdate()->firstOrFail();
+            $before = $type->only(['covers', 'consumes', 'is_mapped']);
+            $type->update(['covers' => $covers, 'consumes' => $consumes, 'is_mapped' => true, 'mapped_by' => $actor->id]);
+            $issue = DataIssue::query()->where('company_id', $company->id)
+                ->where('open_key', 'leave_type_unmapped|leave_type|type:'.$type->id)->first();
+            if ($issue !== null) {
+                $this->issues->resolve($issue, $actor, $reason);
+            }
+            $this->audit->log('leave.type.mapped', $type, ['before' => $before,
+                'after' => $type->only(['covers', 'consumes', 'is_mapped']), 'reason' => $reason], $actor);
+            $ids = LeaveRequest::query()->where('company_id', $company->id)->where('leave_type_id', $type->id)
+                ->whereNotNull('employee_id')->distinct()->pluck('employee_id')->all();
+            $this->triggers->dispatch($company->id, $ids, 'type_mapping');
+
+            return $type;
+        });
+    }
 
     public function key(string $name, ?string $otherName): string
     {

@@ -156,6 +156,8 @@ return [
             'leave_invalid_duration' => 'مدة الإجازة تحتاج إلى مراجعة',
             'leave_import_row_error' => 'خطأ في صف استيراد الإجازات',
             'leave_request_missing' => 'طلب مفقود من تقرير إجازات كامل',
+            'leave_with_attendance_nothing_to_reconcile' => 'إجازة معتمدة مع حضور دون رصيد يحتاج إلى تسوية',
+            'leave_duration_mismatch' => 'مدة الإجازة لا تطابق أيام العمل',
         ],
     ],
     'attendance_ui' => [
@@ -296,6 +298,18 @@ return [
         'already_imported' => 'تم استيراد تقرير الإجازات هذا مسبقاً.',
         'storage_failed' => 'تعذر حفظ تقرير الإجازات الأصلي.',
         'request_reappeared' => 'ظهر طلب الإجازة مجدداً في تقرير لاحق.',
+    ],
+    'leave_reconciliation' => [
+        'invalid_distribution' => 'اختر أيام عمل صحيحة لتوزيع طلب الإجازة.',
+        'invalid_dates' => 'أدخل تواريخ إجازة صحيحة ومدة بأيام كاملة أو أنصاف أيام.',
+        'invalid_target' => 'اختر الغياب أو التأخر أو المغادرة المبكرة أو الخروج.',
+        'no_deduction' => 'لا يوجد خصم حالي من الرصيد لإلغائه في هذا اليوم.',
+        'already_withdrawn' => 'تم سحب قرار الإجازة هذا مسبقاً.',
+        'reason_required' => 'يجب ذكر السبب.',
+        'invalid_mapping' => 'اختر تصنيف إجازة صحيحاً واذكر السبب.',
+        'invalid_expiry' => 'اختر مدة صلاحية صحيحة للرصيد واذكر السبب.',
+        'distribution_resolved' => 'تم تأكيد توزيع الإجازة أو تصحيحه.',
+        'issue_resolved' => 'تغير مصدر الإجازة أو يوم الحضور.',
     ],
     'locale' => [
         'arabic' => 'العربية',

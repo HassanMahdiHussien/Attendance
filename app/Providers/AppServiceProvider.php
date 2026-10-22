@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Enums\UserRole;
 use App\Events\AttendanceProcessed;
 use App\Events\CoverageChanged;
+use App\Events\DaysAssessed;
 use App\Events\EmployeeExitChanged;
 use App\Events\EmployeeVersionChanged;
 use App\Filament\Auth\LoginResponse;
@@ -14,6 +15,7 @@ use App\Models\Company;
 use App\Policies\Attendance\ImportBatchPolicy as AttendanceImportBatchPolicy;
 use App\Services\Attendance\AssessmentTriggers;
 use App\Services\Attendance\EmployeeChangeListener;
+use App\Services\Leave\ReconciliationTriggers;
 use App\Support\HealthPing;
 use App\Support\Tenancy\TenantContext;
 use Filament\Facades\Filament;
@@ -71,10 +73,15 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(EmployeeExitChanged::class, [AssessmentTriggers::class, 'employeeExitChanged']);
         Event::listen(AttendanceProcessed::class, [AssessmentTriggers::class, 'attendanceProcessed']);
         Event::listen(CoverageChanged::class, [AssessmentTriggers::class, 'coverageChanged']);
+        Event::listen(DaysAssessed::class, [ReconciliationTriggers::class, 'daysAssessed']);
         Gate::define('importEmployees', fn ($user, Company $company): bool => $user->is_active
             && in_array($user->primary_role, [UserRole::HrStaff, UserRole::PlatformAdmin], true)
             && Filament::getTenant() instanceof Company
             && (int) Filament::getTenant()->id === (int) $company->id
+            && $user->canAccessTenant($company));
+        Gate::define('manageLeave', fn ($user, Company $company): bool => $user->is_active
+            && in_array($user->primary_role, [UserRole::HrStaff, UserRole::PlatformAdmin], true)
+            && app(TenantContext::class)->companyId() === $company->id
             && $user->canAccessTenant($company));
         $this->app->bind(\Filament\Auth\Http\Responses\Contracts\LoginResponse::class, LoginResponse::class);
         foreach ([Login::class, Logout::class, Failed::class] as $event) {

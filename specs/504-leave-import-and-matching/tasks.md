@@ -10,10 +10,10 @@
 - [x] T005 Tests for step 1
 
 ## Step 2 — Distribution and reconciliation
-- [ ] T006 `DaysAssessed` event from `DayAssessor`; `ReconcileLeaveJob`; triggers
-- [ ] T007 `LeaveDistributor` (revision 6) and `Reconciler` (revisions 2–4) with explanations
-- [ ] T008 `LeaveActions`: cancel, confirm distribution, fix dates, reverse deduction, withdraw
-- [ ] T009 Tests: PRD §25 2, 13, 14, 15, 23; half-day on absence; 2.5-day distribution; mismatch; cancellation refill; HR reversal stickiness; day changes move allocations; replay idempotent; isolation
+- [x] T006 `DaysAssessed` event from `DayAssessor`; `ReconcileLeaveJob`; triggers
+- [x] T007 `LeaveDistributor` (revision 6) and `Reconciler` (revisions 2–4) with explanations
+- [x] T008 `LeaveActions`: cancel, confirm distribution, fix dates, reverse deduction, withdraw
+- [x] T009 Tests: PRD §25 2, 13, 14, 15, 23; half-day on absence; 2.5-day distribution; mismatch; cancellation refill; HR reversal stickiness; day changes move allocations; replay idempotent; isolation
 
 ## Step 3 — Screens
 - [ ] T010 Leave upload, requests, request detail, leave types, credit ledger; day detail "Leave and reconciliation"; translations, UI inventory, route sweep, help; Livewire + browser smoke tests

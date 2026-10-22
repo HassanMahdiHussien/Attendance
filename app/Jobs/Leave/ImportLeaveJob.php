@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Services\Attendance\DataIssues;
 use App\Services\Leave\LeaveFile;
 use App\Services\Leave\LeaveTypes;
+use App\Services\Leave\ReconciliationTriggers;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
@@ -72,6 +73,21 @@ class ImportLeaveJob implements ShouldBeUnique, ShouldQueue
                 if ($batch->scope === 'full') {
                     $this->missingFromFull($company, $batch, $issues);
                 }
+                $employeeIds = DB::table('leave_import_rows as rows')
+                    ->join('leave_requests as requests', function ($join): void {
+                        $join->on('requests.id', '=', 'rows.request_id')->on('requests.company_id', '=', 'rows.company_id');
+                    })
+                    ->where('rows.company_id', $company->id)->where('rows.batch_id', $batch->id)
+                    ->whereNotNull('requests.employee_id')->distinct()->pluck('requests.employee_id')->all();
+                $priorOwners = DB::table('leave_import_rows as rows')
+                    ->join('leave_request_versions as versions', function ($join): void {
+                        $join->on('versions.request_id', '=', 'rows.request_id')->on('versions.company_id', '=', 'rows.company_id');
+                    })
+                    ->where('rows.company_id', $company->id)->where('rows.batch_id', $batch->id)
+                    ->selectRaw("DISTINCT CAST(JSON_UNQUOTE(JSON_EXTRACT(`versions`.`values`, '$.employee_id')) AS UNSIGNED) AS employee_id")
+                    ->pluck('employee_id')->filter()->all();
+                $employeeIds = array_values(array_unique(array_merge($employeeIds, $priorOwners)));
+                app(ReconciliationTriggers::class)->dispatch($company->id, $employeeIds, 'import');
                 $this->event($batch, 'completed', [
                     'rows' => ImportRow::query()->where('batch_id', $batch->id)->count(),
                     'requests' => ImportRow::query()->where('batch_id', $batch->id)->whereNotNull('request_id')->distinct()->count('request_id'),
