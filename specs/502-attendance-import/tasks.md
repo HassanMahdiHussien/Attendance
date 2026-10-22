@@ -6,13 +6,13 @@ Each step ends green in WSL `~/attendance` (Unit, Feature, Browser, Pint). Every
 
 ## Step 1 — Schema and streaming import (runnable without processing)
 
-- [ ] T001 Migrations (`*_attendance_*`): devices, device settings, import batches, batch events, import mappings, transactions, transaction sources, people, coverage intervals, data issues; composite FKs; append-only triggers for batches, batch events, transactions, sources, device settings
-- [ ] T002 Models (`App\Models\Attendance`), factories, `config/attendance.php` (non-employee department patterns, cleanup gap, preview sample limit)
-- [ ] T003 `TransactionFile`: streaming read, header-row detection (skip title row), date/time parsing (strings and Excel serials) in Asia/Baghdad, export time from file name
-- [ ] T004 `TransactionImport::preview` (counts, bounded samples, duplicates in file and against stored, devices, unknown IDs, suggested coverage, errors) and `commit` (token, hash idempotency, file + batch, declared coverage intervals, `ImportTransactionsJob` after commit)
-- [ ] T005 `ImportTransactionsJob`: chunked, idempotent inserts of transactions (natural key) and sources (raw values per row), batch events with sequence, final counts from tables
-- [ ] T006 `DeviceRegistry::register` (pending device + suggested role/site), `PersonClassifier` (employee / non-employee / unknown by code and department label), `DataIssues` (open/resolve/dismiss, `open_key`)
-- [ ] T007 Tests: parsing, title row, export-time coverage, idempotent and overlapping uploads, raw values kept per source row, classification and issues, retry of a failed chunk, isolation, composite FKs, append-only triggers
+- [x] T001 Migrations (`*_attendance_*`): devices, device settings, import batches, batch events, import mappings, transactions, transaction sources, people, coverage intervals, data issues; composite FKs; append-only triggers for batches, batch events, transactions, sources, device settings
+- [x] T002 Models (`App\Models\Attendance`), factories, `config/attendance.php` (non-employee department patterns, cleanup gap, preview sample limit)
+- [x] T003 `TransactionFile`: streaming read, header-row detection (skip title row), date/time parsing (strings and Excel serials) in Asia/Baghdad, export time from file name
+- [x] T004 `TransactionImport::preview` (counts, bounded samples, duplicates in file and against stored, devices, unknown IDs, suggested coverage, errors) and `commit` (token, hash idempotency, file + batch, declared coverage intervals, `ImportTransactionsJob` after commit)
+- [x] T005 `ImportTransactionsJob`: chunked, idempotent inserts of transactions (natural key) and sources (raw values per row), batch events with sequence, final counts from tables
+- [x] T006 `DeviceRegistry::register` (pending device + suggested role/site), `PersonClassifier` (employee / non-employee / unknown by code and department label), `DataIssues` (open/resolve/dismiss, `open_key`)
+- [x] T007 Tests: parsing, title row, export-time coverage, idempotent and overlapping uploads, raw values kept per source row, classification and issues, retry of a failed chunk, isolation, composite FKs, append-only triggers
 
 ## Step 2 — Cleanup, meals and re-processing
 

@@ -1,6 +1,11 @@
 <?php
 
 use App\Models\AiGenerationLog;
+use App\Models\Attendance\DeviceSetting;
+use App\Models\Attendance\ImportBatch as AttendanceImportBatch;
+use App\Models\Attendance\ImportBatchEvent;
+use App\Models\Attendance\Transaction;
+use App\Models\Attendance\TransactionSource;
 use App\Models\AuditLog;
 use App\Models\Company;
 use App\Models\EmployeeImportBatch;
@@ -13,7 +18,9 @@ test('kept append-only triggers reject raw SQL updates and deletes', function ()
     $company = Company::factory()->create();
     app(TenantContext::class)->setCompany($company);
 
-    foreach ([AuditLog::factory()->create(), AiGenerationLog::factory()->create(), EmployeeImportBatch::factory()->create(), EmployeeVersion::factory()->create()] as $record) {
+    foreach ([AuditLog::factory()->create(), AiGenerationLog::factory()->create(), EmployeeImportBatch::factory()->create(), EmployeeVersion::factory()->create(),
+        DeviceSetting::factory()->create(), AttendanceImportBatch::factory()->create(), ImportBatchEvent::factory()->create(),
+        Transaction::factory()->create(), TransactionSource::factory()->create()] as $record) {
         $table = $record->getTable();
         $triggerCount = DB::table('information_schema.TRIGGERS')
             ->where('EVENT_OBJECT_SCHEMA', DB::getDatabaseName())

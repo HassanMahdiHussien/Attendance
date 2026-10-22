@@ -1,6 +1,16 @@
 <?php
 
 use App\Exceptions\TenantMismatch;
+use App\Models\Attendance\CoverageInterval;
+use App\Models\Attendance\DataIssue;
+use App\Models\Attendance\Device;
+use App\Models\Attendance\DeviceSetting;
+use App\Models\Attendance\ImportBatch as AttendanceImportBatch;
+use App\Models\Attendance\ImportBatchEvent;
+use App\Models\Attendance\ImportMapping as AttendanceImportMapping;
+use App\Models\Attendance\Person;
+use App\Models\Attendance\Transaction;
+use App\Models\Attendance\TransactionSource;
 use App\Models\Branch;
 use App\Models\BranchUser;
 use App\Models\Company;
@@ -16,6 +26,9 @@ use App\Support\Tenancy\TenantContext;
 dataset('tenant models', [
     Branch::class, Location::class, Employee::class, BranchUser::class,
     CompanySequence::class, EmployeeImportBatch::class, EmployeeImportMapping::class, EmployeeVersion::class,
+    Device::class, DeviceSetting::class, AttendanceImportBatch::class, ImportBatchEvent::class,
+    AttendanceImportMapping::class, Transaction::class, TransactionSource::class, Person::class,
+    CoverageInterval::class, DataIssue::class,
 ]);
 
 test('every kept tenant model isolates reads and builder writes and stamps creation', function (string $model): void {

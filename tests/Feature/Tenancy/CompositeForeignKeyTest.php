@@ -1,6 +1,16 @@
 <?php
 
 use App\Exceptions\TenantMismatch;
+use App\Models\Attendance\CoverageInterval;
+use App\Models\Attendance\DataIssue;
+use App\Models\Attendance\Device;
+use App\Models\Attendance\DeviceSetting;
+use App\Models\Attendance\ImportBatch as AttendanceImportBatch;
+use App\Models\Attendance\ImportBatchEvent;
+use App\Models\Attendance\ImportMapping as AttendanceImportMapping;
+use App\Models\Attendance\Person;
+use App\Models\Attendance\Transaction;
+use App\Models\Attendance\TransactionSource;
 use App\Models\Branch;
 use App\Models\BranchUser;
 use App\Models\Company;
@@ -21,6 +31,16 @@ test('every kept composite tenant foreign key rejects another company through mo
         'employees' => Employee::class,
         'employee_import_batches' => EmployeeImportBatch::class,
         'employee_versions' => EmployeeVersion::class,
+        'attendance_devices' => Device::class,
+        'attendance_device_settings' => DeviceSetting::class,
+        'attendance_import_batches' => AttendanceImportBatch::class,
+        'attendance_import_batch_events' => ImportBatchEvent::class,
+        'attendance_import_mappings' => AttendanceImportMapping::class,
+        'attendance_transactions' => Transaction::class,
+        'attendance_transaction_sources' => TransactionSource::class,
+        'attendance_people' => Person::class,
+        'attendance_coverage_intervals' => CoverageInterval::class,
+        'data_issues' => DataIssue::class,
         'branch_user' => BranchUser::class,
         'users' => User::class,
     ];
@@ -60,6 +80,20 @@ test('every kept composite tenant foreign key rejects another company through mo
         }
         if (isset($attributes['email'])) {
             $attributes['email'] = 'cross-'.$target->id.'@example.test';
+        }
+        // Copied rows must not collide on their own unique keys before MySQL reaches the foreign key check.
+        foreach (['serial_number', 'person_code', 'header_signature', 'open_key'] as $unique) {
+            if (isset($attributes[$unique])) {
+                $attributes[$unique] = 'CROSS-'.$key->foreign_column.'-'.$target->id;
+            }
+        }
+        if (isset($attributes['file_sha256'])) {
+            $attributes['file_sha256'] = hash('sha256', 'cross-'.$key->foreign_column.'-'.$target->id);
+        }
+        foreach (['row_number', 'sequence'] as $unique) {
+            if (isset($attributes[$unique])) {
+                $attributes[$unique] = 900000 + $target->id;
+            }
         }
 
         $context->runForCompany($a, function () use ($sourceClass, $attributes): void {
