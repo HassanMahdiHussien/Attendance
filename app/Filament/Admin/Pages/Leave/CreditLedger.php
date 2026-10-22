@@ -26,6 +26,10 @@ class CreditLedger extends LeavePage
 
     public string $settingReason = '';
 
+    public array $leaveCalendarRestDays = [5];
+
+    public string $calendarReason = '';
+
     public static function getNavigationLabel(): string
     {
         return __('messages.leave_ui.credits_title');
@@ -39,7 +43,9 @@ class CreditLedger extends LeavePage
     public function mount(): void
     {
         parent::mount();
-        $this->expiryDays = (string) (Setting::query()->where('company_id', $this->company()->id)->value('credit_expiry_days') ?? '');
+        $setting = Setting::query()->where('company_id', $this->company()->id)->first();
+        $this->expiryDays = (string) ($setting?->credit_expiry_days ?? '');
+        $this->leaveCalendarRestDays = $setting?->leave_calendar_rest_days ?? [5];
     }
 
     public function employees(): array
@@ -135,5 +141,14 @@ class CreditLedger extends LeavePage
         $settings->setCreditExpiry($this->company(), $this->expiryDays === '' ? null : (int) $this->expiryDays,
             $this->settingReason, auth()->user());
         $this->settingReason = '';
+    }
+
+    public function saveLeaveCalendar(LeaveSettings $settings): void
+    {
+        $this->validate(['leaveCalendarRestDays' => 'array', 'leaveCalendarRestDays.*' => 'integer|between:1,7',
+            'calendarReason' => 'required|string|max:2000']);
+        $settings->setLeaveCalendarRestDays($this->company(), array_map('intval', $this->leaveCalendarRestDays),
+            $this->calendarReason, auth()->user());
+        $this->calendarReason = '';
     }
 }

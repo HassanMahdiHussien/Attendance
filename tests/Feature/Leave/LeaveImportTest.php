@@ -14,6 +14,7 @@ use App\Models\Leave\LeaveRequest;
 use App\Models\Leave\LeaveType;
 use App\Models\Leave\RequestVersion;
 use App\Models\User;
+use App\Services\Employees\EmployeeHistory;
 use App\Services\Leave\LeaveFile;
 use App\Services\Leave\LeaveImport;
 use App\Support\Tenancy\TenantContext;
@@ -87,7 +88,7 @@ test('real report shape streams dates, statuses, types and bounded issues', func
     $mapping = $reader->suggest($sheet['headers']);
     $preview = app(LeaveImport::class)->preview($this->company, $file, $mapping, ['scope' => 'full']);
     expect($preview['counts']['rows'])->toBe(8)
-        ->and($preview['suggested_scope']['period_from'])->toBe('1970-01-01')
+        ->and($preview['suggested_scope']['period_from'])->toBe('2026-10-19')
         ->and(count($preview['samples']['errors']))->toBeLessThanOrEqual(50)
         ->and(LeaveRequest::count())->toBe(0);
     $batch = importLeaveSheet($file, ['scope' => 'full']);
@@ -169,7 +170,30 @@ test('unknown employee code is retained as text and raised for HR', function ():
     expect($request->owner_code)->toBe('00009999')
         ->and($request->employee_id)->toBeNull()
         ->and($request->flags)->toContain('unknown_employee')
-        ->and(DataIssue::query()->where('type', 'leave_unknown_employee')->count())->toBe(1);
+        ->and(DataIssue::query()->where('type', 'leave_unknown_employee')->count())->toBe(1)
+        ->and(DataIssue::query()->where('type', 'leave_unknown_employee')->firstOrFail()->subject_key)->toBe('owner:00009999');
+});
+
+test('unknown employee requests share one bounded issue and resolve after linking', function (): void {
+    $rows = [];
+    for ($number = 1; $number <= 22; $number++) {
+        $row = leaveRow('FORM-'.str_pad((string) $number, 2, '0', STR_PAD_LEFT));
+        $row[1] = '00009999';
+        $rows[] = $row;
+    }
+    importLeaveSheet(leaveSheet($rows));
+    $issue = DataIssue::query()->where('type', 'leave_unknown_employee')->sole();
+    expect($issue->subject_key)->toBe('owner:00009999')
+        ->and($issue->details['request_count'])->toBe(22)
+        ->and($issue->details['form_numbers'])->toHaveCount(20);
+
+    $employee = app(EmployeeHistory::class)->create(
+        ['company_id' => $this->company->id, 'branch_id' => $this->employee->branch_id,
+            'name' => 'Fake Later Employee', 'hire_date' => '2020-01-01', 'employee_code' => '00009999'],
+        [], '2020-01-01', 'manual', $this->actor,
+    );
+    expect(LeaveRequest::query()->where('owner_code', '00009999')->where('employee_id', $employee->id)->count())->toBe(22)
+        ->and($issue->fresh()->status)->toBe('resolved');
 });
 
 test('CSV import keeps a leading-zero employee code and a stable upload snapshot', function (): void {

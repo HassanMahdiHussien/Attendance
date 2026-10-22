@@ -18,6 +18,7 @@ use App\Policies\Leave\ImportBatchPolicy as LeaveImportBatchPolicy;
 use App\Services\Attendance\AssessmentTriggers;
 use App\Services\Attendance\EmployeeChangeListener;
 use App\Services\Leave\ReconciliationTriggers;
+use App\Services\Leave\UnknownEmployeeIssues;
 use App\Support\HealthPing;
 use App\Support\Tenancy\TenantContext;
 use Filament\Facades\Filament;
@@ -73,6 +74,7 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(BackupHasFailed::class, fn () => app(HealthPing::class)->failure('backup', 'Backup failed'));
         Event::listen(EmployeeVersionChanged::class, [EmployeeChangeListener::class, 'handle']);
         Event::listen(EmployeeVersionChanged::class, [AssessmentTriggers::class, 'employeeVersionChanged']);
+        Event::listen(EmployeeVersionChanged::class, [UnknownEmployeeIssues::class, 'employeeVersionChanged']);
         Event::listen(EmployeeExitChanged::class, [AssessmentTriggers::class, 'employeeExitChanged']);
         Event::listen(AttendanceProcessed::class, [AssessmentTriggers::class, 'attendanceProcessed']);
         Event::listen(CoverageChanged::class, [AssessmentTriggers::class, 'coverageChanged']);

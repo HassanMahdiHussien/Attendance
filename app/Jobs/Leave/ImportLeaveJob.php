@@ -15,6 +15,7 @@ use App\Services\Attendance\DataIssues;
 use App\Services\Leave\LeaveFile;
 use App\Services\Leave\LeaveTypes;
 use App\Services\Leave\ReconciliationTriggers;
+use App\Services\Leave\UnknownEmployeeIssues;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
@@ -73,6 +74,7 @@ class ImportLeaveJob implements ShouldBeUnique, ShouldQueue
                 if ($batch->scope === 'full') {
                     $this->missingFromFull($company, $batch, $issues);
                 }
+                app(UnknownEmployeeIssues::class)->refreshForBatch($company, $batch->id);
                 $employeeIds = DB::table('leave_import_rows as rows')
                     ->join('leave_requests as requests', function ($join): void {
                         $join->on('requests.id', '=', 'rows.request_id')->on('requests.company_id', '=', 'rows.company_id');
@@ -107,6 +109,7 @@ class ImportLeaveJob implements ShouldBeUnique, ShouldQueue
     {
         DB::transaction(function () use ($company, $batch, $chunk, $types, $issues): void {
             Company::query()->whereKey($company->id)->lockForUpdate()->firstOrFail();
+            $previousOwnerCodes = [];
             $codes = array_values(array_unique(array_filter(
                 array_column(array_column($chunk, 'values'), 'owner_code'),
                 fn (string $code): bool => $code !== '',
@@ -136,11 +139,11 @@ class ImportLeaveJob implements ShouldBeUnique, ShouldQueue
                     $firstInBatch = ! ImportRow::query()->where('batch_id', $batch->id)
                         ->where('request_id', $request->id)->exists();
                     if ($firstInBatch) {
+                        $previousOwnerCode = $request->owner_code;
                         $type = $values['type_name'] === '' ? null : $types->findOrSeed($company, $values['type_name'], $values['other_type_name']);
                         $employeeId = $employees->get($values['owner_code']);
                         if ($employeeId === null) {
                             $errors[] = 'unknown_employee';
-                            $issues->open($company, 'leave_unknown_employee', 'leave_request', 'request:'.$request->id);
                         }
                         if (in_array('invalid_dates', $errors, true)) {
                             $issues->open($company, 'leave_invalid_dates', 'leave_request', 'request:'.$request->id);
@@ -161,6 +164,9 @@ class ImportLeaveJob implements ShouldBeUnique, ShouldQueue
                             'created_on' => $values['created_on'], 'flags' => array_values(array_unique($errors)),
                         ];
                         $this->observe($request, $batch, $row, $parsed);
+                        if ($previousOwnerCode !== $request->owner_code) {
+                            $previousOwnerCodes[$previousOwnerCode] = true;
+                        }
                         $this->resolveReappearance($company, $request, $batch);
                     } else {
                         $errors[] = 'duplicate_in_file';
@@ -183,6 +189,9 @@ class ImportLeaveJob implements ShouldBeUnique, ShouldQueue
                 if ($rowIssue && $errors !== []) {
                     $issues->open($company, 'leave_import_row_error', 'batch_row', $batch->id.':'.$row['number'], details: ['codes' => $errors]);
                 }
+            }
+            foreach (array_keys($previousOwnerCodes) as $code) {
+                app(UnknownEmployeeIssues::class)->refresh($company, $code);
             }
             $this->event($batch, 'processing', ['through_row' => $chunk[array_key_last($chunk)]['number']]);
         });

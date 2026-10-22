@@ -137,7 +137,7 @@ class LeaveImport
                     $otherTypeCount++;
                 }
                 $date = $row['values']['start_date'];
-                if ($date !== null) {
+                if ($date !== null && ! in_array('invalid_dates', $row['errors'], true)) {
                     $first = $first === null ? $date : min($first, $date);
                     $last = $last === null ? $date : max($last, $date);
                 }

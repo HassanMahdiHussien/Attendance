@@ -211,6 +211,27 @@ test('changing credit expiry replays the employee and stops an expired deduction
     expect(Allocation::query()->whereNull('superseded_by_run_id')->count())->toBe(0);
 });
 
+test('changing the leave calendar re-distributes a source-counted Saturday without putting minutes on it', function (): void {
+    $request = LeaveRequest::factory()->create([
+        'company_id' => $this->company->id, 'employee_id' => $this->employee->id,
+        'owner_code' => $this->employee->employee_code, 'leave_type_id' => $this->type->id,
+        'external_id' => 'SATURDAY-COUNTED', 'status' => 'approved',
+        'start_date' => '2026-10-16', 'end_date' => '2026-10-21', 'duration_days' => 5.0,
+    ]);
+    replayLeave($this->company, $this->employee);
+    expect($request->fresh()->counting_method)->toBe('leave_calendar')
+        ->and(RequestDay::query()->whereNull('superseded_by_run_id')->orderBy('work_date')->get()
+            ->map(fn (RequestDay $day): string => $day->work_date->toDateString())->all())
+        ->toBe(['2026-10-18', '2026-10-19', '2026-10-20', '2026-10-21']);
+
+    app(LeaveSettings::class)->setLeaveCalendarRestDays($this->company, [5, 6], 'Company calendar changed', $this->actor);
+    Queue::assertPushed(ReconcileLeaveJob::class);
+    replayLeave($this->company, $this->employee);
+    expect($request->fresh()->counting_method)->toBeNull()
+        ->and(RequestDay::query()->whereNull('superseded_by_run_id')->count())->toBe(0)
+        ->and(DataIssue::query()->where('type', 'leave_duration_mismatch')->where('status', 'open')->count())->toBe(1);
+});
+
 test('a two and a half day request distributes across working days and skips Friday', function (): void {
     LeaveRequest::factory()->create([
         'company_id' => $this->company->id, 'employee_id' => $this->employee->id,

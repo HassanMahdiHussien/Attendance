@@ -115,6 +115,9 @@ class LeaveRequestDetail extends LeavePage
             ->where(function ($query) use ($request): void {
                 $query->where(function ($requests) use ($request): void {
                     $requests->where('subject_type', 'leave_request')->where('subject_key', 'request:'.$request->id);
+                })->orWhere(function ($owners) use ($request): void {
+                    $owners->where('type', 'leave_unknown_employee')->where('subject_type', 'employee_code')
+                        ->where('subject_key', 'owner:'.$request->owner_code);
                 })->orWhere(function ($days) use ($request): void {
                     $days->where('subject_type', 'leave_request_day')
                         ->where('subject_key', 'like', '%:request_day:'.$request->id.'|%');

@@ -92,10 +92,21 @@ class Reconciler
             }
         }
         $plannedDays = [];
+        $setting = Setting::query()->where('company_id', $company->id)->first();
+        $leaveCalendarRestDays = $setting?->leave_calendar_rest_days ?? [5];
+        $methodsChanged = false;
         foreach ($requests as $request) {
             $requestDecisions = $byRequest->get($request->id, collect());
             if ($request->status !== 'approved' || ! $request->leaveType?->covers || ! $request->leaveType->is_mapped
                 || $requestDecisions->contains('decision', 'cancel')) {
+                if ($request->counting_method !== null) {
+                    $this->audit->log('leave.distribution.method_changed', $request, [
+                        'before' => $request->counting_method, 'after' => null,
+                    ]);
+                    $request->update(['counting_method' => null]);
+                    $methodsChanged = true;
+                }
+
                 continue;
             }
             $values = [
@@ -109,10 +120,25 @@ class Reconciler
             }
             if (in_array('invalid_dates', $request->flags ?? [], true)
                 && ! $requestDecisions->contains('decision', 'fix_dates')) {
+                if ($request->counting_method !== null) {
+                    $this->audit->log('leave.distribution.method_changed', $request, [
+                        'before' => $request->counting_method, 'after' => null,
+                    ]);
+                    $request->update(['counting_method' => null]);
+                    $methodsChanged = true;
+                }
+
                 continue;
             }
             $confirmation = $requestDecisions->last(fn (RequestDecision $decision): bool => $decision->decision === 'confirm_distribution')?->values;
-            $distribution = $this->distributor->distribute($values, $versions, $policies, $confirmation);
+            $distribution = $this->distributor->distribute($values, $versions, $policies, $confirmation, $leaveCalendarRestDays);
+            if ($request->counting_method !== $distribution['counting_method']) {
+                $this->audit->log('leave.distribution.method_changed', $request, [
+                    'before' => $request->counting_method, 'after' => $distribution['counting_method'],
+                ]);
+                $request->update(['counting_method' => $distribution['counting_method']]);
+                $methodsChanged = true;
+            }
             $mismatchKey = 'leave_duration_mismatch|leave_request|request:'.$request->id;
             if ($distribution['flag'] === 'duration_mismatch') {
                 $this->issues->open($company, 'leave_duration_mismatch', 'leave_request', 'request:'.$request->id);
@@ -164,7 +190,6 @@ class Reconciler
             ->whereNull('superseded_by_run_id')->get();
         $oldAllocations = Allocation::query()->where('company_id', $company->id)->where('employee_id', $employee->id)
             ->whereNull('superseded_by_run_id')->get();
-        $setting = Setting::query()->where('company_id', $company->id)->first();
         $expiry = $setting?->credit_expiry_days;
         $sourceDays = [];
         foreach ($plannedDays as $day) {
@@ -191,7 +216,7 @@ class Reconciler
                     'note' => __('messages.leave_reconciliation.issue_resolved'), 'resolved_at' => now()]);
                 $this->audit->log('leave.issue.resolved', $issue, ['type' => $issue->type, 'subject_key' => $issue->subject_key]);
             });
-        if ($sameDays && $this->sameLedger($plan, $oldCredits, $oldAllocations, $oldDays)) {
+        if (! $methodsChanged && $sameDays && $this->sameLedger($plan, $oldCredits, $oldAllocations, $oldDays)) {
             return false;
         }
         $oldAllocations->each(fn (Allocation $allocation) => $allocation->update(['superseded_by_run_id' => $run->id]));

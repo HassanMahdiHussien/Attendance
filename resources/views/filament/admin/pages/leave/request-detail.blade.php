@@ -8,6 +8,7 @@
                 <p>{{ __('messages.leave_ui.type') }}: {{ $request->leaveType?->name ?? '—' }}</p>
                 <p>{{ __('messages.leave_ui.dates') }}: <bdi dir="ltr">{{ $effective['start_date'] }} – {{ $effective['end_date'] }}</bdi></p>
                 <p>{{ __('messages.leave_ui.duration') }}: <bdi dir="ltr">{{ $effective['duration_days'] ?? '—' }}</bdi></p>
+                <p>{{ __('messages.leave_ui.counting_method') }}: {{ $request->counting_method === null ? '—' : __('messages.leave_ui.counting_methods.'.$request->counting_method) }}</p>
                 <p>{{ __('messages.leave_ui.approver') }}: {{ $request->approver_name ?? '—' }}</p>
                 <p>{{ __('messages.leave_ui.snapshot_at') }}: <bdi dir="ltr">{{ $request->latest_snapshot_at?->format('Y-m-d H:i:s') }}</bdi></p>
             </div>

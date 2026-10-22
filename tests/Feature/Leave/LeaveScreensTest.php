@@ -176,6 +176,9 @@ test('credit ledger changes expiry and reverses a current deduction', function (
     $decision = RequestDecision::query()->where('decision', 'reverse_deduction')->sole();
     Livewire::test(CreditLedger::class)->set('employeeId', (string) $this->employee->id)
         ->set('reason', 'Correction withdrawn')->call('withdraw', $decision->id)->assertHasNoErrors();
+    Livewire::test(CreditLedger::class)->assertSee(__('messages.leave_ui.leave_calendar_settings'))
+        ->set('leaveCalendarRestDays', [5, 6])->set('calendarReason', 'Company calendar')
+        ->call('saveLeaveCalendar')->assertHasNoErrors();
 });
 
 test('day detail renders leave reconciliation explanations in English and Arabic', function (): void {

@@ -12,7 +12,14 @@ class Setting extends Model
 
     protected $table = 'leave_settings';
 
+    protected $attributes = ['leave_calendar_rest_days' => '[5]'];
+
     protected $guarded = [];
+
+    protected function casts(): array
+    {
+        return ['leave_calendar_rest_days' => 'array'];
+    }
 
     protected array $companyUserKeys = ['updated_by'];
 }

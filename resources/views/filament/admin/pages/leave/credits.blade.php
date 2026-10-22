@@ -34,5 +34,17 @@
                 <x-filament::button type="submit">{{ __('messages.leave_ui.save') }}</x-filament::button></form>
             @error('expiryDays') <p class="text-red-600">{{ $message }}</p> @enderror @error('settingReason') <p class="text-red-600">{{ $message }}</p> @enderror
         </x-ui.card>
+        <x-ui.card :title="__('messages.leave_ui.leave_calendar_settings')">
+            <form wire:submit="saveLeaveCalendar" class="space-y-3">
+                <p>{{ __('messages.leave_ui.leave_calendar_rest_days') }}</p>
+                <div class="flex flex-wrap gap-3">@foreach (__('messages.office_ui.weekdays') as $number => $label)
+                    <label><input type="checkbox" value="{{ $number }}" wire:model="leaveCalendarRestDays"> {{ $label }}</label>
+                @endforeach</div>
+                <label>{{ __('messages.leave_ui.reason') }} <input type="text" wire:model="calendarReason" class="rounded-xl border border-gray-200 p-2"></label>
+                <x-filament::button type="submit">{{ __('messages.leave_ui.save') }}</x-filament::button>
+            </form>
+            @error('leaveCalendarRestDays') <p class="text-red-600">{{ $message }}</p> @enderror
+            @error('calendarReason') <p class="text-red-600">{{ $message }}</p> @enderror
+        </x-ui.card>
     </div>
 </x-filament-panels::page>
