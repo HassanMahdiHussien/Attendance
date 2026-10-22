@@ -3,12 +3,16 @@
 namespace App\Providers;
 
 use App\Enums\UserRole;
+use App\Events\AttendanceProcessed;
+use App\Events\CoverageChanged;
+use App\Events\EmployeeExitChanged;
 use App\Events\EmployeeVersionChanged;
 use App\Filament\Auth\LoginResponse;
 use App\Listeners\AuditAuthEvents;
 use App\Models\Attendance\ImportBatch;
 use App\Models\Company;
 use App\Policies\Attendance\ImportBatchPolicy as AttendanceImportBatchPolicy;
+use App\Services\Attendance\AssessmentTriggers;
 use App\Services\Attendance\EmployeeChangeListener;
 use App\Support\HealthPing;
 use App\Support\Tenancy\TenantContext;
@@ -63,6 +67,10 @@ class AppServiceProvider extends ServiceProvider
         });
         Event::listen(BackupHasFailed::class, fn () => app(HealthPing::class)->failure('backup', 'Backup failed'));
         Event::listen(EmployeeVersionChanged::class, [EmployeeChangeListener::class, 'handle']);
+        Event::listen(EmployeeVersionChanged::class, [AssessmentTriggers::class, 'employeeVersionChanged']);
+        Event::listen(EmployeeExitChanged::class, [AssessmentTriggers::class, 'employeeExitChanged']);
+        Event::listen(AttendanceProcessed::class, [AssessmentTriggers::class, 'attendanceProcessed']);
+        Event::listen(CoverageChanged::class, [AssessmentTriggers::class, 'coverageChanged']);
         Gate::define('importEmployees', fn ($user, Company $company): bool => $user->is_active
             && in_array($user->primary_role, [UserRole::HrStaff, UserRole::PlatformAdmin], true)
             && Filament::getTenant() instanceof Company

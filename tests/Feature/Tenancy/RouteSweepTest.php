@@ -100,6 +100,10 @@ test('a company user cannot reach another company through any parameterised GET 
             }
         });
 
+    // The detail page carries its record in query parameters rather than in the route path.
+    $dayDetail = $this->get('/admin/'.$a->id.'/attendance/day?employee='.$records['employee'].'&date='.today()->toDateString());
+    expect($dayDetail->getStatusCode())->toBe(404);
+
     // A filter change must not silently remove every tenant route from the sweep.
     expect($visited)->toBeGreaterThan(10)
         ->and(array_values(array_unique($unmapped)))->toBe([])

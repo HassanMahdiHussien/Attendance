@@ -3,6 +3,7 @@
 namespace App\Services\Employees;
 
 use App\Enums\EmployeeExitStatus;
+use App\Events\EmployeeExitChanged;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\EmployeeImportBatch;
@@ -61,6 +62,7 @@ class ExitReview
             $employee->last_working_day = $date;
             $employee->is_active = $date >= today()->toDateString();
         }, 'confirmed');
+        event(new EmployeeExitChanged($employee->fresh(), $date));
     }
 
     public function dismiss(Employee $employee, User $actor, string $reason): void
@@ -68,12 +70,14 @@ class ExitReview
         if (trim($reason) === '') {
             throw ValidationException::withMessages(['reason' => __('messages.exit_review.reason_required')]);
         }
+        $from = $employee->last_working_day?->toDateString() ?? today()->toDateString();
         $this->decide($employee, $actor, function (Employee $employee): void {
             abort_unless($employee->exit_status === EmployeeExitStatus::PendingReview, 422);
             $employee->exit_status = EmployeeExitStatus::None;
             $employee->last_working_day = null;
             $employee->exit_review_batch_id = null;
         }, 'dismissed', $reason);
+        event(new EmployeeExitChanged($employee->fresh(), $from));
     }
 
     public function applyDue(Employee $employee): bool

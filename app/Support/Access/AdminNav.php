@@ -6,6 +6,9 @@ use App\Filament\Admin\Pages\Attendance\AttendanceBatches;
 use App\Filament\Admin\Pages\Attendance\AttendanceDevices;
 use App\Filament\Admin\Pages\Attendance\AttendanceIssues;
 use App\Filament\Admin\Pages\Attendance\AttendancePunches;
+use App\Filament\Admin\Pages\Attendance\DailyAttendance;
+use App\Filament\Admin\Pages\Attendance\OfficePolicyPage;
+use App\Filament\Admin\Pages\Attendance\ReviewQueue;
 use App\Filament\Admin\Pages\Attendance\UploadAttendance;
 use App\Filament\Admin\Pages\CompanySettings;
 use App\Filament\Admin\Resources\BranchResource;
@@ -32,6 +35,9 @@ class AdminNav
         [AttendanceDevices::class, 'settings', 'heroicon-o-device-phone-mobile'],
         [AttendanceIssues::class, 'folder', 'heroicon-o-exclamation-triangle'],
         [AttendancePunches::class, 'users', 'heroicon-o-clock'],
+        [DailyAttendance::class, 'users', 'heroicon-o-calendar-days'],
+        [ReviewQueue::class, 'folder', 'heroicon-o-clipboard-document-check'],
+        [OfficePolicyPage::class, 'settings', 'heroicon-o-adjustments-horizontal'],
     ];
 
     public static function items(User $user): array

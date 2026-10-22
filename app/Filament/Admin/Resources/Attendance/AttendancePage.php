@@ -30,4 +30,9 @@ abstract class AttendancePage extends Page
 
         return Filament::getTenant();
     }
+
+    public function minutes(?int $value): string
+    {
+        return $value === null ? '—' : sprintf('%d:%02d', intdiv($value, 60), $value % 60);
+    }
 }

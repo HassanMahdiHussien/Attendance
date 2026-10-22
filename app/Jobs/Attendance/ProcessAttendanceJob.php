@@ -2,6 +2,7 @@
 
 namespace App\Jobs\Attendance;
 
+use App\Events\AttendanceProcessed;
 use App\Models\Company;
 use App\Services\Attendance\AttendanceProcessor;
 use App\Support\Tenancy\TenantContext;
@@ -45,5 +46,6 @@ class ProcessAttendanceJob implements ShouldBeUnique, ShouldQueue
         app(TenantContext::class)->runForCompany($company, fn () => $processor->run(
             $company, $this->personCodes, $this->from, $this->to, $this->trigger, $this->batchId, $this->deviceId,
         ));
+        event(new AttendanceProcessed($this->companyId, $this->personCodes, $this->from, $this->to));
     }
 }

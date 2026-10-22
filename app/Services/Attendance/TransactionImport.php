@@ -3,6 +3,7 @@
 namespace App\Services\Attendance;
 
 use App\Enums\UserRole;
+use App\Events\CoverageChanged;
 use App\Jobs\Attendance\ImportTransactionsJob;
 use App\Models\Attendance\Device;
 use App\Models\Attendance\DeviceSetting;
@@ -229,6 +230,7 @@ class TransactionImport
                         'kind' => 'declared', 'is_confirmed' => isset($approvedBranches[$branchId]), 'created_at' => now(),
                     ]);
                 }
+                event(new CoverageChanged($company->id, $coverage['branch_ids'], $coverage['from'], $coverage['to']));
                 ImportMapping::query()->updateOrCreate(
                     ['company_id' => $company->id, 'header_signature' => hash('sha256', json_encode($preview['headers'], JSON_THROW_ON_ERROR))],
                     ['headers' => $preview['headers'], 'mapping' => $mapping, 'updated_by' => $actor->id],
