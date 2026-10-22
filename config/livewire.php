@@ -4,7 +4,8 @@
 return [
     'temporary_file_upload' => [
         'disk' => env('LIVEWIRE_TEMPORARY_FILE_UPLOAD_DISK'),
-        'rules' => ['required', 'file', 'max:51200'],
+        // The temporary endpoint must accept files up to the attendance import's validated limit.
+        'rules' => ['required', 'file', 'max:102400'],
         'directory' => null,
         'middleware' => null,
         'preview_mimes' => [

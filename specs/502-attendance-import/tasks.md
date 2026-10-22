@@ -22,10 +22,10 @@ Each step ends green in WSL `~/attendance` (Unit, Feature, Browser, Pint). Every
 
 ## Step 3 — Screens
 
-- [ ] T011 Attendance upload page (upload → mapping on new headers → coverage → preview → commit → progress)
-- [ ] T012 Batches list with original-file download (policy + audit); devices page; data issues page; punch viewer
-- [ ] T013 Nav group, translations (en + ar), help article, UI inventory, route sweep mappings
-- [ ] T014 Tests: Livewire upload flow, permissions and isolation per page, download access, browser smoke test of the pages
+- [x] T011 Attendance upload page (upload → mapping on new headers → coverage → preview → commit → progress)
+- [x] T012 Batches list with original-file download (policy + audit); devices page; data issues page; punch viewer
+- [x] T013 Nav group, translations (en + ar), help article, UI inventory, route sweep mappings
+- [x] T014 Tests: Livewire upload flow, permissions and isolation per page, download access, browser smoke test of the pages
 
 ## Step 4 — Docs and verification (orchestrator)
 

@@ -17,6 +17,8 @@ test('HR opens the employee import page with its upload options', function (): v
         ->fill('email', $user->email)
         ->fill('password', 'password')
         ->press('Log in')
+        // Wait for the signed-in home page: navigating earlier races the login request.
+        ->assertSee('Attendance dashboard')
         ->navigate('/admin/'.$company->id.'/employees/import')
         ->assertSee('Employee file')
         ->assertSee('Map columns')

@@ -2,6 +2,11 @@
 
 namespace App\Support\Access;
 
+use App\Filament\Admin\Pages\Attendance\AttendanceBatches;
+use App\Filament\Admin\Pages\Attendance\AttendanceDevices;
+use App\Filament\Admin\Pages\Attendance\AttendanceIssues;
+use App\Filament\Admin\Pages\Attendance\AttendancePunches;
+use App\Filament\Admin\Pages\Attendance\UploadAttendance;
 use App\Filament\Admin\Pages\CompanySettings;
 use App\Filament\Admin\Resources\BranchResource;
 use App\Filament\Admin\Resources\EmployeeResource;
@@ -21,7 +26,25 @@ class AdminNav
         [EmployeeResource::class, 'users', 'heroicon-o-user-group'],
     ];
 
+    private const ATTENDANCE_ENTRIES = [
+        [UploadAttendance::class, 'folder', 'heroicon-o-arrow-up-tray'],
+        [AttendanceBatches::class, 'folder', 'heroicon-o-archive-box'],
+        [AttendanceDevices::class, 'settings', 'heroicon-o-device-phone-mobile'],
+        [AttendanceIssues::class, 'folder', 'heroicon-o-exclamation-triangle'],
+        [AttendancePunches::class, 'users', 'heroicon-o-clock'],
+    ];
+
     public static function items(User $user): array
+    {
+        return self::entries($user, self::ENTRIES);
+    }
+
+    public static function attendanceItems(User $user): array
+    {
+        return self::entries($user, self::ATTENDANCE_ENTRIES);
+    }
+
+    private static function entries(User $user, array $entries): array
     {
         $panel = Filament::getPanel('admin');
         $tenant = Filament::getCurrentPanel()?->getId() === 'admin'
@@ -41,7 +64,7 @@ class AdminNav
             }
 
             $items = [];
-            foreach (self::ENTRIES as $sort => [$class, $icon, $filamentIcon]) {
+            foreach ($entries as $sort => [$class, $icon, $filamentIcon]) {
                 $registered = is_subclass_of($class, Resource::class)
                     ? in_array($class, $panel->getResources(), true)
                     : in_array($class, $panel->getPages(), true);

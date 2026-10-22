@@ -1,6 +1,8 @@
     @php
         $nav = \App\Support\Access\Nav::items(auth()->user());
         $adminNav = \App\Support\Access\AdminNav::items(auth()->user());
+        $attendanceNav = \App\Support\Access\AdminNav::attendanceItems(auth()->user());
+        $attendanceActive = collect($attendanceNav)->contains(fn ($item) => $item['active']);
         $platformNav = \App\Support\Access\PlatformNav::items(auth()->user());
         $platformActive = collect($platformNav)->contains(fn ($item) => $item['active']);
         $switchableTenants = \App\Support\Access\WorkspaceTenants::items(auth()->user());
@@ -32,6 +34,14 @@
                         <button type="button" @click="platformOpen = !platformOpen" :aria-expanded="platformOpen.toString()" aria-controls="workspace-platform" class="relative flex h-16 items-center gap-1.5 whitespace-nowrap px-2.5 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-[-6px] focus-visible:outline-signal {{ $platformActive ? 'text-signal' : 'text-night-soft hover:text-white' }}">{{ __('Platform') }}<x-ui.icon name="chevron" class="h-4 w-4 rotate-90" />@if($platformActive)<span class="absolute inset-x-3 bottom-0 h-[3px] rounded-t bg-signal" aria-hidden="true"></span>@endif</button>
                         <div id="workspace-platform" x-show="platformOpen" x-cloak x-transition.opacity.duration.150ms class="absolute top-full mt-1 w-64 rounded-xl border border-line bg-white p-1.5 text-ink shadow-[0_12px_32px_-8px_rgb(14_26_43/0.28)] start-0">
                             @foreach($platformNav as $item)<a href="{{ $item['url'] }}" @if($item['active']) aria-current="page" @endif class="flex min-h-10 items-center gap-3 rounded-lg px-3 text-sm focus-visible:outline-2 focus-visible:outline-primary {{ $item['active'] ? 'bg-primary-light font-semibold text-primary' : 'hover:bg-gray-50' }}">{{ $item['label'] }}</a>@endforeach
+                        </div>
+                    </div>
+                @endif
+                @if($attendanceNav)
+                    <div class="relative" x-data="{ attendanceOpen: false }" @keydown.escape.window="attendanceOpen = false" @click.outside="attendanceOpen = false">
+                        <button type="button" @click="attendanceOpen = !attendanceOpen" :aria-expanded="attendanceOpen.toString()" aria-controls="workspace-attendance" class="relative flex h-16 items-center gap-1.5 whitespace-nowrap px-2.5 text-sm font-medium {{ $attendanceActive ? 'text-signal' : 'text-night-soft hover:text-white' }}">{{ __('Attendance') }}<x-ui.icon name="chevron" class="h-4 w-4 rotate-90" /></button>
+                        <div id="workspace-attendance" x-show="attendanceOpen" x-cloak class="absolute top-full mt-1 w-64 rounded-xl border border-line bg-white p-1.5 text-ink shadow-[0_12px_32px_-8px_rgb(14_26_43/0.28)] start-0">
+                            @foreach($attendanceNav as $item)<a href="{{ $item['url'] }}" @if($item['active']) aria-current="page" @endif class="flex min-h-10 items-center gap-3 rounded-lg px-3 text-sm {{ $item['active'] ? 'bg-primary-light font-semibold text-primary' : 'hover:bg-gray-50' }}">{{ $item['label'] }}</a>@endforeach
                         </div>
                     </div>
                 @endif
@@ -87,6 +97,11 @@
                 @if($platformNav)
                     <div class="mt-3 border-t border-line pt-3"><strong class="block px-3 py-2 text-sm">{{ __('Platform') }}</strong>
                         @foreach($platformNav as $item)<a href="{{ $item['url'] }}" @if($item['active']) aria-current="page" @endif class="flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm font-medium {{ $item['active'] ? 'bg-primary-light text-primary' : 'text-gray-700' }}">{{ $item['label'] }}</a>@endforeach
+                    </div>
+                @endif
+                @if($attendanceNav)
+                    <div class="mt-3 border-t border-line pt-3"><strong class="block px-3 py-2 text-sm">{{ __('Attendance') }}</strong>
+                        @foreach($attendanceNav as $item)<a href="{{ $item['url'] }}" @if($item['active']) aria-current="page" @endif class="flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm font-medium {{ $item['active'] ? 'bg-primary-light text-primary' : 'text-gray-700' }}">{{ $item['label'] }}</a>@endforeach
                     </div>
                 @endif
                 @if($adminNav)
