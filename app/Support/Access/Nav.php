@@ -14,29 +14,11 @@ class Nav
             return request()->attributes->get($key);
         }
 
-        $role = $user->primary_role;
         $items = [];
-        if (! in_array($role, [UserRole::PlatformAdmin, UserRole::Reporter, UserRole::DeptManager], true)) {
-            $items[] = self::item('My work', '/home', 'home', 'home');
-        }
-        if (in_array($role, [UserRole::CompanyAdmin, UserRole::HrStaff], true)) {
-            if (DashboardNav::visible($user)) {
-                $items[] = self::item('Dashboard', '/dashboard', 'chart', 'dashboard*');
-            }
-            $items[] = self::item('Cases', '/cases', 'folder', 'cases*');
-            $count = ViolationReportVisibility::inbox($user)->count() + EmailDraftVisibility::inbox($user)->count();
-            $items[] = self::item('Reports inbox', '/reports/inbox', 'inbox', 'reports/inbox', $count);
-        } elseif (in_array($role, [UserRole::Reporter, UserRole::DeptManager], true)) {
-            $items[] = self::item('My reports', '/reports', 'inbox', 'reports*');
-        } elseif (in_array($role, [UserRole::CommitteeMember, UserRole::ExternalLegalReviewer], true)) {
-            $items[] = self::item('My cases', '/my-cases', 'folder', 'my-cases');
-        }
-
-        if (CommitteeNav::hasPending($user)) {
-            $items[] = self::item('Committee', '/committee', 'check', 'committee*', null, true);
-        }
-        if (in_array($role, [UserRole::CompanyAdmin, UserRole::HrStaff, UserRole::PlatformAdmin, UserRole::HrPartnerStaff], true)) {
-            $items[] = self::item('Statistics', '/statistics', 'chart', 'statistics*');
+        if ($user->primary_role === UserRole::HrStaff) {
+            $items[] = self::item('Home', '/home', 'home', 'home');
+            $items[] = self::item('Employees', '/employees', 'users', 'employees*');
+        } elseif ($user->primary_role === UserRole::PlatformAdmin) {
             $items[] = self::item('Employees', '/employees', 'users', 'employees*');
         }
         request()->attributes->set($key, $items);
@@ -44,8 +26,8 @@ class Nav
         return $items;
     }
 
-    private static function item(string $label, string $url, string $icon, string $pattern, ?int $count = null, bool $dot = false): array
+    private static function item(string $label, string $url, string $icon, string $pattern): array
     {
-        return compact('label', 'url', 'icon', 'pattern', 'count', 'dot');
+        return compact('label', 'url', 'icon', 'pattern') + ['count' => null, 'dot' => false];
     }
 }

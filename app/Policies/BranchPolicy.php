@@ -10,7 +10,7 @@ class BranchPolicy
 {
     public function viewAny(User $user): bool
     {
-        return in_array($user->primary_role, [UserRole::PlatformAdmin, UserRole::CompanyAdmin, UserRole::HrStaff], true);
+        return in_array($user->primary_role, [UserRole::PlatformAdmin, UserRole::HrStaff], true);
     }
 
     public function view(User $user, Branch $branch): bool
@@ -20,7 +20,7 @@ class BranchPolicy
 
     public function create(User $user): bool
     {
-        return in_array($user->primary_role, [UserRole::PlatformAdmin, UserRole::CompanyAdmin], true);
+        return in_array($user->primary_role, [UserRole::PlatformAdmin, UserRole::HrStaff], true);
     }
 
     public function update(User $user, Branch $branch): bool

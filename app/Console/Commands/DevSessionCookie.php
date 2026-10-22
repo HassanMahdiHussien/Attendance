@@ -82,8 +82,6 @@ class DevSessionCookie extends Command
             $names = DB::table('users')->where('email', 'like', '%@example.test')
                 ->where(fn ($query) => $query->where('company_id', $demoCompanyId)->orWhereNull('company_id'))
                 ->pluck('name');
-            // Law names are official titles shown as data on English screens too.
-            $names = $names->merge(DB::table('laws')->whereNull('company_id')->pluck('name'));
             foreach (['employees' => ['name', 'name_en'], 'companies' => ['name'], 'branches' => ['name'], 'locations' => ['name']] as $table => $columns) {
                 $query = DB::table($table);
                 if ($table === 'companies') {

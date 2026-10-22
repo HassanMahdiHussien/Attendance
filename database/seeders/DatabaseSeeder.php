@@ -13,12 +13,10 @@ class DatabaseSeeder extends Seeder
         app(TenantContext::class)->runAcrossAllCompanies(function (): void {
             DB::transaction(function (): void {
                 $this->call([
-                    LawsSeeder::class,
                     PilotCompanySeeder::class,
                     LocalUsersSeeder::class,
                 ]);
             });
-            $this->call(DocumentDemoSeeder::class);
         });
     }
 }

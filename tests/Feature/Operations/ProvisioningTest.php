@@ -5,7 +5,6 @@ use App\Enums\UserRole;
 use App\Jobs\HeartbeatJob;
 use App\Models\User;
 use App\Support\HealthPing;
-use Database\Seeders\DocumentDemoSeeder;
 use Database\Seeders\LocalUsersSeeder;
 use Database\Seeders\PilotCompanySeeder;
 use Illuminate\Console\Scheduling\Schedule;
@@ -201,10 +200,6 @@ it('makes an encrypted archive and restores it into a cleaned scratch database',
             $archive->close();
         }
     };
-    $rewriteDump(fn ($sql) => $sql."\nINSERT INTO `companies` (`name`, `letterhead_logo_path`, `created_at`, `updated_at`) VALUES ('drill', 'missing.png', NOW(), NOW());\n");
-    $this->artisan('backup:restore-drill')->assertExitCode(1);
-    expect(scratchDatabaseExists())->toBeFalse();
-
     $rewriteDump(function ($sql) {
         expect($sql)->toContain('CREATE TABLE `cache_locks`');
 
@@ -224,8 +219,7 @@ it('refuses unsafe scratch database names before changing any database', functio
 it('refuses demo seeders in production', function (): void {
     app()->detectEnvironment(fn () => 'production');
     try {
-        foreach ([PilotCompanySeeder::class, LocalUsersSeeder::class,
-            DocumentDemoSeeder::class] as $seeder) {
+        foreach ([PilotCompanySeeder::class, LocalUsersSeeder::class] as $seeder) {
             expect(fn () => app($seeder)->run())->toThrow(RuntimeException::class);
         }
     } finally {
@@ -234,6 +228,7 @@ it('refuses demo seeders in production', function (): void {
 });
 
 it('gates backup schedule entries on the backups setting', function (): void {
+    expect(config('backup.backup.source.files.include'))->not->toContain(base_path('docs/laws'));
     Artisan::call('schedule:list');
     $events = collect(app(Schedule::class)->events())->filter(fn ($event) => str_contains($event->command ?? '', 'backup:'));
     expect($events)->toHaveCount(4);
@@ -243,7 +238,7 @@ it('gates backup schedule entries on the backups setting', function (): void {
     expect($events->every(fn ($event) => $event->filtersPass(app())))->toBeTrue();
 });
 
-it('rejects missing restored tables and referenced files', function (): void {
+it('rejects missing restored tables and append-only rows', function (): void {
     $database = 'testing_restore_drill';
     $settings = config('database.connections.restore_drill');
     $server = new PDO('mysql:host='.$settings['host'].';port='.$settings['port'],
@@ -256,20 +251,6 @@ it('rejects missing restored tables and referenced files', function (): void {
         expect(fn () => (new ReflectionMethod($command, 'verifyDatabase'))->invoke($command, $database))
             ->toThrow(RuntimeException::class, 'missing live tables');
 
-        $server->exec("CREATE TABLE `{$database}`.`companies` (id BIGINT PRIMARY KEY, letterhead_logo_path VARCHAR(255), internal_regulation_file_path VARCHAR(255))");
-        $server->exec("INSERT INTO `{$database}`.`companies` VALUES (1, 'missing.png', NULL)");
-        $archive = storage_path('app/drill-file-check.zip');
-        $zip = new ZipArchive;
-        $zip->open($archive, ZipArchive::CREATE | ZipArchive::OVERWRITE);
-        try {
-            $zip->addFromString('unrelated.txt', 'bytes');
-            expect(fn () => (new ReflectionMethod($command, 'verifyFiles'))->invoke($command, $zip))
-                ->toThrow(RuntimeException::class, 'missing from archive');
-        } finally {
-            $zip->close();
-            unlink($archive);
-        }
-
         $server->exec("CREATE TABLE `{$database}`.`audit_logs` (id BIGINT PRIMARY KEY)");
         DB::table('audit_logs')->insert(['action' => 'drill.coverage.first']);
         $lastId = DB::table('audit_logs')->insertGetId(['action' => 'drill.coverage.second']);
@@ -277,22 +258,6 @@ it('rejects missing restored tables and referenced files', function (): void {
         expect(fn () => (new ReflectionMethod($command, 'verifyAppendOnly'))->invoke($command,
             DB::connection(), DB::connection('restore_drill'), ['audit_logs']))
             ->toThrow(RuntimeException::class, 'Append-only rows are missing');
-
-        $server->exec("UPDATE `{$database}`.`companies` SET letterhead_logo_path = NULL WHERE id = 1");
-        $server->exec("CREATE TABLE `{$database}`.`company_letterheads` (id BIGINT PRIMARY KEY, logo_path VARCHAR(255), logo_sha256 CHAR(64), header_image_path VARCHAR(255), header_image_sha256 CHAR(64))");
-        $server->exec("INSERT INTO `{$database}`.`company_letterheads` VALUES (1, 'logo.png', '".hash('sha256', 'original')."', NULL, NULL)");
-        $zip = new ZipArchive;
-        $zip->open($archive, ZipArchive::CREATE | ZipArchive::OVERWRITE);
-        try {
-            $zip->addFromString('storage/app/private/logo.png', 'altered');
-            $zip->close();
-            $zip->open($archive, ZipArchive::RDONLY);
-            expect(fn () => (new ReflectionMethod($command, 'verifyFiles'))->invoke($command, $zip))
-                ->toThrow(RuntimeException::class, 'hash differs');
-        } finally {
-            $zip->close();
-            unlink($archive);
-        }
     } finally {
         DB::disconnect('restore_drill');
         $server->exec("DROP DATABASE `{$database}`");

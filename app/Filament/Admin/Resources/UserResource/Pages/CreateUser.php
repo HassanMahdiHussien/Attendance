@@ -24,7 +24,7 @@ class CreateUser extends CreateRecord
         try {
             return app(UserAccountService::class)->create($data, auth()->user());
         } catch (ValidationException $exception) {
-            $this->rethrowFormValidation($exception, ['branches' => 'branch_ids']);
+            $this->rethrowFormValidation($exception);
         }
     }
 }

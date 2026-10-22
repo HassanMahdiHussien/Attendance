@@ -30,16 +30,6 @@ class AiGenerationLog extends Model
         return $this->belongsTo(Company::class, 'company_id');
     }
 
-    public function disciplinaryCase(): BelongsTo
-    {
-        return $this->belongsTo(DisciplinaryCase::class, 'case_id');
-    }
-
-    public function document(): BelongsTo
-    {
-        return $this->belongsTo(Document::class, 'document_id');
-    }
-
     public function actorUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'actor_user_id');

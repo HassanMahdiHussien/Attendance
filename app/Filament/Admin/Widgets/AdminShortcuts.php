@@ -3,10 +3,7 @@
 namespace App\Filament\Admin\Widgets;
 
 use App\Filament\Admin\Pages\CompanySettings;
-use App\Filament\Admin\Pages\DocumentTemplates;
-use App\Filament\Admin\Pages\InternalRegulation;
 use App\Filament\Admin\Resources\BranchResource;
-use App\Filament\Admin\Resources\CommitteeMandateResource;
 use App\Filament\Admin\Resources\EmployeeResource;
 use App\Filament\Admin\Resources\LocationResource;
 use App\Filament\Admin\Resources\UserResource;
@@ -40,10 +37,7 @@ class AdminShortcuts extends Widget
             UserResource::class,
             BranchResource::class,
             LocationResource::class,
-            CommitteeMandateResource::class,
-            DocumentTemplates::class,
             CompanySettings::class,
-            InternalRegulation::class,
         ] as $class) {
             $resource = is_subclass_of($class, Resource::class);
             $registered = $resource

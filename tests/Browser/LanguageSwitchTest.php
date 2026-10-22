@@ -8,18 +8,18 @@ use App\Models\User;
 test('the workspace language switch keeps the current page in both directions', function (): void {
     $company = Company::factory()->create();
     completeCompanySetup($company);
-    $admin = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::CompanyAdmin]);
+    $admin = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::HrStaff]);
 
     $page = visitBound('/login')->assertNoJavaScriptErrors()
         ->fill('email', $admin->email)->fill('password', 'password')->press('Log in')
         ->assertPathIs('/home')->assertNoJavaScriptErrors();
-    $page->navigate('/cases')->assertPathIs('/cases')->assertNoJavaScriptErrors()
+    $page->navigate('/employees')->assertPathIs('/employees')->assertNoJavaScriptErrors()
         ->click('#workspace-account > button')->click('#workspace-account-menu button[lang]')
-        ->assertPathIs('/cases')
+        ->assertPathIs('/employees')
         ->assertScript('document.documentElement.dir', 'rtl')
         ->assertNoJavaScriptErrors()
         ->click('#workspace-account > button')->click('#workspace-account-menu button[lang]')
-        ->assertPathIs('/cases')
+        ->assertPathIs('/employees')
         ->assertScript('document.documentElement.dir', 'ltr')
         ->assertNoJavaScriptErrors();
 });
@@ -27,7 +27,7 @@ test('the workspace language switch keeps the current page in both directions', 
 test('the shared header switches languages on the same admin page', function (): void {
     $company = Company::factory()->create();
     completeCompanySetup($company);
-    $admin = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::CompanyAdmin]);
+    $admin = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::HrStaff]);
     $path = parse_url(BranchResource::getUrl(panel: 'admin', tenant: $company), PHP_URL_PATH);
 
     $page = visitBound('/login')->assertNoJavaScriptErrors()

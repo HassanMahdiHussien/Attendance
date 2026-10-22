@@ -20,7 +20,7 @@ class EditCompany extends EditRecord
     protected function handleRecordUpdate(Model $record, array $data): Model
     {
         $kurdish = (bool) ($data['kurdish_enabled'] ?? false);
-        unset($data['kurdish_enabled'], $data['first_admin_name'], $data['first_admin_email'], $data['first_admin_password']);
+        unset($data['kurdish_enabled'], $data['first_hr_user_name'], $data['first_hr_user_email'], $data['first_hr_user_password']);
         $data['enabled_languages'] = ['ar', 'en', ...($kurdish ? ['ku'] : [])];
         $record->update($data);
 

@@ -8,7 +8,7 @@ The product owner needs attendance and leave reconciliation (`docs/attendance/PR
 
 Building attendance inside the Displanary repo was considered first. The product owner chose a separate repo so attendance work can never break Displanary while it serves its pilot company.
 
-Leave requests are submitted and approved in each company's existing HR system. The platform's own leave module (`docs/PLATFORM-PRD.md` §10) is still in the future.
+Leave requests are submitted and approved in each company's existing HR system. The platform's own leave module (`docs/upstream/displanary/PLATFORM-PRD.md` §10) is still in the future.
 
 ## Decision
 

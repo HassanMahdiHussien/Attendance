@@ -2,9 +2,6 @@
 
 namespace App\Support\Format;
 
-use App\Documents\IraqiDate;
-use App\Enums\CaseStatus;
-use App\Enums\Outcome;
 use App\Support\Text\ArabicText;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
@@ -29,49 +26,7 @@ class Ui
         }
 
         return app()->getLocale() === 'ar'
-            ? IraqiDate::format($local, 'ar')
+            ? $local->day.' '.__('messages.ui.months.'.$local->month).' '.$local->year
             : $local->format('j M Y');
-    }
-
-    public static function outcome(Outcome|string|null $outcome): string
-    {
-        $value = $outcome instanceof Outcome ? $outcome->value : $outcome;
-
-        return match ($value) {
-            'recommendation_only' => __('Recommendation without penalty'),
-            'warning' => __('Warning'),
-            'termination' => __('Termination'),
-            default => __('No outcome yet'),
-        };
-    }
-
-    public static function stage(CaseStatus $status): string
-    {
-        if ($status === CaseStatus::ArchivedFinal) {
-            return __('Closed');
-        }
-
-        return self::stageLabel(StageIndicator::step($status));
-    }
-
-    public static function stageLabel(int $stage): string
-    {
-        return match ($stage) {
-            1 => __('Case opened'),
-            2 => __('Defense letter'),
-            3 => __('Employee response'),
-            4 => __('Committee'),
-            5 => __('Decision'),
-        };
-    }
-
-    public static function remaining(int $days): string
-    {
-        return match ($days) {
-            0 => __('Due today'),
-            1 => __('One day remaining'),
-            2 => __('Two days remaining'),
-            default => trans_choice(':days days remaining', $days, ['days' => self::number($days)]),
-        };
     }
 }

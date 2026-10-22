@@ -23,8 +23,6 @@ return new class extends Migration
         Schema::create('ai_generation_logs', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('company_id')->nullable()->constrained()->restrictOnDelete();
-            $table->foreignId('case_id')->nullable()->constrained('cases')->restrictOnDelete();
-            $table->foreignId('document_id')->nullable()->constrained()->restrictOnDelete();
             $table->foreignId('actor_user_id')->nullable()->constrained('users')->restrictOnDelete();
             $table->string('touchpoint');
             $table->string('model');

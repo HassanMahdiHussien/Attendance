@@ -43,20 +43,10 @@ class User extends Authenticatable implements FilamentUser, HasLocalePreference,
             if ($user->primary_role === null) {
                 throw new TenantMismatch('A primary role is required.');
             }
-            $companyRole = in_array($user->primary_role, [
-                UserRole::CompanyAdmin, UserRole::HrStaff, UserRole::DeptManager,
-                UserRole::Reporter, UserRole::CommitteeMember,
-            ], true);
+            $companyRole = $user->primary_role === UserRole::HrStaff;
 
             if ($companyRole !== ($user->company_id !== null)) {
                 throw new TenantMismatch('User role and company do not match.');
-            }
-
-            if ($user->primary_role === UserRole::ExternalLegalReviewer && $user->law_firm_partner_id === null) {
-                throw new TenantMismatch('A law firm is required.');
-            }
-            if ($user->primary_role === UserRole::HrPartnerStaff && $user->hr_partner_id === null) {
-                throw new TenantMismatch('An HR partner is required.');
             }
 
             if ($user->employee_id !== null) {
@@ -81,10 +71,7 @@ class User extends Authenticatable implements FilamentUser, HasLocalePreference,
 
         return match ($panel->getId()) {
             'platform' => $this->primary_role === UserRole::PlatformAdmin,
-            // The company's own lawyer approves its internal regulation in this panel; every other admin page keeps
-            // its own role check, so the review permission opens only the internal regulation page.
-            'admin' => in_array($this->primary_role, [UserRole::PlatformAdmin, UserRole::CompanyAdmin, UserRole::HrStaff], true)
-                || ($this->company_id !== null && $this->can('review_internal_regulation')),
+            'admin' => in_array($this->primary_role, [UserRole::PlatformAdmin, UserRole::HrStaff], true),
             default => false,
         };
     }
@@ -115,16 +102,6 @@ class User extends Authenticatable implements FilamentUser, HasLocalePreference,
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);
-    }
-
-    public function lawFirmPartner(): BelongsTo
-    {
-        return $this->belongsTo(LawFirmPartner::class);
-    }
-
-    public function hrPartner(): BelongsTo
-    {
-        return $this->belongsTo(HrPartner::class);
     }
 
     /**

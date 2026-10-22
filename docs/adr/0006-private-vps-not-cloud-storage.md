@@ -10,5 +10,5 @@ Store all files on local disk on a single private VPS (Laravel's local `flysyste
 
 ## Consequences
 **Gained:** a genuine marketing differentiator against foreign-cloud-based competitors; simpler initial setup (no cloud SDK/IAM configuration); full data sovereignty.
-**Lost:** the team is now responsible for their own backup reliability, disk capacity planning, and server hardening — there's no managed-service safety net. Losing the primary VPS without a verified-working backup means losing all clients' legal evidence, so backup verification (not just "backup exists") is a launch-readiness gate (see `docs/LAUNCH-CHECKLIST.md`).
+**Lost:** the team is now responsible for their own backup reliability, disk capacity planning, and server hardening — there's no managed-service safety net. Losing the primary VPS without a verified-working backup means losing all clients' legal evidence, so backup verification (not just "backup exists") is a launch-readiness gate (see `docs/upstream/displanary/LAUNCH-CHECKLIST.md`).
 **Revisit when:** the client base grows enough that a single VPS's disk/bandwidth becomes a real constraint (see PRD Section 13's "past ~15–20 companies, re-evaluate" note).

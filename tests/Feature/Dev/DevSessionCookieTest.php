@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 
 it('refuses sessions outside the local environment', function (): void {
-    expect(Artisan::call('dev:session-cookie', ['email' => 'company.admin@example.test']))->toBe(1);
+    expect(Artisan::call('dev:session-cookie', ['email' => 'hr@example.test']))->toBe(1);
     expect(Artisan::output())->toContain('only in the local environment');
 });
 
@@ -29,9 +29,9 @@ it('issues a demo session with names and restores the original locale', function
     $company = Company::factory()->create(['name' => LocalUsersSeeder::DEMO_COMPANY_NAME]);
     $user = User::factory()->create([
         'name' => 'Demo Auditor',
-        'email' => 'company.admin@example.test',
+        'email' => 'hr@example.test',
         'company_id' => $company->id,
-        'primary_role' => UserRole::CompanyAdmin,
+        'primary_role' => UserRole::HrStaff,
         'locale' => 'ar',
     ]);
     $previous = app()['env'];

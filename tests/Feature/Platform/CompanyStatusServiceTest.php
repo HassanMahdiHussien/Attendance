@@ -11,7 +11,7 @@ test('company deactivation purges only its sessions and audits each status chang
     $other = Company::factory()->create();
     $actor = User::factory()->create();
     $first = User::factory()->create(['company_id' => $company->id, 'primary_role' => 'hr_staff']);
-    $second = User::factory()->create(['company_id' => $company->id, 'primary_role' => 'reporter']);
+    $second = User::factory()->create(['company_id' => $company->id, 'primary_role' => 'hr_staff']);
     $outside = User::factory()->create(['company_id' => $other->id, 'primary_role' => 'hr_staff']);
     foreach (['first' => $first, 'second' => $second, 'outside' => $outside] as $id => $user) {
         DB::table('sessions')->insert(['id' => $id, 'user_id' => $user->id, 'payload' => 'x', 'last_activity' => now()->timestamp]);

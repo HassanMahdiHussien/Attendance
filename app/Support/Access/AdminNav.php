@@ -3,13 +3,10 @@
 namespace App\Support\Access;
 
 use App\Filament\Admin\Pages\CompanySettings;
-use App\Filament\Admin\Pages\DocumentTemplates;
-use App\Filament\Admin\Pages\InternalRegulation;
 use App\Filament\Admin\Resources\BranchResource;
-use App\Filament\Admin\Resources\CommitteeMandateResource;
+use App\Filament\Admin\Resources\EmployeeResource;
 use App\Filament\Admin\Resources\LocationResource;
 use App\Filament\Admin\Resources\UserResource;
-use App\Filament\Admin\Resources\ViolationTypeResource;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Filament\Resources\Resource;
@@ -18,13 +15,10 @@ class AdminNav
 {
     private const ENTRIES = [
         [CompanySettings::class, 'settings', 'heroicon-o-cog-6-tooth'],
-        [DocumentTemplates::class, 'file', 'heroicon-o-document-text'],
-        [InternalRegulation::class, 'book', 'heroicon-o-book-open'],
         [BranchResource::class, 'folder', 'heroicon-o-building-office'],
-        [CommitteeMandateResource::class, 'file', 'heroicon-o-document-check'],
         [LocationResource::class, 'folder', 'heroicon-o-map-pin'],
         [UserResource::class, 'users', 'heroicon-o-user-group'],
-        [ViolationTypeResource::class, 'check', 'heroicon-o-list-bullet'],
+        [EmployeeResource::class, 'users', 'heroicon-o-user-group'],
     ];
 
     public static function items(User $user): array

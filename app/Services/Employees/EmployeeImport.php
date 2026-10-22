@@ -2,11 +2,9 @@
 
 namespace App\Services\Employees;
 
-use App\Enums\CaseStatus;
 use App\Enums\SequenceKey;
 use App\Models\Branch;
 use App\Models\Company;
-use App\Models\DisciplinaryCase;
 use App\Models\Employee;
 use App\Models\User;
 use App\Services\AuditLogger;
@@ -96,12 +94,6 @@ class EmployeeImport
                     }
                 }
                 if (in_array('branch_id', $diff, true)) {
-                    if (DisciplinaryCase::withoutGlobalScopes()->where('company_id', $company->id)
-                        ->where('employee_id', $existing->id)->whereNotIn('status', [
-                            CaseStatus::Draft->value, CaseStatus::ArchivedFinal->value, CaseStatus::AppealResolved->value,
-                        ])->exists()) {
-                        $warnings[] = __('messages.employee_import.open_case_stays_in_branch');
-                    }
                     if (User::query()->where('employee_id', $existing->id)->exists()) {
                         $warnings[] = __('messages.employee_import.linked_user_permissions_unchanged');
                     }

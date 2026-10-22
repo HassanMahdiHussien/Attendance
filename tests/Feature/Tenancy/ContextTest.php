@@ -3,9 +3,6 @@
 use App\Exceptions\MissingTenantContext;
 use App\Models\Branch;
 use App\Models\Company;
-use App\Models\Law;
-use App\Models\LawJurisdiction;
-use App\Models\LegalUnit;
 use App\Models\User;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Contracts\Queue\Job;
@@ -49,7 +46,7 @@ test('the platform admin web context sees all companies', function (): void {
     $context = app(TenantContext::class);
     $context->runForCompany($a, fn () => Branch::factory()->create());
     $context->runForCompany($b, fn () => Branch::factory()->create());
-    $companyUser = User::factory()->create(['primary_role' => 'company_admin', 'company_id' => $a->id]);
+    $companyUser = User::factory()->create(['primary_role' => 'hr_staff', 'company_id' => $a->id]);
     $admin = User::factory()->create(['primary_role' => 'platform_admin']);
 
     Route::middleware('web')->get('/_tenant-context-test', fn () => response((string) Branch::count()));
@@ -84,31 +81,6 @@ test('sync jobs keep the caller tenant context', function (): void {
     Queue::connection('sync')->push(new ContextProbeJob($company->id));
 
     expect($context->companyId())->toBe($company->id);
-});
-
-test('legal library exposes statutes and only the current company regulation', function (): void {
-    $a = Company::factory()->create();
-    $b = Company::factory()->create();
-    $context = app(TenantContext::class);
-    $context->setCompany($a);
-    $statute = Law::factory()->create(['kind' => 'statute', 'company_id' => null]);
-    $regA = Law::factory()->create(['kind' => 'internal_regulation', 'company_id' => $a->id]);
-    LawJurisdiction::factory()->create(['law_id' => $statute->id]);
-    LawJurisdiction::factory()->create(['law_id' => $regA->id]);
-    $unitA = LegalUnit::factory()->create(['law_id' => $regA->id]);
-    $context->runForCompany($b, function () use ($b, &$regB): void {
-        $regB = Law::factory()->create(['kind' => 'internal_regulation', 'company_id' => $b->id]);
-        LawJurisdiction::factory()->create(['law_id' => $regB->id]);
-        LegalUnit::factory()->create(['law_id' => $regB->id]);
-    });
-
-    expect(Law::query()->pluck('id')->all())->toContain($statute->id, $regA->id)
-        ->not->toContain($regB->id);
-    expect(LegalUnit::query()->pluck('id')->all())->toContain($unitA->id);
-    expect(LegalUnit::count())->toBe(1);
-    expect(LawJurisdiction::count())->toBe(2);
-    $context->clear();
-    expect(fn () => Law::count())->toThrow(MissingTenantContext::class);
 });
 
 class ContextProbeJob implements ShouldQueue

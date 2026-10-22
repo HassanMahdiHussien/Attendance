@@ -5,7 +5,6 @@ use Illuminate\Support\Facades\File;
 function uiInventoryMatches(string $pattern, string $source): array
 {
     preg_match_all($pattern, $source, $matches, PREG_SET_ORDER);
-    // Patterns without a capture group return the whole match; one group returns it; more return the groups.
     $values = array_map(fn (array $match): string|array => match (count($match)) {
         1 => $match[0], 2 => $match[1], default => array_slice($match, 1)
     }, $matches);
@@ -32,141 +31,22 @@ function uiInventoryFor(string $source): array
         'file_bindings' => $fileBindings,
         'routes' => uiInventoryMatches('/\broute\(\s*["\']([^"\']+)["\']/s', $source),
         'links' => uiInventoryMatches('/\b(?:href|action|back)\s*=\s*["\'](\/[^"\']*)["\']/s', $source),
-        'anchors' => uiInventoryMatches('/\bid\s*=\s*["\'](next-[^"\']+)["\']/s', $source),
-        'viewer_controls' => uiInventoryMatches('/(<x-ui\.file-action\b|data-file-list=)/s', $source),
         'controls' => uiInventoryMatches('/\baria-controls="([^"]+)"/s', $source),
     ];
 }
 
-test('refreshed screens retain their original behavior surface', function (): void {
+test('remaining screens match the reviewed interaction inventory', function (): void {
     $baseline = json_decode(File::get(base_path('tests/fixtures/ui-inventory.json')), true, flags: JSON_THROW_ON_ERROR);
-    // New UI controls may be listed here with a reason once their behavior is reviewed.
-    $allowedAdditions = [
-        'resources/views/layouts/workspace.blade.php' => [
-            'controls' => ['workspace-account-menu', 'workspace-platform'],
-            'routes' => ['help.index'],
-        ],
-        'resources/views/livewire/employees/employee-index.blade.php' => [
-            'wire' => [['wire:model.live', 'companyId']],
-        ],
-        'resources/views/livewire/cases/show-case.blade.php' => [
-            'permission_conditions' => ['$canManage && in_array(auth(', '$canManageAllIncident',
-                '$canManageAllIncident && !$record->defense_letter_issued_at && in_array($record->status, [\App\Enums\CaseStatus::Draft, \App\Enums\CaseStatus::Open], true',
-                '$record->incident_id === null || $canManageAllIncident',
-                '$record->incident_id && $canManage && !$record->defense_letter_issued_at',
-                '!$document->is_locked && $canManage', '$canManage && $document->is_locked'],
-            'role_conditions' => ['$canManage && in_array(auth()->user()->primary_role, [\App\Enums\UserRole::CompanyAdmin, \App\Enums\UserRole::HrStaff], true)'],
-            'wire' => [
-                ['wire:model', 'incidentEmployeeId'],
-                ['wire:model', 'caseDescription'],
-                ['wire:model', 'incidentClosureReason'],
-                ['wire:click', 'addIncidentEmployee'],
-                ['wire:click', 'saveCaseDescription'],
-                ['wire:key', 'incident-member-{{ $member->id }}'],
-                ['wire:click', 'linkRelated'],
-                ['wire:click', 'markRelatedInError({{ $related['],
-                ['wire:model', 'relatedCaseId'],
-                ['wire:model', 'relatedReason'],
-                ['wire:model', 'relatedErrorReasons.{{ $related['],
-                ['wire:model.live.debounce.300ms', 'relatedSearch'],
-                ['wire:model', 'mapViolationTypeId'],
-                ['wire:click', 'mapViolationType'],
-                ['wire:click', 'answerIntakeQuestion({{ $question->id }})'],
-                ['wire:model', 'intakeAnswers.{{ $question->id }}'],
-                ['wire:key', 'intake-question-{{ $question->id }}'],
-            ],
-            'errors' => ['relatedCaseId', 'relatedReason', 'mapViolationTypeId', 'incidentEmployeeId', 'caseDescription', 'incidentClosureReason'],
-            'links' => ['/cases/{{ $other->id }}', '/cases/{{ $member->id }}', '/cases/new?incident_case={{ $record->id }}',
-                '/cases/{{ $record->id }}/session?single=1', '/cases/{{ $record->id }}/documents/{{ $defenseDraft?->id ?? ',
-                '/cases/{{ $record->id }}/recommendations/{{ $document->id }}',
-                '/cases/{{ $record->id }}/decision',
-                '/cases/{{ $record->id }}/documents/{{ $document->id }}/edit'],
-        ],
-        'resources/views/livewire/cases/create-case.blade.php' => [
-            'wire' => [['wire:model', 'violationTypeId'], ['wire:model', 'caseFiles']],
-            'errors' => ['caseFiles', 'caseFiles.*'],
-            'file_bindings' => [[['wire:model', 'caseFiles']]],
-        ],
-        'resources/views/livewire/cases/record-session.blade.php' => [
-            'wire' => [
-                ['wire:key', 'incident-session-case-{{ $incidentCase->id }}'],
-                ['wire:model', 'caseMinutes.{{ $incidentCase->id }}'],
-                ['wire:model', 'caseOutcomes.{{ $incidentCase->id }}'],
-                ['wire:model', 'caseDefenseAcceptance.{{ $incidentCase->id }}'],
-                ['wire:model', 'caseVotes.{{ $incidentCase->id }}.{{ $member->id }}'],
-            ],
-        ],
-        'resources/views/livewire/reports/submit-report.blade.php' => [
-            'wire' => [
-                ['wire:model', 'violationTypeId'], ['wire:model', 'chatInput'], ['wire:click', 'suggestedReply({{ $index }})'],
-                ['wire:model', 'occurredAtText'], ['wire:model', 'witnessesNone'],
-                ['wire:model', 'howStarted'], ['wire:model', 'injuriesDamage'],
-                ['wire:model', 'witnessesUnknown'], ['wire:model', 'employeesUnknown'],
-                ['wire:submit', 'startChat'], ['wire:submit', 'answerChat'],
-                ['wire:click', 'usePlainForm'], ['wire:click', 'continueToReview'], ['wire:click', 'submit'],
-                ['wire:click', 'unknownPlace'], ['wire:click', 'unknownDate'],
-                ['wire:click', 'confirmPersonMatch('],
-                ['wire:click', 'quickReply('], ['wire:click', 'suggestedReply('],
-                ['wire:click', 'removeUpload({{ $index }})'],
-                ['wire:click', 'removeSessionFile({{ $file->id }})'],
-            ],
-            'errors' => ['chatInput', 'occurredAtText', 'people.employees', 'witnessesNone', 'attachments'],
-        ],
-        'resources/views/livewire/reports/inbox.blade.php' => [
-            'wire' => [['wire:model', 'mapViolationTypeIds.{{ $report->id }}'],
-                ['wire:click', 'mapViolationType({{ $report->id }})']],
-        ],
-        'resources/views/livewire/cases/partials/ai-editor-controls.blade.php' => [
-            'wire' => [
-                ['wire:click', 'startSupplementaryComparison'],
-                ['wire:click', 'startDocumentComparison'],
-                ['wire:click', 'startManualComparison'],
-            ],
-        ],
-        'resources/views/livewire/cases/edit-document.blade.php' => [
-            'wire' => [['wire:click', 'writeManually']],
-        ],
-    ];
 
     foreach ($baseline as $path => $expected) {
+        expect(File::exists(base_path($path)))->toBeTrue("Missing inventoried view: {$path}");
         $source = File::get(base_path($path));
         if ($path === 'resources/views/layouts/workspace.blade.php') {
             $source .= File::get(resource_path('views/layouts/partials/workspace-navigation.blade.php'));
         }
         $actual = uiInventoryFor($source);
         foreach ($expected as $kind => $items) {
-            foreach ($items as $item) {
-                expect(in_array($item, $actual[$kind], true))->toBeTrue("Missing {$kind} in {$path}: ".json_encode($item));
-            }
-            foreach ($actual[$kind] as $item) {
-                if (! in_array($item, $items, true)) {
-                    expect(in_array($item, $allowedAdditions[$path][$kind] ?? [], true))->toBeTrue("Unreviewed {$kind} in {$path}: ".json_encode($item));
-                }
-            }
+            expect($actual[$kind])->toEqualCanonicalizing($items, "Changed {$kind} in {$path}");
         }
     }
-});
-
-test('report case opening controls remain inventoried', function (): void {
-    $source = File::get(resource_path('views/livewire/cases/open-from-report.blade.php'));
-    $wire = uiInventoryFor($source)['wire'];
-    $expected = [
-        ['wire:key', 'report-person-{{ $index }}'],
-        // The inventory parser stops at the first single quote, so array lookups appear cut at "[".
-        ['wire:click', 'selectPerson({{ $index }}, {{ $candidate['],
-        ['wire:click', 'searchPerson({{ $index }})'],
-        ['wire:click', 'startAddingPerson({{ $index }})'],
-        ['wire:model', 'newEmployeeName'], ['wire:model', 'newEmployeePosition'],
-        ['wire:model', 'newEmployeeDepartment'], ['wire:model', 'newEmployeeHireDate'], ['wire:model', 'newEmployeeGender'],
-        ['wire:click', 'addNewPerson'],
-        ['wire:model', 'locationId'], ['wire:model', 'place'], ['wire:model', 'incidentDate'],
-        ['wire:model', 'incidentTime'], ['wire:model', 'violationTypeId'], ['wire:model', 'violationType'],
-        ['wire:model', 'assignedHrUserId'], ['wire:model', 'description'], ['wire:model', 'responsibleName'],
-        ['wire:model.live.debounce.300ms', 'responsibleSearch'],
-        ['wire:click', 'selectResponsible({{ $result['], ['wire:model', 'includePriorRecord'],
-        ['wire:click', 'confirmOpen({{ $duplicate['], ['wire:click', 'confirmOpen'],
-        ['wire:click', 'chooseDuplicate({{ $duplicate['],
-        ['wire:click', 'save'], ['wire:click', 'open'],
-    ];
-    expect($wire)->toEqualCanonicalizing($expected);
 });

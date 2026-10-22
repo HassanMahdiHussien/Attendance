@@ -65,8 +65,8 @@ test('help library reflects file additions edits and deletions', function (): vo
     }
 });
 
-test('search matches English and normalized Arabic terms', function (): void {
+test('search matches employee guides in both languages', function (): void {
     $library = app(HelpLibrary::class);
-    expect($library->search('en', 'disciplinary'))->not->toBeEmpty()
-        ->and($library->search('ar', 'الاجراءات'))->not->toBeEmpty();
+    expect($library->search('en', 'employees'))->not->toBeEmpty()
+        ->and($library->search('ar', 'الموظفين'))->not->toBeEmpty();
 });

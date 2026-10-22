@@ -2,21 +2,14 @@
 
 use App\Enums\UserRole;
 use App\Models\Company;
-use App\Models\HrPartner;
-use App\Models\LawFirmPartner;
 use App\Models\User;
 
 test('each active role signs in through the shared login', function (UserRole $role, string $landing): void {
     $company = Company::factory()->create();
     completeCompanySetup($company);
     $attributes = ['primary_role' => $role];
-    if (in_array($role, [UserRole::CompanyAdmin, UserRole::HrStaff, UserRole::DeptManager,
-        UserRole::Reporter, UserRole::CommitteeMember], true)) {
+    if ($role === UserRole::HrStaff) {
         $attributes['company_id'] = $company->id;
-    } elseif ($role === UserRole::ExternalLegalReviewer) {
-        $attributes['law_firm_partner_id'] = LawFirmPartner::factory()->create()->id;
-    } elseif ($role === UserRole::HrPartnerStaff) {
-        $attributes['hr_partner_id'] = HrPartner::factory()->create()->id;
     }
     $user = User::factory()->create($attributes);
 
@@ -29,18 +22,12 @@ test('each active role signs in through the shared login', function (UserRole $r
         ->assertNoJavaScriptErrors();
 })->with([
     'platform admin' => [UserRole::PlatformAdmin, '/platform'],
-    'company admin' => [UserRole::CompanyAdmin, '/home'],
     'HR staff' => [UserRole::HrStaff, '/home'],
-    'department manager' => [UserRole::DeptManager, '/home'],
-    'reporter' => [UserRole::Reporter, '/home'],
-    'committee member' => [UserRole::CommitteeMember, '/home'],
-    'external legal reviewer' => [UserRole::ExternalLegalReviewer, '/home'],
-    'HR partner' => [UserRole::HrPartnerStaff, '/home'],
 ]);
 
 test('a wrong password shows the generic login error', function (): void {
     $company = Company::factory()->create();
-    $user = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::CompanyAdmin]);
+    $user = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::HrStaff]);
 
     visitBound('/login')
         ->assertNoJavaScriptErrors()
@@ -52,11 +39,11 @@ test('a wrong password shows the generic login error', function (): void {
         ->assertNoJavaScriptErrors();
 });
 
-test('an Arabic reporter signs in at a narrow viewport', function (): void {
+test('an Arabic HR user signs in at a narrow viewport', function (): void {
     $company = Company::factory()->create();
     $user = User::factory()->create([
         'company_id' => $company->id,
-        'primary_role' => UserRole::Reporter,
+        'primary_role' => UserRole::HrStaff,
         'locale' => 'ar',
     ]);
 

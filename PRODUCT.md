@@ -8,80 +8,68 @@ web
 
 ## Users
 
-- **HR staff and HR managers** in Iraqi private-sector companies are the primary users. They run disciplinary
-  cases every working day from a desktop or laptop at the office: reviewing incoming reports, opening cases,
-  drafting and issuing letters, recording paper hand-offs and signatures, tracking legal deadlines.
-- **Supervisors, engineers and department managers** (reporter role) submit violation reports about their team,
-  mostly from a phone on the factory or site floor, and only see the bare status of their own reports.
-- **Committee members** (legal, HR and labour-union representatives named in the company's Administrative Order)
-  approve or reject the committee recommendations occasionally, from phone or desktop.
-- **The company's own lawyer** approves the company's internal regulation, article by article.
-- **The platform owner** (Platform Admin) manages all tenant companies and the shared legal library.
-- Employees who are subject to a case have no account in this phase; everything with them happens on paper.
-- Arabic is the main working language; English is fully supported and the default interface language. Kurdish
-  (Sorani) is a per-company document language, off by default.
+- **HR staff and HR managers** at Iraqi companies import employee, attendance-device, leave,
+  overtime and holiday records. They review data issues, confirm interpretations, reconcile hours
+  and explain results to employees.
+- **Platform Admin** manages tenant companies and access through explicit cross-company paths.
+- Employees are the people whose records are reconciled. An employee account is not required to
+  explain a result or review its source.
+- English is the default interface language; Arabic is fully supported with native RTL layouts.
 
 ## Product Purpose
 
-Run an employee disciplinary procedure end to end under Iraqi Labour Law No. 37/2015 (federal Iraq) or Law
-No. 71/1987 (Kurdistan Region): report → case → defense request letter → employee response → committee session →
-committee recommendations (three approvals) → decision letter → appeal window → archive. Facts are entered once and
-pulled into every document. Success means no legal deadline is missed, every step is provable after the fact, and
-HR stops retyping the same facts into several legal letters.
+Reconcile attendance and leave without replacing the company's leave system or calculating pay.
+Keep original files and raw transactions, clean repeated punches, calculate work and absence
+minutes, match leave and approved overtime, and show how each employee result was reached.
+Success means HR can correct a source interpretation without losing history, re-upload safely,
+and give the same answer from the profile, dashboard, reports and chat.
 
 ## Positioning
 
-A trusted legal process tool, not generic HR software. The AI drafts legal Arabic only from facts and decisions
-humans entered, cites law articles only by verified id from a curated library (it never types article text), and
-every draft passes a human confirmation gate. Deadlines are calendar-day exact and anchored to the Administrative
-Order's rules; documents are immutable once issued; every action is in an append-only audit log. Calm, precise,
-legally safe.
+An explainable attendance and leave reconciliation workspace. Versioned service rules calculate
+hours, balances and allocations. AI may propose the meaning of a leave description, a holiday
+notice or a chat request; HR confirms before a proposal affects a record. The source and each
+correction remain visible and auditable.
 
 ## Operating Context
 
-- Official delivery is always on paper: letters are printed, signed (or refused before two witnesses), scanned and
-  uploaded. Email and WhatsApp are alerts only.
-- Legal deadlines drive the work: 3-day response, 15-day procedure (from the defense letter's issue date), 30-day
-  appeal window; all calendar days.
-- Every issued document carries several languages in one physical document (Arabic page, English page, optional
-  Kurdish), with Arabic governing; it gets an official reference number at issuance.
-- The committee is a pool per role (legal / HR / labour union) from a versioned Administrative Order; quorum needs
-  three with a union member present.
-- Multi-tenant SaaS: each company sees only its own data; HR partners see aggregate stats; an external partner law
-  firm sees only cases where consultation was requested.
+- Multi-tenant SaaS: each company sees its own records; Platform Admin has explicit cross-company
+  access.
+- Inputs include attendance-device exports, employee lists, leave reports, approved overtime
+  reports and holiday notices. A re-upload never duplicates effects.
+- Ongoing or incompletely covered days remain pending. Missing data is not automatically absence.
+- The product does not issue disciplinary decisions, approve leave or calculate payroll.
 
 ## Capabilities and Constraints
 
-- Web app (Laravel, Livewire, Tailwind; Filament for admin/back-office screens), responsive for phone use; no
-  native app in this phase.
-- Full right-to-left Arabic interface and left-to-right English; Western digits everywhere.
-- Printed legal documents are rendered separately (HTML → PDF with an Arabic Naskh document font) and must look
-  like formal Iraqi official correspondence; they are not part of the app-interface redesign.
-- AI is unavailable-tolerant: every drafting step has a manual "write it yourself" path.
-- Terminology: case (حالة), report (بلاغ), defense request letter (طلب دفاع), committee recommendations (توصيات
-  اللجنة), decision letter (كتاب القرار), Administrative Order (الأمر الإداري), reference number (العدد).
+- Responsive web app built with Laravel, Livewire, Tailwind and Filament for administration.
+- Full right-to-left Arabic interface and left-to-right English; employee names and source
+  descriptions are never machine-translated.
+- Source files and raw rows remain immutable; corrections, allocations and reversals point to the
+  source and record an actor and reason.
+- Import and calculation remain available when AI is unavailable.
 
 ## Brand Commitments
 
-- Name: **Displanery** (Arabic: **نظام الانضباط**) is final.
-- The logo/mark and the whole visual identity are open to redesign (2026-10-14).
-- Voice: calm, precise, plain-spoken, respectful of the employee; never alarmist, never playful about discipline.
+- Name: **Attendance**.
+- Keep the established midnight shell, restrained signal amber and readable work surfaces.
+- Voice: calm, precise and respectful of the employee. Explain uncertainty and pending data plainly.
 
 ## Evidence on Hand
 
-- Pilot company: Al Waha (anonymised in seed data, Hilla branch), with its real Administrative Order and sample
-  letters (`docs/`; real employee records in `docs/attachments` must never be committed or shown).
+- The pilot company and sites are represented by anonymised seed data. Real employee reports and
+  names must never be committed or shown.
 - No customer testimonials, logos, metrics or pricing exist yet; do not fabricate any.
 
 ## Product Principles
 
-1. The human decides; the system records and drafts. Every AI output is visibly a draft until a person confirms it.
-2. Deadlines first: what is due, for whom, and when must be the most visible thing on any working screen.
-3. Enter once, reuse everywhere; never make a user retype a fact the system already holds.
-4. Every action is provable later: state, actor and time are always recoverable and shown where it matters.
-5. Arabic and English are equal citizens; right-to-left is native, not an afterthought.
+1. Explain every result from source rows, correction history and a versioned rule.
+2. Keep pending and incomplete days distinct from confirmed absence.
+3. Re-upload without duplicate transactions, balances, allocations or notifications.
+4. Let HR confirm interpretations; AI proposals never change records by themselves.
+5. Keep English and Arabic equally usable, including native RTL layouts.
 
 ## Accessibility & Inclusion
 
-Keyboard-reachable controls and visible focus; WCAG AA contrast; works at 375 px; RTL-correct layouts; legible
-Arabic text sizes for long reading on the document review screens.
+Keyboard-reachable controls and visible focus; WCAG AA contrast; works at 375 px; RTL-correct
+layouts; legible Arabic text for long employee records.

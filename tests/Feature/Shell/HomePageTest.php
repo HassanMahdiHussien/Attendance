@@ -10,7 +10,7 @@ it('renders the English LTR home page', function () {
         ->assertSee('lang="en"', false)
         ->assertSee('dir="ltr"', false)
         ->assertSee('Readex+Pro')
-        ->assertSee('Displanery');
+        ->assertSee('Attendance');
 });
 
 it('dispatches the heartbeat job and schedules it every minute', function () {

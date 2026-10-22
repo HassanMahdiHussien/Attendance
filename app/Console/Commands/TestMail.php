@@ -20,7 +20,7 @@ class TestMail extends Command
 
             return self::FAILURE;
         }
-        Mail::to($address)->send(new OperationsMessage('Displanery mail test', 'Displanery operational mail test.'));
+        Mail::to($address)->send(new OperationsMessage('Attendance mail test', 'Attendance operational mail test.'));
         $this->info('Test mail sent.');
 
         return self::SUCCESS;

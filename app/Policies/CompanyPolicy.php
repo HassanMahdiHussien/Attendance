@@ -15,7 +15,7 @@ class CompanyPolicy
 
     public function view(User $user, Company $company): bool
     {
-        return $this->viewAny($user) || ($user->company_id === $company->id && in_array($user->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true));
+        return $this->viewAny($user) || ($user->company_id === $company->id && $user->primary_role === UserRole::HrStaff);
     }
 
     public function create(User $user): bool
@@ -25,7 +25,7 @@ class CompanyPolicy
 
     public function update(User $user, Company $company): bool
     {
-        return $this->viewAny($user) || ($user->primary_role === UserRole::CompanyAdmin && $user->company_id === $company->id);
+        return $this->viewAny($user) || ($user->primary_role === UserRole::HrStaff && $user->company_id === $company->id);
     }
 
     public function delete(User $user, Company $company): bool

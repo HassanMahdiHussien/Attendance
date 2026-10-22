@@ -10,7 +10,6 @@ use App\Support\Search\SearchText;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Validation\ValidationException;
 
@@ -18,7 +17,7 @@ class Employee extends Model
 {
     use BelongsToCompany, Concerns\Audited, HasFactory;
 
-    protected $attributes = ['is_active' => true, 'is_general_manager' => false, 'gender' => 'unspecified'];
+    protected $attributes = ['is_active' => true, 'gender' => 'unspecified'];
 
     protected $table = 'employees';
 
@@ -32,13 +31,6 @@ class Employee extends Model
             $employee->search_name = SearchText::normalize((string) $employee->name);
             if (! EmployeeGender::tryFrom((string) ($employee->getAttributes()['gender'] ?? 'unspecified'))) {
                 throw ValidationException::withMessages(['gender' => __('messages.employee.gender_invalid')]);
-            }
-            if ($employee->is_general_manager && $employee->is_active && self::query()
-                ->where('company_id', $employee->company_id)
-                ->where('is_general_manager', true)->where('is_active', true)
-                ->when($employee->exists, fn ($query) => $query->whereKeyNot($employee->getKey()))
-                ->exists()) {
-                throw ValidationException::withMessages(['is_general_manager' => __('messages.employee.single_active_general_manager')]);
             }
         });
         static::creating(function (self $employee): void {
@@ -54,7 +46,6 @@ class Employee extends Model
         return [
             'hire_date' => 'date',
             'gender' => EmployeeGender::class,
-            'is_general_manager' => 'boolean',
             'is_active' => 'boolean',
         ];
     }
@@ -72,10 +63,5 @@ class Employee extends Model
     public function user(): HasOne
     {
         return $this->hasOne(User::class);
-    }
-
-    public function cases(): HasMany
-    {
-        return $this->hasMany(DisciplinaryCase::class);
     }
 }

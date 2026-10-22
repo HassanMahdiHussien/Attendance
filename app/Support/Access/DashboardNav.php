@@ -9,6 +9,6 @@ class DashboardNav
 {
     public static function visible(User $user): bool
     {
-        return in_array($user->primary_role, [UserRole::CompanyAdmin, UserRole::HrStaff], true);
+        return $user->primary_role === UserRole::HrStaff;
     }
 }

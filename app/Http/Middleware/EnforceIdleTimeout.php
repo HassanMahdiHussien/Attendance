@@ -15,7 +15,7 @@ class EnforceIdleTimeout
     public function handle(Request $request, Closure $next): Response
     {
         if ($user = (Filament::getCurrentPanel() ? Filament::auth()->user() : $request->user())) {
-            $minutes = in_array($user->primary_role, [UserRole::PlatformAdmin, UserRole::ExternalLegalReviewer, UserRole::HrPartnerStaff], true)
+            $minutes = $user->primary_role === UserRole::PlatformAdmin
                 ? config('displanery.idle_timeout_minutes.platform') : config('displanery.idle_timeout_minutes.default');
             $last = $request->session()->get('last_activity_at');
             if ($last !== null && now()->timestamp - (int) $last > $minutes * 60) {

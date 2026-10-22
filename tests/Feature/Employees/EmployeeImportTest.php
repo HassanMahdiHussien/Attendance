@@ -30,7 +30,7 @@ function employeeHeaders(): string
 beforeEach(function (): void {
     app()->setLocale('ar');
     $this->company = Company::factory()->create();
-    $this->admin = User::factory()->create(['company_id' => $this->company->id, 'primary_role' => UserRole::CompanyAdmin]);
+    $this->admin = User::factory()->create(['company_id' => $this->company->id, 'primary_role' => UserRole::HrStaff]);
     actingInAdminTenant($this, $this->admin, $this->company);
     $this->branch = Branch::factory()->create(['name' => 'بغداد']);
 });
@@ -99,7 +99,6 @@ test('updates keep empty optional cells and inactive status, with field names in
     $employee = Employee::factory()->create([
         'branch_id' => $this->branch->id, 'employee_code' => 'ABC', 'name' => 'قديم',
         'email' => 'kept@example.com', 'gender' => 'female', 'is_active' => false,
-        'is_general_manager' => true,
     ]);
     $file = employeeCsv(employeeHeaders()."جديد,abc,قسم,منصب,2024-01-15,بغداد,,\n");
     $import = app(EmployeeImport::class);
@@ -112,7 +111,6 @@ test('updates keep empty optional cells and inactive status, with field names in
         ->and($employee->fresh()->email)->toBe('kept@example.com')
         ->and($employee->fresh()->gender->value)->toBe('female')
         ->and($employee->fresh()->is_active)->toBeFalse()
-        ->and($employee->fresh()->is_general_manager)->toBeTrue()
         ->and($employee->fresh()->search_name)->toBe(SearchText::normalize($employee->fresh()->name));
     $audit = AuditLog::query()->where('action', 'employees.imported')->latest('id')->firstOrFail();
     expect($audit->metadata['sha256'])->toBe($preview->hash)
@@ -174,7 +172,7 @@ test('empty files, missing headers and files over 2 MB are rejected before previ
     }
 });
 
-test('import page and template are restricted to the selected company and role', function (): void {
+test('import page and template are restricted to the selected company', function (): void {
     $url = EmployeeResource::getUrl('import', panel: 'admin', tenant: $this->company);
     Livewire::test(ImportEmployees::class)->assertOk();
     $this->get($url)->assertOk();
@@ -182,16 +180,12 @@ test('import page and template are restricted to the selected company and role',
     expect($template->getContent())->toStartWith("\xEF\xBB\xBFالاسم,رقم الموظف")
         ->and(substr_count($template->getContent(), "\n"))->toBe(1);
     $file = employeeCsv(employeeHeaders()."أول,,قسم,منصب,2024-01-15,بغداد,,\n");
-    foreach ([UserRole::HrStaff, UserRole::Reporter] as $role) {
-        $actor = User::factory()->create(['company_id' => $this->company->id, 'primary_role' => $role]);
-        actingInAdminTenant($this, $actor, $this->company);
-        Livewire::test(ImportEmployees::class)->assertForbidden();
-        expect(fn () => app(EmployeeImport::class)->preview($this->company, $file))->toThrow(AuthorizationException::class);
-        expect(fn () => app(EmployeeImport::class)->commit($this->company, $file, $actor, hash_file('sha256', $file->getRealPath())))
-            ->toThrow(AuthorizationException::class);
-        $this->get($url)->assertForbidden();
-        $this->get(route('employees.import.template', ['company' => $this->company->id]))->assertForbidden();
-    }
+    $hr = User::factory()->create(['company_id' => $this->company->id, 'primary_role' => UserRole::HrStaff]);
+    actingInAdminTenant($this, $hr, $this->company);
+    Livewire::test(ImportEmployees::class)->assertOk();
+    $this->get($url)->assertOk();
+    $this->get(route('employees.import.template', ['company' => $this->company->id]))->assertOk();
+
     $other = Company::factory()->create();
     actingInAdminTenant($this, $this->admin, $other);
     Livewire::test(ImportEmployees::class)->assertForbidden();
@@ -212,11 +206,6 @@ test('replaced upload cannot be confirmed', function (): void {
 
 test('preview and confirm recheck the actor and tenant after the page mounted', function (): void {
     $file = employeeCsv(employeeHeaders()."أول,,قسم,منصب,2024-01-15,بغداد,,\n");
-    $page = Livewire::test(ImportEmployees::class)->set('sourceFile', $file);
-    $hr = User::factory()->create(['company_id' => $this->company->id, 'primary_role' => UserRole::HrStaff]);
-    actingInAdminTenant($this, $hr, $this->company);
-    $page->call('previewImport')->assertForbidden();
-
     actingInAdminTenant($this, $this->admin, $this->company);
     $page = Livewire::test(ImportEmployees::class)->set('sourceFile', $file)->call('previewImport');
     $other = Company::factory()->create();
