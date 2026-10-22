@@ -1,7 +1,7 @@
-# Displanery
+# Attendance
 
-Multi-tenant SaaS for Iraqi companies to run employee disciplinary procedures under Iraqi labour
-law. It is the first module of a wider employee-lifecycle platform.
+Multi-tenant SaaS for Iraqi companies to reconcile attendance, leave and overtime from source
+reports. HR can trace each employee-facing result to the imported records and calculation rules.
 
 - Build reference: [CLAUDE.md](CLAUDE.md) · deliberate decisions: [WEIRDNESS.md](WEIRDNESS.md)
 - Architecture decisions: [docs/adr](docs/adr/README.md)
@@ -35,7 +35,7 @@ php artisan test --compact
 ```
 
 Tests run against the MySQL `testing_attendance` database, so they never share a database with
-Displanary's suite on the same machine. SQLite is never used, because the immutability rules live
+Displanary's suite on the same machine. SQLite is never used, because append-only rules live
 in MySQL triggers.
 
 ## Server note

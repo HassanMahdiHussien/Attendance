@@ -52,11 +52,11 @@ Phases 2–4 landed as one commit: Phase 2 alone could not pass the suite becaus
 
 ## Phase 5 — Docs and governance
 
-- [ ] T030 Constitution 2.0.0 (plan D5), version line and amendment note
-- [ ] T031 README, PRODUCT.md, DESIGN.md product wording → attendance (design tokens unchanged)
-- [ ] T032 `WEIRDNESS.md`: discipline lines → `docs/upstream/displanary/WEIRDNESS.md`
-- [ ] T033 Prune unused keys from `lang/{en,ar}/messages.php` and `lang/ar.json`; `TranslationCoverageTest` passes
-- [ ] T034 `docs/upstream/FOUNDATION-CHANGES.md` lists every kept foundation file edited (with "port" / "do not apply")
+- [x] T030 Constitution 2.0.0 (plan D5), version line and amendment note
+- [x] T031 README, PRODUCT.md, DESIGN.md product wording → attendance (design tokens unchanged)
+- [x] T032 `WEIRDNESS.md`: discipline lines → `docs/upstream/displanary/WEIRDNESS.md`
+- [x] T033 Prune unused keys from `lang/{en,ar}/messages.php` and `lang/ar.json`; `TranslationCoverageTest` passes
+- [x] T034 `docs/upstream/FOUNDATION-CHANGES.md` lists every kept foundation file edited (with "port" / "do not apply")
 
 ## Phase 6 — Verification (orchestrator)
 

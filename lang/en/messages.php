@@ -11,7 +11,6 @@ return [
     ],
     'setup' => [
         'title' => 'Finish setting up your company',
-        'branches' => 'Branches and jurisdictions',
         'languages' => 'Interface languages',
         'done' => 'Done',
         'fix' => 'Complete setup',

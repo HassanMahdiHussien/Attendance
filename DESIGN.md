@@ -1,6 +1,6 @@
 ---
-name: Displanery
-description: Iraqi disciplinary-procedure workspace styled as a station departures board.
+name: Attendance
+description: Iraqi attendance and leave reconciliation workspace styled as a station departures board.
 colors:
   night: "#0E1A2B"
   night-strip: "#16263D"
@@ -111,21 +111,21 @@ components:
     height: "64px"
 ---
 
-# Design System: Displanery
+# Design System: Attendance
 
 ## Overview
 
 **Creative North Star: "Baghdad Central Departures"**
 
-Displanery reads like the departures board at Baghdad Central Station. A disciplinary case is a timetable: what is due next, from which stage, and how long until it leaves. The midnight board hangs overhead (the top bar, the departures strip, the next-step panel); everything below it is a calm, light working ground where HR verifies facts, documents and history over long office sessions.
+Attendance reads like the departures board at Baghdad Central Station. Each employee day has a clear state: source coverage, calculated time, reconciliation and remaining questions. The midnight board hangs overhead (the top bar and summary strip); everything below it is a calm, light working ground where HR verifies source records and history over long office sessions.
 
-The system is restrained by design. Colour does jobs, not decoration: signal amber marks the single primary action and the current stage, green means done or on time, red means overdue. The signature is the split-flap countdown chip and the route rail of five stations. Printed legal documents keep their own formal Naskh voice (Noto Naskh Arabic) and are not styled by this system.
+The system is restrained by design. Colour does jobs, not decoration: signal amber marks the single primary action and current state, green means complete, red marks a problem requiring attention. The split-flap chip and route rail remain available visual patterns for measured time and progress.
 
 The user explicitly rejected a generic SaaS look, playful colour, an old government look and cramped density.
 
 **Key Characteristics:**
 - Midnight shell overhead, light #F2F4F7 working ground below.
-- Deadlines are always the most visible thing on a working screen.
+- The current reconciliation state and unresolved data issues are visible on working screens.
 - Amber appears at most twice per screen: the current station and the primary action.
 - One interface family (Readex Pro) for Arabic and Latin; JetBrains Mono only for numbers that are measured or counted.
 - Right-to-left is native: every layout mirrors with logical properties.
@@ -142,7 +142,7 @@ A midnight-and-amber station palette over cool, near-white working surfaces.
 
 ### Neutral
 - **Station Night** (night): the top bar and the next-step panel.
-- **Board Strip** (night-strip): the departures strip and dashboard deadline board.
+- **Board Strip** (night-strip): the departures strip and dashboard summary board.
 - **Board Rule** (night-line): hairlines and chips inside the dark board.
 - **Board Ink** (night-soft): secondary text on dark surfaces.
 - **Working Ground** (working-ground): the page background.
@@ -151,23 +151,23 @@ A midnight-and-amber station palette over cool, near-white working surfaces.
 - **Ink** (ink): body and heading text.
 
 ### State
-- **Overdue Red** (overdue-red, wash overdue-red-wash), **Done Green** (done-green, wash done-green-wash), **Pending Ochre** (pending-ochre on signal-amber-wash): deadline and status meaning only.
+- **Overdue Red** (overdue-red, wash overdue-red-wash), **Done Green** (done-green, wash done-green-wash), **Pending Ochre** (pending-ochre on signal-amber-wash): time and status meaning only.
 
 ### Named Rules
 **The Two Amber Points Rule.** On any screen, signal amber appears on at most the current stage and the one primary action. Repeated list actions use the secondary button.
 
-**The Meaning-Only State Rule.** Red, green and ochre appear only where they carry a deadline or status meaning, never as decoration.
+**The Meaning-Only State Rule.** Red, green and ochre appear only where they carry a time or status meaning, never as decoration.
 
 ## Typography
 
 **Interface Font:** Readex Pro (with sans-serif)
 **Figures Font:** JetBrains Mono (with monospace), tabular figures
-**Document Font:** Noto Naskh Arabic (with serif), legal document previews only
+**Document Font:** Noto Naskh Arabic (with serif), printable documents only
 
-**Character:** A Kufi-rooted workhorse sans that sets Arabic and Latin at the same weight and rhythm, paired with a station-board mono for every case number, date and countdown.
+**Character:** A Kufi-rooted workhorse sans that sets Arabic and Latin at the same weight and rhythm, paired with a station-board mono for measured times, dates and counts.
 
 ### Hierarchy
-- **Numeral** (700, 2.75rem, 1): the case number in the departures strip, signal amber on the dark board.
+- **Numeral** (700, 2.75rem, 1): the main measured figure in the departures strip, signal amber on the dark board.
 - **Headline** (700, 1.5rem, 1.25): page titles.
 - **Title** (600, 1.125rem, 1.35): panel and section headings, the next step.
 - **Body** (400, 0.9375rem, 1.5): all interface text; prose capped near 75ch.
@@ -175,13 +175,13 @@ A midnight-and-amber station palette over cool, near-white working surfaces.
 - **Countdown** (500, 0.8rem, uppercase, tabular): split-flap chips.
 
 ### Named Rules
-**The Measured Mono Rule.** Mono is for numbers that are counted or measured (case numbers, dates, countdowns, counts), never for labels or decoration.
+**The Measured Mono Rule.** Mono is for numbers that are counted or measured (times, dates, countdowns, counts), never for labels or decoration.
 
 **The No Eyebrow Rule.** No small uppercase kicker above a heading; the heading speaks for itself.
 
 ## Layout
 
-A single centred column (max 80rem, 32px gutters on wide screens, 16px on phones) under a sticky 64px top bar. Working screens stack full-width panels with 20px rhythm; the case page opens with the departures strip, then a two-thirds route rail beside a one-third next-step panel. The top-bar navigation appears from 1280px; below it a four-item bottom bar and a "More" sheet carry navigation. Tables collapse into labelled stacked rows under 768px, and the departures table drops its stage and status columns on phones.
+A single centred column (max 80rem, 32px gutters on wide screens, 16px on phones) under a sticky 64px top bar. Working screens stack full-width panels with 20px rhythm; an employee result may open with a departures strip followed by source and reconciliation detail. The top-bar navigation appears from 1280px; below it a four-item bottom bar and a "More" sheet carry navigation. Tables collapse into labelled stacked rows under 768px.
 
 ## Elevation & Depth
 
@@ -211,7 +211,7 @@ Gently squared: 12px panels, 8px controls and buttons, 4px chips; only route sta
 
 ### Cards / Containers
 - **Corner Style:** 12px.
-- **Background:** Panel White on Working Ground; Station Night for the next-step panel; Board Strip for deadline boards.
+- **Background:** Panel White on Working Ground; Station Night for a priority panel; Board Strip for summary boards.
 - **Shadow Strategy:** Panel rest (see Elevation).
 - **Border:** 1px Hairline.
 - **Internal Padding:** 20px (16px on phones).
@@ -225,17 +225,17 @@ Gently squared: 12px panels, 8px controls and buttons, 4px chips; only route sta
 - **Phones:** white bottom bar of four items; the current item gets an amber cap and Ink text.
 
 ### Route Rail (signature)
-Five stations on one 3px line: done stations filled Station Night, the current station Signal Amber with a soft amber ring, future stations white with a Hairline ring. In compact lists it shrinks to 10px stations joined by 2px lines.
+When a process has stages, five stations sit on one 3px line: done stations filled Station Night, the current station Signal Amber with a soft amber ring, future stations white with a Hairline ring. In compact lists it shrinks to 10px stations joined by 2px lines.
 
 ### Departures Strip (signature)
-The case header: case number as the amber numeral, employee name, violation and position, then a table of due events (event, stage, due date, countdown chip, status) on the Board Strip.
+A summary header: employee name, selected period and a measured figure as the amber numeral, followed by the source coverage and reconciliation state on the Board Strip.
 
 ## Do's and Don'ts
 
 ### Do:
-- **Do** put the deadlines of a case or list first, as a departures strip or board with countdown chips.
+- **Do** put the employee result, source coverage and unresolved issues first.
 - **Do** keep amber to the current station and the single primary action (The Two Amber Points Rule).
-- **Do** set every case number, date and countdown in JetBrains Mono with tabular figures.
+- **Do** set every measured time, date and count in JetBrains Mono with tabular figures.
 - **Do** use logical properties so every layout mirrors for Arabic.
 
 ### Don't:
