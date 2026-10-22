@@ -19,4 +19,4 @@
 - [x] T010 Leave upload, requests, request detail, leave types, credit ledger; day detail "Leave and reconciliation"; translations, UI inventory, route sweep, help; Livewire + browser smoke tests
 
 ## Step 4 — Verification (orchestrator)
-- [ ] T011 Real leave sample on the smoke DB; docs; PR
+- [x] T011 Real leave sample (21,249 rows) on the smoke DB with HC employees: statuses 18,534 approved / 2,022 draft / 391 rejected / 302 pending; 2 unmapped types (0200, "Employee Son/Daughter Marriage"); 33 unknown owners; duration mismatches 3,594 → 26 after the counting-method rule; 19,025 leave days distributed; re-upload refused. Docs; PR
