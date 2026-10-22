@@ -149,6 +149,13 @@ return [
             'unknown_person' => 'Punches for an ID not in the employee list',
             'device_pending' => 'Device awaiting approval',
             'import_row_error' => 'Attendance import row error',
+            'leave_type_unmapped' => 'Leave type needs mapping',
+            'leave_unknown_employee' => 'Leave request has an unknown employee ID',
+            'leave_invalid_dates' => 'Leave request dates need review',
+            'leave_unknown_status' => 'Leave status needs review',
+            'leave_invalid_duration' => 'Leave duration needs review',
+            'leave_import_row_error' => 'Leave import row error',
+            'leave_request_missing' => 'Request missing from a full leave report',
         ],
     ],
     'attendance_ui' => [
@@ -279,6 +286,16 @@ return [
     'office_policy' => [
         'reason_required' => 'A reason is required for a policy change.',
         'invalid' => 'The office policy values are invalid.',
+    ],
+    'leave_import' => [
+        'invalid_file' => 'Choose a CSV or Excel leave report within the file size limit.',
+        'header_missing' => 'The leave report header could not be found.',
+        'mapping_invalid' => 'Map the required leave report columns once each.',
+        'scope_invalid' => 'Enter a valid report scope, period and snapshot time.',
+        'review_again' => 'Review the file and scope again before importing.',
+        'already_imported' => 'This leave report has already been imported.',
+        'storage_failed' => 'The original leave report could not be stored.',
+        'request_reappeared' => 'The request reappeared in a later leave report.',
     ],
     'locale' => [
         'arabic' => 'Arabic',

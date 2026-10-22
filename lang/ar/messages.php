@@ -149,6 +149,13 @@ return [
             'unknown_person' => 'بصمات لمعرّف غير موجود في قائمة الموظفين',
             'device_pending' => 'جهاز ينتظر الموافقة',
             'import_row_error' => 'خطأ في صف استيراد الحضور',
+            'leave_type_unmapped' => 'نوع الإجازة يحتاج إلى ربط',
+            'leave_unknown_employee' => 'طلب الإجازة يحمل رقم موظف غير معروف',
+            'leave_invalid_dates' => 'تواريخ طلب الإجازة تحتاج إلى مراجعة',
+            'leave_unknown_status' => 'حالة الإجازة تحتاج إلى مراجعة',
+            'leave_invalid_duration' => 'مدة الإجازة تحتاج إلى مراجعة',
+            'leave_import_row_error' => 'خطأ في صف استيراد الإجازات',
+            'leave_request_missing' => 'طلب مفقود من تقرير إجازات كامل',
         ],
     ],
     'attendance_ui' => [
@@ -279,6 +286,16 @@ return [
     'office_policy' => [
         'reason_required' => 'يجب ذكر سبب تغيير سياسة الدوام.',
         'invalid' => 'قيم سياسة الدوام غير صالحة.',
+    ],
+    'leave_import' => [
+        'invalid_file' => 'اختر تقرير إجازات CSV أو Excel ضمن حد حجم الملف.',
+        'header_missing' => 'تعذر العثور على عنوان أعمدة تقرير الإجازات.',
+        'mapping_invalid' => 'اربط أعمدة تقرير الإجازات المطلوبة مرة واحدة لكل عمود.',
+        'scope_invalid' => 'أدخل نطاق التقرير والفترة ووقت اللقطة بصورة صحيحة.',
+        'review_again' => 'راجع الملف ونطاقه مرة أخرى قبل الاستيراد.',
+        'already_imported' => 'تم استيراد تقرير الإجازات هذا مسبقاً.',
+        'storage_failed' => 'تعذر حفظ تقرير الإجازات الأصلي.',
+        'request_reappeared' => 'ظهر طلب الإجازة مجدداً في تقرير لاحق.',
     ],
     'locale' => [
         'arabic' => 'العربية',

@@ -26,6 +26,19 @@ use App\Models\Employee;
 use App\Models\EmployeeImportBatch;
 use App\Models\EmployeeImportMapping;
 use App\Models\EmployeeVersion;
+use App\Models\Leave\Allocation as LeaveAllocation;
+use App\Models\Leave\Credit as LeaveCredit;
+use App\Models\Leave\ImportBatch as LeaveImportBatch;
+use App\Models\Leave\ImportBatchEvent as LeaveImportBatchEvent;
+use App\Models\Leave\ImportMapping as LeaveImportMapping;
+use App\Models\Leave\ImportRow as LeaveImportRow;
+use App\Models\Leave\LeaveRequest;
+use App\Models\Leave\LeaveType;
+use App\Models\Leave\ProcessingRun as LeaveProcessingRun;
+use App\Models\Leave\RequestDay as LeaveRequestDay;
+use App\Models\Leave\RequestDecision as LeaveRequestDecision;
+use App\Models\Leave\RequestVersion as LeaveRequestVersion;
+use App\Models\Leave\Setting as LeaveSetting;
 use App\Models\Location;
 use App\Models\User;
 use App\Support\Tenancy\TenantContext;
@@ -37,6 +50,10 @@ dataset('tenant models', [
     AttendanceImportMapping::class, Transaction::class, TransactionSource::class, Person::class,
     CoverageInterval::class, DataIssue::class, ProcessingRun::class, Punch::class, Meal::class,
     Policy::class, ManualPunch::class, DayDecision::class, Day::class,
+    LeaveImportBatch::class, LeaveImportBatchEvent::class, LeaveImportMapping::class,
+    LeaveType::class, LeaveRequest::class, LeaveImportRow::class, LeaveRequestVersion::class,
+    LeaveRequestDecision::class, LeaveProcessingRun::class, LeaveRequestDay::class,
+    LeaveCredit::class, LeaveAllocation::class,
 ]);
 
 test('every kept tenant model isolates reads and builder writes and stamps creation', function (string $model): void {
@@ -71,3 +88,18 @@ test('every kept tenant model isolates reads and builder writes and stamps creat
     expect(fn () => $make($a, ['company_id' => $b->id]))->toThrow(TenantMismatch::class);
     $context->clear();
 })->with('tenant models');
+
+test('one leave setting per company remains tenant scoped', function (): void {
+    $a = Company::factory()->create();
+    $b = Company::factory()->create();
+    $context = app(TenantContext::class);
+    $own = $context->runForCompany($a, fn () => LeaveSetting::factory()->create());
+    $other = $context->runForCompany($b, fn () => LeaveSetting::factory()->create());
+
+    $context->setCompany($a);
+    expect(LeaveSetting::query()->pluck('id')->all())->toBe([$own->id])
+        ->and(LeaveSetting::find($other->id))->toBeNull()
+        ->and(LeaveSetting::query()->whereKey($other->id)->update(['credit_expiry_days' => 30]))->toBe(0)
+        ->and(fn () => LeaveSetting::factory()->create(['company_id' => $b->id]))->toThrow(TenantMismatch::class);
+    $context->clear();
+});
