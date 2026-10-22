@@ -19,4 +19,4 @@
 - [x] T010 Daily attendance, review queue, office policy, day detail; translations, UI inventory, route sweep, help article; Livewire tests + browser smoke test
 
 ## Step 4 — Verification (orchestrator)
-- [ ] T011 Real sample on the smoke DB, docs (WEIRDNESS, FOUNDATION-CHANGES), PR
+- [x] T011 Real sample on the smoke DB (all Hilla/Karbala employees marked office for the test): 18 and 19 Oct each ~45% present, ~35% missing punch, ~20% absent; 20 Oct pending (export ends 08:43); found and fixed: no policy before the company creation date silently skipped assessment. Docs updated; PR opened

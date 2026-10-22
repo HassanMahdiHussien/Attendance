@@ -28,11 +28,14 @@ class DayAssessor
         private OutageDetector $outages,
         private AuditLogger $audit,
         private EmployeeHistory $history,
+        private OfficePolicy $policy,
     ) {}
 
     public function run(Company $company, array $scope, string $trigger): ProcessingRun
     {
         abort_unless(app(TenantContext::class)->companyId() === $company->id, 403);
+        // A company created outside onboarding must not be skipped silently for lack of a policy.
+        $this->policy->createDefault($company);
         $from = substr((string) ($scope['from'] ?? ''), 0, 10);
         $to = min(substr((string) ($scope['to'] ?? ''), 0, 10), today('Asia/Baghdad')->toDateString());
         if ($from === '' || $to === '' || $from > $to) {

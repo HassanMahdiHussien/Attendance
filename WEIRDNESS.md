@@ -49,3 +49,7 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 - A device's role and site take effect at local midnight of the setting's date; a pending device's punches are stored but ignored until HR approves it.
 - Repeated-punch groups never span more than 16 hours (`attendance.cleanup.max_group_gap_hours`) so two shifts are never merged.
 - People are contractors/visitors by their department label (`3rd Party …`, `Guest`, `General`), not by ID length: the real export has 8-digit contractor IDs.
+- Office arrival after 09:00 makes 18:00 the required leaving time (not arrival + 9 h), and arriving before 08:00 never allows leaving before 17:00 (product owner, 2026-10-22).
+- Short hours (< 8 h recorded presence) is an alert only and is never added to the hours requiring reconciliation: its minutes overlap lateness and early departure.
+- The first office policy version is effective from 2000-01-01, not the company's creation date: HR imports punches from months before the company joined the system.
+- An attendance day is not assessed until confirmed coverage of the employee's site reaches the required leaving time plus 2 hours; until then it is "pending", never absent.

@@ -14,6 +14,9 @@ use Illuminate\Validation\ValidationException;
 
 class OfficePolicy
 {
+    // The first version covers all history: HR imports months of punches from before the company joined.
+    public const DEFAULT_EFFECTIVE_FROM = '2000-01-01';
+
     public const DEFAULTS = [
         'office_start' => '08:00:00',
         'flex_minutes' => 60,
@@ -48,7 +51,7 @@ class OfficePolicy
 
             $policy = Policy::create(self::DEFAULTS + [
                 'company_id' => $company->id,
-                'effective_from' => $company->created_at?->toDateString() ?? today()->toDateString(),
+                'effective_from' => self::DEFAULT_EFFECTIVE_FROM,
                 'version' => 1,
             ]);
             $this->audit->log('attendance.policy.created', $policy, [

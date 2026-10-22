@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\Attendance\OfficePolicy;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -112,11 +113,12 @@ return new class extends Migration
             $table->foreign(['company_id', 'policy_id'])->references(['company_id', 'id'])->on('attendance_policies')->restrictOnDelete();
         });
 
-        // Existing tenants need a baseline without requiring a production seeder run.
-        foreach (DB::table('companies')->select('id', 'created_at')->orderBy('id')->cursor() as $company) {
+        // Existing tenants need a baseline without requiring a production seeder run. It starts in 2000 so punches
+        // imported for months before the company was created are still assessed.
+        foreach (DB::table('companies')->select('id')->orderBy('id')->cursor() as $company) {
             DB::table('attendance_policies')->insert([
                 'company_id' => $company->id,
-                'effective_from' => substr((string) ($company->created_at ?? now()), 0, 10),
+                'effective_from' => OfficePolicy::DEFAULT_EFFECTIVE_FROM,
                 'office_start' => '08:00:00',
                 'flex_minutes' => 60,
                 'workday_minutes' => 540,

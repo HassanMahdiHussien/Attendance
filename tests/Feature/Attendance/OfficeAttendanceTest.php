@@ -325,3 +325,24 @@ test('the assessment service cannot read another company from the current tenant
         ], 'test'))->toThrow(HttpException::class);
     });
 });
+
+test('a company created after the punch dates and without a policy is still assessed', function (): void {
+    // Real companies join after the months of punches HR uploads first.
+    $company = Company::factory()->create(['created_at' => '2026-10-22 08:00:00']);
+    app(TenantContext::class)->runForCompany($company, function () use ($company): void {
+        $branch = Branch::factory()->create(['company_id' => $company->id]);
+        $employee = Employee::factory()->create([
+            'company_id' => $company->id, 'branch_id' => $branch->id, 'hire_date' => '2020-01-01', 'work_pattern' => 'office',
+        ]);
+        $batch = ImportBatch::factory()->create(['company_id' => $company->id]);
+        CoverageInterval::factory()->create([
+            'company_id' => $company->id, 'batch_id' => $batch->id, 'branch_id' => $branch->id,
+            'coverage_from' => '2026-10-19 00:00:00', 'coverage_to' => '2026-10-20 23:59:59', 'is_confirmed' => true,
+        ]);
+
+        app(DayAssessor::class)->run($company, ['employee_ids' => [$employee->id], 'from' => '2026-10-19', 'to' => '2026-10-19'], 'manual');
+
+        expect(Day::query()->where('employee_id', $employee->id)->whereNull('superseded_by_run_id')->value('status'))->toBe('absent')
+            ->and(app(OfficePolicy::class)->asOf($company, '2026-10-19'))->not->toBeNull();
+    });
+});
