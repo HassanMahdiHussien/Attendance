@@ -40,7 +40,7 @@
 {{ $salutation }}
 @else
 @lang('Regards,')<br>
-{{ __('Displanery') }}
+{{ __('Attendance') }}
 @endif
 
 {{-- Subcopy --}}

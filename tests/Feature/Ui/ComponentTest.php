@@ -28,9 +28,9 @@ test('badge tones, responsive table labels, and nested field errors render', fun
 
 test('Filament panels use the translated brand name', function (): void {
     app()->setLocale('en');
-    expect(Filament::getPanel('admin')->getBrandName())->toBe('Displanery');
+    expect(Filament::getPanel('admin')->getBrandName())->toBe('Attendance');
 
     app()->setLocale('ar');
-    expect(Filament::getPanel('admin')->getBrandName())->toBe(__('Displanery'))
-        ->and(Filament::getPanel('platform')->getBrandName())->toBe(__('Displanery'));
+    expect(Filament::getPanel('admin')->getBrandName())->toBe(__('Attendance'))
+        ->and(Filament::getPanel('platform')->getBrandName())->toBe(__('Attendance'));
 });

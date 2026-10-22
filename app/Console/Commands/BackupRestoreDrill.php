@@ -186,8 +186,8 @@ class BackupRestoreDrill extends Command
             $recipient = config('displanery.backups.notify_email');
             if (is_string($recipient) && $recipient !== '') {
                 try {
-                    Mail::to($recipient)->send(new OperationsMessage('Displanery restore drill failed',
-                        'The Displanery restore drill failed. Inspect the application log and run the drill again.'));
+                    Mail::to($recipient)->send(new OperationsMessage('Attendance restore drill failed',
+                        'The Attendance restore drill failed. Inspect the application log and run the drill again.'));
                 } catch (Throwable) {
                     Log::warning('Restore drill failure mail could not be sent');
                 }

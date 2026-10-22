@@ -8,5 +8,5 @@ test('operational mail remains English under an Arabic request locale', function
     app()->setLocale('ar');
     Mail::fake();
     Artisan::call('ops:test-mail', ['address' => 'operator@example.test']);
-    Mail::assertSent(OperationsMessage::class, fn (OperationsMessage $mail): bool => $mail->locale === 'en' && $mail->subjectLine === 'Displanery mail test');
+    Mail::assertSent(OperationsMessage::class, fn (OperationsMessage $mail): bool => $mail->locale === 'en' && $mail->subjectLine === 'Attendance mail test');
 });

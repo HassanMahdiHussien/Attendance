@@ -3,7 +3,7 @@
 use App\Models\User;
 
 test('guests can enter through the English home page', function (): void {
-    $this->get('/')->assertOk()->assertSee('Displanery')->assertSee('Log in')
+    $this->get('/')->assertOk()->assertSee('Attendance')->assertSee('Log in')
         ->assertSee(route('login'));
 });
 

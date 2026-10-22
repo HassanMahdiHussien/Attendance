@@ -62,7 +62,7 @@ return [
             'to' => env('BACKUP_NOTIFY_EMAIL') ?: (env('MAIL_FROM_ADDRESS') ?: 'hello@example.com'),
             'from' => [
                 'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
-                'name' => env('MAIL_FROM_NAME', 'Displanery'),
+                'name' => env('MAIL_FROM_NAME', 'Attendance'),
             ],
         ],
         'slack' => ['webhook_url' => '', 'channel' => null, 'username' => null, 'icon' => null],
