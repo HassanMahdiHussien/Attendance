@@ -3,13 +3,17 @@
 use App\Exceptions\TenantMismatch;
 use App\Models\Attendance\CoverageInterval;
 use App\Models\Attendance\DataIssue;
+use App\Models\Attendance\Day;
+use App\Models\Attendance\DayDecision;
 use App\Models\Attendance\Device;
 use App\Models\Attendance\DeviceSetting;
 use App\Models\Attendance\ImportBatch as AttendanceImportBatch;
 use App\Models\Attendance\ImportBatchEvent;
 use App\Models\Attendance\ImportMapping as AttendanceImportMapping;
+use App\Models\Attendance\ManualPunch;
 use App\Models\Attendance\Meal;
 use App\Models\Attendance\Person;
+use App\Models\Attendance\Policy;
 use App\Models\Attendance\ProcessingRun;
 use App\Models\Attendance\Punch;
 use App\Models\Attendance\Transaction;
@@ -46,6 +50,10 @@ test('every kept composite tenant foreign key rejects another company through mo
         'attendance_processing_runs' => ProcessingRun::class,
         'attendance_punches' => Punch::class,
         'attendance_meals' => Meal::class,
+        'attendance_policies' => Policy::class,
+        'attendance_manual_punches' => ManualPunch::class,
+        'attendance_day_decisions' => DayDecision::class,
+        'attendance_days' => Day::class,
         'data_issues' => DataIssue::class,
         'branch_user' => BranchUser::class,
         'users' => User::class,
@@ -96,9 +104,9 @@ test('every kept composite tenant foreign key rejects another company through mo
         if (isset($attributes['file_sha256'])) {
             $attributes['file_sha256'] = hash('sha256', 'cross-'.$key->foreign_column.'-'.$target->id);
         }
-        foreach (['row_number', 'sequence'] as $unique) {
+        foreach (['row_number', 'sequence', 'version'] as $unique) {
             if (isset($attributes[$unique])) {
-                $attributes[$unique] = 900000 + $target->id;
+                $attributes[$unique] = $unique === 'version' ? 2000000000 + $target->id : 900000 + $target->id;
             }
         }
 

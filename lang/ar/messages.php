@@ -197,6 +197,10 @@ return [
             'serial_number' => 'الرقم التسلسلي', 'device_name' => 'اسم الجهاز', 'data_source' => 'مصادر البيانات',
         ],
     ],
+    'office_policy' => [
+        'reason_required' => 'يجب ذكر سبب تغيير سياسة الدوام.',
+        'invalid' => 'قيم سياسة الدوام غير صالحة.',
+    ],
     'locale' => [
         'arabic' => 'العربية',
     ],

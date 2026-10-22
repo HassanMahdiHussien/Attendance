@@ -3,11 +3,11 @@
 **Input**: [spec.md](spec.md), [plan.md](plan.md) — the "Revisions after Codex plan review" section overrides earlier plan text. Each step ends green in WSL (Unit, Feature, Browser, Pint).
 
 ## Step 1 — Schema and rules engine
-- [ ] T001 Migrations: policies (+ default backfill), manual punches, day decisions, days (historical branch, current-result indexes); append-only triggers for policies, manual punches, decisions
-- [ ] T002 Models, factories; tenancy test maps (+ unique busting), isolation, trigger smoke
-- [ ] T003 `OfficePolicy` (asOf with version tie-break, add) and onboarding default
-- [ ] T004 Pure `OfficeDayCalculator` implementing plan revisions 4 and 5
-- [ ] T005 Exhaustive unit tests for the calculator (boundaries, overrides, pairing, missing punch, exits, short hours, confirmed absence, closing time)
+- [x] T001 Migrations: policies (+ default backfill), manual punches, day decisions, days (historical branch, current-result indexes); append-only triggers for policies, manual punches, decisions
+- [x] T002 Models, factories; tenancy test maps (+ unique busting), isolation, trigger smoke
+- [x] T003 `OfficePolicy` (asOf with version tie-break, add) and onboarding default
+- [x] T004 Pure `OfficeDayCalculator` implementing plan revisions 4 and 5
+- [x] T005 Exhaustive unit tests for the calculator (boundaries, overrides, pairing, missing punch, exits, short hours, confirmed absence, closing time)
 
 ## Step 2 — Assessment pipeline
 - [ ] T006 Events `AttendanceProcessed`, `CoverageChanged`, `EmployeeExitChanged` (after commit) and `AssessDaysJob`

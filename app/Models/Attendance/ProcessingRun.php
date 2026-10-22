@@ -19,7 +19,7 @@ class ProcessingRun extends Model
 
     protected function casts(): array
     {
-        return ['person_codes' => 'array', 'counts' => 'array', 'scope_from' => 'datetime', 'scope_to' => 'datetime', 'started_at' => 'datetime', 'finished_at' => 'datetime'];
+        return ['person_codes' => 'array', 'scope' => 'array', 'counts' => 'array', 'scope_from' => 'datetime', 'scope_to' => 'datetime', 'started_at' => 'datetime', 'finished_at' => 'datetime'];
     }
 
     public function batch(): BelongsTo

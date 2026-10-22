@@ -197,6 +197,10 @@ return [
             'serial_number' => 'Serial number', 'device_name' => 'Device name', 'data_source' => 'Data sources',
         ],
     ],
+    'office_policy' => [
+        'reason_required' => 'A reason is required for a policy change.',
+        'invalid' => 'The office policy values are invalid.',
+    ],
     'locale' => [
         'arabic' => 'Arabic',
     ],
