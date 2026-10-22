@@ -8,7 +8,10 @@ use App\Models\Attendance\DeviceSetting;
 use App\Models\Attendance\ImportBatch as AttendanceImportBatch;
 use App\Models\Attendance\ImportBatchEvent;
 use App\Models\Attendance\ImportMapping as AttendanceImportMapping;
+use App\Models\Attendance\Meal;
 use App\Models\Attendance\Person;
+use App\Models\Attendance\ProcessingRun;
+use App\Models\Attendance\Punch;
 use App\Models\Attendance\Transaction;
 use App\Models\Attendance\TransactionSource;
 use App\Models\Branch;
@@ -40,6 +43,9 @@ test('every kept composite tenant foreign key rejects another company through mo
         'attendance_transaction_sources' => TransactionSource::class,
         'attendance_people' => Person::class,
         'attendance_coverage_intervals' => CoverageInterval::class,
+        'attendance_processing_runs' => ProcessingRun::class,
+        'attendance_punches' => Punch::class,
+        'attendance_meals' => Meal::class,
         'data_issues' => DataIssue::class,
         'branch_user' => BranchUser::class,
         'users' => User::class,

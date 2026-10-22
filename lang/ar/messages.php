@@ -139,6 +139,12 @@ return [
         'already_imported' => 'استُورد هذا الملف سابقاً.',
         'storage_failed' => 'تعذر حفظ الملف الأصلي.',
         'classified_resolution' => 'تمت مطابقة الشخص أثناء استيراد الحضور.',
+        'device_approved_resolution' => 'تمت الموافقة على الجهاز.',
+        'device_retired_resolution' => 'أُحيل الجهاز إلى التقاعد.',
+        'device_role_invalid' => 'اختر دوراً صالحاً للجهاز.',
+        'device_branch_invalid' => 'اختر فرعاً تابعاً لهذه الشركة.',
+        'device_state_invalid' => 'لا يمكن إجراء هذا التغيير في حالة الجهاز الحالية.',
+        'device_date_invalid' => 'أدخل تاريخ سريان صالحاً.',
         'issue_types' => [
             'unknown_person' => 'بصمات لمعرّف غير موجود في قائمة الموظفين',
             'device_pending' => 'جهاز ينتظر الموافقة',

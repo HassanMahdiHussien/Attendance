@@ -10,6 +10,7 @@ use App\Services\Attendance\PersonClassifier;
 use App\Services\Attendance\TransactionFile;
 use App\Services\Attendance\TransactionImport;
 use App\Support\Tenancy\TenantContext;
+use Carbon\CarbonImmutable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -43,6 +44,8 @@ class ImportTransactionsJob implements ShouldBeUnique, ShouldQueue
         app(TenantContext::class)->runForCompany($company, function () use ($company, $file, $import, $devices, $people, $issues): void {
             $batch = ImportBatch::query()->findOrFail($this->batchId);
             if ($this->latestState($batch) === 'completed') {
+                $this->dispatchProcessing($batch);
+
                 return;
             }
             try {
@@ -66,6 +69,7 @@ class ImportTransactionsJob implements ShouldBeUnique, ShouldQueue
                     $this->storeChunk($company, $batch, $chunk, $import, $devices, $people, $issues, $classified);
                 }
                 $this->event($batch, 'completed', $this->finalCounts($batch));
+                $this->dispatchProcessing($batch);
             } catch (\Throwable $exception) {
                 $code = $exception instanceof ValidationException ? 'invalid_file'
                     : ($exception instanceof RuntimeException && str_starts_with($exception->getMessage(), 'Stored attendance file')
@@ -187,6 +191,23 @@ class ImportTransactionsJob implements ShouldBeUnique, ShouldQueue
                 ->where('t.first_batch_id', '!=', $batch->id)
                 ->distinct()->count('attendance_transaction_sources.transaction_id'),
         ];
+    }
+
+    private function dispatchProcessing(ImportBatch $batch): void
+    {
+        $sources = DB::table('attendance_transaction_sources as s')
+            ->join('attendance_transactions as t', function ($join): void {
+                $join->on('t.id', '=', 's.transaction_id')->on('t.company_id', '=', 's.company_id');
+            })
+            ->where('s.company_id', $batch->company_id)->where('s.batch_id', $batch->id);
+        $codes = (clone $sources)->distinct()->pluck('t.person_code')->all();
+        if ($codes === []) {
+            return;
+        }
+        $range = (clone $sources)->selectRaw('MIN(t.punched_at) AS first_at, MAX(t.punched_at) AS last_at')->first();
+        $from = CarbonImmutable::parse($range->first_at)->subDay()->startOfDay()->toDateTimeString();
+        $to = CarbonImmutable::parse($range->last_at)->addDay()->endOfDay()->toDateTimeString();
+        ProcessAttendanceJob::dispatch($batch->company_id, $codes, $from, $to, 'import', $batch->id)->afterCommit();
     }
 
     private function latestState(ImportBatch $batch): ?string

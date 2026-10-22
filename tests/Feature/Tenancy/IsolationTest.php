@@ -8,7 +8,10 @@ use App\Models\Attendance\DeviceSetting;
 use App\Models\Attendance\ImportBatch as AttendanceImportBatch;
 use App\Models\Attendance\ImportBatchEvent;
 use App\Models\Attendance\ImportMapping as AttendanceImportMapping;
+use App\Models\Attendance\Meal;
 use App\Models\Attendance\Person;
+use App\Models\Attendance\ProcessingRun;
+use App\Models\Attendance\Punch;
 use App\Models\Attendance\Transaction;
 use App\Models\Attendance\TransactionSource;
 use App\Models\Branch;
@@ -28,7 +31,7 @@ dataset('tenant models', [
     CompanySequence::class, EmployeeImportBatch::class, EmployeeImportMapping::class, EmployeeVersion::class,
     Device::class, DeviceSetting::class, AttendanceImportBatch::class, ImportBatchEvent::class,
     AttendanceImportMapping::class, Transaction::class, TransactionSource::class, Person::class,
-    CoverageInterval::class, DataIssue::class,
+    CoverageInterval::class, DataIssue::class, ProcessingRun::class, Punch::class, Meal::class,
 ]);
 
 test('every kept tenant model isolates reads and builder writes and stamps creation', function (string $model): void {

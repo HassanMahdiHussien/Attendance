@@ -2,9 +2,11 @@
 
 use App\Enums\UserRole;
 use App\Jobs\Attendance\ImportTransactionsJob;
+use App\Jobs\Attendance\ProcessAttendanceJob;
 use App\Models\Attendance\DataIssue;
 use App\Models\Attendance\Device;
 use App\Models\Attendance\ImportBatchEvent;
+use App\Models\Attendance\Meal;
 use App\Models\Attendance\Person;
 use App\Models\Attendance\Transaction;
 use App\Models\Attendance\TransactionSource;
@@ -153,6 +155,7 @@ test('commit preserves every source row and retry does not duplicate transaction
     expect(DB::table('attendance_coverage_intervals')->where('batch_id', $batch->id)->value('is_confirmed'))->toBeFalsy();
 
     attendanceImportJob($batch->id);
+    Queue::assertPushed(ProcessAttendanceJob::class);
     attendanceImportJob($batch->id);
     expect(Transaction::count())->toBe(3)->and(TransactionSource::count())->toBe(4)
         ->and(TransactionSource::query()->where('duplicate_in_file', true)->value('person_name'))->toBe(' Different Source Name ')
@@ -189,6 +192,32 @@ test('overlapping files retain one canonical punch and separate raw source rows'
     attendanceImportJob($batchTwo->id);
     expect(Transaction::count())->toBe(2)->and(TransactionSource::count())->toBe(3)
         ->and(TransactionSource::query()->where('batch_id', $batchTwo->id)->where('punch_time', '08:00')->value('person_name'))->toBe('Updated Export Name');
+});
+
+test('overlapping restaurant uploads keep one current meal count', function (): void {
+    $first = attendanceSheet([[12345678, 'Fake Employee', 'Operations', '2026-10-20', '12:00', '255', 'MEAL-1', 'Hilla_RESTAURANT_Face', 'Face']]);
+    $import = app(TransactionImport::class);
+    $mapping = app(TransactionFile::class)->suggest(app(TransactionFile::class)->inspect($first)['headers']);
+    $coverage = ['branch_ids' => [$this->branch->id]];
+    $preview = $import->preview($this->company, $first, $mapping, $coverage);
+    $batch = $import->commit($this->company, $first, $this->actor, $mapping, $coverage, $preview['token']);
+    attendanceImportJob($batch->id);
+    $device = Device::query()->where('serial_number', 'MEAL-1')->firstOrFail();
+    app(DeviceRegistry::class)->approve($device, 'restaurant', $this->branch->id, $this->actor);
+    $job = Queue::pushed(ProcessAttendanceJob::class)->last();
+    app()->call([$job, 'handle']);
+    expect(Meal::query()->whereNull('superseded_by_run_id')->value('punch_count'))->toBe(1);
+
+    $second = attendanceSheet([[12345678, 'Changed Fake Name', 'Operations', '2026-10-20', '12:00', '255', 'MEAL-1', 'Hilla_RESTAURANT_Face', 'Face']], 'Transaction_20261020120030.xlsx');
+    $preview = $import->preview($this->company, $second, $mapping, $coverage);
+    $overlap = $import->commit($this->company, $second, $this->actor, $mapping, $coverage, $preview['token']);
+    attendanceImportJob($overlap->id);
+    $job = Queue::pushed(ProcessAttendanceJob::class)->last();
+    app()->call([$job, 'handle']);
+
+    expect(Transaction::query()->count())->toBe(1)->and(TransactionSource::query()->count())->toBe(2)
+        ->and(Meal::query()->whereNull('superseded_by_run_id')->count())->toBe(1)
+        ->and(Meal::query()->whereNull('superseded_by_run_id')->value('punch_count'))->toBe(1);
 });
 
 test('invalid rows remain traceable and a failed chunk can be retried without duplication', function (): void {

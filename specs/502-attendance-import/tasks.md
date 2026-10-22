@@ -16,9 +16,9 @@ Each step ends green in WSL `~/attendance` (Unit, Feature, Browser, Pint). Every
 
 ## Step 2 — Cleanup, meals and re-processing
 
-- [ ] T008 `PunchCleanup` (FR-006 rules, gap limit, deterministic) and `MealCounter`; processing runs; per-person locking and superseding
-- [ ] T009 `ProcessAttendanceJob` dispatched after import; `DeviceRegistry::approve/change/retire` with re-processing scope; `PersonClassifier` listener on `EmployeeVersionChanged` and employee creation
-- [ ] T010 Tests: PRD §25 1, 3, 4, 5; pending device unused until approval; device change rebuilds neighbouring groups and meal days; employee added later reclassifies and reprocesses; re-run idempotent; concurrent runs leave one current result
+- [x] T008 `PunchCleanup` (FR-006 rules, gap limit, deterministic) and `MealCounter`; processing runs; per-person locking and superseding
+- [x] T009 `ProcessAttendanceJob` dispatched after import; `DeviceRegistry::approve/change/retire` with re-processing scope; `PersonClassifier` listener on `EmployeeVersionChanged` and employee creation
+- [x] T010 Tests: PRD §25 1, 3, 4, 5; pending device unused until approval; device change rebuilds neighbouring groups and meal days; employee added later reclassifies and reprocesses; re-run idempotent; concurrent runs leave one current result
 
 ## Step 3 — Screens
 

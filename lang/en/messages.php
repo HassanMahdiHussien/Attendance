@@ -139,6 +139,12 @@ return [
         'already_imported' => 'This file was already imported.',
         'storage_failed' => 'The original file could not be stored.',
         'classified_resolution' => 'The person was matched during attendance import.',
+        'device_approved_resolution' => 'The device was approved.',
+        'device_retired_resolution' => 'The device was retired.',
+        'device_role_invalid' => 'Choose a valid device role.',
+        'device_branch_invalid' => 'Choose a branch in this company.',
+        'device_state_invalid' => 'This device cannot make that change in its current state.',
+        'device_date_invalid' => 'Enter a valid effective date.',
         'issue_types' => [
             'unknown_person' => 'Punches for an ID not in the employee list',
             'device_pending' => 'Device awaiting approval',

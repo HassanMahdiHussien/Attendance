@@ -211,13 +211,22 @@ class TransactionImport
                     ],
                 ]);
                 ImportBatchEvent::create(['company_id' => $company->id, 'batch_id' => $batch->id, 'sequence' => 1, 'state' => 'queued']);
+                $approvedBranches = [];
+                $seenDevices = Device::query()->where('company_id', $company->id)->where('status', 'approved')
+                    ->whereIn('serial_number', array_keys($preview['per_device']))->get();
+                foreach ($seenDevices as $device) {
+                    $setting = DeviceSetting::query()->where('company_id', $company->id)->where('device_id', $device->id)
+                        ->whereDate('effective_from', '<=', substr($coverage['from'], 0, 10))
+                        ->orderByDesc('effective_from')->orderByDesc('id')->first();
+                    if ($setting !== null && $setting->role !== 'retired') {
+                        $approvedBranches[$setting->branch_id] = true;
+                    }
+                }
                 foreach ($coverage['branch_ids'] as $branchId) {
-                    $approved = DeviceSetting::query()->where('company_id', $company->id)->where('branch_id', $branchId)
-                        ->whereHas('device', fn ($query) => $query->where('status', 'approved'))->exists();
                     DB::table('attendance_coverage_intervals')->insert([
                         'company_id' => $company->id, 'batch_id' => $batch->id, 'branch_id' => $branchId,
                         'coverage_from' => $coverage['from'], 'coverage_to' => $coverage['to'],
-                        'kind' => 'declared', 'is_confirmed' => $approved, 'created_at' => now(),
+                        'kind' => 'declared', 'is_confirmed' => isset($approvedBranches[$branchId]), 'created_at' => now(),
                     ]);
                 }
                 ImportMapping::query()->updateOrCreate(

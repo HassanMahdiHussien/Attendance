@@ -3,9 +3,11 @@
 namespace App\Providers;
 
 use App\Enums\UserRole;
+use App\Events\EmployeeVersionChanged;
 use App\Filament\Auth\LoginResponse;
 use App\Listeners\AuditAuthEvents;
 use App\Models\Company;
+use App\Services\Attendance\EmployeeChangeListener;
 use App\Support\HealthPing;
 use App\Support\Tenancy\TenantContext;
 use Filament\Facades\Filament;
@@ -57,6 +59,7 @@ class AppServiceProvider extends ServiceProvider
             }
         });
         Event::listen(BackupHasFailed::class, fn () => app(HealthPing::class)->failure('backup', 'Backup failed'));
+        Event::listen(EmployeeVersionChanged::class, [EmployeeChangeListener::class, 'handle']);
         Gate::define('importEmployees', fn ($user, Company $company): bool => $user->is_active
             && in_array($user->primary_role, [UserRole::HrStaff, UserRole::PlatformAdmin], true)
             && Filament::getTenant() instanceof Company
