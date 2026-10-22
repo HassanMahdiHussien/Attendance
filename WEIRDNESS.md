@@ -53,3 +53,5 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 - Short hours (< 8 h recorded presence) is an alert only and is never added to the hours requiring reconciliation: its minutes overlap lateness and early departure.
 - The first office policy version is effective from 2000-01-01, not the company's creation date: HR imports punches from months before the company joined the system.
 - An attendance day is not assessed until confirmed coverage of the employee's site reaches the required leaving time plus 2 hours; until then it is "pending", never absent.
+- Surplus leave credit is deducted automatically (oldest unreconciled hours first, oldest credit first, each with a written explanation), overriding PRD §11.2 — product owner, 2026-10-22. An HR reversal of one deduction stops that target from being auto-funded again.
+- A leave request is rejected whenever `Leave Form Rejected` has a date, whatever the status column says; an older leave report uploaded after a newer one never changes a request's current status (latest snapshot time wins).

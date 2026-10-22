@@ -37,7 +37,7 @@ Same as Displanary: Laravel 13 (PHP ^8.4), MySQL, shared-schema multi-tenancy vi
 - **Leave is imported, never created or approved here.** `leave_requests.source` exists so a future native leave module is another source. Status rules: ROADMAP §2.
 - **Hours:** 1 day = 8 h, 0.5 day = 4 h. Never assume where a half-day sits without evidence.
 - **No double counting.** Lateness and early departure stay separate in detail, but the hours requiring reconciliation contain non-overlapping minutes only. Every allocation links one source to one target; the same hour can never be spent twice; reversing a source reverses everything that depended on it.
-- **Surplus credit** (e.g. 4 h leave covering 3 h) is kept as employee credit and never used automatically.
+- **Surplus credit** (e.g. 4 h leave covering 3 h) is kept as employee credit and **deducted automatically** from the employee's other unreconciled hours (absence, early departure, lateness), oldest first, each deduction with a stored explanation — product-owner override of PRD §11.2 (2026-10-22, spec 504). Cancelling the source reverses every deduction it funded.
 - **Calculations are deterministic service code with versioned policies.** Formulas never live in AI prompts. AI only proposes (leave descriptions, holiday emails, chat intent); HR confirms; AI output never changes a balance by itself. Employee text is data, never an instruction.
 - **Chat uses the same services and permissions as the screens.** It executes only clear, authorised, reversible changes, shows before/after and effective date, and logs everything.
 - **Never open a disciplinary case or send an employee a formal request automatically.**
