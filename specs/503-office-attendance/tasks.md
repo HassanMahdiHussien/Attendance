@@ -10,10 +10,10 @@
 - [x] T005 Exhaustive unit tests for the calculator (boundaries, overrides, pairing, missing punch, exits, short hours, confirmed absence, closing time)
 
 ## Step 2 — Assessment pipeline
-- [ ] T006 Events `AttendanceProcessed`, `CoverageChanged`, `EmployeeExitChanged` (after commit) and `AssessDaysJob`
-- [ ] T007 `DayAssessor` (coverage union, eligibility per date, batch loading, employee locks, superseding, change log)
-- [ ] T008 `OutageDetector`, `DayReview` (add missing time, confirm absence, withdraw), scheduled `attendance:assess-pending`
-- [ ] T009 Feature tests: PRD §25 6, 10, 11, 12; absences for employees without punches; outage rule and no reopen; back-dated rest day / policy changes; exit confirmation; isolation
+- [x] T006 Events `AttendanceProcessed`, `CoverageChanged`, `EmployeeExitChanged` (after commit) and `AssessDaysJob`
+- [x] T007 `DayAssessor` (coverage union, eligibility per date, batch loading, employee locks, superseding, change log)
+- [x] T008 `OutageDetector`, `DayReview` (add missing time, confirm absence, withdraw), scheduled `attendance:assess-pending`
+- [x] T009 Feature tests: PRD §25 6, 10, 11, 12; absences for employees without punches; outage rule and no reopen; back-dated rest day / policy changes; exit confirmation; isolation
 
 ## Step 3 — Screens
 - [ ] T010 Daily attendance, review queue, office policy, day detail; translations, UI inventory, route sweep, help article; Livewire tests + browser smoke test

@@ -3,6 +3,7 @@
 namespace App\Services\Attendance;
 
 use App\Enums\UserRole;
+use App\Events\CoverageChanged;
 use App\Jobs\Attendance\ProcessAttendanceJob;
 use App\Models\Attendance\DataIssue;
 use App\Models\Attendance\Device;
@@ -85,6 +86,9 @@ class DeviceRegistry
             $this->audit->log('attendance.device.retired', $device, [
                 'device_id' => $device->id, 'effective_from' => $date, 'setting_id' => $setting?->id,
             ], $actor);
+            if ($latest !== null) {
+                $this->dispatchCoverage($device->company_id, [$latest->branch_id], $date);
+            }
             $this->dispatchAffected($device, $date, $setting?->id);
 
             return $setting;
@@ -116,20 +120,20 @@ class DeviceRegistry
                 'effective_from' => $date, 'role' => $role, 'branch_id' => $branchId,
                 'approved_by' => $actor->id, 'reason' => $reason,
             ]);
-            $confirmedIntervals = [];
             if ($expectedStatus === 'pending') {
                 $device->update(['status' => 'approved']);
                 $issue = DataIssue::query()->where('open_key', 'device_pending|device|'.$device->serial_number)->first();
                 if ($issue !== null) {
                     $this->issues->resolve($issue, $actor, __('messages.attendance_import.device_approved_resolution'));
                 }
-                $confirmedIntervals = $this->confirmDeclaredCoverage($device, $branchId, $date);
             }
+            $confirmedIntervals = $this->confirmDeclaredCoverage($device, $branchId, $date);
             $this->audit->log('attendance.device.'.($expectedStatus === 'pending' ? 'approved' : 'changed'), $device, [
                 'device_id' => $device->id, 'before' => $previous === null ? null : ['role' => $previous->role, 'branch_id' => $previous->branch_id],
                 'after' => ['role' => $role, 'branch_id' => $branchId], 'effective_from' => $date,
                 'setting_id' => $setting->id, 'confirmed_coverage_interval_ids' => $confirmedIntervals,
             ], $actor);
+            $this->dispatchCoverage($device->company_id, array_values(array_unique(array_filter([$branchId, $previous?->branch_id]))), $date);
             $this->dispatchAffected($device, $date, $setting->id);
 
             return $setting;
@@ -141,23 +145,41 @@ class DeviceRegistry
         $confirmed = [];
         $intervals = DB::table('attendance_coverage_intervals')->where('company_id', $device->company_id)
             ->where('branch_id', $branchId)->where('kind', 'declared')->where('is_confirmed', false)
-            ->where('coverage_from', '>=', $date.' 00:00:00')->get();
+            ->where('coverage_to', '>=', $date.' 00:00:00')->get();
         foreach ($intervals as $interval) {
+            $confirmedFrom = max($interval->coverage_from, $date.' 00:00:00');
             $found = DB::table('attendance_transaction_sources as s')
                 ->join('attendance_transactions as t', function ($join): void {
                     $join->on('t.id', '=', 's.transaction_id')->on('t.company_id', '=', 's.company_id');
                 })
                 ->where('s.company_id', $device->company_id)->where('s.batch_id', $interval->batch_id)
                 ->where('t.device_id', $device->id)
-                ->whereBetween('t.punched_at', [$interval->coverage_from, $interval->coverage_to])->exists();
+                ->whereBetween('t.punched_at', [$confirmedFrom, $interval->coverage_to])->exists();
             if ($found) {
-                DB::table('attendance_coverage_intervals')->where('company_id', $device->company_id)
-                    ->where('id', $interval->id)->update(['is_confirmed' => true]);
-                $confirmed[] = $interval->id;
+                if ($confirmedFrom === $interval->coverage_from) {
+                    DB::table('attendance_coverage_intervals')->where('company_id', $device->company_id)
+                        ->where('id', $interval->id)->update(['is_confirmed' => true]);
+                    $confirmed[] = $interval->id;
+                } else {
+                    $confirmed[] = DB::table('attendance_coverage_intervals')->insertGetId([
+                        'company_id' => $device->company_id, 'batch_id' => $interval->batch_id,
+                        'branch_id' => $branchId, 'coverage_from' => $confirmedFrom,
+                        'coverage_to' => $interval->coverage_to, 'kind' => 'declared',
+                        'is_confirmed' => true, 'created_at' => now(),
+                    ]);
+                }
             }
         }
 
         return $confirmed;
+    }
+
+    private function dispatchCoverage(int $companyId, array $branchIds, string $from): void
+    {
+        $last = DB::table('attendance_coverage_intervals')->where('company_id', $companyId)
+            ->whereIn('branch_id', $branchIds)->max('coverage_to');
+        $to = max($from, today()->toDateString(), substr((string) $last, 0, 10));
+        event(new CoverageChanged($companyId, $branchIds, $from, $to));
     }
 
     private function dispatchAffected(Device $device, string $date, ?int $settingId): void

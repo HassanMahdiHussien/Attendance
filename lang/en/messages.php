@@ -197,6 +197,14 @@ return [
             'serial_number' => 'Serial number', 'device_name' => 'Device name', 'data_source' => 'Data sources',
         ],
     ],
+    'office_attendance' => [
+        'reassess_command' => 'Reassess pending office attendance days after their close time.',
+        'outage_cleared' => 'Approved check-in activity was found for this date.',
+        'invalid_time' => 'Enter a valid check-in or check-out time.',
+        'already_withdrawn' => 'This correction or decision has already been withdrawn.',
+        'not_reviewable' => 'This day is not awaiting HR review.',
+        'reason_required' => 'A reason is required.',
+    ],
     'office_policy' => [
         'reason_required' => 'A reason is required for a policy change.',
         'invalid' => 'The office policy values are invalid.',

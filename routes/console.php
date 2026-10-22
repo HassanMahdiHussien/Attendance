@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\Attendance\PendingDaysScheduler;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -8,8 +9,13 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
+Artisan::command('attendance:assess-pending', function (PendingDaysScheduler $scheduler): void {
+    $this->info((string) $scheduler->dispatch());
+})->purpose(__('messages.office_attendance.reassess_command'));
+
 Schedule::command('app:heartbeat --dispatch')->everyMinute();
 Schedule::command('employees:apply-effective-changes')->dailyAt('00:15')->timezone('Asia/Baghdad')->withoutOverlapping();
+Schedule::command('attendance:assess-pending')->hourly()->timezone('Asia/Baghdad')->withoutOverlapping();
 
 Schedule::command('backup:run')->dailyAt('01:00')->timezone('Asia/Baghdad')
     ->when(fn () => config('displanery.backups.enabled'))->withoutOverlapping();

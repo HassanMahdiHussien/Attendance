@@ -88,7 +88,7 @@ class OfficePolicy
                 'before' => $current === null ? [] : array_intersect_key($current->toArray(), self::DEFAULTS),
                 'after' => $values, 'reason' => $reason,
             ], $actor);
-            // The dated policy row is the input for the assessment dispatch added with the pipeline.
+            DB::afterCommit(fn () => app(AssessmentTriggers::class)->policyAdded($policy));
 
             return $policy;
         });

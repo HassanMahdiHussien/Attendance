@@ -2,6 +2,7 @@
 
 namespace App\Services\Attendance;
 
+use App\Events\CoverageChanged;
 use App\Models\Attendance\DataIssue;
 use App\Models\Company;
 use App\Models\User;
@@ -53,6 +54,9 @@ class DataIssues
                 'type' => $issue->type, 'subject_key' => $issue->subject_key,
                 'before' => 'open', 'after' => $status,
             ], $actor);
+            if ($issue->type === 'device_outage' && preg_match('/^branch:(\d+):(\d{4}-\d{2}-\d{2})$/', $issue->subject_key, $matches)) {
+                event(new CoverageChanged((int) $issue->company_id, [(int) $matches[1]], $matches[2], $matches[2]));
+            }
         });
     }
 }
