@@ -18,7 +18,7 @@ class CsvReader
         'gender' => ['gender', 'الجنس'],
     ];
 
-    private const REQUIRED = ['name', 'department', 'position', 'hire_date', 'branch'];
+    private const REQUIRED = ['name', 'hire_date', 'branch'];
 
     public function read(UploadedFile $file): array
     {

@@ -17,13 +17,16 @@ class EmployeeFactory extends Factory
     public function definition(): array
     {
         return [
-            'branch_id' => Branch::factory(),
             'company_id' => app(TenantContext::class)->companyId(),
+            'branch_id' => fn (array $attributes): int => Branch::factory()->create(['company_id' => $attributes['company_id']])->id,
             'name' => $this->faker->words(3, true),
             'department' => $this->faker->words(3, true),
             'position' => $this->faker->words(3, true),
             'hire_date' => now(),
             'gender' => 'male',
+            'work_pattern' => null,
+            'rest_days' => null,
+            'exit_status' => 'none',
         ];
     }
 

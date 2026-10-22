@@ -76,6 +76,24 @@
     ],
     "links": []
   },
+  "resources/views/filament/admin/resources/employee-resource/pages/exit-review-employees.blade.php": {
+    "wire": [["wire:click", "confirm({{ $employee->id }})"], ["wire:click", "dismiss({{ $employee->id }})"], ["wire:key", "exit-{{ $employee->id }}"], ["wire:model", "dismissReasons.{{ $employee->id }}"], ["wire:model", "lastWorkingDays.{{ $employee->id }}"]],
+    "errors": [],
+    "can": [],
+    "role_conditions": [],
+    "permission_calls": [],
+    "permission_conditions": [],
+    "file_bindings": [],
+    "routes": [],
+    "links": []
+  },
+  "resources/views/filament/admin/resources/employee-resource/pages/import-employees.blade.php": {
+    "wire": [["wire:click", "confirmMappedImport"], ["wire:click", "previewMappedImport"], ["wire:key", "batch-{{ $batch->id }}"], ["wire:key", "mapping-{{ $index }}"], ["wire:key", "preview-{{ $loop->index }}"], ["wire:model", "effectiveDate"], ["wire:model", "mode"], ["wire:model", "sourceFile"], ["wire:model.live", "mapping.{{ $index }}"], ["wire:submit", "prepareMapping"]],
+    "errors": ["effectiveDate", "mapping", "mode", "sourceFile"],
+    "can": [], "role_conditions": [], "permission_calls": [], "permission_conditions": [],
+    "file_bindings": [[["wire:model", "sourceFile"]]],
+    "routes": ["employees.import.file", "employees.import.template"], "links": []
+  },
   "resources/views/livewire/global-search.blade.php": {
     "wire": [
       [

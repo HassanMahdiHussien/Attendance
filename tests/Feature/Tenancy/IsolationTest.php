@@ -6,13 +6,16 @@ use App\Models\BranchUser;
 use App\Models\Company;
 use App\Models\CompanySequence;
 use App\Models\Employee;
+use App\Models\EmployeeImportBatch;
+use App\Models\EmployeeImportMapping;
+use App\Models\EmployeeVersion;
 use App\Models\Location;
 use App\Models\User;
 use App\Support\Tenancy\TenantContext;
 
 dataset('tenant models', [
     Branch::class, Location::class, Employee::class, BranchUser::class,
-    CompanySequence::class,
+    CompanySequence::class, EmployeeImportBatch::class, EmployeeImportMapping::class, EmployeeVersion::class,
 ]);
 
 test('every kept tenant model isolates reads and builder writes and stamps creation', function (string $model): void {

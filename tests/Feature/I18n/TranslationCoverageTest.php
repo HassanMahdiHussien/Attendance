@@ -1,5 +1,7 @@
 <?php
 
+use App\Services\Employees\ColumnMapping;
+use App\Services\Employees\EmployeeHistory;
 use Illuminate\Support\Facades\File;
 
 test('all UI translation keys exist in both catalogue layers and UI code contains no Arabic prose', function (): void {
@@ -51,4 +53,31 @@ test('all UI translation keys exist in both catalogue layers and UI code contain
     }
 
     expect($violations)->toBe([]);
+});
+
+test('dynamic employee history labels exist in both languages', function (): void {
+    $english = File::getRequire(lang_path('en/messages.php'));
+    $arabic = File::getRequire(lang_path('ar/messages.php'));
+
+    foreach (EmployeeHistory::FIELDS as $field) {
+        expect(data_get($english, 'employee_history.fields.'.$field))->not->toBeNull()
+            ->and(data_get($arabic, 'employee_history.fields.'.$field))->not->toBeNull();
+    }
+    foreach (['initial', 'manual', 'import', 'chat'] as $source) {
+        expect(data_get($english, 'employee_history.sources.'.$source))->not->toBeNull()
+            ->and(data_get($arabic, 'employee_history.sources.'.$source))->not->toBeNull();
+    }
+});
+
+test('mapped import fields and statuses exist in both languages', function (): void {
+    $english = File::getRequire(lang_path('en/messages.php'));
+    $arabic = File::getRequire(lang_path('ar/messages.php'));
+    foreach (ColumnMapping::FIELDS as $field) {
+        expect(data_get($english, 'employee_import_ui.fields.'.$field))->not->toBeNull()
+            ->and(data_get($arabic, 'employee_import_ui.fields.'.$field))->not->toBeNull();
+    }
+    foreach (['new', 'update', 'unchanged', 'error'] as $status) {
+        expect(data_get($english, 'employee_import_ui.status.'.$status))->not->toBeNull()
+            ->and(data_get($arabic, 'employee_import_ui.status.'.$status))->not->toBeNull();
+    }
 });

@@ -10,12 +10,15 @@ use App\Livewire\Help\HelpArticlePage;
 use App\Livewire\Help\HelpIndex;
 use App\Livewire\Home;
 use App\Models\Company;
+use App\Models\EmployeeImportBatch;
+use App\Services\AuditLogger;
 use Filament\Facades\Filament;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -45,6 +48,16 @@ Route::middleware('auth')->group(function (): void {
             'Content-Disposition' => 'attachment; filename="employees-template.csv"',
         ]);
     })->name('employees.import.template');
+    Route::get('/admin/{company}/employee-imports/{batch}/file', function (Company $company, int $batch) {
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+        Filament::setTenant($company);
+        $record = EmployeeImportBatch::query()->where('company_id', $company->id)->findOrFail($batch);
+        Gate::authorize('viewOriginal', $record);
+        abort_unless(Storage::disk('local')->exists($record->file_path), 404);
+        app(AuditLogger::class)->log('employee.import.file.downloaded', $record, ['batch_id' => $record->id]);
+
+        return Storage::disk('local')->download($record->file_path, $record->file_name);
+    })->name('employees.import.file');
     Route::post('/logout', function (Request $request): RedirectResponse {
         Auth::logout();
         $request->session()->invalidate();

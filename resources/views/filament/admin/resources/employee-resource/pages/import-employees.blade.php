@@ -1,55 +1,123 @@
 <x-filament-panels::page>
     <div class="space-y-6">
         <section class="space-y-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-            <h2 class="font-bold">{{ __('Employee file') }}</h2>
-            <p>{{ __('Download the template and fill one row per employee. Required columns: name, department, position, hire date, and branch. Employee number, email, and gender are optional. Use 2024-01-15 or 15/01/2024 for dates.') }}</p>
-            <p>{{ __('Example: Ahmed Ali, EMP-0100, HR, Officer, 2024-01-15, Baghdad, ahmed@example.com, male. Leave the employee number blank to generate one. Blank optional cells do not erase existing values.') }}</p>
+            <h2 class="font-bold">{{ __('messages.employee_import_ui.upload') }}</h2>
+            <p>{{ __('messages.employee_import_ui.instructions') }}</p>
             <a class="underline text-primary-600" href="{{ route('employees.import.template', ['company' => \Filament\Facades\Filament::getTenant()->id]) }}">{{ __('Download CSV template') }}</a>
-            <form wire:submit="previewImport" class="space-y-3">
-                <input type="file" wire:model="sourceFile" accept=".csv,.txt,text/csv,text/plain" class="block w-full rounded-xl border border-gray-200 bg-white p-2">
+            <form wire:submit="prepareMapping" class="space-y-3">
+                <input type="file" name="sourceFile" wire:model="sourceFile" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" class="block w-full rounded-xl border border-gray-200 bg-white p-2">
                 @error('sourceFile') <p class="text-red-600">{{ $message }}</p> @enderror
-                <x-filament::button type="submit">{{ __('Preview file') }}</x-filament::button>
+                <div class="flex flex-wrap gap-4">
+                    <label>{{ __('messages.employee_import_ui.mode') }}
+                        <select wire:model="mode" class="rounded-xl border border-gray-200 bg-white p-2">
+                            <option value="full">{{ __('messages.employee_import_ui.full') }}</option>
+                            <option value="partial">{{ __('messages.employee_import_ui.partial') }}</option>
+                        </select>
+                    </label>
+                    <label>{{ __('messages.employee_import_ui.effective_date') }}
+                        <input type="date" wire:model="effectiveDate" class="rounded-xl border border-gray-200 bg-white p-2" dir="ltr">
+                    </label>
+                </div>
+                @error('mode') <p class="text-red-600">{{ $message }}</p> @enderror
+                @error('effectiveDate') <p class="text-red-600">{{ $message }}</p> @enderror
+                <x-filament::button type="submit" wire:loading.attr="disabled" wire:target="sourceFile">{{ __('messages.employee_import_ui.map_columns') }}</x-filament::button>
             </form>
         </section>
 
-        @if ($summary)
-            <section class="rounded-xl border border-green-500 p-4">{{ __('Import completed: :added added, :updated updated.', ['added' => \App\Support\Format\Ui::number($summary['added']), 'updated' => \App\Support\Format\Ui::number($summary['updated'])]) }}</section>
-        @endif
-
-        @if ($previewRows !== null)
-            @php
-                $errors = count(array_filter($previewRows, fn ($row) => $row['status'] === 'error'));
-                $added = count(array_filter($previewRows, fn ($row) => $row['status'] === 'new'));
-                $updated = count($previewRows) - $errors - $added;
-            @endphp
+        @if ($step === 'mapping')
             <section class="space-y-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-                <h2 class="font-bold">{{ __('Preview: :count rows', ['count' => \App\Support\Format\Ui::number(count($previewRows))]) }}</h2>
-                <p>{{ __('New: :new · Updates: :updated · Errors: :errors', ['new' => \App\Support\Format\Ui::number($added), 'updated' => \App\Support\Format\Ui::number($updated), 'errors' => \App\Support\Format\Ui::number($errors)]) }}</p>
-                @if ($notices)
-                    <p>{{ __('Unknown columns were ignored') }}: {{ implode(', ', $notices) }}</p>
-                @endif
+                <h2 class="font-bold">{{ __('messages.employee_import_ui.mapping') }}</h2>
+                <p>{{ __('messages.employee_import_ui.mapping_help') }}</p>
                 <div class="overflow-x-auto">
-                    <table class="w-full text-start border-collapse">
-                        <thead><tr class="border-b"><th class="p-2">{{ __('Row') }}</th><th class="p-2">{{ __('Status') }}</th><th class="p-2">{{ __('Name') }}</th><th class="p-2">{{ __('Number') }}</th><th class="p-2">{{ __('Branch') }}</th><th class="p-2">{{ __('Changes / notes') }}</th></tr></thead>
+                    <table class="w-full text-start"><thead><tr><th class="p-2">{{ __('messages.employee_import_ui.column') }}</th><th class="p-2">{{ __('messages.employee_import_ui.header') }}</th><th class="p-2">{{ __('messages.employee_import_ui.sample') }}</th><th class="p-2">{{ __('messages.employee_import_ui.field') }}</th></tr></thead>
                         <tbody>
-                            @foreach ($previewRows as $row)
-                                <tr class="border-b align-top">
-                                    <td class="p-2">{{ \App\Support\Format\Ui::number($row['number']) }}</td>
-                                    <td class="p-2"><x-filament::badge :color="$row['status'] === 'error' ? 'danger' : ($row['status'] === 'new' ? 'success' : 'warning')">{{ match ($row['status']) { 'new' => __('New'), 'update' => __('Will be updated'), 'update-inactive' => __('Will be updated (inactive)'), default => __('Error') } }}</x-filament::badge></td>
-                                    <td class="p-2">{{ $row['values']['name'] }}</td>
-                                    <td class="p-2">{{ $row['values']['employee_code'] ?: __('Will be generated') }}</td>
-                                    <td class="p-2">{{ $row['branch'] }}</td>
-                                    <td class="p-2">
-                                        @foreach ($row['errors'] as $error) <p class="text-red-600">{{ $error }}</p> @endforeach
-                                        @if ($row['diff']) <p>{{ __('Change') }}: {{ implode(', ', $row['diff']) }}</p> @endif
-                                        @foreach ($row['warnings'] as $warning) <p class="text-amber-600">{{ $warning }}</p> @endforeach
-                                    </td>
+                            @foreach ($headers as $index => $header)
+                                <tr class="border-t" wire:key="mapping-{{ $index }}">
+                                    <td class="p-2" dir="ltr">{{ $index + 1 }}</td>
+                                    <td class="p-2">{{ $header ?: __('messages.employee_import_ui.blank_header') }}</td>
+                                    <td class="p-2"><bdi dir="{{ in_array($mapping[$index] ?? '', ['employee_code', 'manager_code', 'email', 'fallback_notification_email', 'schedule_start', 'schedule_end'], true) ? 'ltr' : 'auto' }}">{{ $samples[$index] ?? '' }}</bdi></td>
+                                    <td class="p-2"><select wire:model.live="mapping.{{ $index }}" class="rounded-xl border border-gray-200 bg-white p-2">
+                                        <option value="">{{ __('messages.employee_import_ui.unmapped') }}</option>
+                                        @foreach (\App\Services\Employees\ColumnMapping::FIELDS as $field)
+                                            <option value="{{ $field }}">{{ __('messages.employee_import_ui.fields.'.$field) }}</option>
+                                        @endforeach
+                                    </select></td>
                                 </tr>
                             @endforeach
                         </tbody>
                     </table>
                 </div>
-                <x-filament::button wire:click="confirmImport" :disabled="$errors > 0">{{ __('Confirm import') }}</x-filament::button>
+                @error('mapping') <p class="text-red-600">{{ $message }}</p> @enderror
+                <x-filament::button wire:click="previewMappedImport">{{ __('Preview file') }}</x-filament::button>
+            </section>
+        @endif
+
+        @if ($summary)
+            <section class="space-y-2 rounded-xl border border-green-500 p-4">
+                @if (isset($summary['counts']))
+                    <p>{{ __('messages.employee_import_ui.completed', $summary['counts']) }}</p>
+                    <a class="underline" href="{{ route('employees.import.file', ['company' => \Filament\Facades\Filament::getTenant()->id, 'batch' => $summary['batch_id']]) }}">{{ __('messages.employee_import_ui.download_original') }}</a>
+                @else
+                    <p>{{ __('Import completed: :added added, :updated updated.', $summary) }}</p>
+                @endif
+            </section>
+        @endif
+
+        @if ($this->recentBatches()->isNotEmpty())
+            <section class="space-y-2 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                <h2 class="font-bold">{{ __('messages.employee_import_ui.previous') }}</h2>
+                @foreach ($this->recentBatches() as $batch)
+                    <p wire:key="batch-{{ $batch->id }}"><bdi dir="ltr">{{ $batch->created_at->format('Y-m-d') }}</bdi> · {{ __('messages.employee_import_ui.'.$batch->mode) }} ·
+                        <a class="underline" href="{{ route('employees.import.file', ['company' => \Filament\Facades\Filament::getTenant()->id, 'batch' => $batch->id]) }}">{{ __('messages.employee_import_ui.download_original') }}</a>
+                    </p>
+                @endforeach
+            </section>
+        @endif
+
+        @if ($previewRows !== null)
+            <section class="space-y-2 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                @foreach ($previewRows as $row)
+                    @foreach ($row['errors'] as $error) <p class="text-red-600">{{ $error }}</p> @endforeach
+                    @foreach ($row['warnings'] as $warning) <p class="text-amber-700">{{ $warning }}</p> @endforeach
+                @endforeach
+            </section>
+        @endif
+
+        @if ($step === 'preview' && $this->mappedPreview())
+            <section class="space-y-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                <h2 class="font-bold">{{ __('messages.employee_import_ui.preview') }}</h2>
+                <p>{{ __('messages.employee_import_ui.counts', ['new' => $this->mappedPreview()->added(), 'changed' => $this->mappedPreview()->changed(), 'unchanged' => $this->mappedPreview()->unchanged(), 'missing' => count($this->mappedPreview()->missing), 'errors' => $this->mappedPreview()->errors()]) }}</p>
+                @if ($this->mappedPreview()->alreadyImported)
+                    <p class="text-amber-700">{{ __('messages.employee_import_ui.already_imported', $this->mappedPreview()->alreadyImported) }}</p>
+                @endif
+                <div class="overflow-x-auto"><table class="w-full text-start">
+                    <thead><tr><th class="p-2">{{ __('Row') }}</th><th class="p-2">{{ __('Status') }}</th><th class="p-2">{{ __('Name') }}</th><th class="p-2">{{ __('Number') }}</th><th class="p-2">{{ __('Branch') }}</th><th class="p-2">{{ __('Changes / notes') }}</th></tr></thead>
+                    <tbody>
+                        @foreach ($this->mappedPreview()->rows as $row)
+                            <tr class="border-t" wire:key="preview-{{ $loop->index }}">
+                                <td class="p-2">{{ $row['number'] }}</td><td class="p-2">{{ __('messages.employee_import_ui.status.'.$row['status']) }}</td>
+                                <td class="p-2">{{ $row['name'] }}</td><td class="p-2"><bdi dir="ltr">{{ $row['code'] }}</bdi></td><td class="p-2">{{ $row['branch'] }}</td>
+                                <td class="p-2">
+                                    @foreach ($row['diff'] as $field => $change)
+                                        <p>{{ __('messages.employee_import_ui.fields.'.$field) }}:
+                                            <bdi dir="{{ in_array($field, ['email', 'fallback_notification_email', 'schedule_start', 'schedule_end', 'manager_employee_id'], true) ? 'ltr' : 'auto' }}">{{ is_array($change['before']) ? implode(', ', $change['before']) : ($change['before'] ?? '—') }}</bdi>
+                                            → <bdi dir="{{ in_array($field, ['email', 'fallback_notification_email', 'schedule_start', 'schedule_end', 'manager_employee_id'], true) ? 'ltr' : 'auto' }}">{{ is_array($change['after']) ? implode(', ', $change['after']) : ($change['after'] ?? '—') }}</bdi>
+                                        </p>
+                                    @endforeach
+                                    @foreach ($row['errors'] as $error) <p class="text-red-600">{{ $error }}</p> @endforeach
+                                    @foreach ($row['warnings'] as $warning) <p class="text-amber-700">{{ $warning }}</p> @endforeach
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table></div>
+                @if ($this->mappedPreview()->missing)
+                    <h3 class="font-bold">{{ __('messages.employee_import_ui.missing') }}</h3>
+                    <ul>@foreach ($this->mappedPreview()->missing as $employee)<li><bdi dir="ltr">{{ $employee['code'] }}</bdi> — {{ $employee['name'] }}</li>@endforeach</ul>
+                @endif
+                @if ($this->mappedPreview()->token && $this->mappedPreview()->errors() === 0)
+                    <x-filament::button wire:click="confirmMappedImport">{{ __('Confirm import') }}</x-filament::button>
+                @endif
             </section>
         @endif
     </div>

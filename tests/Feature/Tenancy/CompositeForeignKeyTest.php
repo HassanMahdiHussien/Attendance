@@ -5,6 +5,8 @@ use App\Models\Branch;
 use App\Models\BranchUser;
 use App\Models\Company;
 use App\Models\Employee;
+use App\Models\EmployeeImportBatch;
+use App\Models\EmployeeVersion;
 use App\Models\Location;
 use App\Models\User;
 use App\Support\Tenancy\TenantContext;
@@ -17,6 +19,8 @@ test('every kept composite tenant foreign key rejects another company through mo
         'branches' => Branch::class,
         'locations' => Location::class,
         'employees' => Employee::class,
+        'employee_import_batches' => EmployeeImportBatch::class,
+        'employee_versions' => EmployeeVersion::class,
         'branch_user' => BranchUser::class,
         'users' => User::class,
     ];

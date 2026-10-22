@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Enums\EmployeeExitStatus;
 use App\Enums\EmployeeGender;
+use App\Enums\EmployeeWorkPattern;
 use App\Enums\SequenceKey;
 use App\Models\Concerns\BelongsToCompany;
 use App\Services\SequenceService;
@@ -10,6 +12,7 @@ use App\Support\Search\SearchText;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Validation\ValidationException;
 
@@ -17,13 +20,13 @@ class Employee extends Model
 {
     use BelongsToCompany, Concerns\Audited, HasFactory;
 
-    protected $attributes = ['is_active' => true, 'gender' => 'unspecified'];
+    protected $attributes = ['is_active' => true, 'gender' => 'unspecified', 'exit_status' => 'none'];
 
     protected $table = 'employees';
 
     protected $guarded = [];
 
-    protected array $companyParents = ['branch'];
+    protected array $companyParents = ['branch', 'manager', 'exitReviewBatch'];
 
     protected static function booted(): void
     {
@@ -47,6 +50,10 @@ class Employee extends Model
             'hire_date' => 'date',
             'gender' => EmployeeGender::class,
             'is_active' => 'boolean',
+            'work_pattern' => EmployeeWorkPattern::class,
+            'rest_days' => 'array',
+            'exit_status' => EmployeeExitStatus::class,
+            'last_working_day' => 'date',
         ];
     }
 
@@ -63,5 +70,20 @@ class Employee extends Model
     public function user(): HasOne
     {
         return $this->hasOne(User::class);
+    }
+
+    public function manager(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'manager_employee_id');
+    }
+
+    public function exitReviewBatch(): BelongsTo
+    {
+        return $this->belongsTo(EmployeeImportBatch::class, 'exit_review_batch_id');
+    }
+
+    public function versions(): HasMany
+    {
+        return $this->hasMany(EmployeeVersion::class);
     }
 }

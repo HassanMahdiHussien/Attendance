@@ -25,7 +25,7 @@ class BackupRestoreDrill extends Command
 
     private const VOLATILE = ['sessions', 'cache', 'cache_locks', 'jobs', 'job_batches', 'failed_jobs'];
 
-    private const APPEND_ONLY = ['audit_logs', 'ai_generation_logs'];
+    private const APPEND_ONLY = ['audit_logs', 'ai_generation_logs', 'employee_versions', 'employee_import_batches'];
 
     public function handle(HealthPing $ping): int
     {

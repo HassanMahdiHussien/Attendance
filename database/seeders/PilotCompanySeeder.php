@@ -5,8 +5,8 @@ namespace Database\Seeders;
 use App\Enums\Jurisdiction;
 use App\Models\Branch;
 use App\Models\Company;
-use App\Models\Employee;
 use App\Models\Location;
+use App\Services\Employees\EmployeeHistory;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -49,7 +49,7 @@ class PilotCompanySeeder extends Seeder
 
                 $englishNames = ['Laith Fadil Karim', 'Rana Yaser Jabbar', 'Marwan Nazim Taha', 'Salma Fuad Jasim', 'Nadir Kazim Raouf', 'Dalal Haider Abbas', 'Yumna Qasim Falah', 'Ziyad Khalil Dawood', 'Huda Raed Mohsen', 'Firas Adil Samir', 'Safaa Walid Mahmoud', 'Maysoun Thamir Youssef'];
                 foreach ($people as $index => [$name, $department, $position]) {
-                    Employee::create([
+                    $values = [
                         'company_id' => $company->id,
                         'branch_id' => $branch->id,
                         'name' => $name,
@@ -64,7 +64,13 @@ class PilotCompanySeeder extends Seeder
                         },
                         'gender' => in_array($index, [1, 3, 5, 6, 8, 11], true) ? 'female' : 'male',
                         'hire_date' => '2024-01-01',
-                    ]);
+                    ];
+                    app(EmployeeHistory::class)->create(
+                        array_intersect_key($values, array_flip(['company_id', 'branch_id', 'name', 'gender', 'hire_date'])),
+                        $values,
+                        '2024-01-01',
+                        'initial',
+                    );
                 }
             });
         });

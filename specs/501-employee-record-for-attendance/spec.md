@@ -1,6 +1,6 @@
 # Feature Specification: Shared employee record for attendance
 
-**Branch**: `501-employee-record-for-attendance` (after `500-foundation-cleanup` is merged) | **Created**: 2026-10-21 | **Status**: Draft — awaiting product-owner review
+**Branch**: `501-employee-record-for-attendance` (after `500-foundation-cleanup` is merged) | **Created**: 2026-10-21 | **Status**: Clarified 2026-10-22
 
 **Input**: Product owner (2026-10-21): build the attendance and leave reconciliation module (`docs/attendance/PRD-EN.md`) in this repo (copied from Displanary), so that after merge-back one employee search shows both attendance and discipline. Decisions and sequence: `docs/attendance/ROADMAP.md`. Architecture: ADR 0013 (separate repo, merge back later). This spec covers only the shared employee record that every later attendance spec depends on (PRD §5). No attendance calculation is built here.
 
@@ -27,15 +27,15 @@
 - **FR-003 Full-population upload** (extends the existing import; CSV stays supported, `.xlsx` added via the already-installed `openspout`):
   - HR chooses the upload type: **full active list** (new behaviour, the attendance default) or **partial update** (today's behaviour).
   - HR sets the effective date of the upload (default: today).
-  - Columns are matched by header name with configurable aliases, because the real employee file's headers are not known yet (ROADMAP Q6). Unknown columns are listed in the preview and ignored.
-  - Employee IDs are read as text: `00123` stays `00123`; Excel numeric cells are converted without losing digits.
+  - **Column mapping.** On upload the system suggests a mapping (column position → field) from header aliases (English and Arabic, editable in config) and HR confirms or corrects it before the preview. A confirmed mapping is saved per company under the file's header signature (the ordered header row) and applied automatically next time; HR can still change it. Columns not mapped are ignored and never stored in the database. Duplicate and blank headers are handled because mapping is by position.
+  - Employee IDs are read as text: `00123` stays `00123`; Excel numeric cells are converted without losing digits. Excel date serials, `YYYY-MM-DD` and `DD/MM/YYYY` dates are accepted. `#N/A` and similar Excel error cells count as empty.
   - **The preview shows, before anything changes**: rows read, new employees, changed employees with each changed field (before → after), unchanged employees, errors, and — for a full list — **active employees missing from the file**.
   - Committing is all-or-nothing, as today. Re-uploading the same file (same SHA-256) creates no versions and no changes, and says so.
   - Each upload is kept as an `employee_import_batches` row: original file on the private disk, hash, type, effective date, uploader, counts, and the preview summary.
 - **FR-004 Missing employees are never deactivated automatically**:
   - An active employee missing from a full list gets `exit_status = pending_review` and appears in an HR "Exit review" list with the batch that raised it.
   - The proposed last working day is the employee's last recorded attendance date. Attendance data arrives in spec 502, so until then the field starts empty and HR enters a date.
-  - HR confirms the last working day (or dismisses the review if the employee was left out by mistake). Confirming sets `exit_status = confirmed` and `last_working_day`; `is_active` becomes false after that date. History, cases and documents are untouched.
+  - HR confirms the last working day (or dismisses the review if the employee was left out by mistake). Confirming sets `exit_status = confirmed` and `last_working_day`; `is_active` becomes false after that date (immediately if the date has passed, otherwise by a daily idempotent scheduled command). History is untouched.
   - A linked user account is shown as a warning before confirmation (existing behaviour).
   - An employee who reappears in a later full list while `pending_review` is cleared automatically, with an audit entry.
 - **FR-005 Manual edits from the employee screens**: the Filament employee form gains the new fields and an "effective from" date (default today). Saving creates a version through the same service as the import. The employee page shows a short "Changes" history: date, field, before → after, by whom, source.
@@ -58,7 +58,13 @@
 
 Attendance transactions, devices, work-pattern policies and their defaults (502–503); leave (504); the combined employee page and dashboard (505); employee accounts.
 
-## Open for review
+## Clarifications (product owner, 2026-10-22)
 
-- Real employee-file headers (ROADMAP Q6) — only the alias list depends on them.
-- `position` and `department` are required by today's import. The attendance employee file may not have `position`; proposed: keep the existing value when the column is missing, and allow it empty for employees created by a full list, flagged in the preview. Needs confirmation because Displanary's documents print the position after merge-back.
+- **Real employee file (Q6 resolved).** The active-employee export is `HC.xlsx` (SAP-style, one sheet `Data`, ~1,015 rows, header in row 1). Its columns, by position: A `Pers.No.` = employee code (8 digits, text); B `Personnel Number` = English name; C (blank header) = Arabic name, `#N/A` when missing; D `Position`; E `Entry` = hire date as an Excel date serial; N `Gender Key` (`Male`/`Female`); X `Personnel Area` = branch (Hilla/Erbil/Karbala/Baghdad); P `Organizational Unit` = department; T `Pers.No.` (a **second** column with the same header) = manager's employee code; U `Personnel number of superior (` = manager's name. Other columns (age, birth date, nationality, education, payroll, cost centre, collar, groups, company code, directorate, sub-area) are **never imported**. The file contains **no emails and no work pattern**.
+  - Because one header repeats and one is blank, columns are mapped by **position with a saved mapping**, not by header name alone (see FR-003).
+  - Arabic name → `name`; when it is missing or `#N/A`, `name` = the English name. English name → `name_en`.
+- **Two sources, one importer.** The active list is uploaded as a **full active list**. The separate email / work-pattern file is uploaded as a **partial update**: it changes only the fields it maps and never flags anyone as missing.
+- **Manager.** Each employee row carries the manager's employee code; the importer links `manager_employee_id` by that code within the company. If the code is missing or matches no employee, `manager_name` keeps the reported name and the preview shows a warning. A manager's email is that manager's own `employees.email` (uploaded through the email file); `fallback_notification_email` is a separate column the email file may carry, for employees without their own email.
+- **Position** is optional: when the column is not mapped, existing employees keep their position; new employees get an empty position and the preview shows a warning.
+- **Roles.** After spec 500 only `hr_staff` (own company) and `platform_admin` exist; both can use everything in this spec. There are no cases or documents any more, so FR-004's "cases and documents untouched" means "history untouched".
+- **Privacy.** The original uploaded file is kept on the private disk (PRD §4) and may contain personal columns the system never imports; it is downloadable only by HR of that company and platform admins, and never shown in the preview.

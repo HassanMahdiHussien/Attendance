@@ -3,6 +3,8 @@
 use App\Models\AiGenerationLog;
 use App\Models\AuditLog;
 use App\Models\Company;
+use App\Models\EmployeeImportBatch;
+use App\Models\EmployeeVersion;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -11,7 +13,7 @@ test('kept append-only triggers reject raw SQL updates and deletes', function ()
     $company = Company::factory()->create();
     app(TenantContext::class)->setCompany($company);
 
-    foreach ([AuditLog::factory()->create(), AiGenerationLog::factory()->create()] as $record) {
+    foreach ([AuditLog::factory()->create(), AiGenerationLog::factory()->create(), EmployeeImportBatch::factory()->create(), EmployeeVersion::factory()->create()] as $record) {
         $table = $record->getTable();
         $triggerCount = DB::table('information_schema.TRIGGERS')
             ->where('EVENT_OBJECT_SCHEMA', DB::getDatabaseName())
