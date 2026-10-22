@@ -29,6 +29,6 @@ Each step ends green in WSL `~/attendance` (Unit, Feature, Browser, Pint). Every
 
 ## Step 4 — Docs and verification (orchestrator)
 
-- [ ] T015 `WEIRDNESS.md`, `FOUNDATION-CHANGES.md` (only shared files)
-- [ ] T016 Real sample through preview and commit on the smoke DB; report counts
+- [x] T015 `WEIRDNESS.md`, `FOUNDATION-CHANGES.md` (only shared files)
+- [x] T016 Real sample through preview and commit on the smoke DB (with HC employees): 4,828 rows, 907 in-file duplicates, 3,921 transactions, 472 employees / 102 non-employees / 4 unknown (4 issues), 2,284 used + 134 repeat punches, 800 meal person-days (52 with repeats); re-upload refused
 - [ ] T017 Open PR
