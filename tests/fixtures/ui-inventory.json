@@ -76,6 +76,17 @@
     ],
     "links": []
   },
+  "resources/views/filament/admin/resources/employee-resource/pages/exit-review-employees.blade.php": {
+    "wire": [["wire:click", "confirm({{ $employee->id }})"], ["wire:click", "dismiss({{ $employee->id }})"], ["wire:key", "exit-{{ $employee->id }}"], ["wire:model", "dismissReasons.{{ $employee->id }}"], ["wire:model", "lastWorkingDays.{{ $employee->id }}"]],
+    "errors": [],
+    "can": [],
+    "role_conditions": [],
+    "permission_calls": [],
+    "permission_conditions": [],
+    "file_bindings": [],
+    "routes": [],
+    "links": []
+  },
   "resources/views/livewire/global-search.blade.php": {
     "wire": [
       [

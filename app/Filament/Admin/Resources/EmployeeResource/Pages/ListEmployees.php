@@ -17,6 +17,9 @@ class ListEmployees extends ListRecords
             Action::make('importEmployees')->label(__('Import from CSV'))
                 ->visible(fn (): bool => ImportEmployees::canAccess())
                 ->url(fn (): string => EmployeeResource::getUrl('import')),
+            Action::make('exitReview')->label(__('Exit review'))
+                ->visible(fn (): bool => ExitReviewEmployees::canAccess())
+                ->url(fn (): string => EmployeeResource::getUrl('exit-review')),
             CreateAction::make(),
         ];
     }

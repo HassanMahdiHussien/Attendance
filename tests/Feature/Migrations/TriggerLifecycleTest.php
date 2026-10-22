@@ -28,7 +28,9 @@ test('trigger migrations drop and recreate every trigger with identical definiti
     try {
         $before = $triggers();
         expect($before)->toHaveKey('immutable_audit_logs_update')
-            ->and($before)->toHaveKey('immutable_ai_generation_logs_update');
+            ->and($before)->toHaveKey('immutable_ai_generation_logs_update')
+            ->and($before)->toHaveKey('immutable_employee_versions_update')
+            ->and($before)->toHaveKey('immutable_employee_import_batches_update');
 
         // A failing down() must be reported as itself: re-applying after a partial rollback would
         // otherwise fail with an unrelated "trigger already exists" and hide the real cause.

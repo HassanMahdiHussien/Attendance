@@ -12,13 +12,14 @@ use App\Services\SequenceService;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 class EmployeeImport
 {
-    public function __construct(private CsvReader $reader, private SequenceService $sequences, private AuditLogger $audit) {}
+    public function __construct(private CsvReader $reader, private SequenceService $sequences, private AuditLogger $audit, private EmployeeHistory $history) {}
 
     public function preview(Company $company, UploadedFile $file, bool $lock = false): ImportPreview
     {
@@ -40,7 +41,7 @@ class EmployeeImport
             if (! $raw['columns_valid']) {
                 $errors[] = __('messages.employee_import.wrong_column_count');
             }
-            foreach (['name', 'department', 'position', 'hire_date', 'branch'] as $field) {
+            foreach (['name', 'hire_date', 'branch'] as $field) {
                 if (trim($input[$field] ?? '') === '') {
                     $errors[] = __('messages.employee_import.field_required', ['field' => __('messages.employee_import.fields.'.$field)]);
                 }
@@ -77,8 +78,8 @@ class EmployeeImport
             $values = [
                 'name' => $input['name'] ?? '',
                 'employee_code' => $existing?->employee_code ?? $code,
-                'department' => $input['department'] ?? '',
-                'position' => $input['position'] ?? '',
+                'department' => ($input['department'] ?? '') !== '' ? $input['department'] : $existing?->department,
+                'position' => ($input['position'] ?? '') !== '' ? $input['position'] : $existing?->position,
                 'hire_date' => $date,
                 'branch_id' => $branchMatches->count() === 1 ? $branchMatches->first()->id : null,
                 'email' => ($input['email'] ?? '') !== '' ? $input['email'] : ($existing?->email),
@@ -154,8 +155,7 @@ class EmployeeImport
                         continue;
                     }
                     $employee = Employee::withoutGlobalScopes()->where('company_id', $company->id)->findOrFail($row['employee_id']);
-                    $employee->fill($row['values']);
-                    $employee->save();
+                    $this->history->record($employee, Arr::except($row['values'], ['employee_code']), today(), 'import', $actor);
                     if ($row['diff'] !== []) {
                         $changed[] = ['id' => $employee->id, 'fields' => $row['diff']];
                     }
@@ -172,7 +172,13 @@ class EmployeeImport
                         } while (isset($used[$this->normalise($values['employee_code'])]));
                     }
                     $used[$this->normalise($values['employee_code'])] = true;
-                    Employee::create($values + ['company_id' => $company->id]);
+                    $this->history->create(
+                        Arr::only($values, ['name', 'employee_code', 'branch_id', 'hire_date', 'gender']) + ['company_id' => $company->id],
+                        Arr::except($values, ['employee_code']),
+                        today(),
+                        'import',
+                        $actor,
+                    );
                 }
                 $this->audit->log('employees.imported', $company, [
                     'sha256' => $preview->hash, 'added' => $preview->added(), 'updated' => $preview->updated(),

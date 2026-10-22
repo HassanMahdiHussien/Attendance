@@ -2,7 +2,7 @@
     <div class="space-y-6">
         <section class="space-y-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
             <h2 class="font-bold">{{ __('Employee file') }}</h2>
-            <p>{{ __('Download the template and fill one row per employee. Required columns: name, department, position, hire date, and branch. Employee number, email, and gender are optional. Use 2024-01-15 or 15/01/2024 for dates.') }}</p>
+            <p>{{ __('Download the template and fill one row per employee. Name, hire date and branch are required. Department, position, employee number, email and gender are optional. Use 2024-01-15 or 15/01/2024 for dates.') }}</p>
             <p>{{ __('Example: Ahmed Ali, EMP-0100, HR, Officer, 2024-01-15, Baghdad, ahmed@example.com, male. Leave the employee number blank to generate one. Blank optional cells do not erase existing values.') }}</p>
             <a class="underline text-primary-600" href="{{ route('employees.import.template', ['company' => \Filament\Facades\Filament::getTenant()->id]) }}">{{ __('Download CSV template') }}</a>
             <form wire:submit="previewImport" class="space-y-3">
@@ -37,7 +37,7 @@
                                     <td class="p-2">{{ \App\Support\Format\Ui::number($row['number']) }}</td>
                                     <td class="p-2"><x-filament::badge :color="$row['status'] === 'error' ? 'danger' : ($row['status'] === 'new' ? 'success' : 'warning')">{{ match ($row['status']) { 'new' => __('New'), 'update' => __('Will be updated'), 'update-inactive' => __('Will be updated (inactive)'), default => __('Error') } }}</x-filament::badge></td>
                                     <td class="p-2">{{ $row['values']['name'] }}</td>
-                                    <td class="p-2">{{ $row['values']['employee_code'] ?: __('Will be generated') }}</td>
+                                    <td class="p-2"><bdi dir="ltr">{{ $row['values']['employee_code'] ?: __('Will be generated') }}</bdi></td>
                                     <td class="p-2">{{ $row['branch'] }}</td>
                                     <td class="p-2">
                                         @foreach ($row['errors'] as $error) <p class="text-red-600">{{ $error }}</p> @endforeach

@@ -31,6 +31,30 @@ return [
     'employee' => [
         'gender_invalid' => 'يجب تحديد الجنس بذكر أو أنثى أو غير محدد.',
     ],
+    'employee_history' => [
+        'title' => 'التغييرات',
+        'none' => 'لا توجد تغييرات مسجلة.',
+        'empty' => 'فارغ',
+        'system' => 'النظام',
+        'rest_days_invalid' => 'يجب أن تكون أيام الراحة بين 1 و7.',
+        'required_identity' => 'حقل الهوية هذا مطلوب.',
+        'invalid_reference' => 'الموظف أو الفرع المحدد لا ينتمي إلى هذه الشركة.',
+        'invalid_pattern' => 'اختر نمط عمل صالحاً.',
+        'sources' => ['initial' => 'أولي', 'manual' => 'يدوي', 'import' => 'استيراد', 'chat' => 'محادثة'],
+        'fields' => [
+            'name' => 'الاسم', 'name_en' => 'الاسم بالإنجليزية', 'department' => 'القسم',
+            'department_en' => 'القسم بالإنجليزية', 'position' => 'المنصب', 'position_en' => 'المنصب بالإنجليزية',
+            'hire_date' => 'تاريخ التعيين', 'branch_id' => 'الفرع', 'email' => 'البريد الإلكتروني', 'gender' => 'الجنس',
+            'work_pattern' => 'نمط العمل', 'rest_days' => 'أيام الراحة', 'schedule_start' => 'بداية الدوام',
+            'schedule_end' => 'نهاية الدوام', 'manager_employee_id' => 'المدير', 'manager_name' => 'اسم المدير المبلغ عنه',
+            'fallback_notification_email' => 'بريد الإشعارات البديل',
+        ],
+    ],
+    'exit_review' => [
+        'inactive' => 'يمكن إدخال الموظفين النشطين فقط في مراجعة المغادرة.',
+        'already_confirmed' => 'لا يمكن إعادة فتح مغادرة مؤكدة.',
+        'reason_required' => 'سبب الاستبعاد مطلوب.',
+    ],
     'import' => [
         'file_empty_or_too_large' => 'الملف فارغ أو يتجاوز 2 ميغابايت.',
         'encoding_unreadable' => 'تعذر قراءة ترميز الملف.',

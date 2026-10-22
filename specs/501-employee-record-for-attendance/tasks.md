@@ -6,21 +6,21 @@ Each run ends green in WSL `~/attendance`: `php artisan test --compact` (Unit, F
 
 ## Run 1 — Data layer and every existing write path
 
-- [ ] T001 Migration: `employee_import_batches` (append-only triggers)
-- [ ] T002 Migration: new `employees` columns; `position` and `department` nullable; `exit_review_batch_id` FK after T001
-- [ ] T003 Migration: `employee_versions` (sparse `changes` + `previous`, append-only triggers) and one `initial` version per existing employee
-- [ ] T004 Migration: `employee_import_mappings`
-- [ ] T005 Models, factories, casts (`rest_days` as list of ISO weekdays, `work_pattern` and `exit_status` enums)
-- [ ] T006 `EmployeeHistory::asOf` (per field) and `record` (changed fields only, recompute today's row, event, audit)
-- [ ] T007 `EmployeeVersionChanged` event
-- [ ] T008 `ExitReview` (start, confirm, dismiss; deactivation the day after the last working day)
-- [ ] T009 Command `employees:apply-effective-changes`, scheduled daily
-- [ ] T010 Filament employee form: new fields, effective date, reason; saves through `EmployeeHistory`
-- [ ] T011 Replace the Deactivate action with exit review; exit review admin page
-- [ ] T012 Existing CSV import commit writes through `EmployeeHistory` (source `import`); `department`/`position` optional
-- [ ] T013 Employee page "Changes" list
-- [ ] T014 Translations (en + ar), nav, UI inventory
-- [ ] T015 Tests: `asOf` (before/on/after, back-dated, future-dated), schedule-end-only, append-only, isolation, composite FKs, exit review, day-after deactivation, command idempotency, existing import tests updated
+- [x] T001 Migration: `employee_import_batches` (append-only triggers)
+- [x] T002 Migration: new `employees` columns; `position` and `department` nullable; `exit_review_batch_id` FK after T001
+- [x] T003 Migration: `employee_versions` (sparse `changes` + `previous`, append-only triggers) and one `initial` version per existing employee
+- [x] T004 Migration: `employee_import_mappings`
+- [x] T005 Models, factories, casts (`rest_days` as list of ISO weekdays, `work_pattern` and `exit_status` enums)
+- [x] T006 `EmployeeHistory::asOf` (per field) and `record` (changed fields only, recompute today's row, event, audit)
+- [x] T007 `EmployeeVersionChanged` event
+- [x] T008 `ExitReview` (start, confirm, dismiss; deactivation the day after the last working day)
+- [x] T009 Command `employees:apply-effective-changes`, scheduled daily
+- [x] T010 Filament employee form: new fields, effective date, reason; saves through `EmployeeHistory`
+- [x] T011 Replace the Deactivate action with exit review; exit review admin page
+- [x] T012 Existing CSV import commit writes through `EmployeeHistory` (source `import`); `department`/`position` optional
+- [x] T013 Employee page "Changes" list
+- [x] T014 Translations (en + ar), nav, UI inventory
+- [x] T015 Tests: `asOf` (before/on/after, back-dated, future-dated), schedule-end-only, append-only, isolation, composite FKs, exit review, day-after deactivation, command idempotency, existing import tests updated
 
 ## Run 2 — Import engine and import screen
 

@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Employee;
+use App\Models\EmployeeVersion;
 use App\Models\User;
 use App\Services\Employees\EmployeeImport;
 use App\Support\Search\SearchText;
@@ -156,6 +157,22 @@ test('formula-looking cells remain ordinary stored text', function (): void {
     expect($employee->name)->toBe('=اسم')
         ->and($employee->department)->toBe('@قسم')
         ->and($employee->position)->toBe('-منصب');
+});
+
+test('legacy CSV commits create history and optional department and position do not erase stored values', function (): void {
+    $existing = Employee::factory()->create([
+        'branch_id' => $this->branch->id, 'employee_code' => 'KEEP-1',
+        'department' => 'Original department', 'position' => 'Original position',
+    ]);
+    $file = employeeCsv("name,employee_id,hire_date,branch\nUpdated,KEEP-1,2024-01-15,بغداد\nNew,KEEP-2,2024-01-15,بغداد\n");
+    $import = app(EmployeeImport::class);
+    $preview = $import->preview($this->company, $file);
+    expect($preview->errors())->toBe(0);
+    $import->commit($this->company, $file, $this->admin, $preview->hash);
+    expect($existing->fresh()->department)->toBe('Original department')
+        ->and($existing->fresh()->position)->toBe('Original position')
+        ->and(Employee::query()->where('employee_code', 'KEEP-2')->firstOrFail()->position)->toBeNull()
+        ->and(EmployeeVersion::query()->where('employee_id', $existing->id)->where('source', 'import')->exists())->toBeTrue();
 });
 
 test('5,000 rows are accepted and 5,001 are rejected', function (): void {

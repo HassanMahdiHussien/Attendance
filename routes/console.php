@@ -9,6 +9,7 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('app:heartbeat --dispatch')->everyMinute();
+Schedule::command('employees:apply-effective-changes')->dailyAt('00:15')->timezone('Asia/Baghdad')->withoutOverlapping();
 
 Schedule::command('backup:run')->dailyAt('01:00')->timezone('Asia/Baghdad')
     ->when(fn () => config('displanery.backups.enabled'))->withoutOverlapping();

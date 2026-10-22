@@ -31,6 +31,30 @@ return [
     'employee' => [
         'gender_invalid' => 'Gender must be male, female, or unspecified.',
     ],
+    'employee_history' => [
+        'title' => 'Changes',
+        'none' => 'No changes recorded.',
+        'empty' => 'Empty',
+        'system' => 'System',
+        'rest_days_invalid' => 'Rest days must be weekdays from 1 to 7.',
+        'required_identity' => 'This identity field is required.',
+        'invalid_reference' => 'The selected employee or branch is not in this company.',
+        'invalid_pattern' => 'Choose a valid work pattern.',
+        'sources' => ['initial' => 'Initial', 'manual' => 'Manual', 'import' => 'Import', 'chat' => 'Chat'],
+        'fields' => [
+            'name' => 'Name', 'name_en' => 'English name', 'department' => 'Department',
+            'department_en' => 'English department', 'position' => 'Position', 'position_en' => 'English position',
+            'hire_date' => 'Hire date', 'branch_id' => 'Branch', 'email' => 'Email address', 'gender' => 'Gender',
+            'work_pattern' => 'Work pattern', 'rest_days' => 'Rest days', 'schedule_start' => 'Schedule start',
+            'schedule_end' => 'Schedule end', 'manager_employee_id' => 'Manager', 'manager_name' => 'Reported manager name',
+            'fallback_notification_email' => 'Fallback notification email',
+        ],
+    ],
+    'exit_review' => [
+        'inactive' => 'Only active employees can enter exit review.',
+        'already_confirmed' => 'A confirmed exit cannot be reopened.',
+        'reason_required' => 'A dismissal reason is required.',
+    ],
     'import' => [
         'file_empty_or_too_large' => 'The file is empty or exceeds 2 MB.',
         'encoding_unreadable' => 'The file encoding could not be read.',

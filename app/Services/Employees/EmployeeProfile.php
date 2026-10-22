@@ -30,7 +30,10 @@ class EmployeeProfile
         return app(TenantContext::class)->runForCompany($employee->company_id, function () use ($viewer, $employee): array {
             abort_unless($this->policy->view($viewer, $employee), 404);
 
-            return ['employee' => $employee->loadMissing(['branch', 'company'])];
+            return [
+                'employee' => $employee->loadMissing(['branch', 'company']),
+                'changes' => $employee->versions()->with('actor')->orderByDesc('effective_from')->orderByDesc('id')->limit(10)->get(),
+            ];
         });
     }
 }

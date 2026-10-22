@@ -6,6 +6,7 @@ use App\Filament\Admin\Resources\BranchResource;
 use App\Filament\Admin\Resources\BranchResource\Pages\ListBranchs;
 use App\Filament\Admin\Resources\EmployeeResource;
 use App\Filament\Admin\Resources\EmployeeResource\Pages\CreateEmployee;
+use App\Filament\Admin\Resources\EmployeeResource\Pages\EditEmployee;
 use App\Filament\Admin\Resources\EmployeeResource\Pages\ListEmployees;
 use App\Filament\Admin\Resources\LocationResource;
 use App\Filament\Admin\Resources\LocationResource\Pages\ListLocations;
@@ -15,6 +16,7 @@ use App\Filament\Admin\Resources\UserResource\Pages\ListUsers;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Employee;
+use App\Models\EmployeeVersion;
 use App\Models\Location;
 use App\Models\User;
 use App\Services\UserAccountService;
@@ -84,7 +86,23 @@ test('employee form generates a text employee code', function (): void {
         'hire_date' => '2026-01-01',
     ])->call('create')->assertHasNoFormErrors();
 
-    expect(Employee::query()->where('name', 'Example Employee')->firstOrFail()->employee_code)->toStartWith('EMP-');
+    $employee = Employee::query()->where('name', 'Example Employee')->firstOrFail();
+    expect($employee->employee_code)->toStartWith('EMP-')
+        ->and(EmployeeVersion::query()->where('employee_id', $employee->id)->exists())->toBeTrue();
+});
+
+test('employee edit records a dated version without changing unrelated fields', function (): void {
+    $employee = Employee::factory()->create(['department' => 'Operations']);
+    actingInAdminTenant($this, $this->admin, $this->company);
+    Livewire::test(EditEmployee::class, ['record' => $employee->id])->fillForm([
+        'work_pattern' => 'office',
+        'schedule_end' => '17:00',
+        'effective_from' => today()->toDateString(),
+    ])->call('save')->assertHasNoFormErrors();
+
+    expect($employee->fresh()->department)->toBe('Operations')
+        ->and($employee->fresh()->work_pattern->value)->toBe('office')
+        ->and(EmployeeVersion::query()->where('employee_id', $employee->id)->where('source', 'manual')->exists())->toBeTrue();
 });
 
 test('HR user creation is company scoped', function (): void {
