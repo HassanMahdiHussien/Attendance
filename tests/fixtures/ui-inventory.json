@@ -1,6 +1,6 @@
 {
   "resources/views/layouts/workspace.blade.php": {
-    "controls": ["workspace-account-menu", "workspace-more", "workspace-platform", "workspace-settings"],
+    "controls": ["workspace-account-menu", "workspace-attendance", "workspace-more", "workspace-platform", "workspace-settings"],
     "routes": ["help.index", "locale.update"]
   },
   "resources/views/livewire/auth/login.blade.php": {
@@ -93,6 +93,28 @@
     "can": [], "role_conditions": [], "permission_calls": [], "permission_conditions": [],
     "file_bindings": [[["wire:model", "sourceFile"]]],
     "routes": ["employees.import.file", "employees.import.template"], "links": []
+  },
+  "resources/views/filament/admin/pages/attendance/upload.blade.php": {
+    "wire": [["wire:click", "commit"], ["wire:click", "preview"], ["wire:click", "setCoverageStep"], ["wire:key", "attendance-branch-{{ $id }}"], ["wire:key", "attendance-event-{{ $event->id }}"], ["wire:key", "attendance-mapping-{{ $index }}"], ["wire:model", "coverage.branch_ids"], ["wire:model", "coverage.from"], ["wire:model", "coverage.to"], ["wire:model", "sourceFile"], ["wire:model.live", "mapping.{{ $index }}"], ["wire:submit", "prepare"]],
+    "errors": ["coverage", "mapping", "sourceFile"], "can": [], "role_conditions": [], "permission_calls": [], "permission_conditions": [],
+    "file_bindings": [[["wire:model", "sourceFile"]]], "routes": [], "links": []
+  },
+  "resources/views/filament/admin/pages/attendance/batches.blade.php": {
+    "wire": [["wire:click", "$set(&quot;errorPage&quot;, {{ $nextPage }})"], ["wire:click", "$set(&quot;errorPage&quot;, {{ max(1, $errorPage - 1) }})"], ["wire:click", "retry({{ $batch->id }})"], ["wire:click", "showErrors({{ $batch->id }})"], ["wire:key", "attendance-batch-{{ $batch->id }}"]],
+    "errors": [], "can": [], "role_conditions": [], "permission_calls": [], "permission_conditions": [], "file_bindings": [],
+    "routes": ["attendance.import.file"], "links": []
+  },
+  "resources/views/filament/admin/pages/attendance/devices.blade.php": {
+    "wire": [["wire:click", "selectDevice({{ $device->id }}, &quot;approve&quot;)"], ["wire:click", "selectDevice({{ $device->id }}, &quot;change&quot;)"], ["wire:click", "selectDevice({{ $device->id }}, &quot;retire&quot;)"], ["wire:key", "attendance-device-{{ $device->id }}"], ["wire:model", "branchId"], ["wire:model", "effectiveFrom"], ["wire:model", "reason"], ["wire:model", "role"], ["wire:submit", "save"]],
+    "errors": ["branchId", "effectiveFrom", "reason", "role"], "can": [], "role_conditions": [], "permission_calls": [], "permission_conditions": [], "file_bindings": [], "routes": [], "links": []
+  },
+  "resources/views/filament/admin/pages/attendance/issues.blade.php": {
+    "wire": [["wire:click", "close({{ $issue->id }}, &quot;dismiss&quot;)"], ["wire:click", "close({{ $issue->id }}, &quot;resolve&quot;)"], ["wire:key", "attendance-issue-{{ $issue->id }}"], ["wire:model", "notes.{{ $issue->id }}"], ["wire:model.live", "status"], ["wire:model.live", "type"]],
+    "errors": [], "can": [], "role_conditions": [], "permission_calls": [], "permission_conditions": [], "file_bindings": [], "routes": [], "links": []
+  },
+  "resources/views/filament/admin/pages/attendance/punches.blade.php": {
+    "wire": [["wire:key", "attendance-day-{{ $day }}"], ["wire:model.live", "employeeId"], ["wire:model.live", "from"], ["wire:model.live", "personCode"], ["wire:model.live", "to"]],
+    "errors": [], "can": [], "role_conditions": [], "permission_calls": [], "permission_conditions": [], "file_bindings": [], "routes": [], "links": []
   },
   "resources/views/livewire/global-search.blade.php": {
     "wire": [

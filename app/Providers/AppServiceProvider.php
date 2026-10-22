@@ -3,9 +3,13 @@
 namespace App\Providers;
 
 use App\Enums\UserRole;
+use App\Events\EmployeeVersionChanged;
 use App\Filament\Auth\LoginResponse;
 use App\Listeners\AuditAuthEvents;
+use App\Models\Attendance\ImportBatch;
 use App\Models\Company;
+use App\Policies\Attendance\ImportBatchPolicy as AttendanceImportBatchPolicy;
+use App\Services\Attendance\EmployeeChangeListener;
 use App\Support\HealthPing;
 use App\Support\Tenancy\TenantContext;
 use Filament\Facades\Filament;
@@ -36,6 +40,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Gate::policy(ImportBatch::class, AttendanceImportBatchPolicy::class);
         $guardBackup = function (): void {
             if (! app()->environment(['local', 'testing']) && mb_strlen((string) config('backup.backup.password')) < 32) {
                 throw new \RuntimeException('A backup archive password of at least 32 characters is required.');
@@ -57,6 +62,7 @@ class AppServiceProvider extends ServiceProvider
             }
         });
         Event::listen(BackupHasFailed::class, fn () => app(HealthPing::class)->failure('backup', 'Backup failed'));
+        Event::listen(EmployeeVersionChanged::class, [EmployeeChangeListener::class, 'handle']);
         Gate::define('importEmployees', fn ($user, Company $company): bool => $user->is_active
             && in_array($user->primary_role, [UserRole::HrStaff, UserRole::PlatformAdmin], true)
             && Filament::getTenant() instanceof Company

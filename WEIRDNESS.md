@@ -45,3 +45,7 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 - Filament's top bar and navigation are disabled in both panels; the workspace navigation partial renders through the panel body hook so all three surfaces share one header and phone menu. (2026-10-18)
 
 - Arabic pages reset letter-spacing on every element (`:lang(ar) *` in app.css and the Filament theme): the board's tracked capitals break Arabic joining («ج د يد»), so tracking is an English-only style. The mono font stack falls back to Readex Pro so Arabic month names in dates never use a system font. (2026-10-18)
+- Attendance punches are deduplicated by (person code, minute, punch state, device serial): two genuine punches in the same minute on the same device count once, exactly like an export duplicate (PRD §8).
+- A device's role and site take effect at local midnight of the setting's date; a pending device's punches are stored but ignored until HR approves it.
+- Repeated-punch groups never span more than 16 hours (`attendance.cleanup.max_group_gap_hours`) so two shifts are never merged.
+- People are contractors/visitors by their department label (`3rd Party …`, `Guest`, `General`), not by ID length: the real export has 8-digit contractor IDs.
