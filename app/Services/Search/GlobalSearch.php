@@ -31,6 +31,7 @@ class GlobalSearch
         $employees = app(EmployeeProfilePolicy::class)->scope($viewer)
             ->where(function ($scope) use ($like, $prefix, $number): void {
                 $scope->where('employees.search_name', 'like', $like)
+                    ->orWhere('employees.search_name_en', 'like', $like)
                     ->orWhere('employees.employee_code', 'like', $prefix);
                 if ($number !== null) {
                     $scope->orWhere('employees.employee_code', 'like', 'EMP-'.$prefix);
@@ -38,8 +39,10 @@ class GlobalSearch
             })
             ->orderByRaw('CASE WHEN employees.employee_code IN (?, ?) THEN 0 ELSE 1 END', [$term, 'EMP-'.$term])
             ->orderBy('employees.name')->limit(8)->get();
+        $employees->load('branch');
         $groups['employees'] = $employees->map(fn ($employee) => [
-            'label' => $employee->name, 'detail' => $employee->employee_code.' · '.$employee->department,
+            'label' => $employee->name, 'code' => $employee->employee_code,
+            'detail' => implode(' · ', array_filter([$employee->branch?->name, $employee->department])),
             'url' => route('employees.show', $employee),
         ])->all();
 

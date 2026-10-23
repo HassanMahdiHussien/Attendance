@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\UserRole;
+use App\Models\Attendance\AttendanceExport;
 use App\Models\Attendance\ImportBatch as AttendanceImportBatch;
 use App\Models\Branch;
 use App\Models\Company;
@@ -51,6 +52,9 @@ test('a company user cannot reach another company through any parameterised GET 
         $leaveBatch = LeaveImportBatch::factory()->create([
             'company_id' => $b->id, 'uploaded_by' => $user->id, 'file_path' => 'sweep/'.$marker.'.txt',
         ]);
+        $export = AttendanceExport::factory()->create([
+            'company_id' => $b->id, 'requested_by' => $user->id, 'file_path' => 'sweep/'.$marker.'.txt',
+        ]);
         $foreignLeaveRequest = LeaveRequest::factory()->create([
             'company_id' => $b->id, 'employee_id' => $employee->id, 'owner_code' => $employee->employee_code,
         ]);
@@ -59,6 +63,7 @@ test('a company user cannot reach another company through any parameterised GET 
         return [
             'company' => $b->id, 'tenant' => $b->id, 'employee' => $employee->id,
             'batch' => $batch->id, 'attendanceBatch' => $attendanceBatch->id, 'leaveBatch' => $leaveBatch->id,
+            'export' => $export->id,
             'foreignLeaveRequest' => $foreignLeaveRequest->id,
             'path' => 'sweep/'.$marker.'.txt',
             // Help paths name shared static content, never a tenant record.
@@ -116,6 +121,10 @@ test('a company user cannot reach another company through any parameterised GET 
     // Leave detail also selects its record through a query parameter.
     $leaveDetail = $this->get('/admin/'.$a->id.'/leave/request?request='.$records['foreignLeaveRequest']);
     expect($leaveDetail->getStatusCode())->toBe(404);
+
+    // The platform dashboard's company selector is an explicit tenant path.
+    expect($this->get('/dashboard/company/'.$b->id)->getStatusCode())->toBe(404)
+        ->and($this->get('/dashboard/company/'.$b->id.'/employees?tile=active_employees')->getStatusCode())->toBe(404);
 
     // A filter change must not silently remove every tenant route from the sweep.
     expect($visited)->toBeGreaterThan(10)

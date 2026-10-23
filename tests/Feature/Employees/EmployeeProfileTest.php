@@ -17,7 +17,7 @@ test('employee search and direct page obey company and role scope', function ():
 
     $this->actingAs($admin)->get('/employees')->assertOk()->assertSee($employee->name);
     $this->get('/employees/'.$employee->id)->assertOk()->assertSee($employee->name)
-        ->assertSee('Attendance details will appear here.');
+        ->assertSee('Current month');
     $this->actingAs($outsider)->get('/employees/'.$employee->id)->assertNotFound();
 
     $platform = User::factory()->create(['company_id' => null, 'primary_role' => 'platform_admin']);
@@ -36,5 +36,5 @@ test('employee profile returns identity without case history', function (): void
     expect($profile['employee']->is($employee))->toBeTrue()
         ->and($profile)->not->toHaveKey('history');
     $this->actingAs($viewer)->get(route('employees.show', $employee))->assertOk()
-        ->assertSee('Attendance details will appear here.');
+        ->assertSee('Current month');
 });

@@ -1,6 +1,8 @@
 <?php
 
 use App\Exceptions\TenantMismatch;
+use App\Models\Attendance\AttendanceExport;
+use App\Models\Attendance\AttendanceExportEvent;
 use App\Models\Attendance\CoverageInterval;
 use App\Models\Attendance\DataIssue;
 use App\Models\Attendance\Day;
@@ -66,6 +68,8 @@ test('every kept composite tenant foreign key rejects another company through mo
         'attendance_manual_punches' => ManualPunch::class,
         'attendance_day_decisions' => DayDecision::class,
         'attendance_days' => Day::class,
+        'attendance_exports' => AttendanceExport::class,
+        'attendance_export_events' => AttendanceExportEvent::class,
         'leave_import_batches' => LeaveImportBatch::class,
         'leave_import_batch_events' => LeaveImportBatchEvent::class,
         'leave_import_mappings' => LeaveImportMapping::class,

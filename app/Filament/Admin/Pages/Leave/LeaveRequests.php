@@ -4,9 +4,9 @@ namespace App\Filament\Admin\Pages\Leave;
 
 use App\Filament\Admin\Resources\Leave\LeavePage;
 use App\Models\Attendance\DataIssue;
-use App\Models\Employee;
 use App\Models\Leave\LeaveRequest;
 use App\Models\Leave\LeaveType;
+use App\Services\Attendance\Reporting\EmployeeFilterSearch;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
@@ -22,6 +22,8 @@ class LeaveRequests extends LeavePage
     public string $typeId = '';
 
     public string $employeeId = '';
+
+    public string $employeeSearch = '';
 
     public string $from = '';
 
@@ -91,9 +93,29 @@ class LeaveRequests extends LeavePage
         return LeaveType::query()->where('company_id', $this->company()->id)->orderBy('name')->pluck('name', 'id')->all();
     }
 
-    public function employees(): array
+    public function searchEmployees(): array
     {
-        return Employee::query()->where('company_id', $this->company()->id)->orderBy('name')->pluck('name', 'id')->all();
+        return $this->employeeId === ''
+            ? app(EmployeeFilterSearch::class)->find(auth()->user(), $this->company(), $this->employeeSearch) : [];
+    }
+
+    public function updatedEmployeeSearch(): void
+    {
+        $this->employeeId = '';
+    }
+
+    public function chooseEmployee(int $id, EmployeeFilterSearch $search): void
+    {
+        $selected = $search->selected(auth()->user(), $this->company(), $id);
+        $this->employeeId = (string) $selected['id'];
+        $this->employeeSearch = $selected['name'].' · '.$selected['code'];
+    }
+
+    public function clearEmployee(): void
+    {
+        $this->company();
+        $this->employeeId = '';
+        $this->employeeSearch = '';
     }
 
     public function detailUrl(LeaveRequest $request): string

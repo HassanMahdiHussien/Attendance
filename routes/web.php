@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\HelpShotController;
 use App\Http\Controllers\LocaleController;
+use App\Livewire\Attendance\DashboardEmployees;
 use App\Livewire\Auth\Login;
 use App\Livewire\Dashboard\HrDashboard;
 use App\Livewire\Employees\EmployeeIndex;
@@ -9,6 +10,7 @@ use App\Livewire\Employees\EmployeePage;
 use App\Livewire\Help\HelpArticlePage;
 use App\Livewire\Help\HelpIndex;
 use App\Livewire\Home;
+use App\Models\Attendance\AttendanceExport;
 use App\Models\Attendance\ImportBatch;
 use App\Models\Company;
 use App\Models\EmployeeImportBatch;
@@ -84,6 +86,17 @@ Route::middleware('auth')->group(function (): void {
 
         return Storage::disk('local')->download($record->file_path, $record->file_name);
     })->name('leave.import.file');
+    Route::get('/admin/{company}/attendance-exports/{export}/file', function (Company $company, int $export) {
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+        abort_unless(auth()->user()->canAccessTenant($company), 404);
+        Filament::setTenant($company);
+        $record = AttendanceExport::query()->where('company_id', $company->id)->findOrFail($export);
+        Gate::authorize('view', $record);
+        abort_unless($record->file_path !== null && Storage::disk('local')->exists($record->file_path), 404);
+        app(AuditLogger::class)->log('attendance.export.downloaded', $record, ['export_id' => $record->id]);
+
+        return Storage::disk('local')->download($record->file_path, $record->file_name);
+    })->name('attendance.exports.file');
     Route::post('/logout', function (Request $request): RedirectResponse {
         Auth::logout();
         $request->session()->invalidate();
@@ -92,6 +105,9 @@ Route::middleware('auth')->group(function (): void {
         return redirect('/login');
     })->name('logout');
     Route::get('/dashboard', HrDashboard::class)->name('dashboard.index');
+    Route::get('/dashboard/employees', DashboardEmployees::class)->name('dashboard.employees');
+    Route::get('/dashboard/company/{company}', HrDashboard::class)->name('dashboard.company');
+    Route::get('/dashboard/company/{company}/employees', DashboardEmployees::class)->name('dashboard.company.employees');
     Route::get('/employees', EmployeeIndex::class)->name('employees.index');
     Route::get('/employees/{employee}', EmployeePage::class)->name('employees.show');
     Route::get('/home', Home::class)->name('workspace.home');

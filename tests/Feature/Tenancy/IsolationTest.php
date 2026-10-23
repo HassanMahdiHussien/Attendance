@@ -1,6 +1,8 @@
 <?php
 
 use App\Exceptions\TenantMismatch;
+use App\Models\Attendance\AttendanceExport;
+use App\Models\Attendance\AttendanceExportEvent;
 use App\Models\Attendance\CoverageInterval;
 use App\Models\Attendance\DataIssue;
 use App\Models\Attendance\Day;
@@ -50,6 +52,7 @@ dataset('tenant models', [
     AttendanceImportMapping::class, Transaction::class, TransactionSource::class, Person::class,
     CoverageInterval::class, DataIssue::class, ProcessingRun::class, Punch::class, Meal::class,
     Policy::class, ManualPunch::class, DayDecision::class, Day::class,
+    AttendanceExport::class, AttendanceExportEvent::class,
     LeaveImportBatch::class, LeaveImportBatchEvent::class, LeaveImportMapping::class,
     LeaveType::class, LeaveRequest::class, LeaveImportRow::class, LeaveRequestVersion::class,
     LeaveRequestDecision::class, LeaveProcessingRun::class, LeaveRequestDay::class,

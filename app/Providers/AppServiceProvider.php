@@ -10,9 +10,11 @@ use App\Events\EmployeeExitChanged;
 use App\Events\EmployeeVersionChanged;
 use App\Filament\Auth\LoginResponse;
 use App\Listeners\AuditAuthEvents;
+use App\Models\Attendance\AttendanceExport;
 use App\Models\Attendance\ImportBatch;
 use App\Models\Company;
 use App\Models\Leave\ImportBatch as LeaveImportBatch;
+use App\Policies\Attendance\AttendanceExportPolicy;
 use App\Policies\Attendance\ImportBatchPolicy as AttendanceImportBatchPolicy;
 use App\Policies\Leave\ImportBatchPolicy as LeaveImportBatchPolicy;
 use App\Services\Attendance\AssessmentTriggers;
@@ -50,6 +52,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::policy(ImportBatch::class, AttendanceImportBatchPolicy::class);
+        Gate::policy(AttendanceExport::class, AttendanceExportPolicy::class);
         Gate::policy(LeaveImportBatch::class, LeaveImportBatchPolicy::class);
         $guardBackup = function (): void {
             if (! app()->environment(['local', 'testing']) && mb_strlen((string) config('backup.backup.password')) < 32) {

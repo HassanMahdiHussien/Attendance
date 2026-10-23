@@ -1,7 +1,18 @@
 <x-filament-panels::page>
     <div class="space-y-4">
         <section class="flex flex-wrap gap-4 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-            <label>{{ __('messages.attendance_ui.employee') }} <select wire:model.live="employeeId" class="rounded-xl border border-gray-200 p-2"><option value="">—</option>@foreach ($this->employees() as $id => $name)<option value="{{ $id }}">{{ $name }}</option>@endforeach</select></label>
+            <div class="relative text-sm">
+                <label for="punch-employee-search">{{ __('messages.attendance_ui.employee') }}</label>
+                <div class="flex gap-2"><input id="punch-employee-search" type="search" wire:model.live.debounce.250ms="employeeSearch" role="combobox" aria-autocomplete="list" aria-controls="punch-employee-results" aria-expanded="{{ $employeeId === null && mb_strlen(trim($employeeSearch)) >= 2 ? 'true' : 'false' }}" placeholder="{{ __('messages.search.placeholder') }}" class="ui-control rounded-xl border border-gray-200 p-2" />
+                    @if ($employeeSearch !== '') <button type="button" wire:click="clearEmployee" class="ui-link" aria-label="{{ __('messages.reporting_ui.clear_employee') }}">{{ __('messages.reporting_ui.all') }}</button> @endif</div>
+                @if ($employeeId === null && mb_strlen(trim($employeeSearch)) >= 2)
+                    <div id="punch-employee-results" role="listbox" class="absolute inset-x-0 z-20 mt-1 max-h-64 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-xl">
+                        @forelse ($this->searchEmployees() as $employee)
+                            <button type="button" role="option" aria-selected="false" wire:click="chooseEmployee({{ $employee->id }})" class="block w-full px-3 py-2 text-start hover:bg-primary-light focus:bg-primary-light"><strong class="block">{{ $employee->name }}</strong><span class="text-xs text-gray-500"><bdi dir="ltr">{{ $employee->employee_code }}</bdi> · {{ $employee->branch_name }}</span></button>
+                        @empty <p class="p-3 text-gray-500">{{ __('messages.search.no_results') }}</p> @endforelse
+                    </div>
+                @endif
+            </div>
             <label>{{ __('messages.attendance_ui.person_code') }} <input type="text" wire:model.live="personCode" dir="ltr" class="rounded-xl border border-gray-200 p-2"></label>
             <label>{{ __('messages.attendance_ui.from') }} <input type="date" wire:model.live="from" dir="ltr" class="rounded-xl border border-gray-200 p-2"></label>
             <label>{{ __('messages.attendance_ui.to') }} <input type="date" wire:model.live="to" dir="ltr" class="rounded-xl border border-gray-200 p-2"></label>

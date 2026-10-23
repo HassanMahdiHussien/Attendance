@@ -1,6 +1,7 @@
 <?php
 
 use App\Services\Attendance\PendingDaysScheduler;
+use App\Services\Attendance\Reporting\AttendanceExports;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -13,9 +14,14 @@ Artisan::command('attendance:assess-pending', function (PendingDaysScheduler $sc
     $this->info((string) $scheduler->dispatch());
 })->purpose(__('messages.office_attendance.reassess_command'));
 
+Artisan::command('attendance:clean-exports', function (AttendanceExports $exports): void {
+    $this->info((string) $exports->cleanup());
+})->purpose(__('messages.export_ui.cleanup_command'));
+
 Schedule::command('app:heartbeat --dispatch')->everyMinute();
 Schedule::command('employees:apply-effective-changes')->dailyAt('00:15')->timezone('Asia/Baghdad')->withoutOverlapping();
 Schedule::command('attendance:assess-pending')->hourly()->timezone('Asia/Baghdad')->withoutOverlapping();
+Schedule::command('attendance:clean-exports')->dailyAt('03:00')->timezone('Asia/Baghdad')->withoutOverlapping();
 
 Schedule::command('backup:run')->dailyAt('01:00')->timezone('Asia/Baghdad')
     ->when(fn () => config('displanery.backups.enabled'))->withoutOverlapping();

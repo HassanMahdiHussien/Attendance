@@ -7,6 +7,7 @@ use App\Models\Attendance\Meal;
 use App\Models\Attendance\Punch;
 use App\Models\Attendance\Transaction;
 use App\Models\Employee;
+use App\Services\Attendance\Reporting\EmployeeFilterSearch;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Validator;
 
@@ -17,6 +18,8 @@ class AttendancePunches extends AttendancePage
     protected string $view = 'filament.admin.pages.attendance.punches';
 
     public ?int $employeeId = null;
+
+    public string $employeeSearch = '';
 
     public string $personCode = '';
 
@@ -39,12 +42,48 @@ class AttendancePunches extends AttendancePage
         parent::mount();
         $this->from = today()->subDays(7)->toDateString();
         $this->to = today()->toDateString();
+
+        if (request()->has('employee')) {
+            $employee = request()->query('employee');
+            $from = request()->query('from');
+            $to = request()->query('to');
+            abort_unless(is_string($employee) && ctype_digit($employee)
+                && Validator::make(compact('from', 'to'), [
+                    'from' => 'required|date_format:Y-m-d',
+                    'to' => 'required|date_format:Y-m-d|after_or_equal:from',
+                ])->passes(), 404);
+            Employee::query()->where('company_id', $this->company()->id)->findOrFail((int) $employee);
+            $this->employeeId = (int) $employee;
+            $selected = app(EmployeeFilterSearch::class)->selected(auth()->user(), $this->company(), $this->employeeId);
+            $this->employeeSearch = $selected['name'].' · '.$selected['code'];
+            $this->from = $from;
+            $this->to = $to;
+        }
     }
 
-    public function employees(): array
+    public function searchEmployees(): array
     {
-        return Employee::query()->where('company_id', $this->company()->id)->orderBy('name')->limit(1000)
-            ->get()->mapWithKeys(fn (Employee $employee): array => [$employee->id => $employee->employee_code.' — '.$employee->name])->all();
+        return $this->employeeId === null
+            ? app(EmployeeFilterSearch::class)->find(auth()->user(), $this->company(), $this->employeeSearch) : [];
+    }
+
+    public function updatedEmployeeSearch(): void
+    {
+        $this->employeeId = null;
+    }
+
+    public function chooseEmployee(int $id, EmployeeFilterSearch $search): void
+    {
+        $selected = $search->selected(auth()->user(), $this->company(), $id);
+        $this->employeeId = $selected['id'];
+        $this->employeeSearch = $selected['name'].' · '.$selected['code'];
+    }
+
+    public function clearEmployee(): void
+    {
+        $this->company();
+        $this->employeeId = null;
+        $this->employeeSearch = '';
     }
 
     public function days(): array

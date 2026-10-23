@@ -32,6 +32,7 @@ class Employee extends Model
     {
         static::saving(function (self $employee): void {
             $employee->search_name = SearchText::normalize((string) $employee->name);
+            $employee->search_name_en = SearchText::normalize((string) $employee->name_en);
             if (! EmployeeGender::tryFrom((string) ($employee->getAttributes()['gender'] ?? 'unspecified'))) {
                 throw ValidationException::withMessages(['gender' => __('messages.employee.gender_invalid')]);
             }

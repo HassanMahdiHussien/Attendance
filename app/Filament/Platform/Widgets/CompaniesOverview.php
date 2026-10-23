@@ -28,6 +28,7 @@ class CompaniesOverview extends Widget
             'name' => $company->name, 'active' => $company->is_active,
             'subscription' => $company->subscription_status->value,
             'url' => CompanyResource::getUrl('edit', ['record' => $company->id]),
+            'attendance_url' => route('dashboard.company', ['company' => $company->id]),
         ])->all();
     }
 }
