@@ -3,9 +3,9 @@
 **Input**: [spec.md](spec.md), [plan.md](plan.md) — "Revisions after Codex plan review" overrides earlier plan text. Each step ends green in WSL (Unit, Feature, Browser, Pint).
 
 ## Step 1 — Additive schema and pure calculator
-- [ ] T001 Migration: policy columns (absence_minutes, shift and security sections, inference tolerance) with defaults; day columns (shift_start, shift_source, shift_confidence, shift_evidence); decision kind pick_shift (+ shift_start); FK-safe down()
-- [ ] T002 `ShiftDayCalculator` (pure) per revisions 3 and the spec rules
-- [ ] T003 Exhaustive unit tests; tenancy/trigger tests for changed tables; office results unchanged
+- [x] T001 Migration: policy columns (absence_minutes, shift and security sections, inference tolerance) with defaults; day columns (shift_start, shift_source, shift_confidence, shift_evidence); decision kind pick_shift (+ shift_start); FK-safe down()
+- [x] T002 `ShiftDayCalculator` (pure) per revisions 3 and the spec rules
+- [x] T003 Exhaustive unit tests; tenancy/trigger tests for changed tables; office results unchanged
 
 ## Step 1b — Employee fields and default pattern rule (plan addendum)
 - [ ] T001b `staff_category` + `legal_entity` employee fields (versioned, import aliases, form); `pattern_rules` config; rule applied on import and once for existing employees through EmployeeHistory (source `rule`); `pattern_review` issue for flagged positions; tests

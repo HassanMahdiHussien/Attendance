@@ -17,6 +17,17 @@ class Policy extends Model
 
     protected $guarded = [];
 
+    protected $attributes = [
+        'absence_minutes' => 480,
+        'shift_starts' => '["00:00","08:00","16:00"]',
+        'shift_minutes' => 480,
+        'shift_break_minutes' => 30,
+        'shift_min_presence_minutes' => 480,
+        'shift_rest_days' => '[5]',
+        'security_min_presence_minutes' => 480,
+        'inference_tolerance_minutes' => 120,
+    ];
+
     public $timestamps = false;
 
     protected array $companyUserKeys = ['created_by'];
@@ -26,6 +37,8 @@ class Policy extends Model
         return [
             'effective_from' => 'date',
             'office_rest_days' => 'array',
+            'shift_starts' => 'array',
+            'shift_rest_days' => 'array',
             'exits_count_toward_balance' => 'boolean',
             'created_at' => 'datetime',
         ];
