@@ -15,9 +15,9 @@
 - [x] T008 Translations, UI inventory, route sweep, help; Livewire + browser smoke tests
 
 ## Step 3 — Exports and printable statement
-- [ ] T009 `attendance_exports` + events, `GenerateAttendanceExportJob`, retry, cleanup, download route + policy + audit
-- [ ] T010 Excel reports (FR-005) and PDF statement (ar/en)
-- [ ] T011 Three-surface agreement test + export/PDF tests + tenancy/trigger tests
+- [x] T009 `attendance_exports` + events, `GenerateAttendanceExportJob`, retry, cleanup, download route + policy + audit
+- [x] T010 Excel reports (FR-005) and PDF statement (ar/en)
+- [x] T011 Three-surface agreement test + export/PDF tests + tenancy/trigger tests
 
 ## Step 4 — Verification (orchestrator)
 - [ ] T012 Real data on the smoke DB (HC + punches + leave), browser check of dashboard and an employee page, one export and one PDF; docs; PR

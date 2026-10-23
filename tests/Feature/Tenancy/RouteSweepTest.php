@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\UserRole;
+use App\Models\Attendance\AttendanceExport;
 use App\Models\Attendance\ImportBatch as AttendanceImportBatch;
 use App\Models\Branch;
 use App\Models\Company;
@@ -51,6 +52,9 @@ test('a company user cannot reach another company through any parameterised GET 
         $leaveBatch = LeaveImportBatch::factory()->create([
             'company_id' => $b->id, 'uploaded_by' => $user->id, 'file_path' => 'sweep/'.$marker.'.txt',
         ]);
+        $export = AttendanceExport::factory()->create([
+            'company_id' => $b->id, 'requested_by' => $user->id, 'file_path' => 'sweep/'.$marker.'.txt',
+        ]);
         $foreignLeaveRequest = LeaveRequest::factory()->create([
             'company_id' => $b->id, 'employee_id' => $employee->id, 'owner_code' => $employee->employee_code,
         ]);
@@ -59,6 +63,7 @@ test('a company user cannot reach another company through any parameterised GET 
         return [
             'company' => $b->id, 'tenant' => $b->id, 'employee' => $employee->id,
             'batch' => $batch->id, 'attendanceBatch' => $attendanceBatch->id, 'leaveBatch' => $leaveBatch->id,
+            'export' => $export->id,
             'foreignLeaveRequest' => $foreignLeaveRequest->id,
             'path' => 'sweep/'.$marker.'.txt',
             // Help paths name shared static content, never a tenant record.

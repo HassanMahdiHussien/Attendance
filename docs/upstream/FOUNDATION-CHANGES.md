@@ -9,15 +9,17 @@ Every kept foundation file edited since the spec-500 baseline is listed below. R
 | `app/Models/Employee.php` | Syncs a normalized English search name when employee identity changes. | Imported English names need the same lookup as Arabic names and codes. | **Port** |
 | `database/migrations/2026_10_23_020000_add_english_employee_search.php` | Adds and backfills indexed `employees.search_name_en`. | English names need a normalized lookup in the shared employee record. | **Port** |
 | `app/Services/Search/GlobalSearch.php` | Searches English names and shows current branch and department. | Similar employee names need site and department context. | **Port** |
-| `app/Livewire/Dashboard/HrDashboard.php` | Replaced the placeholder with scoped attendance filters, totals and freshness. | HR sees current reconciled results. | **Do not apply** |
+| `app/Livewire/Dashboard/HrDashboard.php` | Replaced the placeholder with scoped attendance filters, totals, freshness and export requests. | HR sees current results and requests reports with the same filters. | **Do not apply** |
 | `app/Filament/Platform/Widgets/CompaniesOverview.php` | Links each company to its explicitly scoped attendance dashboard. | Platform staff choose a tenant before viewing attendance. | **Do not apply** |
 | `resources/views/filament/platform/widgets/companies-overview.blade.php` | Displays the company attendance link. | Gives platform administrators the explicit tenant path. | **Do not apply** |
-| `resources/views/livewire/dashboard/hr-dashboard.blade.php` | Displays attendance metrics and coverage in place of the placeholder. | The HR dashboard reads the attendance projection. | **Do not apply** |
+| `resources/views/livewire/dashboard/hr-dashboard.blade.php` | Displays attendance metrics, coverage and export controls in place of the placeholder. | The HR dashboard reads the attendance projection and passes filters to reports. | **Do not apply** |
 | `resources/views/livewire/home.blade.php` | Embeds the attendance dashboard. | HR's existing landing shows current results. | **Do not apply** |
 | `resources/views/livewire/employees/employee-page.blade.php` | Includes the attendance section in place of the placeholder. | Retains the shared employee identity page and adds attendance side by side. | **Do not apply** |
 | `resources/views/livewire/global-search.blade.php` | Isolates employee codes as left-to-right text beside site and department. | Search results remain readable in Arabic. | **Port** |
-| `routes/web.php` | Adds scoped attendance dashboard and drill-down routes. | HR and platform users need distinct authorised paths. | **Do not apply** |
-| `lang/en/messages.php`, `lang/ar/messages.php` | Adds bilingual attendance overview labels. | New screens display in both interface languages. | **Do not apply** |
+| `routes/web.php` | Adds scoped dashboard, drill-down and audited export download routes. | HR and platform users need distinct authorised paths and private files. | **Do not apply** |
+| `lang/en/messages.php`, `lang/ar/messages.php` | Adds bilingual attendance overview and export labels. | New screens and reports display in both interface languages. | **Do not apply** |
+| `app/Providers/AppServiceProvider.php` | Registers the attendance export policy. | Private generated files need explicit authorization. | **Do not apply** |
+| `routes/console.php` | Schedules private attendance export file cleanup. | Export files expire after 30 days while audit rows remain. | **Do not apply** |
 
 
 ## Guidance and runtime

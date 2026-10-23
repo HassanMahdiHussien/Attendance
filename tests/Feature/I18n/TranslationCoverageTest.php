@@ -1,5 +1,7 @@
 <?php
 
+use App\Services\Attendance\Reporting\ExportData;
+use App\Services\Attendance\Reporting\ExportKinds;
 use App\Services\Attendance\Reporting\ReportTiles;
 use App\Services\Attendance\TransactionFile;
 use App\Services\Employees\ColumnMapping;
@@ -92,6 +94,22 @@ test('every attendance overview tile has English and Arabic labels', function ()
     foreach (ReportTiles::KEYS as $tile) {
         expect(data_get($english, 'reporting_ui.tiles.'.$tile))->not->toBeNull()
             ->and(data_get($arabic, 'reporting_ui.tiles.'.$tile))->not->toBeNull();
+    }
+});
+
+test('attendance export kinds, states and columns have English and Arabic labels', function (): void {
+    $english = File::getRequire(lang_path('en/messages.php'));
+    $arabic = File::getRequire(lang_path('ar/messages.php'));
+    $labels = [
+        ...array_map(fn (string $kind): string => 'kinds.'.$kind, ExportKinds::ALL),
+        ...array_map(fn (string $state): string => 'states.'.$state, ['queued', 'running', 'completed', 'failed', 'file_deleted']),
+        ...array_map(fn (string $error): string => 'errors.'.$error, ['chrome_missing', 'generation_failed']),
+        ...array_map(fn (string $column): string => 'columns.'.$column,
+            array_unique(array_merge(ExportData::DAY_COLUMNS, ExportData::SUMMARY_COLUMNS, ExportData::MEAL_COLUMNS, ExportData::ISSUE_COLUMNS))),
+    ];
+    foreach ($labels as $label) {
+        expect(data_get($english, 'export_ui.'.$label))->not->toBeNull()
+            ->and(data_get($arabic, 'export_ui.'.$label))->not->toBeNull();
     }
 });
 

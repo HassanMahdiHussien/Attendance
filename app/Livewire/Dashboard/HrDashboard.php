@@ -6,7 +6,9 @@ use App\Enums\UserRole;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Employee;
+use App\Services\Attendance\Reporting\AttendanceExports;
 use App\Services\Attendance\Reporting\AttendanceSummary;
+use App\Services\Attendance\Reporting\ExportKinds;
 use App\Services\Attendance\Reporting\LastUpdate;
 use App\Services\Attendance\Reporting\ReportFilters;
 use App\Services\Attendance\Reporting\ReportTiles;
@@ -36,6 +38,12 @@ class HrDashboard extends Component
     public string $workPattern = '';
 
     public string $status = '';
+
+    public string $exportKind = 'lateness_reconciliation';
+
+    public string $exportLocale = 'en';
+
+    public bool $exportQueued = false;
 
     public function mount(?string $company = null): void
     {
@@ -68,6 +76,17 @@ class HrDashboard extends Component
     public function apply(): void
     {
         $this->company();
+    }
+
+    public function requestExport(AttendanceExports $exports): void
+    {
+        $company = $this->company();
+        app(TenantContext::class)->runForCompany($company, function () use ($company, $exports): void {
+            abort_unless(in_array($this->exportKind, ExportKinds::ALL, true)
+                && ! in_array($this->exportKind, ExportKinds::EMPLOYEE_ONLY, true), 403);
+            $exports->request($company, auth()->user(), $this->exportKind, $this->filters(), $this->exportLocale);
+        });
+        $this->exportQueued = true;
     }
 
     public function tileUrl(string $tile): string

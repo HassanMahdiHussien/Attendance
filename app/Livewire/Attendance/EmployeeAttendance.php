@@ -12,6 +12,7 @@ use App\Models\Leave\LeaveRequest;
 use App\Models\Leave\RequestDay;
 use App\Models\Leave\RequestVersion;
 use App\Policies\EmployeeProfilePolicy;
+use App\Services\Attendance\Reporting\AttendanceExports;
 use App\Services\Attendance\Reporting\AttendanceSummary;
 use App\Services\Attendance\Reporting\LastUpdate;
 use App\Services\Attendance\Reporting\ReportFilters;
@@ -35,6 +36,12 @@ class EmployeeAttendance extends Component
     public string $tab = 'days';
 
     public string $selectedTile = '';
+
+    public string $exportKind = 'employee_statement_xlsx';
+
+    public string $exportLocale = 'en';
+
+    public bool $exportQueued = false;
 
     public function mount(int $employeeId): void
     {
@@ -78,6 +85,17 @@ class EmployeeAttendance extends Component
     public function apply(): void
     {
         $this->employee();
+    }
+
+    public function requestExport(AttendanceExports $exports): void
+    {
+        $employee = $this->employee();
+        abort_unless(in_array($this->exportKind, ['employee_statement_xlsx', 'statement_pdf'], true), 403);
+        app(TenantContext::class)->runForCompany($employee->company_id, function () use ($employee, $exports): void {
+            $exports->request($employee->company, auth()->user(), $this->exportKind,
+                ['from' => $this->from, 'to' => $this->to, 'employee_ids' => [$employee->id]], $this->exportLocale);
+        });
+        $this->exportQueued = true;
     }
 
     public function render(AttendanceSummary $summary, DayReconciliation $reconciliation, LastUpdate $lastUpdate): View

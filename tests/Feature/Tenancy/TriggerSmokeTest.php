@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\AiGenerationLog;
+use App\Models\Attendance\AttendanceExportEvent;
 use App\Models\Attendance\DayDecision;
 use App\Models\Attendance\DeviceSetting;
 use App\Models\Attendance\ImportBatch as AttendanceImportBatch;
@@ -30,6 +31,7 @@ test('kept append-only triggers reject raw SQL updates and deletes', function ()
         DeviceSetting::factory()->create(), AttendanceImportBatch::factory()->create(), ImportBatchEvent::factory()->create(),
         Transaction::factory()->create(), TransactionSource::factory()->create(), Policy::factory()->create(),
         ManualPunch::factory()->create(), DayDecision::factory()->create(), LeaveImportBatch::factory()->create(),
+        AttendanceExportEvent::factory()->create(),
         LeaveImportBatchEvent::factory()->create(), LeaveImportRow::factory()->create(),
         LeaveRequestVersion::factory()->create(), LeaveRequestDecision::factory()->create()] as $record) {
         $table = $record->getTable();
