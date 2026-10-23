@@ -411,6 +411,10 @@ return [
         'distribution_resolved' => 'تم تأكيد توزيع الإجازة أو تصحيحه.',
         'issue_resolved' => 'تغير مصدر الإجازة أو يوم الحضور.',
     ],
+    'reporting' => [
+        'invalid_period' => 'اختر فترة تقرير صالحة.',
+        'invalid_filters' => 'اختر مرشحات تقرير صالحة لهذه الشركة.',
+    ],
     'locale' => [
         'arabic' => 'العربية',
     ],

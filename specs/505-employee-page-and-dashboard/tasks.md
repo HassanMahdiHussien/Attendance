@@ -3,10 +3,10 @@
 **Input**: [spec.md](spec.md), [plan.md](plan.md) — "Revisions after Codex plan review" overrides earlier plan text. Each step ends green in WSL (Unit, Feature, Browser, Pint).
 
 ## Step 1 — Contracts and summary service
-- [ ] T001 `ReportFilters` (period, employee, branch, department, manager, work pattern, status; validated, serialisable)
-- [ ] T002 `AttendanceSummary` canonical projection (revisions 1–3), streamed detail rows
-- [ ] T003 `LastUpdate` freshness + coverage quality (revision 4)
-- [ ] T004 Projection tests with 503/504 fixtures: categories, gross/reconciled/remaining by kind, credit rules, leave status grouping, pending exclusion, historical branch, meals/issues scoping, isolation
+- [x] T001 `ReportFilters` (period, employee, branch, department, manager, work pattern, status; validated, serialisable)
+- [x] T002 `AttendanceSummary` canonical projection (revisions 1–3), streamed detail rows
+- [x] T003 `LastUpdate` freshness + coverage quality (revision 4)
+- [x] T004 Projection tests with 503/504 fixtures: categories, gross/reconciled/remaining by kind, credit rules, leave status grouping, pending exclusion, historical branch, meals/issues scoping, isolation
 
 ## Step 2 — Screens, access and search
 - [ ] T005 Employee page attendance section (tiles + drill-downs, re-authorised)

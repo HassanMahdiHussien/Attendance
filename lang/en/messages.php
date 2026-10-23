@@ -411,6 +411,10 @@ return [
         'distribution_resolved' => 'The leave distribution was confirmed or corrected.',
         'issue_resolved' => 'The leave source or attendance day changed.',
     ],
+    'reporting' => [
+        'invalid_period' => 'Choose a valid report period.',
+        'invalid_filters' => 'Choose valid report filters for this company.',
+    ],
     'locale' => [
         'arabic' => 'Arabic',
     ],
