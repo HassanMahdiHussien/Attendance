@@ -1,7 +1,15 @@
 <div class="space-y-6">
     <x-ui.page-header :title="$employee->name" :back="route('employees.index')" />
     <x-ui.card>
-        <p class="text-gray-500"><bdi dir="ltr">{{ \App\Support\Format\Ui::number($employee->employee_code) }}</bdi> · {{ $employee->department }} · {{ $employee->position }} · {{ $employee->branch?->name }}</p>
+        <p class="text-gray-500">
+            <bdi dir="ltr">{{ \App\Support\Format\Ui::number($employee->employee_code) }}</bdi> · {{ $employee->department }} · {{ $employee->position }} · {{ $employee->branch?->name }}
+            @if ($employee->staff_category)
+                · {{ __('messages.employee_history.fields.staff_category') }}: <bdi dir="ltr">{{ $employee->staff_category }}</bdi>
+            @endif
+            @if ($employee->legal_entity)
+                · {{ __('messages.employee_history.fields.legal_entity') }}: <bdi dir="auto">{{ $employee->legal_entity }}</bdi>
+            @endif
+        </p>
         <p class="mt-2 text-sm text-gray-500">{{ __('Hire date') }}: <bdi dir="ltr">{{ \App\Support\Format\Ui::date($employee->hire_date) }}</bdi></p>
     </x-ui.card>
     <section aria-label="{{ __('messages.attendance.title') }}">

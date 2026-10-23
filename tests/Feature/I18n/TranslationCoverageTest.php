@@ -68,7 +68,7 @@ test('dynamic employee history labels exist in both languages', function (): voi
         expect(data_get($english, 'employee_history.fields.'.$field))->not->toBeNull()
             ->and(data_get($arabic, 'employee_history.fields.'.$field))->not->toBeNull();
     }
-    foreach (['initial', 'manual', 'import', 'chat'] as $source) {
+    foreach (['initial', 'manual', 'import', 'chat', 'rule'] as $source) {
         expect(data_get($english, 'employee_history.sources.'.$source))->not->toBeNull()
             ->and(data_get($arabic, 'employee_history.sources.'.$source))->not->toBeNull();
     }
@@ -84,6 +84,16 @@ test('mapped import fields and statuses exist in both languages', function (): v
     foreach (['new', 'update', 'unchanged', 'error'] as $status) {
         expect(data_get($english, 'employee_import_ui.status.'.$status))->not->toBeNull()
             ->and(data_get($arabic, 'employee_import_ui.status.'.$status))->not->toBeNull();
+    }
+});
+
+test('pattern review issue labels exist in both languages', function (): void {
+    $english = File::getRequire(lang_path('en/messages.php'));
+    $arabic = File::getRequire(lang_path('ar/messages.php'));
+
+    foreach (['attendance_import', 'attendance_ui'] as $group) {
+        expect(data_get($english, $group.'.issue_types.pattern_review'))->not->toBeNull()
+            ->and(data_get($arabic, $group.'.issue_types.pattern_review'))->not->toBeNull();
     }
 });
 

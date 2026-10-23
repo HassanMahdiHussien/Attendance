@@ -36,6 +36,9 @@ class Employee extends Model
             if (! EmployeeGender::tryFrom((string) ($employee->getAttributes()['gender'] ?? 'unspecified'))) {
                 throw ValidationException::withMessages(['gender' => __('messages.employee.gender_invalid')]);
             }
+            if ($employee->staff_category !== null && ! in_array($employee->staff_category, ['B', 'W'], true)) {
+                throw ValidationException::withMessages(['staff_category' => __('messages.employee.staff_category_invalid')]);
+            }
         });
         static::creating(function (self $employee): void {
             if (blank($employee->employee_code)) {
@@ -52,6 +55,8 @@ class Employee extends Model
             'gender' => EmployeeGender::class,
             'is_active' => 'boolean',
             'work_pattern' => EmployeeWorkPattern::class,
+            'staff_category' => 'string',
+            'legal_entity' => 'string',
             'rest_days' => 'array',
             'exit_status' => EmployeeExitStatus::class,
             'last_working_day' => 'date',

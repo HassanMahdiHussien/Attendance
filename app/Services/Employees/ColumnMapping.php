@@ -13,6 +13,7 @@ class ColumnMapping
     public const FIELDS = [
         'employee_code', 'name', 'name_en', 'department', 'position', 'hire_date', 'branch',
         'email', 'gender', 'manager_code', 'manager_name', 'work_pattern', 'rest_days',
+        'staff_category', 'legal_entity',
         'schedule_start', 'schedule_end', 'fallback_notification_email',
     ];
 
@@ -28,6 +29,8 @@ class ColumnMapping
         $hc = count($headers) === 24 && $headers[0] === 'Pers.No.' && $headers[19] === 'Pers.No.';
         if ($hc) {
             $mapping[2] = 'name';
+            $mapping[10] = 'staff_category';
+            $mapping[16] = 'legal_entity';
         }
         foreach ($headers as $index => $header) {
             foreach (config('employee_import.aliases', []) as $field => $aliases) {

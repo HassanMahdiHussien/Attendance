@@ -2,6 +2,20 @@
 
 Every kept foundation file edited since the spec-500 baseline is listed below. Removals are not listed because Displanary keeps that code. Apply only rows marked **Port**; **Do not apply** rows describe changes needed solely by Attendance.
 
+## Employee classification fields (spec 506)
+
+| File | Change | Why | Displanary |
+|---|---|---|---|
+| `database/migrations/2026_10_23_050000_add_employee_classification_attendance.php` | Adds nullable `employees.staff_category` and `employees.legal_entity`. | The HC list supplies collar and employing company. | **Port both fields** |
+| `app/Models/Employee.php`, `database/factories/EmployeeFactory.php` | Accepts and validates collar and legal entity. | The shared employee record and fixtures carry both fields. | **Port both fields** |
+| `app/Services/Employees/EmployeeHistory.php` | Versions both fields and permits rule-sourced pattern changes. | Employee identity and pattern decisions retain their effective dates. | **Port both fields**; apply the rule hook with Attendance |
+| `app/Services/Employees/ColumnMapping.php`, `config/employee_import.php`, `app/Services/Employees/MappedEmployeeImport.php` | Maps HC columns K and Q and normalizes collar values. | Imported values reach the versioned employee record. | **Port both fields**; apply pattern assignment with Attendance |
+| `app/Services/Employees/CsvReader.php`, `app/Services/Employees/EmployeeImport.php` | Accepts optional collar and legal entity in legacy CSV and runs the pattern rule after commit. | Both employee import paths retain the same classification. | **Port both fields**; apply pattern assignment with Attendance |
+| `app/Filament/Admin/Resources/EmployeeResource.php`, `resources/views/livewire/employees/employee-page.blade.php` | Shows collar and legal entity in employee editing and identity. | HR can verify source classification and employing entity. | **Port both fields** |
+| `lang/en/messages.php`, `lang/ar/messages.php` | Adds bilingual field, rule source, and review labels. | History, imports, and review issues need readable names. | **Port field labels**; apply rule labels with Attendance |
+| `app/Services/Employees/PatternRule.php`, `app/Console/Commands/ApplyEmployeePatternRules.php`, `config/attendance.php` | Assigns an empty pattern from position or collar with a dated history entry and an idempotent one-time command. | Attendance needs a default classification without overriding HR. | **Apply with the attendance module** |
+
+
 ## Attendance overview integration (spec 505)
 
 | File | Change | Why | Displanary |

@@ -41,6 +41,7 @@ class AttendanceIssues extends AttendancePage
     {
         $issue = DataIssue::query()->where('company_id', $this->company()->id)->findOrFail($issueId);
         abort_unless($issue->status === 'open' && in_array($action, ['resolve', 'dismiss'], true), 403);
+        abort_if($issue->type === 'pattern_review' && $action === 'resolve', 403);
         $this->validate(['notes.'.$issueId => 'required|string|max:1000']);
         $issues->{$action}($issue, auth()->user(), $this->notes[$issueId]);
         unset($this->notes[$issueId]);

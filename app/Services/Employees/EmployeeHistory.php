@@ -21,6 +21,7 @@ class EmployeeHistory
     public const FIELDS = [
         'name', 'name_en', 'department', 'department_en', 'position', 'position_en',
         'hire_date', 'branch_id', 'email', 'gender', 'work_pattern', 'rest_days',
+        'staff_category', 'legal_entity',
         'schedule_start', 'schedule_end', 'manager_employee_id', 'manager_name',
         'fallback_notification_email',
     ];
@@ -96,6 +97,9 @@ class EmployeeHistory
                 'effective_from' => $date->toDateString(), 'before' => $previous, 'after' => $changes,
                 'source' => $source, 'reason' => $reason, 'version_id' => $version->id,
             ], $actor);
+            if ($source === 'manual' && ($changes['work_pattern'] ?? null) !== null && $actor !== null) {
+                app(PatternRule::class)->resolveReview($employee, $actor);
+            }
             event(new EmployeeVersionChanged($employee->fresh(), $date));
 
             return $version;
@@ -187,6 +191,13 @@ class EmployeeHistory
         if (in_array($field, ['branch_id', 'manager_employee_id'], true)) {
             return (int) $value;
         }
+        if ($field === 'staff_category') {
+            return match (mb_strtolower(trim((string) $value))) {
+                'b', 'blue' => 'B',
+                'w', 'white' => 'W',
+                default => (string) $value,
+            };
+        }
 
         return $value;
     }
@@ -205,6 +216,12 @@ class EmployeeHistory
         }
         if ($field === 'work_pattern' && $value !== null && EmployeeWorkPattern::tryFrom((string) $value) === null) {
             throw ValidationException::withMessages([$field => __('messages.employee_history.invalid_pattern')]);
+        }
+        if ($field === 'staff_category' && $value !== null && ! in_array($value, ['B', 'W'], true)) {
+            throw ValidationException::withMessages([$field => __('messages.employee.staff_category_invalid')]);
+        }
+        if ($field === 'legal_entity' && $value !== null && mb_strlen((string) $value) > 255) {
+            throw ValidationException::withMessages([$field => __('messages.employee.legal_entity_too_long')]);
         }
         if ($field === 'gender' && EmployeeGender::tryFrom((string) $value) === null) {
             throw ValidationException::withMessages([$field => __('messages.employee.gender_invalid')]);

@@ -8,7 +8,7 @@
 - [x] T003 Exhaustive unit tests; tenancy/trigger tests for changed tables; office results unchanged
 
 ## Step 1b — Employee fields and default pattern rule (plan addendum)
-- [ ] T001b `staff_category` + `legal_entity` employee fields (versioned, import aliases, form); `pattern_rules` config; rule applied on import and once for existing employees through EmployeeHistory (source `rule`); `pattern_review` issue for flagged positions; tests
+- [x] T001b `staff_category` + `legal_entity` employee fields (versioned, import aliases, form); `pattern_rules` config; rule applied on import and once for existing employees through EmployeeHistory (source `rule`); `pattern_review` issue for flagged positions; tests
 
 ## Step 2 — Integration
 - [ ] T004 Replacement policy versions (revision 1) + reassessment; absence_minutes in Reconciler/LeaveAllocator/AttendanceSummary; LeaveDistributor pattern rest days (revision 2)

@@ -28,6 +28,9 @@ return [
     ],
     'employee' => [
         'gender_invalid' => 'يجب تحديد الجنس بذكر أو أنثى أو غير محدد.',
+        'staff_category_invalid' => 'يجب أن تكون فئة الموظف من العمال أو الموظفين الإداريين.',
+        'legal_entity_too_long' => 'اسم الكيان القانوني طويل جداً.',
+        'staff_categories' => ['B' => 'العمال', 'W' => 'الموظفون الإداريون'],
     ],
     'employee_history' => [
         'title' => 'التغييرات',
@@ -38,12 +41,14 @@ return [
         'required_identity' => 'حقل الهوية هذا مطلوب.',
         'invalid_reference' => 'الموظف أو الفرع المحدد لا ينتمي إلى هذه الشركة.',
         'invalid_pattern' => 'اختر نمط عمل صالحاً.',
-        'sources' => ['initial' => 'أولي', 'manual' => 'يدوي', 'import' => 'استيراد', 'chat' => 'محادثة'],
+        'pattern_review_resolved' => 'غيّرت الموارد البشرية نمط العمل.',
+        'sources' => ['initial' => 'أولي', 'manual' => 'يدوي', 'import' => 'استيراد', 'chat' => 'محادثة', 'rule' => 'قاعدة'],
         'fields' => [
             'name' => 'الاسم', 'name_en' => 'الاسم بالإنجليزية', 'department' => 'القسم',
             'department_en' => 'القسم بالإنجليزية', 'position' => 'المنصب', 'position_en' => 'المنصب بالإنجليزية',
             'hire_date' => 'تاريخ التعيين', 'branch_id' => 'الفرع', 'email' => 'البريد الإلكتروني', 'gender' => 'الجنس',
             'work_pattern' => 'نمط العمل', 'rest_days' => 'أيام الراحة', 'schedule_start' => 'بداية الدوام',
+            'staff_category' => 'فئة الموظف', 'legal_entity' => 'الكيان القانوني',
             'schedule_end' => 'نهاية الدوام', 'manager_employee_id' => 'المدير', 'manager_name' => 'اسم المدير المبلغ عنه',
             'fallback_notification_email' => 'بريد الإشعارات البديل',
         ],
@@ -83,6 +88,7 @@ return [
             'branch' => 'الفرع', 'branch_id' => 'الفرع', 'email' => 'البريد', 'gender' => 'الجنس',
             'manager_code' => 'رمز المدير', 'manager_employee_id' => 'المدير', 'manager_name' => 'اسم المدير',
             'work_pattern' => 'نمط العمل', 'rest_days' => 'أيام الراحة', 'schedule_start' => 'بداية الدوام',
+            'staff_category' => 'فئة الموظف', 'legal_entity' => 'الكيان القانوني',
             'schedule_end' => 'نهاية الدوام', 'fallback_notification_email' => 'بريد الإشعارات البديل',
             'exit_status' => 'مراجعة المغادرة',
         ],
@@ -144,6 +150,7 @@ return [
         'device_state_invalid' => 'لا يمكن إجراء هذا التغيير في حالة الجهاز الحالية.',
         'device_date_invalid' => 'أدخل تاريخ سريان صالحاً.',
         'issue_types' => [
+            'pattern_review' => 'نمط عمل الأمن يحتاج إلى مراجعة الموارد البشرية',
             'unknown_person' => 'بصمات لمعرّف غير موجود في قائمة الموظفين',
             'device_outage' => 'عطل محتمل في جهاز تسجيل الدخول',
             'device_pending' => 'جهاز ينتظر الموافقة',
@@ -161,6 +168,7 @@ return [
     ],
     'attendance_ui' => [
         'issue_types' => [
+            'pattern_review' => 'نمط عمل الأمن يحتاج إلى مراجعة الموارد البشرية',
             'unknown_person' => 'بصمات لمعرّف غير موجود في قائمة الموظفين',
             'device_outage' => 'عطل محتمل في جهاز تسجيل الدخول',
             'device_pending' => 'جهاز ينتظر الموافقة',

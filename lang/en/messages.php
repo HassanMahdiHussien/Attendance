@@ -28,6 +28,9 @@ return [
     ],
     'employee' => [
         'gender_invalid' => 'Gender must be male, female, or unspecified.',
+        'staff_category_invalid' => 'Staff category must be blue collar or white collar.',
+        'legal_entity_too_long' => 'Legal entity is too long.',
+        'staff_categories' => ['B' => 'Blue collar', 'W' => 'White collar'],
     ],
     'employee_history' => [
         'title' => 'Changes',
@@ -38,12 +41,14 @@ return [
         'required_identity' => 'This identity field is required.',
         'invalid_reference' => 'The selected employee or branch is not in this company.',
         'invalid_pattern' => 'Choose a valid work pattern.',
-        'sources' => ['initial' => 'Initial', 'manual' => 'Manual', 'import' => 'Import', 'chat' => 'Chat'],
+        'pattern_review_resolved' => 'HR changed the work pattern.',
+        'sources' => ['initial' => 'Initial', 'manual' => 'Manual', 'import' => 'Import', 'chat' => 'Chat', 'rule' => 'Rule'],
         'fields' => [
             'name' => 'Name', 'name_en' => 'English name', 'department' => 'Department',
             'department_en' => 'English department', 'position' => 'Position', 'position_en' => 'English position',
             'hire_date' => 'Hire date', 'branch_id' => 'Branch', 'email' => 'Email address', 'gender' => 'Gender',
             'work_pattern' => 'Work pattern', 'rest_days' => 'Rest days', 'schedule_start' => 'Schedule start',
+            'staff_category' => 'Staff category', 'legal_entity' => 'Legal entity',
             'schedule_end' => 'Schedule end', 'manager_employee_id' => 'Manager', 'manager_name' => 'Reported manager name',
             'fallback_notification_email' => 'Fallback notification email',
         ],
@@ -83,6 +88,7 @@ return [
             'branch' => 'Branch', 'branch_id' => 'Branch', 'email' => 'Email', 'gender' => 'Gender',
             'manager_code' => 'Manager code', 'manager_employee_id' => 'Manager', 'manager_name' => 'Manager name',
             'work_pattern' => 'Work pattern', 'rest_days' => 'Rest days', 'schedule_start' => 'Schedule start',
+            'staff_category' => 'Staff category', 'legal_entity' => 'Legal entity',
             'schedule_end' => 'Schedule end', 'fallback_notification_email' => 'Fallback notification email',
             'exit_status' => 'Exit review',
         ],
@@ -157,10 +163,12 @@ return [
             'leave_request_missing' => 'Request missing from a full leave report',
             'leave_with_attendance_nothing_to_reconcile' => 'Approved leave meets attendance with no balance to reconcile',
             'leave_duration_mismatch' => 'Leave duration does not match working days',
+            'pattern_review' => 'Security work pattern needs HR review',
         ],
     ],
     'attendance_ui' => [
         'issue_types' => [
+            'pattern_review' => 'Security work pattern needs HR review',
             'unknown_person' => 'Punches for an ID not in the employee list',
             'device_outage' => 'Suspected check-in device outage',
             'device_pending' => 'Device awaiting approval',

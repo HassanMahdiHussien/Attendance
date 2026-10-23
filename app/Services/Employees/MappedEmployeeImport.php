@@ -25,6 +25,7 @@ class MappedEmployeeImport
         private EmployeeHistory $history,
         private AuditLogger $audit,
         private ExitReview $exitReview,
+        private PatternRule $patternRule,
     ) {}
 
     public function preview(Company $company, UploadedFile $file, string $mode, string $effectiveDate, array $mapping): ImportPreview
@@ -121,6 +122,18 @@ class MappedEmployeeImport
                 if ($field === 'work_pattern') {
                     $value = mb_strtolower($value);
                 }
+                if ($field === 'staff_category') {
+                    $value = match (mb_strtolower(trim($value))) {
+                        'b', 'blue' => 'B',
+                        'w', 'white' => 'W',
+                        default => null,
+                    };
+                    if ($value === null) {
+                        $errors[] = __('messages.employee.staff_category_invalid');
+
+                        continue;
+                    }
+                }
                 if (in_array($field, ['schedule_start', 'schedule_end'], true)) {
                     $time = strlen($value) === 5 ? $value.':00' : $value;
                     if (! preg_match('/^\d{2}:\d{2}:\d{2}$/', $time)) {
@@ -172,6 +185,9 @@ class MappedEmployeeImport
                 if (($before[$field] ?? null) !== $value) {
                     $diff[$field] = ['before' => $before[$field] ?? null, 'after' => $value];
                 }
+            }
+            if ($employee?->work_pattern === null && ($rule = $this->patternRule->suggest(array_replace($before, $values))) !== null) {
+                $diff['work_pattern'] = ['before' => null, 'after' => $rule['pattern']];
             }
             if ($mode === 'full' && $employee?->exit_status === EmployeeExitStatus::PendingReview) {
                 $diff['exit_status'] = ['before' => 'pending_review', 'after' => 'none'];
@@ -285,6 +301,9 @@ class MappedEmployeeImport
                     if ($mode === 'full' && $employee->exit_status === EmployeeExitStatus::PendingReview) {
                         $this->exitReview->reappear($employee, $batch, $actor);
                     }
+                }
+                foreach ($preview->rows as $row) {
+                    $this->patternRule->apply($byCode->get($row['code']), $effectiveDate, $batch->id);
                 }
                 foreach ($preview->missing as $missing) {
                     $this->exitReview->start($byCode->get($missing['code']), $actor, $batch);

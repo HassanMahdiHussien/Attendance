@@ -16,6 +16,8 @@ class CsvReader
         'branch' => ['branch', 'الفرع'],
         'email' => ['email', 'البريد'],
         'gender' => ['gender', 'الجنس'],
+        'staff_category' => ['staff_category', 'AG HR Collar'],
+        'legal_entity' => ['legal_entity', 'Company Code'],
     ];
 
     private const REQUIRED = ['name', 'hire_date', 'branch'];

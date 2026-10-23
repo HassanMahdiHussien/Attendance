@@ -48,6 +48,10 @@ class EmployeeResource extends Resource
             TextInput::make('department_en')->label(__('English department')),
             TextInput::make('position')->label(__('Position')),
             TextInput::make('position_en')->label(__('English position')),
+            Select::make('staff_category')->label(__('messages.employee_history.fields.staff_category'))->options([
+                'B' => __('messages.employee.staff_categories.B'), 'W' => __('messages.employee.staff_categories.W'),
+            ]),
+            TextInput::make('legal_entity')->label(__('messages.employee_history.fields.legal_entity')),
             DatePicker::make('hire_date')->label(__('Hire date'))->required(),
             TextInput::make('email')->label(__('Email address'))->email()->extraInputAttributes(['dir' => 'ltr']),
             Select::make('work_pattern')->label(__('Work pattern'))->options([

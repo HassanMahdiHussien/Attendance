@@ -55,6 +55,26 @@ test('UTF-8, BOM and Windows-1256 semicolon files preview Arabic names', functio
     }
 });
 
+test('legacy CSV imports collar and legal entity then records a rule pattern', function (): void {
+    $csv = "name,employee_id,department,position,hire_date,branch,email,gender,staff_category,legal_entity\r\n"
+        ."Fake Employee,EMP-25,Operations,Technician,2024-01-15,{$this->branch->name},,male,blue,Al Waha Company\r\n";
+    $file = employeeCsv($csv);
+    $import = app(EmployeeImport::class);
+    $preview = $import->preview($this->company, $file);
+
+    expect($preview->errors())->toBe(0)
+        ->and($preview->rows[0]['values']['staff_category'])->toBe('B')
+        ->and($preview->rows[0]['diff'])->toContain('work_pattern');
+    $result = $import->commit($this->company, $file, $this->admin, $preview->hash);
+    $employee = Employee::query()->where('employee_code', 'EMP-25')->firstOrFail();
+
+    expect($result['committed'])->toBeTrue()
+        ->and($employee->staff_category)->toBe('B')
+        ->and($employee->legal_entity)->toBe('Al Waha Company')
+        ->and($employee->work_pattern?->value)->toBe('shift')
+        ->and($employee->versions()->where('source', 'rule')->count())->toBe(1);
+});
+
 test('quoted commas and line breaks stay in one employee field', function (): void {
     $csv = employeeHeaders()."\"أحمد, علي\nحسن\",,الإدارة,موظف,2024-01-15,بغداد,,\r\n";
     $preview = app(EmployeeImport::class)->preview($this->company, employeeCsv($csv));

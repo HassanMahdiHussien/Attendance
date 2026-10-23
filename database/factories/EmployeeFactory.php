@@ -25,6 +25,8 @@ class EmployeeFactory extends Factory
             'hire_date' => now(),
             'gender' => 'male',
             'work_pattern' => null,
+            'staff_category' => null,
+            'legal_entity' => null,
             'rest_days' => null,
             'exit_status' => 'none',
         ];
