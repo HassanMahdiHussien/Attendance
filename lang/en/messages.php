@@ -451,6 +451,7 @@ return [
         'linked_hr' => 'HR reviewed this day; any confirmed absence or manual time is recorded separately.',
         'invalid' => 'Choose a valid export and language.', 'one_employee' => 'Choose exactly one employee for a statement.',
         'cleanup_command' => 'Delete expired private attendance export files',
+        'statement_title' => 'Employee attendance statement',
         'kinds' => [
             'employee_statement_xlsx' => 'Employee attendance statement (Excel)',
             'lateness_reconciliation' => 'Lateness, early departure and reconciliation',

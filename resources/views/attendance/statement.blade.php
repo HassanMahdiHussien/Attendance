@@ -20,8 +20,8 @@
     </style>
 </head>
 <body>
-    <h1>{{ __('messages.export_ui.kinds.statement_pdf') }}</h1>
-    <p>{{ $company->name }} · {{ $employee->name }} <bdi class="mono">{{ $employee->employee_code }}</bdi></p>
+    <h1>{{ __('messages.export_ui.statement_title') }}</h1>
+    <p>{{ $company->name }} · <bdi>{{ app()->getLocale() === 'en' && filled($employee->name_en) ? $employee->name_en : $employee->name }}</bdi> <bdi class="mono">{{ $employee->employee_code }}</bdi></p>
     <p class="muted"><bdi class="mono">{{ $filters->from }} — {{ $filters->to }}</bdi></p>
     @foreach ($header as $line)
         <p class="muted">{{ $line[0] }}: <bdi dir="auto">{{ $line[1] }}</bdi></p>
@@ -32,7 +32,7 @@
         <tr><th>{{ __('messages.export_ui.present_days') }}</th><td class="mono">{{ $totals['days']['present'] }}</td></tr>
         <tr><th>{{ __('messages.export_ui.pending_days') }}</th><td class="mono">{{ $totals['days']['pending'] }}</td></tr>
         @foreach (['absence', 'late', 'early', 'exit'] as $kind)
-            <tr><th>{{ __('messages.leave_ui.target_kinds.'.$kind) }}</th><td class="mono">{{ $totals['minutes'][$kind]['gross'] }} / {{ $totals['minutes'][$kind]['reconciled_by_leave'] }} / {{ $totals['minutes'][$kind]['reconciled_by_credit'] }} / {{ $totals['minutes'][$kind]['remaining'] }}</td></tr>
+            <tr><th>{{ ucfirst(__('messages.leave_ui.target_kinds.'.$kind)) }}</th><td class="mono">{{ $totals['minutes'][$kind]['gross'] }} / {{ $totals['minutes'][$kind]['reconciled_by_leave'] }} / {{ $totals['minutes'][$kind]['reconciled_by_credit'] }} / {{ $totals['minutes'][$kind]['remaining'] }}</td></tr>
         @endforeach
         @foreach (['created', 'used_in_period', 'available_at_period_end'] as $kind)
             <tr><th>{{ __('messages.export_ui.credit_totals.'.$kind) }}</th><td class="mono">{{ $totals['credits'][$kind] }}</td></tr>
@@ -55,7 +55,7 @@
         <tbody>
             @foreach ($days as $day)
                 <tr><td class="mono">{{ $day['date'] }}</td><td>{{ $day['status'] }}</td>
-                    <td class="mono">{{ $day['first_in'] }}</td><td class="mono">{{ $day['last_out'] }}</td>
+                    <td class="mono">{{ $day['first_in'] ? substr((string) $day['first_in'], 11, 5) : '' }}</td><td class="mono">{{ $day['last_out'] ? substr((string) $day['last_out'], 11, 5) : '' }}</td>
                     <td class="mono">{{ $day['gross'] }}</td><td class="mono">{{ $day['leave'] }}</td>
                     <td class="mono">{{ $day['credit'] }}</td><td class="mono">{{ $day['remaining'] }}</td></tr>
                 @if ($day['explanations'] !== '')
