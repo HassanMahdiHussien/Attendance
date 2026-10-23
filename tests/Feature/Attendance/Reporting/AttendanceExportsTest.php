@@ -58,7 +58,8 @@ function exportFixture(): array
             'hire_date' => '2020-01-01', 'work_pattern' => 'office']);
         $hr = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::HrStaff]);
         Day::factory()->create(['employee_id' => $employee->id, 'branch_id' => $branch->id,
-            'work_date' => '2026-10-21', 'status' => 'present', 'late_minutes' => 15]);
+            'work_date' => '2026-10-21', 'status' => 'present', 'late_minutes' => 15,
+            'first_in' => '2026-10-21 09:15:00', 'last_out' => '2026-10-21 18:00:00']);
         Day::factory()->create(['employee_id' => $employee->id, 'branch_id' => $branch->id,
             'work_date' => '2026-10-22', 'status' => 'pending']);
 
@@ -112,6 +113,9 @@ test('summary, dashboard, employee tile, Excel totals and PDF data agree for the
         ->and($excel->row_count)->toBe(2)
         ->and(collect($rows)->pluck(0))->toContain('00001234')
         ->and(collect($rows)->pluck(2))->toContain('2026-10-21')
+        ->and(collect($rows)->pluck(4))->toContain('09:15')
+        ->and(collect($rows)->pluck(5))->toContain('18:00')
+        ->and(collect($rows)->pluck(4))->not->toContain('2026-10-21 09:15:00')
         ->and((int) $total[7])->toBe(15)
         ->and((int) $total[7])->toBe($detailLate)
         ->and((int) $total[10])->toBe(15);

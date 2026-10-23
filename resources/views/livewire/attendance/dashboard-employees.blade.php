@@ -1,7 +1,7 @@
 <div class="space-y-5">
     <x-ui.page-header :title="__('messages.reporting_ui.employee_list')" :back="auth()->user()->primary_role === \App\Enums\UserRole::PlatformAdmin ? route('dashboard.company', ['company' => $company->id]) : route('dashboard.index')" />
     <x-ui.card>
-        <p>{{ str_starts_with($tile, 'leave:') ? substr($tile, 6, strrpos($tile, '|') - 6).' · '.__('messages.leave_ui.statuses.'.substr($tile, strrpos($tile, '|') + 1)) : (str_starts_with($tile, 'issue_type:') ? __('messages.attendance_ui.issue_types.'.substr($tile, 11)) : __('messages.reporting_ui.tiles.'.$tile)) }} · <bdi dir="ltr">{{ $from }} → {{ $to }}</bdi></p>
+        <p>{{ \App\Services\Attendance\Reporting\ReportTiles::label($tile) }} · <bdi dir="ltr">{{ $from }} → {{ $to }}</bdi></p>
         <p class="text-sm text-gray-500">{{ __('messages.reporting_ui.matching_employees') }}: <bdi dir="ltr">{{ $employees->count() }}</bdi></p>
     </x-ui.card>
     @forelse ($employees as $employee)

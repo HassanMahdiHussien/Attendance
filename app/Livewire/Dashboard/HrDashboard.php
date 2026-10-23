@@ -8,6 +8,7 @@ use App\Models\Company;
 use App\Models\Employee;
 use App\Services\Attendance\Reporting\AttendanceExports;
 use App\Services\Attendance\Reporting\AttendanceSummary;
+use App\Services\Attendance\Reporting\EmployeeFilterSearch;
 use App\Services\Attendance\Reporting\ExportKinds;
 use App\Services\Attendance\Reporting\LastUpdate;
 use App\Services\Attendance\Reporting\ReportFilters;
@@ -29,11 +30,15 @@ class HrDashboard extends Component
 
     public string $employeeId = '';
 
+    public string $employeeSearch = '';
+
     public string $branchId = '';
 
     public string $department = '';
 
     public string $managerId = '';
+
+    public string $managerSearch = '';
 
     public string $workPattern = '';
 
@@ -78,6 +83,48 @@ class HrDashboard extends Component
         $this->company();
     }
 
+    public function updatedEmployeeSearch(): void
+    {
+        $this->employeeId = '';
+    }
+
+    public function updatedManagerSearch(): void
+    {
+        $this->managerId = '';
+    }
+
+    public function chooseEmployee(int $id, EmployeeFilterSearch $search): void
+    {
+        $company = $this->company();
+        $selected = app(TenantContext::class)->runForCompany($company,
+            fn (): array => $search->selected(auth()->user(), $company, $id));
+        $this->employeeId = (string) $selected['id'];
+        $this->employeeSearch = $selected['name'].' · '.$selected['code'];
+    }
+
+    public function chooseManager(int $id, EmployeeFilterSearch $search): void
+    {
+        $company = $this->company();
+        $selected = app(TenantContext::class)->runForCompany($company,
+            fn (): array => $search->selected(auth()->user(), $company, $id));
+        $this->managerId = (string) $selected['id'];
+        $this->managerSearch = $selected['name'].' · '.$selected['code'];
+    }
+
+    public function clearEmployee(): void
+    {
+        $this->company();
+        $this->employeeId = '';
+        $this->employeeSearch = '';
+    }
+
+    public function clearManager(): void
+    {
+        $this->company();
+        $this->managerId = '';
+        $this->managerSearch = '';
+    }
+
     public function requestExport(AttendanceExports $exports): void
     {
         $company = $this->company();
@@ -99,20 +146,23 @@ class HrDashboard extends Component
         return route($route, $parameters).'?'.http_build_query(['tile' => $tile] + $this->filters());
     }
 
-    public function render(AttendanceSummary $summary, LastUpdate $lastUpdate): View
+    public function render(AttendanceSummary $summary, LastUpdate $lastUpdate, EmployeeFilterSearch $search): View
     {
         $company = $this->company();
 
-        return app(TenantContext::class)->runForCompany($company, function () use ($company, $summary, $lastUpdate): View {
+        return app(TenantContext::class)->runForCompany($company, function () use ($company, $summary, $lastUpdate, $search): View {
             $filters = ReportFilters::fromArray($company, $this->filters());
             $totals = $summary->totals($filters);
-            $employees = Employee::query()->where('company_id', $company->id)->orderBy('name')->get();
+            $employees = $this->employeeId === '' ? $search->find(auth()->user(), $company, $this->employeeSearch) : [];
+            $managers = $this->managerId === '' ? $search->find(auth()->user(), $company, $this->managerSearch) : [];
 
             return view('livewire.dashboard.hr-dashboard', [
                 'company' => $company, 'tiles' => ReportTiles::fromTotals($totals), 'totals' => $totals,
-                'freshness' => $lastUpdate->for($filters), 'employees' => $employees,
+                'freshness' => $lastUpdate->for($filters), 'employees' => $employees, 'managers' => $managers,
                 'branches' => Branch::query()->where('company_id', $company->id)->orderBy('name')->get(),
-                'departments' => $employees->pluck('department')->filter()->unique()->sort()->values(),
+                'departments' => Employee::query()->where('company_id', $company->id)
+                    ->whereNotNull('department')->where('department', '<>', '')
+                    ->distinct()->orderBy('department')->pluck('department'),
             ])->layout('layouts.workspace');
         });
     }

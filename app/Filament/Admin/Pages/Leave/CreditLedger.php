@@ -8,6 +8,7 @@ use App\Models\Leave\Allocation;
 use App\Models\Leave\Credit;
 use App\Models\Leave\RequestDecision;
 use App\Models\Leave\Setting;
+use App\Services\Attendance\Reporting\EmployeeFilterSearch;
 use App\Services\Leave\LeaveActions;
 use App\Services\Leave\LeaveSettings;
 use Illuminate\Support\Facades\DB;
@@ -19,6 +20,8 @@ class CreditLedger extends LeavePage
     protected string $view = 'filament.admin.pages.leave.credits';
 
     public string $employeeId = '';
+
+    public string $employeeSearch = '';
 
     public string $reason = '';
 
@@ -48,9 +51,29 @@ class CreditLedger extends LeavePage
         $this->leaveCalendarRestDays = $setting?->leave_calendar_rest_days ?? [5];
     }
 
-    public function employees(): array
+    public function searchEmployees(): array
     {
-        return Employee::query()->where('company_id', $this->company()->id)->orderBy('name')->pluck('name', 'id')->all();
+        return $this->employeeId === ''
+            ? app(EmployeeFilterSearch::class)->find(auth()->user(), $this->company(), $this->employeeSearch) : [];
+    }
+
+    public function updatedEmployeeSearch(): void
+    {
+        $this->employeeId = '';
+    }
+
+    public function chooseEmployee(int $id, EmployeeFilterSearch $search): void
+    {
+        $selected = $search->selected(auth()->user(), $this->company(), $id);
+        $this->employeeId = (string) $selected['id'];
+        $this->employeeSearch = $selected['name'].' · '.$selected['code'];
+    }
+
+    public function clearEmployee(): void
+    {
+        $this->company();
+        $this->employeeId = '';
+        $this->employeeSearch = '';
     }
 
     public function employee(): ?Employee

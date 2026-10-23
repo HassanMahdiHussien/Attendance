@@ -20,4 +20,4 @@
 - [x] T011 Three-surface agreement test + export/PDF tests + tenancy/trigger tests
 
 ## Step 4 — Verification (orchestrator)
-- [ ] T012 Real data on the smoke DB (HC + punches + leave), browser check of dashboard and an employee page, one export and one PDF; docs; PR
+- [x] T012 Real data on the smoke DB (HC + punches, all office for the test): summary 490 present / 225 absent / 401 missing punch / 1,014 pending; dashboard and employee page checked in a browser; lateness xlsx (444 employees), employee xlsx and PDF statements (ar + en) generated; polish from the browser check (searchable employee filter, HH:MM times, labels). Docs; PR

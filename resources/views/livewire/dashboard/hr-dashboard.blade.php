@@ -11,10 +11,36 @@
         <form wire:submit="apply" class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <label class="text-sm">{{ __('messages.reporting_ui.from') }} <input type="date" wire:model="from" class="ui-control block w-full rounded-xl border border-gray-200 px-3 py-2" /></label>
             <label class="text-sm">{{ __('messages.reporting_ui.to') }} <input type="date" wire:model="to" class="ui-control block w-full rounded-xl border border-gray-200 px-3 py-2" /></label>
-            <label class="text-sm">{{ __('messages.reporting_ui.employee') }} <select wire:model="employeeId" class="ui-control block w-full rounded-xl border border-gray-200 px-3 py-2"><option value="">{{ __('messages.reporting_ui.all') }}</option>@foreach ($employees as $employee)<option value="{{ $employee->id }}">{{ $employee->name }} · {{ $employee->employee_code }}</option>@endforeach</select></label>
+            <div class="relative text-sm">
+                <label for="report-employee-search">{{ __('messages.reporting_ui.employee') }}</label>
+                <div class="flex gap-2">
+                    <input id="report-employee-search" type="search" wire:model.live.debounce.250ms="employeeSearch" role="combobox" aria-autocomplete="list" aria-controls="report-employee-results" aria-expanded="{{ $employeeId === '' && mb_strlen(trim($employeeSearch)) >= 2 ? 'true' : 'false' }}" placeholder="{{ __('messages.search.placeholder') }}" class="ui-control block w-full rounded-xl border border-gray-200 px-3 py-2" />
+                    @if ($employeeSearch !== '') <button type="button" wire:click="clearEmployee" class="ui-link" aria-label="{{ __('messages.reporting_ui.clear_employee') }}">{{ __('messages.reporting_ui.all') }}</button> @endif
+                </div>
+                @if ($employeeId === '' && mb_strlen(trim($employeeSearch)) >= 2)
+                    <div id="report-employee-results" role="listbox" class="absolute inset-x-0 z-20 mt-1 max-h-64 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-xl">
+                        @forelse ($employees as $employee)
+                            <button type="button" role="option" aria-selected="false" wire:click="chooseEmployee({{ $employee->id }})" class="block w-full px-3 py-2 text-start hover:bg-primary-light focus:bg-primary-light"><strong class="block">{{ $employee->name }}</strong><span class="text-xs text-gray-500"><bdi dir="ltr">{{ $employee->employee_code }}</bdi> · {{ $employee->branch_name }}</span></button>
+                        @empty <p class="p-3 text-gray-500">{{ __('messages.search.no_results') }}</p> @endforelse
+                    </div>
+                @endif
+            </div>
             <label class="text-sm">{{ __('messages.reporting_ui.branch') }} <select wire:model="branchId" class="ui-control block w-full rounded-xl border border-gray-200 px-3 py-2"><option value="">{{ __('messages.reporting_ui.all') }}</option>@foreach ($branches as $branch)<option value="{{ $branch->id }}">{{ $branch->name }}</option>@endforeach</select></label>
             <label class="text-sm">{{ __('messages.reporting_ui.department') }} <select wire:model="department" class="ui-control block w-full rounded-xl border border-gray-200 px-3 py-2"><option value="">{{ __('messages.reporting_ui.all') }}</option>@foreach ($departments as $name)<option value="{{ $name }}">{{ $name }}</option>@endforeach</select></label>
-            <label class="text-sm">{{ __('messages.reporting_ui.manager') }} <select wire:model="managerId" class="ui-control block w-full rounded-xl border border-gray-200 px-3 py-2"><option value="">{{ __('messages.reporting_ui.all') }}</option>@foreach ($employees as $employee)<option value="{{ $employee->id }}">{{ $employee->name }} · {{ $employee->employee_code }}</option>@endforeach</select></label>
+            <div class="relative text-sm">
+                <label for="report-manager-search">{{ __('messages.reporting_ui.manager') }}</label>
+                <div class="flex gap-2">
+                    <input id="report-manager-search" type="search" wire:model.live.debounce.250ms="managerSearch" role="combobox" aria-autocomplete="list" aria-controls="report-manager-results" aria-expanded="{{ $managerId === '' && mb_strlen(trim($managerSearch)) >= 2 ? 'true' : 'false' }}" placeholder="{{ __('messages.search.placeholder') }}" class="ui-control block w-full rounded-xl border border-gray-200 px-3 py-2" />
+                    @if ($managerSearch !== '') <button type="button" wire:click="clearManager" class="ui-link" aria-label="{{ __('messages.reporting_ui.clear_manager') }}">{{ __('messages.reporting_ui.all') }}</button> @endif
+                </div>
+                @if ($managerId === '' && mb_strlen(trim($managerSearch)) >= 2)
+                    <div id="report-manager-results" role="listbox" class="absolute inset-x-0 z-20 mt-1 max-h-64 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-xl">
+                        @forelse ($managers as $manager)
+                            <button type="button" role="option" aria-selected="false" wire:click="chooseManager({{ $manager->id }})" class="block w-full px-3 py-2 text-start hover:bg-primary-light focus:bg-primary-light"><strong class="block">{{ $manager->name }}</strong><span class="text-xs text-gray-500"><bdi dir="ltr">{{ $manager->employee_code }}</bdi> · {{ $manager->branch_name }}</span></button>
+                        @empty <p class="p-3 text-gray-500">{{ __('messages.search.no_results') }}</p> @endforelse
+                    </div>
+                @endif
+            </div>
             <label class="text-sm">{{ __('messages.reporting_ui.work_pattern') }} <select wire:model="workPattern" class="ui-control block w-full rounded-xl border border-gray-200 px-3 py-2"><option value="">{{ __('messages.reporting_ui.all') }}</option>@foreach (['office', 'shift', 'security'] as $pattern)<option value="{{ $pattern }}">{{ __('messages.reporting_ui.patterns.'.$pattern) }}</option>@endforeach</select></label>
             <label class="text-sm">{{ __('messages.reporting_ui.status') }} <select wire:model="status" class="ui-control block w-full rounded-xl border border-gray-200 px-3 py-2"><option value="">{{ __('messages.reporting_ui.all') }}</option>@foreach (\App\Services\Attendance\Reporting\ReportFilters::STATUSES as $choice)<option value="{{ $choice }}">{{ __('messages.office_ui.statuses.'.$choice) }}</option>@endforeach</select></label>
             <button type="submit" class="ui-link text-start">{{ __('messages.reporting_ui.apply') }}</button>
@@ -47,7 +73,7 @@
     <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         @foreach ($tiles as $key => $value)
             <a href="{{ $this->tileUrl($key) }}" class="rounded-2xl border border-gray-200 bg-white p-4 hover:border-primary focus-visible:outline-2 focus-visible:outline-primary">
-                <span class="block text-sm text-gray-500">{{ str_starts_with($key, 'leave:') ? substr($key, 6, strrpos($key, '|') - 6).' · '.__('messages.leave_ui.statuses.'.substr($key, strrpos($key, '|') + 1)) : (str_starts_with($key, 'issue_type:') ? __('messages.attendance_ui.issue_types.'.substr($key, 11)) : __('messages.reporting_ui.tiles.'.$key)) }}</span>
+                <span class="block text-sm text-gray-500">{{ \App\Services\Attendance\Reporting\ReportTiles::label($key) }}</span>
                 <strong class="mt-1 block font-mono text-xl text-ink" dir="ltr">{{ \App\Services\Attendance\Reporting\ReportTiles::isMinutes($key) ? sprintf('%d:%02d', intdiv($value, 60), $value % 60) : \App\Support\Format\Ui::number($value) }}</strong>
             </a>
         @endforeach
@@ -57,7 +83,7 @@
         <x-ui.card>
             <h2 class="font-bold text-ink">{{ __('messages.reporting_ui.company_wide') }}</h2>
             @foreach ($totals['issues']['company_wide'] as $type => $count)
-                <p class="mt-2 text-sm">{{ __('messages.attendance_ui.issue_types.'.$type) }}: <bdi dir="ltr">{{ $count }}</bdi></p>
+                <p class="mt-2 text-sm">{{ app()->getLocale() === 'en' ? ucfirst(__('messages.attendance_ui.issue_types.'.$type)) : __('messages.attendance_ui.issue_types.'.$type) }}: <bdi dir="ltr">{{ $count }}</bdi></p>
             @endforeach
             <p class="mt-2 text-sm">{{ __('messages.reporting_ui.non_employee_meals') }}: <bdi dir="ltr">{{ $totals['meals']['non_employee'] }}</bdi></p>
             @foreach ($totals['meals']['non_employee_by_department'] as $department => $count)

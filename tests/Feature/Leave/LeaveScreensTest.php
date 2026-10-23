@@ -132,6 +132,16 @@ test('requests filter by status type employee date and issues', function (): voi
         ->set('from', '2026-10-22')->assertDontSee('LOCAL-FORM');
 });
 
+test('leave request and credit employee pickers search without loading every employee', function (): void {
+    Livewire::test(LeaveRequests::class)->set('employeeSearch', $this->employee->employee_code)
+        ->assertSee($this->employee->employee_code)->assertDontSee($this->foreign['employee']->employee_code)
+        ->call('chooseEmployee', $this->employee->id)->assertSet('employeeId', (string) $this->employee->id)
+        ->call('clearEmployee')->assertSet('employeeId', '');
+    Livewire::test(CreditLedger::class)->set('employeeSearch', $this->employee->employee_code)
+        ->assertSee($this->employee->employee_code)
+        ->call('chooseEmployee', $this->employee->id)->assertSet('employeeId', (string) $this->employee->id);
+});
+
 test('request detail records HR actions and type page maps an unmapped type', function (): void {
     $type = LeaveType::factory()->create(['is_mapped' => false]);
     $request = LeaveRequest::factory()->create(['company_id' => $this->company->id,

@@ -41,7 +41,7 @@
     <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         @foreach ($tiles as $key => $value)
             <button type="button" wire:click="showTile(@js($key))" class="rounded-2xl border border-gray-200 bg-white p-4 text-start hover:border-primary focus-visible:outline-2 focus-visible:outline-primary">
-                <span class="block text-sm text-gray-500">{{ str_starts_with($key, 'leave:') ? substr($key, 6, strrpos($key, '|') - 6).' · '.__('messages.leave_ui.statuses.'.substr($key, strrpos($key, '|') + 1)) : (str_starts_with($key, 'issue_type:') ? __('messages.attendance_ui.issue_types.'.substr($key, 11)) : __('messages.reporting_ui.tiles.'.$key)) }}</span>
+                <span class="block text-sm text-gray-500">{{ \App\Services\Attendance\Reporting\ReportTiles::label($key) }}</span>
                 <strong class="mt-1 block font-mono text-xl text-ink" dir="ltr">{{ \App\Services\Attendance\Reporting\ReportTiles::isMinutes($key) ? sprintf('%d:%02d', intdiv($value, 60), $value % 60) : \App\Support\Format\Ui::number($value) }}</strong>
             </button>
         @endforeach
@@ -61,11 +61,11 @@
                             <a class="ui-link" href="{{ $dayUrl.'?'.http_build_query(['employee' => $employee->id, 'date' => $day['work_date']]) }}">{{ __('messages.reporting_ui.day_detail') }}</a>
                             <a class="ui-link" href="{{ $punchUrl.'?'.http_build_query(['employee' => $employee->id, 'from' => $day['work_date'], 'to' => $day['work_date']]) }}">{{ __('messages.reporting_ui.punches') }}</a>
                         </div>
-                        <p>{{ __('messages.reporting_ui.in_out') }}: <bdi dir="ltr">{{ $day['first_in'] ?? '—' }} / {{ $day['last_out'] ?? '—' }}</bdi></p>
+                        <p>{{ __('messages.reporting_ui.in_out') }}: <bdi dir="ltr">{{ $day['first_in'] ? substr($day['first_in'], 11, 5) : '—' }} / {{ $day['last_out'] ? substr($day['last_out'], 11, 5) : '—' }}</bdi></p>
                         <p>{{ __('messages.reporting_ui.elapsed') }} <bdi dir="ltr">{{ sprintf('%d:%02d', intdiv((int) $day['observed']['elapsed'], 60), $day['observed']['elapsed'] % 60) }}</bdi> · {{ __('messages.reporting_ui.presence') }} <bdi dir="ltr">{{ sprintf('%d:%02d', intdiv((int) $day['observed']['presence'], 60), $day['observed']['presence'] % 60) }}</bdi> · {{ __('messages.reporting_ui.short') }} <bdi dir="ltr">{{ sprintf('%d:%02d', intdiv((int) $day['observed']['short'], 60), $day['observed']['short'] % 60) }}</bdi></p>
                         @foreach (['absence', 'late', 'early', 'exit'] as $kind)
                             @if ($day['minutes'][$kind]['gross'] > 0)
-                                <p>{{ __('messages.leave_ui.target_kinds.'.$kind) }}: {{ __('messages.reporting_ui.gross') }} <bdi dir="ltr">{{ $day['minutes'][$kind]['gross'] }}</bdi> · {{ __('messages.reporting_ui.reconciled') }} <bdi dir="ltr">{{ $day['minutes'][$kind]['reconciled_by_leave'] + $day['minutes'][$kind]['reconciled_by_credit'] }}</bdi> · {{ __('messages.reporting_ui.remaining') }} <bdi dir="ltr">{{ $day['minutes'][$kind]['remaining'] }}</bdi> {{ __('messages.reporting_ui.minutes') }}</p>
+                                <p>{{ app()->getLocale() === 'en' ? ucfirst(__('messages.leave_ui.target_kinds.'.$kind)) : __('messages.leave_ui.target_kinds.'.$kind) }}: {{ __('messages.reporting_ui.gross') }} <bdi dir="ltr">{{ $day['minutes'][$kind]['gross'] }}</bdi> · {{ __('messages.reporting_ui.reconciled') }} <bdi dir="ltr">{{ $day['minutes'][$kind]['reconciled_by_leave'] + $day['minutes'][$kind]['reconciled_by_credit'] }}</bdi> · {{ __('messages.reporting_ui.remaining') }} <bdi dir="ltr">{{ $day['minutes'][$kind]['remaining'] }}</bdi> {{ __('messages.reporting_ui.minutes') }}</p>
                             @endif
                         @endforeach
                         @foreach ($detail[$day['work_date']]['explanations'] ?? [] as $explanation)

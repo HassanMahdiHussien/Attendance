@@ -11,6 +11,7 @@ use App\Models\Company;
 use App\Models\Employee;
 use App\Models\User;
 use App\Services\Attendance\Reporting\AttendanceSummary;
+use App\Services\Attendance\Reporting\EmployeeFilterSearch;
 use App\Services\Attendance\Reporting\ReportFilters;
 use App\Support\Tenancy\TenantContext;
 use Carbon\Carbon;
@@ -108,5 +109,50 @@ test('punch viewer opens on the linked employee and day', function (): void {
 
     Livewire::withQueryParams(['employee' => (string) $employee->id, 'from' => '2026-10-21', 'to' => '2026-10-21'])
         ->test(AttendancePunches::class)->assertSet('employeeId', $employee->id)
-        ->assertSet('from', '2026-10-21')->assertSet('to', '2026-10-21');
+        ->assertSet('from', '2026-10-21')->assertSet('to', '2026-10-21')
+        ->call('clearEmployee')->set('employeeSearch', $employee->employee_code)
+        ->assertSee($employee->employee_code)->call('chooseEmployee', $employee->id)
+        ->assertSet('employeeId', $employee->id);
+});
+
+test('dashboard employee and manager filters search within the selected company', function (): void {
+    $company = Company::factory()->create();
+    $otherCompany = Company::factory()->create();
+    $branch = app(TenantContext::class)->runForCompany($company, fn () => Branch::factory()->create(['name' => 'Hilla']));
+    $employee = app(TenantContext::class)->runForCompany($company, fn () => Employee::factory()->create([
+        'branch_id' => $branch->id, 'name' => 'Samir Local', 'name_en' => 'Samir Local', 'employee_code' => '00001234',
+    ]));
+    app(TenantContext::class)->runForCompany($otherCompany, fn () => Employee::factory()->create([
+        'name' => 'Samir Foreign', 'name_en' => 'Samir Foreign', 'employee_code' => '00005678',
+    ]));
+    $hr = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::HrStaff]);
+    $platform = User::factory()->create(['company_id' => null, 'primary_role' => UserRole::PlatformAdmin]);
+    $this->actingAs($hr);
+    app(TenantContext::class)->setCompany($company);
+    expect(collect(app(EmployeeFilterSearch::class)->find($platform, $company, 'samir'))->pluck('id')->all())
+        ->toBe([$employee->id]);
+
+    Livewire::test(HrDashboard::class)
+        ->set('employeeSearch', 'samir')->assertSee('Samir Local')->assertSee('00001234')
+        ->assertSee('Hilla')->assertDontSee('Samir Foreign')
+        ->call('chooseEmployee', $employee->id)->assertSet('employeeId', (string) $employee->id)
+        ->set('managerSearch', '00001234')->assertSee('Samir Local')
+        ->call('chooseManager', $employee->id)->assertSet('managerId', (string) $employee->id)
+        ->call('clearEmployee')->assertSet('employeeId', '')
+        ->call('clearManager')->assertSet('managerId', '');
+});
+
+test('employee daily lines show clock times and capitalised English labels', function (): void {
+    $company = Company::factory()->create();
+    app(TenantContext::class)->setCompany($company);
+    $employee = Employee::factory()->create();
+    $hr = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::HrStaff]);
+    Day::factory()->create(['employee_id' => $employee->id, 'branch_id' => $employee->branch_id,
+        'work_date' => '2026-10-21', 'status' => 'present', 'first_in' => '2026-10-21 09:15:00',
+        'last_out' => '2026-10-21 18:00:00', 'late_minutes' => 15]);
+    $this->actingAs($hr);
+
+    Livewire::test(EmployeeAttendance::class, ['employeeId' => $employee->id])
+        ->assertSee('09:15 / 18:00')->assertDontSee('2026-10-21 09:15:00')
+        ->assertSee('Lateness: Gross')->assertDontSee('lateness: Gross');
 });

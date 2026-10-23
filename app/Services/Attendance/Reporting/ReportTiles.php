@@ -64,4 +64,16 @@ class ReportTiles
     {
         return str_starts_with($tile, 'leave:') || in_array($tile, ['late', 'early', 'balance', 'reconciled', 'remaining', 'credit_created', 'credit_used', 'credit_available'], true);
     }
+
+    public static function label(string $tile): string
+    {
+        $label = match (true) {
+            str_starts_with($tile, 'leave:') => substr($tile, 6, strrpos($tile, '|') - 6)
+                .' · '.__('messages.leave_ui.statuses.'.substr($tile, strrpos($tile, '|') + 1)),
+            str_starts_with($tile, 'issue_type:') => __('messages.attendance_ui.issue_types.'.substr($tile, 11)),
+            default => __('messages.reporting_ui.tiles.'.$tile),
+        };
+
+        return app()->getLocale() === 'en' ? ucfirst($label) : $label;
+    }
 }

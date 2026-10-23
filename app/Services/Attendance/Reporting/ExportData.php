@@ -185,7 +185,8 @@ class ExportData
                 yield [
                     'employee_code' => $record->employee_code, 'employee_name' => $record->name,
                     'date' => $day['work_date'], 'status' => __('messages.office_ui.statuses.'.$day['status']),
-                    'first_in' => $day['first_in'] ?? '', 'last_out' => $day['last_out'] ?? '',
+                    'first_in' => $day['first_in'] ? substr($day['first_in'], 11, 5) : '',
+                    'last_out' => $day['last_out'] ? substr($day['last_out'], 11, 5) : '',
                     'absence' => $day['minutes']['absence']['gross'], 'late' => $day['minutes']['late']['gross'],
                     'early' => $day['minutes']['early']['gross'], 'exit' => $day['minutes']['exit']['gross'],
                     'gross' => $gross, 'leave' => $leave, 'credit' => $credit, 'remaining' => $remaining,
