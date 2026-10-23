@@ -58,7 +58,7 @@ The full requirements are in `docs/attendance/PRD-EN.md`. This file records what
 | # | Question | Needed by |
 |---|---|---|
 | Q1–Q4 | Resolved 2026-10-21 — see §2. | — |
-| Q5 | After merge-back: should an attendance case offer an HR-clicked "open disciplinary report" action, or only show both side by side? | 505 |
+| Q5 | Resolved 2026-10-23: side by side only; attendance never opens or suggests a disciplinary case. | — |
 | Q6 | Resolved 2026-10-22: active list = `HC.xlsx` (columns in spec 501 Clarifications); the email / work-pattern file is still to come and is uploaded as a partial update. | — |
 | Q7 | Leave export with descriptions; overtime report; holiday email sample. | Later specs |
 | Q8 | PRD §26 items (office departure after 09:00 arrival, overtime thresholds, credit allocation mechanism — including which overtime/credit hours `Overtime Equivelant Leave` draws from, …). | 503 onward |
