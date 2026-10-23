@@ -50,3 +50,17 @@ I: new tables/columns tenant-scoped + isolation tests. II: pure deterministic ca
 8. **Prefetch.** Per chunk of ≤ 100 employees: punches for the widened range, decisions, manual punches, current leave request days and versions in one query each; inference and ownership in memory. Tenancy, trigger, UI inventory and translation tests extended for the new columns, decision kind and screens.
 
 **Steps (final):** (1) additive schema (new policy columns with defaults, day shift columns, decision kind) + pure `ShiftDayCalculator` with exhaustive unit tests — no change to office results; (2) policy replacement versions + `absence_minutes` consumers (504/505) + assessor routing, ownership, prefetch, inference inputs, night coverage/outage, reassessment, feature tests; (3) statuses, review pick-shift, screens, translations, exports; (4) verification with an assumed pattern split on real data, docs, PR.
+
+
+## Addendum (product owner, 2026-10-23): default work pattern rule and two more HC columns
+
+- **Two more employee fields from HC** (shared foundation; versioned like the other fields): `staff_category` from `AG HR Collar` (`B` blue collar | `W` white collar) and `legal_entity` from `Company Code` (e.g. `Al Waha Company`, `Sardkar for Bvr. Ind/Ltd`). Both get default aliases in `config/employee_import.php` and appear in the employee form. `legal_entity` is needed by spec 507 (the Sovereignty Day 2026 announcement covers "CCI Iraq Al-Waha employees" only, i.e. Hilla, Karbala and Baghdad, not Erbil/Sardkar).
+- **Default pattern rule** (applied only to employees whose `work_pattern` is empty, after each employee import and once for existing employees; recorded through `EmployeeHistory` with source `rule` and the reason; any HR edit overrides it and the rule never changes a pattern that is already set):
+  1. position contains "Security" (case-insensitive) → `security` (rest day still to be set by HR, so these employees show "rest day missing" until then);
+  2. else `staff_category` = `B` → `shift`;
+  3. else `staff_category` = `W` → `office`;
+  4. else no pattern (stays "pattern missing").
+  Positions containing "Information Security" or "Security Manager" are set by rule 1 but also raise a `pattern_review` data issue for HR to confirm.
+- The rule lives in config (`config/attendance.php` → `pattern_rules`) so other companies can change it.
+- In the real HC file: 49 security-titled positions, 535 blue collar (all Supply Chain), ~431 white collar.
+- Tests: rule order; existing pattern never overwritten; HR edit after rule wins; import of a later file does not re-apply the rule to employees HR changed; flagged positions raise the issue; history shows source `rule`.
