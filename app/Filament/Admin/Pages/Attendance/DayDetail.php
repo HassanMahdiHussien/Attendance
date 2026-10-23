@@ -8,6 +8,7 @@ use App\Models\Attendance\Day;
 use App\Models\Attendance\DayDecision;
 use App\Models\Attendance\ManualPunch;
 use App\Models\Employee;
+use App\Services\Leave\DayReconciliation;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Livewire\Attributes\Locked;
 
@@ -80,6 +81,11 @@ class DayDetail extends AttendancePage
         return ManualPunch::query()->with('creator')->where('company_id', $this->company()->id)
             ->where('employee_id', $this->employeeId)->whereDate('punched_at', $this->date)
             ->latest('id')->get()->all();
+    }
+
+    public function leaveReconciliation(): array
+    {
+        return app(DayReconciliation::class)->for($this->employee(), $this->date)[$this->date] ?? [];
     }
 
     public function displayValue(mixed $value): string

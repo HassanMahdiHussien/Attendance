@@ -6,6 +6,8 @@ use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\EmployeeImportBatch;
+use App\Models\Leave\ImportBatch as LeaveImportBatch;
+use App\Models\Leave\LeaveRequest;
 use App\Models\Location;
 use App\Models\User;
 use App\Support\Tenancy\TenantContext;
@@ -46,11 +48,18 @@ test('a company user cannot reach another company through any parameterised GET 
         $attendanceBatch = AttendanceImportBatch::factory()->create([
             'company_id' => $b->id, 'uploaded_by' => $user->id, 'file_path' => 'sweep/'.$marker.'.txt',
         ]);
+        $leaveBatch = LeaveImportBatch::factory()->create([
+            'company_id' => $b->id, 'uploaded_by' => $user->id, 'file_path' => 'sweep/'.$marker.'.txt',
+        ]);
+        $foreignLeaveRequest = LeaveRequest::factory()->create([
+            'company_id' => $b->id, 'employee_id' => $employee->id, 'owner_code' => $employee->employee_code,
+        ]);
         Storage::disk('local')->put('sweep/'.$marker.'.txt', $marker);
 
         return [
             'company' => $b->id, 'tenant' => $b->id, 'employee' => $employee->id,
-            'batch' => $batch->id, 'attendanceBatch' => $attendanceBatch->id,
+            'batch' => $batch->id, 'attendanceBatch' => $attendanceBatch->id, 'leaveBatch' => $leaveBatch->id,
+            'foreignLeaveRequest' => $foreignLeaveRequest->id,
             'path' => 'sweep/'.$marker.'.txt',
             // Help paths name shared static content, never a tenant record.
             'section' => 'missing', 'slug' => 'missing', 'locale' => 'xx', 'name' => 'missing',
@@ -103,6 +112,10 @@ test('a company user cannot reach another company through any parameterised GET 
     // The detail page carries its record in query parameters rather than in the route path.
     $dayDetail = $this->get('/admin/'.$a->id.'/attendance/day?employee='.$records['employee'].'&date='.today()->toDateString());
     expect($dayDetail->getStatusCode())->toBe(404);
+
+    // Leave detail also selects its record through a query parameter.
+    $leaveDetail = $this->get('/admin/'.$a->id.'/leave/request?request='.$records['foreignLeaveRequest']);
+    expect($leaveDetail->getStatusCode())->toBe(404);
 
     // A filter change must not silently remove every tenant route from the sweep.
     expect($visited)->toBeGreaterThan(10)

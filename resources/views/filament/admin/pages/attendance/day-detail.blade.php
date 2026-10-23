@@ -78,5 +78,22 @@
             @endforeach
             {{ $this->versions()->links() }}
         </x-ui.card>
+        <x-ui.card :title="__('messages.leave_ui.day_reconciliation')">
+            @php $reconciliation = $this->leaveReconciliation(); @endphp
+            @foreach (['absence', 'late', 'early', 'exit'] as $kind)
+                <p>{{ __('messages.leave_ui.target_kinds.'.$kind) }}: {{ __('messages.leave_ui.reconciled') }} <bdi dir="ltr">{{ $this->minutes($reconciliation['reconciled'][$kind] ?? 0) }}</bdi> · {{ __('messages.leave_ui.remaining') }} <bdi dir="ltr">{{ $this->minutes($reconciliation['remaining'][$kind] ?? 0) }}</bdi></p>
+            @endforeach
+            @if (($reconciliation['absence_closed'] ?? false) && $reconciliation['closed_by_request'])
+                <p class="font-semibold">{{ __('messages.leave_ui.absence_closed', ['request' => "\u{2066}".$reconciliation['closed_by_request']."\u{2069}"]) }}</p>
+            @elseif ($reconciliation['absence_closed'] ?? false)
+                <p class="font-semibold">{{ __('messages.leave_ui.absence_reconciled') }}</p>
+            @endif
+            @foreach ($reconciliation['explanations'] ?? [] as $explanation)
+                <p>{{ app(\App\Services\Leave\LeaveExplanation::class)->render($explanation) }}</p>
+            @endforeach
+            @foreach ($reconciliation['pending_requests'] ?? [] as $pending)
+                <p>{{ __('messages.leave_ui.pending_request', ['request' => "\u{2066}".$pending['external_id']."\u{2069}", 'approver' => $pending['approver_name'] ?? '']) }}</p>
+            @endforeach
+        </x-ui.card>
     </div>
 </x-filament-panels::page>

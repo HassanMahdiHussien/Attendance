@@ -2,6 +2,7 @@
 
 namespace App\Services\Attendance;
 
+use App\Events\DaysAssessed;
 use App\Models\Attendance\Day;
 use App\Models\Attendance\DayDecision;
 use App\Models\Attendance\ManualPunch;
@@ -56,6 +57,7 @@ class DayAssessor
 
         try {
             $count = 0;
+            $changedEmployees = [];
             $start = CarbonImmutable::parse($from);
             $end = CarbonImmutable::parse($to);
             for ($sliceStart = $start; $sliceStart <= $end; $sliceStart = $sliceStart->addDays(31)) {
@@ -84,16 +86,23 @@ class DayAssessor
                     $employees->whereIn('id', $scope['employee_ids']);
                 }
                 $employees->orderBy('id')->chunkById(100, function ($chunk) use (
-                    $company, $scope, $dates, $sliceFrom, $sliceTo, $policyByDate, $run, &$count, &$outageCache,
+                    $company, $scope, $dates, $sliceFrom, $sliceTo, $policyByDate, $run, &$count, &$outageCache, &$changedEmployees,
                 ): void {
-                    $count += DB::transaction(fn (): int => $this->assessChunk(
-                        $company, $chunk->pluck('id')->all(), $scope, $dates, $sliceFrom, $sliceTo,
-                        $policyByDate, $run, $outageCache,
-                    ));
+                    $count += DB::transaction(function () use (
+                        $company, $chunk, $scope, $dates, $sliceFrom, $sliceTo, $policyByDate, $run, &$outageCache, &$changedEmployees,
+                    ): int {
+                        return $this->assessChunk(
+                            $company, $chunk->pluck('id')->all(), $scope, $dates, $sliceFrom, $sliceTo,
+                            $policyByDate, $run, $outageCache, $changedEmployees,
+                        );
+                    });
                 });
             }
             $run->update(['status' => 'completed', 'counts' => ['days_changed' => $count], 'finished_at' => now()]);
             $this->audit->log('attendance.days.assessed', $run, ['scope' => $scope, 'days_changed' => $count]);
+            if ($changedEmployees !== []) {
+                event(new DaysAssessed($company->id, array_keys($changedEmployees), $from, $to));
+            }
         } catch (Throwable $exception) {
             $run->update(['status' => 'failed', 'finished_at' => now()]);
             $this->audit->log('attendance.days.failed', $run, ['scope' => $scope]);
@@ -104,7 +113,7 @@ class DayAssessor
         return $run->fresh();
     }
 
-    private function assessChunk(Company $company, array $ids, array $scope, array $dates, string $from, string $to, array $policies, ProcessingRun $run, array &$outageCache): int
+    private function assessChunk(Company $company, array $ids, array $scope, array $dates, string $from, string $to, array $policies, ProcessingRun $run, array &$outageCache, array &$changedEmployees): int
     {
         $employees = Employee::query()->where('company_id', $company->id)->whereIn('id', $ids)
             ->orderBy('id')->lockForUpdate()->get();
@@ -150,6 +159,7 @@ class DayAssessor
                     if ($old !== null) {
                         $old->update(['superseded_by_run_id' => $run->id]);
                         $changed++;
+                        $changedEmployees[$employee->id] = true;
                     }
 
                     continue;
@@ -195,6 +205,7 @@ class DayAssessor
                     'run_id' => $run->id, 'changes' => $differences,
                 ]);
                 $changed++;
+                $changedEmployees[$employee->id] = true;
             }
         }
 

@@ -1,0 +1,50 @@
+<x-filament-panels::page>
+    <div class="space-y-5">
+        <x-ui.card :title="__('messages.leave_ui.credits_title')">
+            <label>{{ __('messages.leave_ui.employee') }} <select wire:model.live="employeeId" class="rounded-xl border border-gray-200 p-2"><option value="">{{ __('messages.leave_ui.choose_employee') }}</option>@foreach ($this->employees() as $id => $name)<option value="{{ $id }}">{{ $name }}</option>@endforeach</select></label>
+            @if ($this->employee()) <p class="mt-2"><bdi dir="ltr">{{ $this->employee()->employee_code }}</bdi></p> @endif
+        </x-ui.card>
+        @if ($this->employee())
+            <x-ui.card :title="__('messages.leave_ui.credit_balance')">
+                @forelse ($this->credits() as $credit)
+                    <p class="border-b py-2" wire:key="leave-credit-{{ $credit->id }}"><bdi dir="ltr">{{ $credit->sourceDay->request->external_id }} · {{ $credit->sourceDay->work_date->toDateString() }}</bdi>
+                        · {{ __('messages.leave_ui.minutes') }} <bdi dir="ltr">{{ $this->minutes($credit->minutes) }}</bdi>
+                        · {{ __('messages.leave_ui.used') }} <bdi dir="ltr">{{ $this->minutes($this->creditUsed($credit->id)) }}</bdi>
+                        · {{ __('messages.leave_ui.available') }} <bdi dir="ltr">{{ $this->minutes($credit->minutes - $this->creditUsed($credit->id)) }}</bdi>
+                        · {{ __('messages.leave_ui.expires_on') }} <bdi dir="ltr">{{ $credit->expires_on?->toDateString() ?? '—' }}</bdi></p>
+                @empty <p>—</p> @endforelse
+            </x-ui.card>
+            <x-ui.card :title="__('messages.leave_ui.deductions')">
+                <label>{{ __('messages.leave_ui.reason') }} <input type="text" wire:model="reason" class="rounded-xl border border-gray-200 p-2"></label>
+                @error('reason') <p class="text-red-600">{{ $message }}</p> @enderror
+                @forelse ($this->deductions() as $deduction)
+                    <p class="border-b py-2" wire:key="leave-deduction-{{ $deduction->id }}">{{ app(\App\Services\Leave\LeaveExplanation::class)->render($deduction->explanation) }}
+                        <button class="ms-3 underline" wire:click="reverseDeduction({{ $deduction->id }})">{{ __('messages.leave_ui.reverse_deduction') }}</button></p>
+                @empty <p>—</p> @endforelse
+                @foreach ($this->reversals() as $decision)
+                    <p class="border-b py-2" wire:key="leave-reversal-{{ $decision->id }}">{{ __('messages.leave_ui.decision_kinds.'.$decision->decision) }} · <bdi dir="ltr">{{ $decision->work_date?->toDateString() }}</bdi> · {{ $decision->reason }}
+                        @if ($decision->decision === 'reverse_deduction' && ! $this->isWithdrawn($decision))<button class="ms-3 underline" wire:click="withdraw({{ $decision->id }})">{{ __('messages.leave_ui.withdraw') }}</button>@endif</p>
+                @endforeach
+            </x-ui.card>
+        @endif
+        <x-ui.card :title="__('messages.leave_ui.credit_settings')">
+            <form wire:submit="saveExpiry" class="flex flex-wrap items-end gap-3"><label>{{ __('messages.leave_ui.expiry_days') }} <input type="number" min="0" max="65535" wire:model="expiryDays" dir="ltr" class="rounded-xl border border-gray-200 p-2"></label>
+                <span>{{ __('messages.leave_ui.blank_never') }}</span>
+                <label>{{ __('messages.leave_ui.reason') }} <input type="text" wire:model="settingReason" class="rounded-xl border border-gray-200 p-2"></label>
+                <x-filament::button type="submit">{{ __('messages.leave_ui.save') }}</x-filament::button></form>
+            @error('expiryDays') <p class="text-red-600">{{ $message }}</p> @enderror @error('settingReason') <p class="text-red-600">{{ $message }}</p> @enderror
+        </x-ui.card>
+        <x-ui.card :title="__('messages.leave_ui.leave_calendar_settings')">
+            <form wire:submit="saveLeaveCalendar" class="space-y-3">
+                <p>{{ __('messages.leave_ui.leave_calendar_rest_days') }}</p>
+                <div class="flex flex-wrap gap-3">@foreach (__('messages.office_ui.weekdays') as $number => $label)
+                    <label><input type="checkbox" value="{{ $number }}" wire:model="leaveCalendarRestDays"> {{ $label }}</label>
+                @endforeach</div>
+                <label>{{ __('messages.leave_ui.reason') }} <input type="text" wire:model="calendarReason" class="rounded-xl border border-gray-200 p-2"></label>
+                <x-filament::button type="submit">{{ __('messages.leave_ui.save') }}</x-filament::button>
+            </form>
+            @error('leaveCalendarRestDays') <p class="text-red-600">{{ $message }}</p> @enderror
+            @error('calendarReason') <p class="text-red-600">{{ $message }}</p> @enderror
+        </x-ui.card>
+    </div>
+</x-filament-panels::page>

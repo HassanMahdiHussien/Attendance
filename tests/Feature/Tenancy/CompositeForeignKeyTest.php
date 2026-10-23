@@ -24,6 +24,18 @@ use App\Models\Company;
 use App\Models\Employee;
 use App\Models\EmployeeImportBatch;
 use App\Models\EmployeeVersion;
+use App\Models\Leave\Allocation as LeaveAllocation;
+use App\Models\Leave\Credit as LeaveCredit;
+use App\Models\Leave\ImportBatch as LeaveImportBatch;
+use App\Models\Leave\ImportBatchEvent as LeaveImportBatchEvent;
+use App\Models\Leave\ImportMapping as LeaveImportMapping;
+use App\Models\Leave\ImportRow as LeaveImportRow;
+use App\Models\Leave\LeaveRequest;
+use App\Models\Leave\LeaveType;
+use App\Models\Leave\ProcessingRun as LeaveProcessingRun;
+use App\Models\Leave\RequestDay as LeaveRequestDay;
+use App\Models\Leave\RequestDecision as LeaveRequestDecision;
+use App\Models\Leave\RequestVersion as LeaveRequestVersion;
 use App\Models\Location;
 use App\Models\User;
 use App\Support\Tenancy\TenantContext;
@@ -54,6 +66,18 @@ test('every kept composite tenant foreign key rejects another company through mo
         'attendance_manual_punches' => ManualPunch::class,
         'attendance_day_decisions' => DayDecision::class,
         'attendance_days' => Day::class,
+        'leave_import_batches' => LeaveImportBatch::class,
+        'leave_import_batch_events' => LeaveImportBatchEvent::class,
+        'leave_import_mappings' => LeaveImportMapping::class,
+        'leave_types' => LeaveType::class,
+        'leave_requests' => LeaveRequest::class,
+        'leave_import_rows' => LeaveImportRow::class,
+        'leave_request_versions' => LeaveRequestVersion::class,
+        'leave_request_decisions' => LeaveRequestDecision::class,
+        'leave_processing_runs' => LeaveProcessingRun::class,
+        'leave_request_days' => LeaveRequestDay::class,
+        'leave_credits' => LeaveCredit::class,
+        'leave_allocations' => LeaveAllocation::class,
         'data_issues' => DataIssue::class,
         'branch_user' => BranchUser::class,
         'users' => User::class,
@@ -89,6 +113,9 @@ test('every kept composite tenant foreign key rejects another company through mo
         $attributes = $source->getAttributes();
         unset($attributes['id']);
         $attributes[$key->foreign_column] = $target->id;
+        if ($key->source_table === 'leave_allocations' && $key->foreign_column === 'source_credit_id') {
+            $attributes['source_request_day_id'] = null;
+        }
         if (isset($attributes['employee_code'])) {
             $attributes['employee_code'] = 'CROSS-'.$target->id;
         }
@@ -96,7 +123,7 @@ test('every kept composite tenant foreign key rejects another company through mo
             $attributes['email'] = 'cross-'.$target->id.'@example.test';
         }
         // Copied rows must not collide on their own unique keys before MySQL reaches the foreign key check.
-        foreach (['serial_number', 'person_code', 'header_signature', 'open_key'] as $unique) {
+        foreach (['serial_number', 'person_code', 'header_signature', 'open_key', 'external_id', 'normalized_key'] as $unique) {
             if (isset($attributes[$unique])) {
                 $attributes[$unique] = 'CROSS-'.$key->foreign_column.'-'.$target->id;
             }

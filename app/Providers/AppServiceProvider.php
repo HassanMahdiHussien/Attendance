@@ -5,15 +5,20 @@ namespace App\Providers;
 use App\Enums\UserRole;
 use App\Events\AttendanceProcessed;
 use App\Events\CoverageChanged;
+use App\Events\DaysAssessed;
 use App\Events\EmployeeExitChanged;
 use App\Events\EmployeeVersionChanged;
 use App\Filament\Auth\LoginResponse;
 use App\Listeners\AuditAuthEvents;
 use App\Models\Attendance\ImportBatch;
 use App\Models\Company;
+use App\Models\Leave\ImportBatch as LeaveImportBatch;
 use App\Policies\Attendance\ImportBatchPolicy as AttendanceImportBatchPolicy;
+use App\Policies\Leave\ImportBatchPolicy as LeaveImportBatchPolicy;
 use App\Services\Attendance\AssessmentTriggers;
 use App\Services\Attendance\EmployeeChangeListener;
+use App\Services\Leave\ReconciliationTriggers;
+use App\Services\Leave\UnknownEmployeeIssues;
 use App\Support\HealthPing;
 use App\Support\Tenancy\TenantContext;
 use Filament\Facades\Filament;
@@ -45,6 +50,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::policy(ImportBatch::class, AttendanceImportBatchPolicy::class);
+        Gate::policy(LeaveImportBatch::class, LeaveImportBatchPolicy::class);
         $guardBackup = function (): void {
             if (! app()->environment(['local', 'testing']) && mb_strlen((string) config('backup.backup.password')) < 32) {
                 throw new \RuntimeException('A backup archive password of at least 32 characters is required.');
@@ -68,13 +74,19 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(BackupHasFailed::class, fn () => app(HealthPing::class)->failure('backup', 'Backup failed'));
         Event::listen(EmployeeVersionChanged::class, [EmployeeChangeListener::class, 'handle']);
         Event::listen(EmployeeVersionChanged::class, [AssessmentTriggers::class, 'employeeVersionChanged']);
+        Event::listen(EmployeeVersionChanged::class, [UnknownEmployeeIssues::class, 'employeeVersionChanged']);
         Event::listen(EmployeeExitChanged::class, [AssessmentTriggers::class, 'employeeExitChanged']);
         Event::listen(AttendanceProcessed::class, [AssessmentTriggers::class, 'attendanceProcessed']);
         Event::listen(CoverageChanged::class, [AssessmentTriggers::class, 'coverageChanged']);
+        Event::listen(DaysAssessed::class, [ReconciliationTriggers::class, 'daysAssessed']);
         Gate::define('importEmployees', fn ($user, Company $company): bool => $user->is_active
             && in_array($user->primary_role, [UserRole::HrStaff, UserRole::PlatformAdmin], true)
             && Filament::getTenant() instanceof Company
             && (int) Filament::getTenant()->id === (int) $company->id
+            && $user->canAccessTenant($company));
+        Gate::define('manageLeave', fn ($user, Company $company): bool => $user->is_active
+            && in_array($user->primary_role, [UserRole::HrStaff, UserRole::PlatformAdmin], true)
+            && app(TenantContext::class)->companyId() === $company->id
             && $user->canAccessTenant($company));
         $this->app->bind(\Filament\Auth\Http\Responses\Contracts\LoginResponse::class, LoginResponse::class);
         foreach ([Login::class, Logout::class, Failed::class] as $event) {

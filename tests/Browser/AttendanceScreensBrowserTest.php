@@ -4,6 +4,7 @@ use App\Enums\UserRole;
 use App\Models\Attendance\Day;
 use App\Models\Company;
 use App\Models\Employee;
+use App\Models\Leave\LeaveRequest;
 use App\Models\User;
 use App\Support\Tenancy\TenantContext;
 
@@ -44,4 +45,26 @@ test('HR opens the four office attendance pages', function (): void {
     }
     $browser->navigate('/admin/'.$company->id.'/attendance/day?employee='.$employee->id.'&date=2026-10-21')
         ->assertSee('Attendance day')->assertNoJavaScriptErrors();
+});
+
+test('HR opens the leave pages', function (): void {
+    $company = Company::factory()->create();
+    $setup = completeCompanySetup($company);
+    $user = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::HrStaff]);
+    $employee = Employee::factory()->create(['company_id' => $company->id, 'branch_id' => $setup['branch']->id]);
+    $request = LeaveRequest::factory()->create(['company_id' => $company->id, 'employee_id' => $employee->id,
+        'owner_code' => $employee->employee_code]);
+    app(TenantContext::class)->clear();
+
+    $browser = visitBound('/login')
+        ->fill('email', $user->email)
+        ->fill('password', 'password')
+        ->press('Log in')
+        ->assertSee('Attendance dashboard');
+    foreach (['upload' => 'Upload leave', 'batches' => 'Leave batches', 'requests' => 'Leave requests',
+        'types' => 'Leave types', 'credits' => 'Credit ledger'] as $slug => $title) {
+        $browser->navigate('/admin/'.$company->id.'/leave/'.$slug)->assertSee($title)->assertNoJavaScriptErrors();
+    }
+    $browser->navigate('/admin/'.$company->id.'/leave/request?request='.$request->id)
+        ->assertSee('Leave request')->assertNoJavaScriptErrors();
 });
