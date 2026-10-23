@@ -5,10 +5,7 @@
         <p class="mt-2 text-sm text-gray-500">{{ __('Hire date') }}: <bdi dir="ltr">{{ \App\Support\Format\Ui::date($employee->hire_date) }}</bdi></p>
     </x-ui.card>
     <section aria-label="{{ __('messages.attendance.title') }}">
-        <x-ui.card>
-            <h2 class="text-lg font-bold text-ink">{{ __('messages.attendance.title') }}</h2>
-            <p class="mt-2 text-sm text-gray-500">{{ __('messages.attendance.details_placeholder') }}</p>
-        </x-ui.card>
+        <livewire:attendance.employee-attendance :employee-id="$employee->id" />
     </section>
     <section aria-label="{{ __('messages.employee_history.title') }}">
         <x-ui.card>

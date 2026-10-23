@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\HelpShotController;
 use App\Http\Controllers\LocaleController;
+use App\Livewire\Attendance\DashboardEmployees;
 use App\Livewire\Auth\Login;
 use App\Livewire\Dashboard\HrDashboard;
 use App\Livewire\Employees\EmployeeIndex;
@@ -92,6 +93,9 @@ Route::middleware('auth')->group(function (): void {
         return redirect('/login');
     })->name('logout');
     Route::get('/dashboard', HrDashboard::class)->name('dashboard.index');
+    Route::get('/dashboard/employees', DashboardEmployees::class)->name('dashboard.employees');
+    Route::get('/dashboard/company/{company}', HrDashboard::class)->name('dashboard.company');
+    Route::get('/dashboard/company/{company}/employees', DashboardEmployees::class)->name('dashboard.company.employees');
     Route::get('/employees', EmployeeIndex::class)->name('employees.index');
     Route::get('/employees/{employee}', EmployeePage::class)->name('employees.show');
     Route::get('/home', Home::class)->name('workspace.home');

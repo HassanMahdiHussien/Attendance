@@ -39,6 +39,21 @@ class AttendancePunches extends AttendancePage
         parent::mount();
         $this->from = today()->subDays(7)->toDateString();
         $this->to = today()->toDateString();
+
+        if (request()->has('employee')) {
+            $employee = request()->query('employee');
+            $from = request()->query('from');
+            $to = request()->query('to');
+            abort_unless(is_string($employee) && ctype_digit($employee)
+                && Validator::make(compact('from', 'to'), [
+                    'from' => 'required|date_format:Y-m-d',
+                    'to' => 'required|date_format:Y-m-d|after_or_equal:from',
+                ])->passes(), 404);
+            Employee::query()->where('company_id', $this->company()->id)->findOrFail((int) $employee);
+            $this->employeeId = (int) $employee;
+            $this->from = $from;
+            $this->to = $to;
+        }
     }
 
     public function employees(): array

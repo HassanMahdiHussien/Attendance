@@ -22,7 +22,7 @@
                     <div role="group" aria-label="{{ $heading }}">
                         <p class="px-3 pb-1 pt-3 text-xs font-black text-gray-500">{{ $heading }}</p>
                         @foreach($groups[$group] as $result)
-                            <a id="search-result-{{ $resultIndex++ }}" role="option" :aria-selected="active === {{ $resultIndex - 1 }}" href="{{ $result['url'] }}" class="block px-3 py-2 text-sm hover:bg-primary-light focus:bg-primary-light" @mouseenter="active = {{ $resultIndex - 1 }}"><strong class="block">{{ $result['label'] }}</strong><span class="text-xs text-gray-500">{{ $result['detail'] }}</span></a>
+                            <a id="search-result-{{ $resultIndex++ }}" role="option" :aria-selected="active === {{ $resultIndex - 1 }}" href="{{ $result['url'] }}" class="block px-3 py-2 text-sm hover:bg-primary-light focus:bg-primary-light" @mouseenter="active = {{ $resultIndex - 1 }}"><strong class="block">{{ $result['label'] }}</strong><span class="text-xs text-gray-500"><bdi dir="ltr">{{ $result['code'] }}</bdi> · {{ $result['detail'] }}</span></a>
                         @endforeach
                     </div>
                 @endif

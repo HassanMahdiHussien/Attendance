@@ -9,10 +9,10 @@
 - [x] T004 Projection tests with 503/504 fixtures: categories, gross/reconciled/remaining by kind, credit rules, leave status grouping, pending exclusion, historical branch, meals/issues scoping, isolation
 
 ## Step 2 — Screens, access and search
-- [ ] T005 Employee page attendance section (tiles + drill-downs, re-authorised)
-- [ ] T006 Dashboard (HR + platform admin via company picker), tiles → employee lists with the same filters
-- [ ] T007 Search: `search_name_en` + code, branch/department shown
-- [ ] T008 Translations, UI inventory, route sweep, help; Livewire + browser smoke tests
+- [x] T005 Employee page attendance section (tiles + drill-downs, re-authorised)
+- [x] T006 Dashboard (HR + platform admin via company picker), tiles → employee lists with the same filters
+- [x] T007 Search: `search_name_en` + code, branch/department shown
+- [x] T008 Translations, UI inventory, route sweep, help; Livewire + browser smoke tests
 
 ## Step 3 — Exports and printable statement
 - [ ] T009 `attendance_exports` + events, `GenerateAttendanceExportJob`, retry, cleanup, download route + policy + audit

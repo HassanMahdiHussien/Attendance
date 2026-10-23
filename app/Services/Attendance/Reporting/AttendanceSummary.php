@@ -162,6 +162,25 @@ class AttendanceSummary
         }
     }
 
+    public function issueIds(ReportFilters $filters, int $employeeId): array
+    {
+        $this->assertCompany($filters);
+        $employee = Employee::query()->where('company_id', $filters->companyId)->findOrFail($employeeId);
+        $requestIds = LeaveRequest::query()->where('company_id', $filters->companyId)
+            ->where('employee_id', $employeeId)->pluck('id');
+        $keys = [$employee->employee_code, 'owner:'.$employee->employee_code];
+        foreach ($requestIds as $id) {
+            $keys[] = 'request:'.$id;
+        }
+
+        return DataIssue::query()->where('company_id', $filters->companyId)->where('status', 'open')
+            ->where(function ($query) use ($keys, $employeeId): void {
+                $query->whereIn('subject_key', $keys)
+                    ->orWhere(fn ($nested) => $nested->where('subject_type', 'leave_request_day')
+                        ->where('subject_key', 'like', 'employee:'.$employeeId.':request_day:%'));
+            })->orderBy('id')->pluck('id')->all();
+    }
+
     private function days(ReportFilters $filters, array $ids): Builder
     {
         $query = Day::query()->with('policy')->where('company_id', $filters->companyId)->whereIn('employee_id', $ids)
@@ -272,6 +291,7 @@ class AttendanceSummary
     {
         return [
             'active_employees' => 0, 'without_work_pattern' => 0, 'assessed_working_days' => 0,
+            'office_employees_assessed' => 0,
             'days' => array_fill_keys(ReportFilters::STATUSES, 0),
             'minutes' => array_fill_keys(self::KINDS, ['gross' => 0, 'reconciled_by_leave' => 0, 'reconciled_by_credit' => 0, 'remaining' => 0]),
             'observed_minutes' => array_fill_keys(['elapsed', 'presence', 'late', 'early', 'exit', 'short', 'balance'], 0),
@@ -307,6 +327,7 @@ class AttendanceSummary
 
     private function merge(array &$totals, array $row): void
     {
+        $totals['office_employees_assessed'] += (int) ($row['assessed_working_days'] > 0);
         foreach (['active_employees', 'without_work_pattern', 'assessed_working_days', 'short_hours_alerts'] as $key) {
             $totals[$key] += $row[$key];
         }
@@ -601,6 +622,7 @@ class AttendanceSummary
 
         return match ($tile) {
             'active_employees', 'without_work_pattern', 'assessed_working_days', 'short_hours_alerts' => $row[$tile] > 0,
+            'office_employees_assessed' => $row['assessed_working_days'] > 0,
             'late', 'early', 'absence', 'exit' => $row['minutes'][$tile]['gross'] > 0,
             'balance', 'reconciled', 'remaining' => $this->hasMinutes($row, match ($tile) {
                 'balance' => 'gross', 'reconciled' => 'reconciled_by_leave', 'remaining' => 'remaining',

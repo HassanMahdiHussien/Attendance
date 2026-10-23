@@ -117,6 +117,10 @@ test('a company user cannot reach another company through any parameterised GET 
     $leaveDetail = $this->get('/admin/'.$a->id.'/leave/request?request='.$records['foreignLeaveRequest']);
     expect($leaveDetail->getStatusCode())->toBe(404);
 
+    // The platform dashboard's company selector is an explicit tenant path.
+    expect($this->get('/dashboard/company/'.$b->id)->getStatusCode())->toBe(404)
+        ->and($this->get('/dashboard/company/'.$b->id.'/employees?tile=active_employees')->getStatusCode())->toBe(404);
+
     // A filter change must not silently remove every tenant route from the sweep.
     expect($visited)->toBeGreaterThan(10)
         ->and(array_values(array_unique($unmapped)))->toBe([])

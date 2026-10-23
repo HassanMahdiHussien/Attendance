@@ -2,21 +2,122 @@
 
 namespace App\Livewire\Dashboard;
 
-use App\Support\Access\DashboardNav;
+use App\Enums\UserRole;
+use App\Models\Branch;
+use App\Models\Company;
+use App\Models\Employee;
+use App\Services\Attendance\Reporting\AttendanceSummary;
+use App\Services\Attendance\Reporting\LastUpdate;
+use App\Services\Attendance\Reporting\ReportFilters;
+use App\Services\Attendance\Reporting\ReportTiles;
+use App\Support\Tenancy\TenantContext;
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\View\View;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 
 class HrDashboard extends Component
 {
-    public function mount(): void
+    #[Locked]
+    public ?int $companyId = null;
+
+    public string $from = '';
+
+    public string $to = '';
+
+    public string $employeeId = '';
+
+    public string $branchId = '';
+
+    public string $department = '';
+
+    public string $managerId = '';
+
+    public string $workPattern = '';
+
+    public string $status = '';
+
+    public function mount(?string $company = null): void
     {
-        abort_unless(DashboardNav::visible(auth()->user()), 403);
+        $viewer = auth()->user();
+        abort_unless($viewer?->is_active && ($viewer->company_id === null || $viewer->company?->is_active), 403);
+        if ($company !== null) {
+            abort_unless($viewer->primary_role === UserRole::PlatformAdmin && ctype_digit($company), 404);
+            $this->companyId = (int) $company;
+        } else {
+            abort_unless($viewer->primary_role === UserRole::HrStaff, 403);
+            $this->companyId = (int) $viewer->company_id;
+        }
+
+        $this->company();
+        $this->period('current');
     }
 
-    public function render(): View
+    public function period(string $choice): void
     {
-        $this->mount();
+        $this->company();
+        $today = CarbonImmutable::now('Asia/Baghdad');
+        abort_unless(in_array($choice, ['current', 'previous', 'last_30'], true), 404);
+        [$this->from, $this->to] = match ($choice) {
+            'current' => [$today->startOfMonth()->toDateString(), $today->toDateString()],
+            'previous' => [$today->subMonthNoOverflow()->startOfMonth()->toDateString(), $today->subMonthNoOverflow()->endOfMonth()->toDateString()],
+            'last_30' => [$today->subDays(29)->toDateString(), $today->toDateString()],
+        };
+    }
 
-        return view('livewire.dashboard.hr-dashboard')->layout('layouts.workspace');
+    public function apply(): void
+    {
+        $this->company();
+    }
+
+    public function tileUrl(string $tile): string
+    {
+        $company = $this->company();
+        abort_unless(ReportTiles::allowed($tile), 404);
+        $route = auth()->user()->primary_role === UserRole::PlatformAdmin ? 'dashboard.company.employees' : 'dashboard.employees';
+        $parameters = $route === 'dashboard.company.employees' ? ['company' => $company->id] : [];
+
+        return route($route, $parameters).'?'.http_build_query(['tile' => $tile] + $this->filters());
+    }
+
+    public function render(AttendanceSummary $summary, LastUpdate $lastUpdate): View
+    {
+        $company = $this->company();
+
+        return app(TenantContext::class)->runForCompany($company, function () use ($company, $summary, $lastUpdate): View {
+            $filters = ReportFilters::fromArray($company, $this->filters());
+            $totals = $summary->totals($filters);
+            $employees = Employee::query()->where('company_id', $company->id)->orderBy('name')->get();
+
+            return view('livewire.dashboard.hr-dashboard', [
+                'company' => $company, 'tiles' => ReportTiles::fromTotals($totals), 'totals' => $totals,
+                'freshness' => $lastUpdate->for($filters), 'employees' => $employees,
+                'branches' => Branch::query()->where('company_id', $company->id)->orderBy('name')->get(),
+                'departments' => $employees->pluck('department')->filter()->unique()->sort()->values(),
+            ])->layout('layouts.workspace');
+        });
+    }
+
+    private function filters(): array
+    {
+        return [
+            'from' => $this->from, 'to' => $this->to,
+            'employee_ids' => $this->employeeId === '' ? [] : [$this->employeeId],
+            'branch_ids' => $this->branchId === '' ? [] : [$this->branchId],
+            'departments' => $this->department === '' ? [] : [$this->department],
+            'manager_employee_ids' => $this->managerId === '' ? [] : [$this->managerId],
+            'work_patterns' => $this->workPattern === '' ? [] : [$this->workPattern],
+            'statuses' => $this->status === '' ? [] : [$this->status],
+        ];
+    }
+
+    private function company(): Company
+    {
+        $viewer = auth()->user();
+        abort_unless($viewer?->is_active && $this->companyId !== null, 403);
+        abort_unless($viewer->primary_role === UserRole::PlatformAdmin
+            || ($viewer->primary_role === UserRole::HrStaff && (int) $viewer->company_id === $this->companyId && $viewer->company?->is_active), 404);
+
+        return Company::query()->findOrFail($this->companyId);
     }
 }
