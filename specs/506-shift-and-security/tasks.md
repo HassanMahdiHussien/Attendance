@@ -11,10 +11,10 @@
 - [x] T001b `staff_category` + `legal_entity` employee fields (versioned, import aliases, form); `pattern_rules` config; rule applied on import and once for existing employees through EmployeeHistory (source `rule`); `pattern_review` issue for flagged positions; tests
 
 ## Step 2 — Integration
-- [ ] T004 Replacement policy versions (revision 1) + reassessment; absence_minutes in Reconciler/LeaveAllocator/AttendanceSummary; LeaveDistributor pattern rest days (revision 2)
-- [ ] T005 DayAssessor routing by pattern, widened scope, ownership across midnight, prefetch (revisions 4, 8)
-- [ ] T006 Leave-day change → reassessment without loops (revision 5); night coverage/outage windows (revision 6)
-- [ ] T007 Feature tests: PRD §25 7, 8, 9; office 9 h alert with 8 h absence for leave; night shifts; outage; recalculation; isolation
+- [x] T004 Replacement policy versions (revision 1) + reassessment; absence_minutes in Reconciler/LeaveAllocator/AttendanceSummary; LeaveDistributor pattern rest days (revision 2)
+- [x] T005 DayAssessor routing by pattern, widened scope, ownership across midnight, prefetch (revisions 4, 8)
+- [x] T006 Leave-day change → reassessment without loops (revision 5); night coverage/outage windows (revision 6)
+- [x] T007 Feature tests: PRD §25 7, 8, 9; office 9 h alert with 8 h absence for leave; night shifts; outage; recalculation; isolation
 
 ## Step 3 — Statuses and screens
 - [ ] T008 shift_unresolved in review gate/queue/filters/summary/exports; DayReview pick/withdraw shift

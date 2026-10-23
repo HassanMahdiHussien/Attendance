@@ -50,7 +50,8 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 - Repeated-punch groups never span more than 16 hours (`attendance.cleanup.max_group_gap_hours`) so two shifts are never merged.
 - People are contractors/visitors by their department label (`3rd Party …`, `Guest`, `General`), not by ID length: the real export has 8-digit contractor IDs.
 - Office arrival after 09:00 makes 18:00 the required leaving time (not arrival + 9 h), and arriving before 08:00 never allows leaving before 17:00 (product owner, 2026-10-22).
-- Short hours (< 8 h recorded presence) is an alert only and is never added to the hours requiring reconciliation: its minutes overlap lateness and early departure.
+- Short hours is an alert only: office presence below 9 h and shift/security presence below 8 h. Office absence remains 8 h for leave; short hours is never added to the reconciliation balance because it overlaps lateness and early departure.
+- A shift day owns its midnight boundary punches once, even when the checkout timestamp falls on the next calendar date; reassessment widens date scopes on both sides to rebuild neighbouring ownership.
 - The first office policy version is effective from 2000-01-01, not the company's creation date: HR imports punches from months before the company joined the system.
 - An attendance day is not assessed until confirmed coverage of the employee's site reaches the required leaving time plus 2 hours; until then it is "pending", never absent.
 - Surplus leave credit is deducted automatically (oldest unreconciled hours first, oldest credit first, each with a written explanation), overriding PRD §11.2 — product owner, 2026-10-22. An HR reversal of one deduction stops that target from being auto-funded again.

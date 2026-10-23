@@ -12,7 +12,7 @@ use Illuminate\Validation\ValidationException;
 
 class ReportFilters
 {
-    public const STATUSES = ['present', 'absent', 'missing_punch', 'pending', 'rest_day', 'not_employed', 'pattern_missing', 'device_outage'];
+    public const STATUSES = ['present', 'absent', 'missing_punch', 'shift_unresolved', 'pending', 'rest_day', 'not_employed', 'pattern_missing', 'device_outage'];
 
     private function __construct(
         public readonly int $companyId,

@@ -164,6 +164,7 @@ return [
             'leave_request_missing' => 'طلب مفقود من تقرير إجازات كامل',
             'leave_with_attendance_nothing_to_reconcile' => 'إجازة معتمدة مع حضور دون رصيد يحتاج إلى تسوية',
             'leave_duration_mismatch' => 'مدة الإجازة لا تطابق أيام العمل',
+            'leave_rest_day_missing' => 'يجب مراجعة يوم راحة موظف الأمن',
         ],
     ],
     'attendance_ui' => [
@@ -182,6 +183,7 @@ return [
             'leave_request_missing' => 'طلب مفقود من تقرير إجازات كامل',
             'leave_with_attendance_nothing_to_reconcile' => 'إجازة معتمدة مع حضور دون رصيد يحتاج إلى تسوية',
             'leave_duration_mismatch' => 'مدة الإجازة لا تطابق أيام العمل',
+            'leave_rest_day_missing' => 'يجب مراجعة يوم راحة موظف الأمن',
         ],
         'upload_title' => 'رفع ملف الحضور', 'batches_title' => 'دفعات الحضور',
         'devices_title' => 'الأجهزة', 'devices' => 'الأجهزة', 'issues_title' => 'مشكلات البيانات', 'punches_title' => 'عرض البصمات',
@@ -231,6 +233,7 @@ return [
     'office_ui' => [
         'daily_title' => 'الحضور اليومي', 'review_title' => 'قائمة المراجعة',
         'policy_title' => 'سياسة الدوام المكتبي', 'detail_title' => 'تفاصيل يوم الحضور',
+        'office_presence_replacement_reason' => 'حد نقص ساعات الدوام المكتبي: ٩ ساعات؛ الغياب: ٨ ساعات',
         'date' => 'التاريخ', 'branch' => 'الفرع', 'status' => 'الحالة', 'all' => 'الكل',
         'employee' => 'الموظف', 'first_in' => 'أول دخول', 'last_out' => 'آخر خروج',
         'required_leave_at' => 'وقت المغادرة المطلوب', 'elapsed' => 'المدة المنقضية',
@@ -256,6 +259,7 @@ return [
         'recalculation_history' => 'سجل إعادة الحساب',
         'statuses' => [
             'pending' => 'قيد الانتظار', 'present' => 'حاضر', 'missing_punch' => 'بصمة مفقودة',
+            'shift_unresolved' => 'الوردية تحتاج إلى مراجعة الموارد البشرية',
             'absent' => 'غائب', 'rest_day' => 'يوم راحة', 'not_employed' => 'خارج مدة العمل',
             'pattern_missing' => 'نمط العمل مفقود', 'device_outage' => 'عطل الجهاز',
         ],
@@ -303,6 +307,7 @@ return [
         'reassess_command' => 'إعادة تقييم أيام الحضور المعلقة بعد وقت إغلاقها.',
         'outage_cleared' => 'تم العثور على بصمات دخول من جهاز معتمد لهذا اليوم.',
         'invalid_time' => 'أدخل وقت دخول أو خروج صالحاً.',
+        'invalid_shift' => 'اختر وردية صالحة لهذا اليوم.',
         'already_withdrawn' => 'تم التراجع عن هذا التصحيح أو القرار مسبقاً.',
         'not_reviewable' => 'هذا اليوم لا ينتظر مراجعة الموارد البشرية.',
         'reason_required' => 'يجب ذكر السبب.',
@@ -385,6 +390,7 @@ return [
             'leave_unknown_employee' => 'موظف غير معروف', 'leave_invalid_dates' => 'تواريخ غير صالحة',
             'leave_unknown_status' => 'حالة غير معروفة', 'leave_invalid_duration' => 'مدة غير صالحة',
             'leave_duration_mismatch' => 'المدة لا تطابق الأيام', 'leave_request_missing' => 'غائب من التقرير الكامل',
+            'leave_rest_day_missing' => 'يوم راحة موظف الأمن مفقود',
             'leave_with_attendance_nothing_to_reconcile' => 'إجازة مع حضور: لا شيء للتسوية',
         ],
         'row_errors' => [

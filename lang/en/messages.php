@@ -163,6 +163,7 @@ return [
             'leave_request_missing' => 'Request missing from a full leave report',
             'leave_with_attendance_nothing_to_reconcile' => 'Approved leave meets attendance with no balance to reconcile',
             'leave_duration_mismatch' => 'Leave duration does not match working days',
+            'leave_rest_day_missing' => 'Security rest day needs HR review',
             'pattern_review' => 'Security work pattern needs HR review',
         ],
     ],
@@ -182,6 +183,7 @@ return [
             'leave_request_missing' => 'Request missing from a full leave report',
             'leave_with_attendance_nothing_to_reconcile' => 'Approved leave meets attendance with no balance to reconcile',
             'leave_duration_mismatch' => 'Leave duration does not match working days',
+            'leave_rest_day_missing' => 'Security rest day needs HR review',
         ],
         'upload_title' => 'Upload attendance', 'batches_title' => 'Attendance batches',
         'devices_title' => 'Devices', 'devices' => 'Devices', 'issues_title' => 'Data issues', 'punches_title' => 'Punch viewer',
@@ -231,6 +233,7 @@ return [
     'office_ui' => [
         'daily_title' => 'Daily attendance', 'review_title' => 'Review queue',
         'policy_title' => 'Office policy', 'detail_title' => 'Attendance day',
+        'office_presence_replacement_reason' => 'Office short-hours threshold: 9 hours; absence: 8 hours',
         'date' => 'Date', 'branch' => 'Branch', 'status' => 'Status', 'all' => 'All',
         'employee' => 'Employee', 'first_in' => 'First in', 'last_out' => 'Last out',
         'required_leave_at' => 'Required leaving', 'elapsed' => 'Elapsed',
@@ -256,6 +259,7 @@ return [
         'recalculation_history' => 'Recalculation history',
         'statuses' => [
             'pending' => 'Pending', 'present' => 'Present', 'missing_punch' => 'Missing punch',
+            'shift_unresolved' => 'Shift needs HR review',
             'absent' => 'Absent', 'rest_day' => 'Rest day', 'not_employed' => 'Not employed',
             'pattern_missing' => 'Pattern missing', 'device_outage' => 'Device outage',
         ],
@@ -303,6 +307,7 @@ return [
         'reassess_command' => 'Reassess pending office attendance days after their close time.',
         'outage_cleared' => 'Approved check-in activity was found for this date.',
         'invalid_time' => 'Enter a valid check-in or check-out time.',
+        'invalid_shift' => 'Choose a valid shift for this day.',
         'already_withdrawn' => 'This correction or decision has already been withdrawn.',
         'not_reviewable' => 'This day is not awaiting HR review.',
         'reason_required' => 'A reason is required.',
@@ -385,6 +390,7 @@ return [
             'leave_unknown_employee' => 'Unknown employee', 'leave_invalid_dates' => 'Invalid dates',
             'leave_unknown_status' => 'Unknown status', 'leave_invalid_duration' => 'Invalid duration',
             'leave_duration_mismatch' => 'Duration mismatch', 'leave_request_missing' => 'Missing from full report',
+            'leave_rest_day_missing' => 'Security rest day missing',
             'leave_with_attendance_nothing_to_reconcile' => 'Leave with attendance: nothing to reconcile',
         ],
         'row_errors' => [

@@ -133,7 +133,7 @@ class ShiftDayCalculator
                 $confirmedAbsence = false;
             }
         }
-        $result['reviewed'] = $confirmedAbsence;
+        $result['reviewed'] = $confirmedAbsence || $choice !== null;
         $shiftMinutes = (int) ($policy['shift_minutes'] ?? 480);
         $inference = $choice !== null && $timeline !== []
             ? ['start' => $this->shiftStart($day, $choice), 'source' => 'hr', 'confidence' => 'clear']

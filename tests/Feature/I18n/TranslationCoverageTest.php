@@ -151,7 +151,7 @@ test('office attendance dynamic labels exist in both languages', function (): vo
     $arabic = File::getRequire(lang_path('ar/messages.php'));
     $labels = [
         ...array_map(fn (string $state): string => 'statuses.'.$state, [
-            'pending', 'present', 'missing_punch', 'absent', 'rest_day', 'not_employed', 'pattern_missing', 'device_outage',
+            'pending', 'present', 'missing_punch', 'shift_unresolved', 'absent', 'rest_day', 'not_employed', 'pattern_missing', 'device_outage',
         ]),
         ...array_map(fn (string $field): string => 'minutes.'.$field, [
             'elapsed_minutes', 'presence_minutes', 'late_minutes', 'early_minutes',
@@ -199,7 +199,7 @@ test('leave screen dynamic labels exist in both languages', function (): void {
         ...array_map(fn (string $kind): string => 'consumes_values.'.$kind, ['none', 'rest_day_entitlement', 'overtime_or_credit']),
         ...array_map(fn (string $kind): string => 'explanations.'.$kind, ['leave_same_day', 'leave_credit_applied', 'unknown']),
         ...array_map(fn (string $kind): string => 'flags.'.$kind, ['unmapped_type', 'invalid_dates', 'duration_mismatch', 'missing_from_report', 'nothing_to_reconcile']),
-        ...array_map(fn (string $kind): string => 'issue_types.'.$kind, ['leave_unknown_employee', 'leave_invalid_dates', 'leave_unknown_status', 'leave_invalid_duration', 'leave_duration_mismatch', 'leave_request_missing', 'leave_with_attendance_nothing_to_reconcile']),
+        ...array_map(fn (string $kind): string => 'issue_types.'.$kind, ['leave_unknown_employee', 'leave_invalid_dates', 'leave_unknown_status', 'leave_invalid_duration', 'leave_duration_mismatch', 'leave_rest_day_missing', 'leave_request_missing', 'leave_with_attendance_nothing_to_reconcile']),
         ...array_map(fn (string $kind): string => 'counts.'.$kind, ['rows', 'errors', 'duplicates', 'unknown_employees', 'unmapped_types', 'invalid_dates', 'new', 'changed', 'unchanged', 'versions', 'missing_from_full', 'requests', 'through_row']),
         ...array_map(fn (string $kind): string => 'row_errors.'.$kind, ['required', 'too_long', 'invalid_dates', 'duration_mismatch', 'unknown_status', 'invalid_duration', 'missing_duration', 'column_count']),
     ];

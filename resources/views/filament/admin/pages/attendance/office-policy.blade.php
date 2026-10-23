@@ -33,7 +33,7 @@
         <x-ui.card :title="__('messages.office_ui.history')" padding="none">
             <div class="overflow-x-auto"><table class="w-full text-start"><thead><tr>@foreach (['version', 'effective_from', 'by', 'reason'] as $column)<th class="p-3">{{ __('messages.office_ui.'.$column) }}</th>@endforeach</tr></thead><tbody>
                 @foreach ($this->history() as $policy)
-                    <tr class="border-t" wire:key="office-policy-{{ $policy->id }}"><td class="p-3 font-mono" dir="ltr">{{ $policy->version }}</td><td class="p-3 font-mono" dir="ltr">{{ $policy->effective_from->toDateString() }}</td><td class="p-3">{{ $policy->creator?->name ?? __('messages.office_ui.system') }}</td><td class="p-3">{{ $policy->reason ?? '—' }}</td></tr>
+                    <tr class="border-t" wire:key="office-policy-{{ $policy->id }}"><td class="p-3 font-mono" dir="ltr">{{ $policy->version }}</td><td class="p-3 font-mono" dir="ltr">{{ $policy->effective_from->toDateString() }}</td><td class="p-3">{{ $policy->creator?->name ?? __('messages.office_ui.system') }}</td><td class="p-3">{{ str_starts_with((string) $policy->reason, 'office_presence_540_from_policy:') ? __('messages.office_ui.office_presence_replacement_reason') : ($policy->reason ?? '—') }}</td></tr>
                 @endforeach
             </tbody></table></div><div class="p-3">{{ $this->history()->links() }}</div>
         </x-ui.card>

@@ -9,14 +9,14 @@ use App\Support\Tenancy\TenantContext;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
-test('shift policy defaults and nullable day fields preserve existing office data', function (): void {
+test('shift policy defaults and nullable day fields coexist with office data', function (): void {
     $company = Company::factory()->create();
     app(TenantContext::class)->setCompany($company);
     $policy = Policy::factory()->create();
     $day = Day::factory()->create();
 
     expect((int) $policy->fresh()->absence_minutes)->toBe(480)
-        ->and((int) $policy->fresh()->min_presence_minutes)->toBe(480)
+        ->and((int) $policy->fresh()->min_presence_minutes)->toBe(540)
         ->and($policy->fresh()->shift_starts)->toBe(['00:00', '08:00', '16:00'])
         ->and($policy->fresh()->shift_rest_days)->toBe([5])
         ->and($day->fresh()->shift_start)->toBeNull()

@@ -33,7 +33,7 @@ class DayReconciliation
         $result = [];
         foreach ($days as $day) {
             $date = $day->work_date->toDateString();
-            $base = ['absence' => $day->status === 'absent' ? (int) ($day->policy?->min_presence_minutes ?? 480) : 0,
+            $base = ['absence' => $day->status === 'absent' ? (int) ($day->inputs['absence_minutes'] ?? $day->policy?->absence_minutes ?? 480) : 0,
                 'late' => $day->status === 'present' ? (int) $day->late_minutes : 0,
                 'early' => $day->status === 'present' ? (int) $day->early_minutes : 0,
                 'exit' => $day->status === 'present' && $day->policy?->exits_count_toward_balance ? (int) $day->exit_minutes : 0];
