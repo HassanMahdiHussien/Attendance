@@ -13,6 +13,7 @@ use App\Models\Leave\RequestDay;
 use App\Models\Leave\RequestVersion;
 use App\Policies\EmployeeProfilePolicy;
 use App\Services\Attendance\HolidayLabels;
+use App\Services\Attendance\Overtime;
 use App\Services\Attendance\Reporting\AttendanceExports;
 use App\Services\Attendance\Reporting\AttendanceSummary;
 use App\Services\Attendance\Reporting\LastUpdate;
@@ -48,6 +49,9 @@ class EmployeeAttendance extends Component
     {
         $this->employeeId = $employeeId;
         $this->period('current');
+        if (request()->query('attendance_tab') === 'overtime') {
+            $this->tab = 'overtime';
+        }
     }
 
     public function period(string $choice): void
@@ -65,7 +69,7 @@ class EmployeeAttendance extends Component
     public function show(string $tab): void
     {
         $this->employee();
-        abort_unless(in_array($tab, ['days', 'leave', 'credits', 'changes', 'issues'], true), 404);
+        abort_unless(in_array($tab, ['days', 'leave', 'credits', 'overtime', 'changes', 'issues'], true), 404);
         $this->tab = $tab;
         $this->selectedTile = '';
     }
@@ -76,6 +80,7 @@ class EmployeeAttendance extends Component
         abort_unless(ReportTiles::allowed($tile), 404);
         $this->selectedTile = $tile;
         $this->tab = match (true) {
+            in_array($tile, ['overtime_minutes', 'entitled_employees', 'entitlements_available_now', 'entitlements_overdue_now'], true) => 'overtime',
             str_starts_with($tile, 'leave:') || str_starts_with($tile, 'leave_status:') => 'leave',
             str_starts_with($tile, 'credit_') => 'credits',
             str_starts_with($tile, 'issue_type:') || $tile === 'data_issues' => 'issues',
@@ -99,15 +104,23 @@ class EmployeeAttendance extends Component
         $this->exportQueued = true;
     }
 
-    public function render(AttendanceSummary $summary, DayReconciliation $reconciliation, LastUpdate $lastUpdate): View
+    public function render(AttendanceSummary $summary, DayReconciliation $reconciliation, LastUpdate $lastUpdate, Overtime $overtime): View
     {
         $employee = $this->employee();
 
-        return app(TenantContext::class)->runForCompany($employee->company_id, function () use ($employee, $summary, $reconciliation, $lastUpdate): View {
+        return app(TenantContext::class)->runForCompany($employee->company_id, function () use ($employee, $summary, $reconciliation, $lastUpdate, $overtime): View {
             $filters = ReportFilters::fromArray($employee->company, [
                 'from' => $this->from, 'to' => $this->to, 'employee_ids' => [$employee->id],
             ]);
             $totals = $summary->totals($filters);
+            $overtimeTotals = $overtime->totals($filters);
+            $overtimeDays = collect();
+            if ($this->tab === 'days') {
+                $overtimeDays = collect(iterator_to_array($overtime->perDay($filters, $employee->id)))->keyBy('work_date');
+            }
+            $entitlements = $this->tab === 'overtime'
+                ? collect(iterator_to_array($overtime->entitlements($filters))) : collect();
+            $consumptions = collect($overtime->consumptionsFor($filters, $entitlements->pluck('id')->all()));
             $days = $this->tab === 'days' ? array_values(array_filter(iterator_to_array($summary->perDay($filters, $employee->id)),
                 fn (array $day): bool => $this->matchesDay($day))) : [];
             $detail = $this->tab === 'days' ? $reconciliation->for($employee, $filters->from, $filters->to) : [];
@@ -167,11 +180,13 @@ class EmployeeAttendance extends Component
 
             return view('livewire.attendance.employee-attendance', [
                 'employee' => $employee, 'totals' => $totals,
-                'tiles' => array_diff_key(ReportTiles::fromTotals($totals), array_flip([
+                'tiles' => array_diff_key(ReportTiles::fromTotals($totals) + ReportTiles::overtime($overtimeTotals), array_flip([
                     'active_employees', 'office_employees_assessed', 'without_work_pattern',
                 ])),
                 'freshness' => $lastUpdate->for($filters),
                 'days' => $days, 'detail' => $detail, 'holidayNames' => $holidayNames, 'requests' => $requests,
+                'overtime' => $overtimeTotals, 'overtimeDays' => $overtimeDays,
+                'entitlements' => $entitlements, 'consumptions' => $consumptions,
                 'requestVersions' => $requestVersions, 'credits' => $credits,
                 'used' => $used, 'changes' => $changes, 'issues' => $issues,
                 'dayUrl' => DayDetail::getUrl(panel: 'admin', tenant: $employee->company),

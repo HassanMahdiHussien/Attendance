@@ -156,3 +156,15 @@ test('employee daily lines show clock times and capitalised English labels', fun
         ->assertSee('09:15 / 18:00')->assertDontSee('2026-10-21 09:15:00')
         ->assertSee('Lateness: Gross')->assertDontSee('lateness: Gross');
 });
+
+test('an entitlement link opens the employee overtime ledger', function (): void {
+    $company = Company::factory()->create();
+    app(TenantContext::class)->setCompany($company);
+    $employee = Employee::factory()->create();
+    $hr = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::HrStaff]);
+    $this->actingAs($hr);
+
+    Livewire::withQueryParams(['attendance_tab' => 'overtime'])
+        ->test(EmployeeAttendance::class, ['employeeId' => $employee->id])
+        ->assertSet('tab', 'overtime')->assertSee('Overtime and compensatory days');
+});

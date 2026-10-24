@@ -5,6 +5,7 @@ namespace App\Livewire\Attendance;
 use App\Enums\UserRole;
 use App\Models\Company;
 use App\Models\Employee;
+use App\Services\Attendance\Overtime;
 use App\Services\Attendance\Reporting\AttendanceSummary;
 use App\Services\Attendance\Reporting\ReportFilters;
 use App\Services\Attendance\Reporting\ReportTiles;
@@ -44,19 +45,28 @@ class DashboardEmployees extends Component
             'manager_employee_ids', 'work_patterns', 'statuses']);
     }
 
-    public function render(AttendanceSummary $summary): View
+    public function render(AttendanceSummary $summary, Overtime $overtime): View
     {
         $company = $this->company();
 
-        return app(TenantContext::class)->runForCompany($company, function () use ($company, $summary): View {
+        return app(TenantContext::class)->runForCompany($company, function () use ($company, $summary, $overtime): View {
             $filters = ReportFilters::fromArray($company, $this->filters);
-            $ids = $summary->drillDown($filters, $this->tile);
+            $ids = in_array($this->tile, ['overtime_minutes', 'entitled_employees', 'entitlements_available_now', 'entitlements_overdue_now'], true)
+                ? $overtime->drillDownEmployeeIds($filters, $this->tile)
+                : $summary->drillDown($filters, $this->tile);
             $employees = $ids === [] ? collect() : Employee::query()->where('company_id', $company->id)
                 ->whereIn('id', $ids)->with('branch')->orderBy('name')->get();
             $balances = app(LeaveBalances::class)->currentFor($company->id, $employees->pluck('id')->all());
+            $overtimeRows = [];
+            if (in_array($this->tile, ['overtime_minutes', 'entitled_employees', 'entitlements_available_now', 'entitlements_overdue_now'], true)) {
+                foreach ($overtime->perEmployee($filters) as $row) {
+                    $overtimeRows[$row['employee_id']] = $row;
+                }
+            }
 
             return view('livewire.attendance.dashboard-employees', [
                 'company' => $company, 'employees' => $employees, 'balances' => $balances,
+                'overtimeRows' => $overtimeRows,
                 'from' => $filters->from, 'to' => $filters->to,
             ])->layout('layouts.workspace');
         });

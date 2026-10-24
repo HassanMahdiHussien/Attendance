@@ -10,6 +10,7 @@ use App\Models\Leave\Allocation;
 use App\Models\Leave\LeaveRequest;
 use App\Models\Leave\RequestDay;
 use App\Models\Leave\RequestDecision;
+use App\Services\Attendance\Overtime;
 use App\Services\Leave\LeaveBalances;
 use App\Services\Leave\LeaveExplanation;
 use Generator;
@@ -31,7 +32,11 @@ class ExportData
 
     public const ISSUE_COLUMNS = ['employee_code', 'employee_name', 'issue_type', 'issues'];
 
-    public function __construct(private AttendanceSummary $summary, private LastUpdate $lastUpdate, private LeaveExplanation $explanations) {}
+    public const OVERTIME_COLUMNS = ['employee_code', 'employee_name', 'date', 'overtime_basis', 'overtime_minutes', 'early_arrival_minutes'];
+
+    public const ENTITLEMENT_COLUMNS = ['employee_code', 'employee_name', 'date', 'entitlement_basis', 'holiday', 'earned', 'used', 'available', 'overdue', 'alert_on'];
+
+    public function __construct(private AttendanceSummary $summary, private LastUpdate $lastUpdate, private LeaveExplanation $explanations, private Overtime $overtime) {}
 
     public function columns(string $kind): array
     {
@@ -39,6 +44,8 @@ class ExportData
             'leave_and_credit' => self::SUMMARY_COLUMNS,
             'restaurant_usage' => self::MEAL_COLUMNS,
             'data_issues' => self::ISSUE_COLUMNS,
+            'overtime' => self::OVERTIME_COLUMNS,
+            'compensatory_days' => self::ENTITLEMENT_COLUMNS,
             default => self::DAY_COLUMNS,
         };
     }
@@ -76,6 +83,9 @@ class ExportData
                 $header[] = [__('messages.leave_balance_ui.balance_date'), $balance->balance_date->toDateString()];
             }
         }
+        if ($export->kind === 'overtime') {
+            $header[] = [__('messages.overtime_ui.matching_note')];
+        }
 
         return $header;
     }
@@ -89,6 +99,16 @@ class ExportData
         }
         if ($export->kind === 'data_issues') {
             yield from $this->issues($filters);
+
+            return;
+        }
+        if ($export->kind === 'overtime') {
+            yield from $this->overtimeRows($filters);
+
+            return;
+        }
+        if ($export->kind === 'compensatory_days') {
+            yield from $this->entitlementRows($filters);
 
             return;
         }
@@ -218,7 +238,45 @@ class ExportData
 
         return ['company' => $company, 'employee' => $employee, 'filters' => $filters,
             'totals' => $totals, 'days' => $days, 'header' => $this->header($export, $company, $filters),
-            'annual_balance' => app(LeaveBalances::class)->current($employee)];
+            'annual_balance' => app(LeaveBalances::class)->current($employee),
+            'overtime' => $this->overtime->totals($filters),
+            'overtime_days' => iterator_to_array($this->overtime->perDay($filters, $employee->id), false),
+            'entitlements' => iterator_to_array($this->overtime->entitlements($filters), false)];
+    }
+
+    private function overtimeRows(ReportFilters $filters): Generator
+    {
+        $employees = Employee::query()->where('company_id', $filters->companyId)->get()->keyBy('id');
+        foreach ($this->overtime->dayRows($filters) as $day) {
+            if (($day['overtime_minutes'] ?? 0) === 0 && ($day['early_arrival_minutes'] ?? 0) === 0) {
+                continue;
+            }
+            $employee = $employees->get($day['employee_id']);
+            yield [
+                'employee_code' => $employee?->employee_code ?? '', 'employee_name' => $employee?->name ?? '',
+                'date' => $day['work_date'],
+                'overtime_basis' => $day['overtime_basis'] === null ? '' : __('messages.overtime_ui.basis.'.$day['overtime_basis']),
+                'overtime_minutes' => $day['overtime_minutes'] ?? 0,
+                'early_arrival_minutes' => $day['early_arrival_minutes'] ?? 0,
+            ];
+        }
+    }
+
+    private function entitlementRows(ReportFilters $filters): Generator
+    {
+        $employees = Employee::query()->where('company_id', $filters->companyId)->get()->keyBy('id');
+        foreach ($this->overtime->entitlements($filters) as $entitlement) {
+            $employee = $employees->get($entitlement['employee_id']);
+            yield [
+                'employee_code' => $employee?->employee_code ?? '', 'employee_name' => $employee?->name ?? '',
+                'date' => $entitlement['work_date'],
+                'entitlement_basis' => __('messages.overtime_ui.entitlement_basis.'.$entitlement['basis']),
+                'holiday' => $entitlement['holiday'] ? __('messages.office_ui.yes') : __('messages.office_ui.no'),
+                'earned' => $entitlement['earned'], 'used' => $entitlement['used'],
+                'available' => $entitlement['available'], 'overdue' => $entitlement['overdue'],
+                'alert_on' => $entitlement['alert_on'],
+            ];
+        }
     }
 
     private function meals(ReportFilters $filters): Generator

@@ -52,6 +52,23 @@
             <p>{{ $group }}: <bdi class="mono">{{ $minutes }}</bdi> {{ __('messages.reporting_ui.minutes') }}</p>
         @endforeach
     @endif
+    <h2>{{ __('messages.overtime_ui.section') }}</h2>
+    <p>{{ __('messages.overtime_ui.overtime') }}: <bdi class="mono">{{ sprintf('%d:%02d', intdiv($overtime['overtime_minutes'], 60), $overtime['overtime_minutes'] % 60) }}</bdi></p>
+    @foreach ($overtime['overtime_by_basis'] as $basis => $minutes)
+        <p>{{ __('messages.overtime_ui.basis.'.$basis) }}: <bdi class="mono">{{ sprintf('%d:%02d', intdiv($minutes, 60), $minutes % 60) }}</bdi></p>
+    @endforeach
+    <p>{{ __('messages.overtime_ui.earned') }} <bdi class="mono">{{ number_format($overtime['entitlements_earned'], 1) }}</bdi> · {{ __('messages.overtime_ui.used') }} <bdi class="mono">{{ number_format($overtime['entitlements_used'], 1) }}</bdi> · {{ __('messages.overtime_ui.available') }} <bdi class="mono">{{ number_format($overtime['entitlements_available_now'], 1) }}</bdi> · {{ __('messages.overtime_ui.overdue') }} <bdi class="mono">{{ number_format($overtime['entitlements_overdue_now'], 1) }}</bdi></p>
+    <table><thead><tr><th>{{ __('messages.export_ui.columns.date') }}</th><th>{{ __('messages.overtime_ui.overtime') }}</th><th>{{ __('messages.overtime_ui.basis_title') }}</th><th>{{ __('messages.overtime_ui.early_marker') }}</th></tr></thead><tbody>
+        @foreach ($overtime_days as $overtimeDay)
+            <tr><td class="mono">{{ $overtimeDay['work_date'] }}</td><td class="mono">{{ $overtimeDay['overtime_minutes'] ?? 0 }}</td><td>{{ $overtimeDay['overtime_basis'] === null ? '—' : __('messages.overtime_ui.basis.'.$overtimeDay['overtime_basis']) }}</td><td class="mono">{{ $overtimeDay['early_arrival_minutes'] ?? 0 }}</td></tr>
+        @endforeach
+    </tbody></table>
+    <h2>{{ __('messages.overtime_ui.entitlement') }}</h2>
+    <table><thead><tr><th>{{ __('messages.export_ui.columns.date') }}</th><th>{{ __('messages.overtime_ui.earned') }}</th><th>{{ __('messages.overtime_ui.used') }}</th><th>{{ __('messages.overtime_ui.available') }}</th><th>{{ __('messages.overtime_ui.overdue') }}</th></tr></thead><tbody>
+        @foreach ($entitlements as $entitlement)
+            <tr><td class="mono">{{ $entitlement['work_date'] }}</td><td class="mono">{{ $entitlement['earned'] }}</td><td class="mono">{{ $entitlement['used'] }}</td><td class="mono">{{ $entitlement['available'] }}</td><td class="mono">{{ $entitlement['overdue'] }}</td></tr>
+        @endforeach
+    </tbody></table>
     <h2>{{ __('messages.export_ui.daily_detail') }}</h2>
     <table>
         <thead><tr>

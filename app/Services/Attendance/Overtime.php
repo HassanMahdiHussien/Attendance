@@ -21,8 +21,12 @@ class Overtime
     {
         $totals = $this->emptyRow();
         $totals['employee_ids'] = [];
+        $totals['entitled_employees'] = 0;
         foreach ($this->perEmployee($filters, $asOf) as $row) {
             $totals['employee_ids'][] = $row['employee_id'];
+            if ($row['entitlements_earned'] > 0) {
+                $totals['entitled_employees']++;
+            }
             foreach (['overtime_minutes', 'early_arrival_days', 'entitlements_earned',
                 'entitlements_used', 'entitlements_available_now', 'entitlements_overdue_now'] as $key) {
                 $totals[$key] += $row[$key];
@@ -93,6 +97,20 @@ class Overtime
         }
     }
 
+    public function dayRows(ReportFilters $filters): Generator
+    {
+        $this->assertCompany($filters);
+        foreach ($this->summary->selectedDays($filters) as $day) {
+            yield [
+                'day_id' => (int) $day->id, 'employee_id' => (int) $day->employee_id,
+                'work_date' => $day->work_date->toDateString(),
+                'overtime_minutes' => $day->overtime_minutes === null ? null : (int) $day->overtime_minutes,
+                'overtime_basis' => $day->overtime_basis,
+                'early_arrival_minutes' => $day->early_arrival_minutes === null ? null : (int) $day->early_arrival_minutes,
+            ];
+        }
+    }
+
     public function entitlements(ReportFilters $filters, ?string $asOf = null): Generator
     {
         $this->assertCompany($filters);
@@ -108,6 +126,24 @@ class Overtime
         if ($dayIds !== []) {
             yield from $this->entitlementRows($filters, $dayIds, $asOf);
         }
+    }
+
+    public function consumptionsFor(ReportFilters $filters, array $entitlementIds): array
+    {
+        $this->assertCompany($filters);
+        if ($entitlementIds === []) {
+            return [];
+        }
+
+        return EntitlementConsumption::query()->with('request')
+            ->where('company_id', $filters->companyId)->whereIn('entitlement_id', $entitlementIds)
+            ->whereNull('superseded_by_run_id')->orderBy('id')->get()
+            ->map(fn (EntitlementConsumption $consumption): array => [
+                'entitlement_id' => (int) $consumption->entitlement_id,
+                'request_id' => (int) $consumption->request_id,
+                'external_id' => $consumption->request?->external_id,
+                'quantity' => (float) $consumption->quantity,
+            ])->all();
     }
 
     public function drillDownDayIds(ReportFilters $filters, string $basis): array
@@ -126,11 +162,11 @@ class Overtime
 
     public function drillDownEmployeeIds(ReportFilters $filters, string $tile, ?string $asOf = null): array
     {
-        abort_unless(in_array($tile, ['overtime_minutes', 'early_arrival_days', 'entitlements_earned',
+        abort_unless(in_array($tile, ['overtime_minutes', 'early_arrival_days', 'entitled_employees', 'entitlements_earned',
             'entitlements_available_now', 'entitlements_overdue_now'], true), 404);
         $ids = [];
         foreach ($this->perEmployee($filters, $asOf) as $row) {
-            if ($row[$tile] > 0) {
+            if (($tile === 'entitled_employees' ? $row['entitlements_earned'] : $row[$tile]) > 0) {
                 $ids[] = $row['employee_id'];
             }
         }

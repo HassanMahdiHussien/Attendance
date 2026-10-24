@@ -3,6 +3,7 @@
 use App\Enums\UserRole;
 use App\Filament\Admin\Pages\Attendance\AttendanceExportsPage;
 use App\Jobs\Attendance\GenerateAttendanceExportJob;
+use App\Livewire\Attendance\DashboardEmployees;
 use App\Livewire\Attendance\EmployeeAttendance;
 use App\Livewire\Dashboard\HrDashboard;
 use App\Models\Attendance\AttendanceExport;
@@ -10,6 +11,7 @@ use App\Models\Attendance\AttendanceExportEvent;
 use App\Models\Attendance\DataIssue;
 use App\Models\Attendance\Day;
 use App\Models\Attendance\Meal;
+use App\Models\Attendance\RestDayEntitlement;
 use App\Models\AuditLog;
 use App\Models\Branch;
 use App\Models\Company;
@@ -17,6 +19,7 @@ use App\Models\Employee;
 use App\Models\Leave\LeaveRequest;
 use App\Models\Leave\LeaveType;
 use App\Models\User;
+use App\Services\Attendance\Overtime;
 use App\Services\Attendance\Reporting\AttendanceExports;
 use App\Services\Attendance\Reporting\AttendanceSummary;
 use App\Services\Attendance\Reporting\ExportData;
@@ -132,8 +135,71 @@ test('summary, dashboard, employee tile, Excel totals and PDF data agree for the
         $html = view('attendance.statement', $localized)->render();
         expect($html)->toContain('00001234')->toContain('2026-10-21')
             ->toContain($locale === 'ar' ? 'dir="rtl"' : 'dir="ltr"')
-            ->toContain($locale === 'ar' ? 'كشف حضور الموظف' : 'Employee attendance statement');
+            ->toContain($locale === 'ar' ? 'كشف حضور الموظف' : 'Employee attendance statement')
+            ->toContain($locale === 'ar' ? 'العمل الإضافي والأيام التعويضية' : 'Overtime and compensatory days');
     }
+});
+
+test('overtime totals agree across tiles, drill down, Excel and statement', function (): void {
+    $fixture = exportFixture();
+    $this->actingAs($fixture['hr']);
+    app(TenantContext::class)->setCompany($fixture['company']);
+    $day = Day::factory()->create(['employee_id' => $fixture['employee']->id,
+        'branch_id' => $fixture['branch']->id, 'work_date' => '2026-10-16',
+        'status' => 'rest_day_worked', 'overtime_minutes' => 240, 'overtime_basis' => 'rest_day',
+        'inputs' => ['work_pattern' => 'office']]);
+    RestDayEntitlement::factory()->create(['employee_id' => $fixture['employee']->id,
+        'source_day_id' => $day->id, 'work_date' => '2026-10-16', 'quantity' => 0.5]);
+    $filters = ReportFilters::fromArray($fixture['company'], ['from' => '2026-10-16', 'to' => '2026-10-23']);
+    $overtime = app(Overtime::class)->totals($filters, '2026-10-23');
+    expect($overtime['overtime_minutes'])->toBe(240)
+        ->and($overtime['entitled_employees'])->toBe(1)
+        ->and($overtime['entitlements_available_now'])->toBe(0.5)
+        ->and(app(Overtime::class)->drillDownEmployeeIds($filters, 'entitled_employees', '2026-10-23'))
+        ->toBe([$fixture['employee']->id]);
+    Livewire::test(HrDashboard::class)->set('from', '2026-10-16')->set('to', '2026-10-23')
+        ->call('apply')->assertSee('Overtime hours')->assertSee('4:00')
+        ->assertSee('Available compensatory days')->assertSee('0.5');
+    Livewire::withQueryParams(['tile' => 'overtime_minutes', 'from' => '2026-10-16', 'to' => '2026-10-23'])
+        ->test(DashboardEmployees::class)->assertSee($fixture['employee']->name)->assertSee('4:00');
+    Livewire::test(EmployeeAttendance::class, ['employeeId' => $fixture['employee']->id])
+        ->set('from', '2026-10-16')->set('to', '2026-10-23')->call('apply')
+        ->call('showTile', 'overtime_minutes')->assertSet('tab', 'overtime')
+        ->assertSee('2026-10-16')->assertSee('4:00');
+
+    foreach (['overtime', 'compensatory_days', 'employee_statement_xlsx'] as $kind) {
+        $input = $filters->toArray();
+        if ($kind === 'employee_statement_xlsx') {
+            $input['employee_ids'] = [$fixture['employee']->id];
+        }
+        $export = app(AttendanceExports::class)->request($fixture['company'], $fixture['hr'], $kind, $input, 'en');
+        runAttendanceExport($export->id);
+        $this->get(route('attendance.exports.file', ['company' => $fixture['company']->id,
+            'export' => $export->id]))->assertOk();
+        $rows = attendanceExportRows($export->fresh());
+        expect(collect($rows)->pluck(0))->toContain('00001234');
+        if ($kind === 'overtime') {
+            $total = collect($rows)->first(fn (array $row): bool => ($row[0] ?? null) === 'Total');
+            expect(collect($rows)->pluck(0))->toContain('External overtime-report matching is not yet available.')
+                ->and((int) $total[4])->toBe($overtime['overtime_minutes']);
+        }
+        if ($kind === 'compensatory_days') {
+            $total = collect($rows)->first(fn (array $row): bool => ($row[0] ?? null) === 'Total');
+            expect((float) $total[5])->toBe($overtime['entitlements_earned'])
+                ->and((float) $total[7])->toBe($overtime['entitlements_available_now']);
+        }
+        if ($kind === 'employee_statement_xlsx') {
+            $statementOvertime = collect($rows)->first(fn (array $row): bool => ($row[0] ?? null) === 'Overtime and compensatory days');
+            expect((int) $statementOvertime[1])->toBe($overtime['overtime_minutes']);
+        }
+    }
+    $pdf = AttendanceExport::factory()->create(['kind' => 'statement_pdf',
+        'filters' => array_replace($filters->toArray(), ['employee_ids' => [$fixture['employee']->id]])]);
+    $statement = app(ExportData::class)->statement($pdf, $fixture['company'],
+        ReportFilters::fromArray($fixture['company'], $pdf->filters));
+    expect($statement['overtime']['overtime_minutes'])->toBe(240)
+        ->and($statement['overtime']['entitlements_available_now'])->toBe(0.5)
+        ->and(view('attendance.statement', $statement)->render())->toContain('Overtime and compensatory days');
 });
 
 test('each Excel kind writes a labelled private file with a detail total', function (): void {

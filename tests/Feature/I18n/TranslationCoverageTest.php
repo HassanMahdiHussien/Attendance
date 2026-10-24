@@ -165,7 +165,8 @@ test('attendance export kinds, states and columns have English and Arabic labels
         ...array_map(fn (string $state): string => 'states.'.$state, ['queued', 'running', 'completed', 'failed', 'file_deleted']),
         ...array_map(fn (string $error): string => 'errors.'.$error, ['chrome_missing', 'generation_failed']),
         ...array_map(fn (string $column): string => 'columns.'.$column,
-            array_unique(array_merge(ExportData::DAY_COLUMNS, ExportData::SUMMARY_COLUMNS, ExportData::MEAL_COLUMNS, ExportData::ISSUE_COLUMNS))),
+            array_unique(array_merge(ExportData::DAY_COLUMNS, ExportData::SUMMARY_COLUMNS, ExportData::MEAL_COLUMNS,
+                ExportData::ISSUE_COLUMNS, ExportData::OVERTIME_COLUMNS, ExportData::ENTITLEMENT_COLUMNS))),
     ];
     foreach ($labels as $label) {
         expect(data_get($english, 'export_ui.'.$label))->not->toBeNull()
@@ -213,13 +214,16 @@ test('office attendance dynamic labels exist in both languages', function (): vo
             'absence_minutes', 'close_grace_minutes', 'exits_count_toward_balance', 'office_rest_days',
             'shift_starts', 'shift_minutes', 'shift_break_minutes', 'shift_min_presence_minutes',
             'shift_rest_days', 'security_min_presence_minutes', 'inference_tolerance_minutes',
+            'overtime_min_minutes', 'overtime_step_minutes', 'rest_day_half_minutes', 'rest_day_full_minutes',
+            'compensatory_rest_days',
         ]),
         ...array_map(fn (string $field): string => 'change_fields.'.$field, [
             'work_date', 'branch_id', 'status', 'first_in', 'last_out', 'elapsed_minutes',
             'presence_minutes', 'late_minutes', 'early_minutes', 'exit_minutes',
             'short_minutes', 'balance_minutes', 'required_leave_at', 'intervals',
             'exits', 'policy_id', 'inputs', 'reviewed', 'shift_start', 'shift_source',
-            'shift_confidence', 'shift_evidence', 'holiday_ids',
+            'shift_confidence', 'shift_evidence', 'holiday_ids', 'overtime_minutes',
+            'overtime_basis', 'early_arrival_minutes', 'entitlement',
         ]),
         ...array_map(fn (string $field): string => 'inputs.'.$field, [
             'policy_version', 'work_pattern', 'hire_date', 'exit_status', 'last_working_day',
@@ -240,6 +244,23 @@ test('office attendance dynamic labels exist in both languages', function (): vo
     foreach ($labels as $label) {
         expect(data_get($english, 'office_ui.'.$label))->not->toBeNull()
             ->and(data_get($arabic, 'office_ui.'.$label))->not->toBeNull();
+    }
+});
+
+test('overtime display and report labels exist in both languages', function (): void {
+    $english = File::getRequire(lang_path('en/messages.php'));
+    $arabic = File::getRequire(lang_path('ar/messages.php'));
+    foreach (['after_end', 'rest_day', 'holiday'] as $basis) {
+        expect(data_get($english, 'overtime_ui.basis.'.$basis))->not->toBeNull()
+            ->and(data_get($arabic, 'overtime_ui.basis.'.$basis))->not->toBeNull();
+    }
+    foreach (['office_friday', 'shift_rest_day', 'security_rest_day'] as $basis) {
+        expect(data_get($english, 'overtime_ui.entitlement_basis.'.$basis))->not->toBeNull()
+            ->and(data_get($arabic, 'overtime_ui.entitlement_basis.'.$basis))->not->toBeNull();
+    }
+    foreach (['overtime_minutes', 'entitled_employees', 'entitlements_available_now', 'entitlements_overdue_now'] as $tile) {
+        expect(data_get($english, 'reporting_ui.tiles.'.$tile))->not->toBeNull()
+            ->and(data_get($arabic, 'reporting_ui.tiles.'.$tile))->not->toBeNull();
     }
 });
 

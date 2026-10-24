@@ -9,6 +9,8 @@ use App\Models\Attendance\DayDecision;
 use App\Models\Attendance\ManualPunch;
 use App\Models\Employee;
 use App\Services\Attendance\HolidayLabels;
+use App\Services\Attendance\Overtime;
+use App\Services\Attendance\Reporting\ReportFilters;
 use App\Services\Leave\DayReconciliation;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -104,6 +106,24 @@ class DayDetail extends AttendancePage
         return app(DayReconciliation::class)->for($this->employee(), $this->date)[$this->date] ?? [];
     }
 
+    public function overtime(): array
+    {
+        $filters = ReportFilters::fromArray($this->company(), [
+            'from' => $this->date, 'to' => $this->date, 'employee_ids' => [$this->employeeId],
+        ]);
+
+        return iterator_to_array(app(Overtime::class)->perDay($filters, $this->employeeId), false)[0] ?? [];
+    }
+
+    public function entitlement(): ?array
+    {
+        $filters = ReportFilters::fromArray($this->company(), [
+            'from' => $this->date, 'to' => $this->date, 'employee_ids' => [$this->employeeId],
+        ]);
+
+        return iterator_to_array(app(Overtime::class)->entitlements($filters), false)[0] ?? null;
+    }
+
     public function displayValue(mixed $value): string
     {
         if ($value === null) {
@@ -120,6 +140,13 @@ class DayDetail extends AttendancePage
     {
         if ($field === 'status' && is_string($value)) {
             return __('messages.office_ui.statuses.'.$value);
+        }
+        if ($field === 'overtime_basis' && is_string($value)) {
+            return __('messages.overtime_ui.basis.'.$value);
+        }
+        if ($field === 'entitlement' && is_array($value) && isset($value['basis'])) {
+            return number_format((float) ($value['quantity'] ?? 0), 1).' '.
+                __('messages.overtime_ui.entitlement_basis.'.$value['basis']);
         }
 
         return $this->displayValue($value);

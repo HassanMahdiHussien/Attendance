@@ -46,6 +46,14 @@ class OfficePolicyPage extends AttendancePage
 
     public int $inferenceToleranceMinutes = 120;
 
+    public int $overtimeMinMinutes = 30;
+
+    public int $overtimeStepMinutes = 15;
+
+    public int $restDayHalfMinutes = 240;
+
+    public int $restDayFullMinutes = 480;
+
     #[Locked]
     public array $initialValues = [];
 
@@ -82,6 +90,10 @@ class OfficePolicyPage extends AttendancePage
             $this->shiftRestDays = $policy->shift_rest_days;
             $this->securityMinPresenceMinutes = $policy->security_min_presence_minutes;
             $this->inferenceToleranceMinutes = $policy->inference_tolerance_minutes;
+            $this->overtimeMinMinutes = $policy->overtime_min_minutes;
+            $this->overtimeStepMinutes = $policy->overtime_step_minutes;
+            $this->restDayHalfMinutes = $policy->rest_day_half_minutes;
+            $this->restDayFullMinutes = $policy->rest_day_full_minutes;
         }
         $this->initialValues = $this->values();
     }
@@ -113,6 +125,10 @@ class OfficePolicyPage extends AttendancePage
             'shiftRestDays' => 'array', 'shiftRestDays.*' => 'integer|between:1,7',
             'securityMinPresenceMinutes' => 'required|integer|min:1|max:1440',
             'inferenceToleranceMinutes' => 'required|integer|min:1|max:1440',
+            'overtimeMinMinutes' => 'required|integer|min:0|max:1440',
+            'overtimeStepMinutes' => 'required|integer|min:1|max:1440',
+            'restDayHalfMinutes' => 'required|integer|min:1|max:1440',
+            'restDayFullMinutes' => 'required|integer|min:1|max:1440',
         ]);
         $values = $this->values();
         $changed = [];
@@ -145,6 +161,10 @@ class OfficePolicyPage extends AttendancePage
             'shift_min_presence_minutes' => $this->shiftMinPresenceMinutes, 'shift_rest_days' => $shiftRestDays,
             'security_min_presence_minutes' => $this->securityMinPresenceMinutes,
             'inference_tolerance_minutes' => $this->inferenceToleranceMinutes,
+            'overtime_min_minutes' => $this->overtimeMinMinutes,
+            'overtime_step_minutes' => $this->overtimeStepMinutes,
+            'rest_day_half_minutes' => $this->restDayHalfMinutes,
+            'rest_day_full_minutes' => $this->restDayFullMinutes,
         ];
     }
 }
