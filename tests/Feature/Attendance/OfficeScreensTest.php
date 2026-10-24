@@ -107,9 +107,10 @@ test('office day times remain left to right in the Arabic interface', function (
     Livewire::test(DailyAttendance::class)->assertSee('الحضور اليومي')->assertSee('dir="ltr"', escape: false);
 });
 
-test('office policy shows the current version and appends an effective version', function (): void {
+test('attendance policy shows every pattern section and appends an effective version', function (): void {
     Queue::fake([AssessDaysJob::class]);
-    Livewire::test(OfficePolicyPage::class)->assertSee('Office policy')->assertSee('Policy history')
+    Livewire::test(OfficePolicyPage::class)->assertSee('Attendance policy')->assertSee('Office')
+        ->assertSee('Shift')->assertSee('Security')->assertSee('Policy history')
         ->set('effectiveFrom', '2026-10-21')->set('flexMinutes', 45)
         ->set('reason', 'Approved hours update')->call('addVersion')->assertHasNoErrors();
     $latest = Policy::query()->where('company_id', $this->company->id)->orderByDesc('version')->firstOrFail();

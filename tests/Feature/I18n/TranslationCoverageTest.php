@@ -159,21 +159,28 @@ test('office attendance dynamic labels exist in both languages', function (): vo
         ]),
         ...array_map(fn (string $field): string => 'policy_fields.'.$field, [
             'office_start', 'flex_minutes', 'workday_minutes', 'min_presence_minutes',
-            'close_grace_minutes', 'exits_count_toward_balance', 'office_rest_days',
+            'absence_minutes', 'close_grace_minutes', 'exits_count_toward_balance', 'office_rest_days',
+            'shift_starts', 'shift_minutes', 'shift_break_minutes', 'shift_min_presence_minutes',
+            'shift_rest_days', 'security_min_presence_minutes', 'inference_tolerance_minutes',
         ]),
         ...array_map(fn (string $field): string => 'change_fields.'.$field, [
             'work_date', 'branch_id', 'status', 'first_in', 'last_out', 'elapsed_minutes',
             'presence_minutes', 'late_minutes', 'early_minutes', 'exit_minutes',
             'short_minutes', 'balance_minutes', 'required_leave_at', 'intervals',
-            'exits', 'policy_id', 'inputs', 'reviewed',
+            'exits', 'policy_id', 'inputs', 'reviewed', 'shift_start', 'shift_source',
+            'shift_confidence', 'shift_evidence',
         ]),
         ...array_map(fn (string $field): string => 'inputs.'.$field, [
             'policy_version', 'work_pattern', 'hire_date', 'exit_status', 'last_working_day',
             'branch_id', 'schedule_start', 'schedule_end', 'rest_days', 'reason',
         ]),
         ...array_map(fn (string $decision): string => 'decisions_list.'.$decision, [
-            'confirm_absence', 'withdraw_confirmation',
+            'confirm_absence', 'withdraw_confirmation', 'pick_shift', 'withdraw_shift',
         ]),
+        ...array_map(fn (string $source): string => 'shift_sources.'.$source, ['inferred', 'hr', 'unknown']),
+        ...array_map(fn (string $confidence): string => 'shift_confidences.'.$confidence, ['clear', 'leave_explained', 'unresolved']),
+        ...array_map(fn (string $field): string => 'shift_evidence_fields.'.$field, ['first_in', 'last_out', 'approved_leave_minutes']),
+        ...array_map(fn (string $section): string => 'policy_sections.'.$section, ['office', 'shift', 'security', 'inference']),
         ...array_map(fn (int $day): string => 'weekdays.'.$day, range(1, 7)),
         ...array_map(fn (string $trigger): string => 'triggers.'.$trigger, [
             'punches', 'coverage', 'exit', 'employee', 'policy', 'review', 'pending', 'unknown',

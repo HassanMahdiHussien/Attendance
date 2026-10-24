@@ -58,6 +58,14 @@ class PatternRule
         return null;
     }
 
+    public function source(Employee $employee): ?string
+    {
+        $version = $employee->versions()->orderByDesc('effective_from')->orderByDesc('id')
+            ->get(['source', 'changes'])->first(fn (EmployeeVersion $version): bool => array_key_exists('work_pattern', $version->changes ?? []));
+
+        return $version?->source;
+    }
+
     public function resolveReview(Employee $employee, User $actor): void
     {
         $issue = DataIssue::query()->where('company_id', $employee->company_id)

@@ -40,9 +40,14 @@ test('HR opens the four office attendance pages', function (): void {
         ->fill('password', 'password')
         ->press('Log in')
         ->assertSee('Attendance dashboard');
-    foreach (['daily' => 'Daily attendance', 'review' => 'Review queue', 'office-policy' => 'Office policy'] as $slug => $title) {
+    foreach (['daily' => 'Daily attendance', 'review' => 'Review queue', 'office-policy' => 'Attendance policy'] as $slug => $title) {
         $browser->navigate('/admin/'.$company->id.'/attendance/'.$slug)->assertSee($title)->assertNoJavaScriptErrors();
     }
+    // "Needs shift" is an option of the review filter: options are not visible text, so check the page source.
+    $browser->navigate('/admin/'.$company->id.'/attendance/review')->assertSee('Review queue')
+        ->assertSourceHas('Needs shift')->assertNoJavaScriptErrors();
+    $browser->navigate('/admin/'.$company->id.'/attendance/office-policy')->assertSee('Shift')
+        ->assertSee('Security')->assertNoJavaScriptErrors();
     $browser->navigate('/admin/'.$company->id.'/attendance/day?employee='.$employee->id.'&date=2026-10-21')
         ->assertSee('Attendance day')->assertNoJavaScriptErrors();
 });

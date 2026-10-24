@@ -14,18 +14,19 @@
         </div>
         <x-ui.card padding="none">
             <div class="overflow-x-auto"><table class="w-full text-start text-sm"><thead><tr>
-                @foreach (['employee', 'branch', 'status', 'first_in', 'last_out', 'elapsed', 'presence', 'late', 'early', 'short', 'balance', 'reviewed'] as $column)<th class="whitespace-nowrap p-3">{{ __('messages.office_ui.'.$column) }}</th>@endforeach
+                @foreach (['employee', 'branch', 'status', 'shift', 'first_in', 'last_out', 'elapsed', 'presence', 'late', 'early', 'short', 'balance', 'reviewed'] as $column)<th class="whitespace-nowrap p-3">{{ __('messages.office_ui.'.$column) }}</th>@endforeach
             </tr></thead><tbody>
                 @forelse ($this->days() as $day)
                     <tr class="border-t" wire:key="office-day-{{ $day->id }}">
                         <td class="p-3"><a class="font-semibold text-primary underline" href="{{ $this->detailUrl($day) }}">{{ $day->employee->name }}</a><br><bdi class="font-mono text-xs" dir="ltr">{{ $day->employee->employee_code }}</bdi></td>
                         <td class="p-3">{{ $day->branch?->name ?? '—' }}</td>
                         <td class="p-3"><x-ui.badge :tone="match ($day->status) { 'present' => 'green', 'absent', 'device_outage' => 'red', 'missing_punch', 'pending' => 'amber', default => 'gray' }">{{ __('messages.office_ui.statuses.'.$day->status) }}</x-ui.badge></td>
+                        <td class="p-3"><bdi class="font-mono" dir="ltr">{{ \App\Services\Attendance\ShiftDisplay::hours($day->shift_start, $day->policy?->shift_minutes) ?? '—' }}</bdi>@if ($day->shift_source)<span class="block text-xs">{{ __('messages.office_ui.shift_sources.'.$day->shift_source) }}</span>@endif</td>
                         <td class="p-3 font-mono" dir="ltr">{{ $day->first_in?->format('H:i') ?? '—' }}</td><td class="p-3 font-mono" dir="ltr">{{ $day->last_out?->format('H:i') ?? '—' }}</td>
                         @foreach (['elapsed_minutes', 'presence_minutes', 'late_minutes', 'early_minutes', 'short_minutes', 'balance_minutes'] as $field)<td class="p-3 font-mono" dir="ltr">{{ $this->minutes($day->{$field}) }}</td>@endforeach
                         <td class="p-3">{{ $day->reviewed ? __('messages.office_ui.yes') : '—' }}</td>
                     </tr>
-                @empty <tr><td colspan="12" class="p-5">{{ __('messages.office_ui.no_days') }}</td></tr> @endforelse
+                @empty <tr><td colspan="13" class="p-5">{{ __('messages.office_ui.no_days') }}</td></tr> @endforelse
             </tbody></table></div>
             <div class="p-3">{{ $this->days()->links() }}</div>
         </x-ui.card>

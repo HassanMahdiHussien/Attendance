@@ -59,14 +59,19 @@ class ReviewQueue extends AttendancePage
             $query->where('branch_id', ctype_digit($this->branchId) ? (int) $this->branchId : 0);
         }
         if ($this->reviewState === 'awaiting') {
-            $query->whereIn('status', ['missing_punch', 'absent'])->where('reviewed', false);
+            $query->whereIn('status', ['missing_punch', 'absent', 'shift_unresolved'])->where('reviewed', false);
+        } elseif ($this->reviewState === 'needs_shift') {
+            $query->where('status', 'shift_unresolved')->where('reviewed', false);
         } elseif ($this->reviewState === 'reviewed') {
             $query->where(function ($query): void {
                 $query->where('reviewed', true)->orWhereExists(function ($subquery): void {
                     $subquery->selectRaw('1')->from('attendance_manual_punches as manual')
                         ->whereColumn('manual.company_id', 'attendance_days.company_id')
                         ->whereColumn('manual.employee_id', 'attendance_days.employee_id')
-                        ->whereRaw('DATE(manual.punched_at) = attendance_days.work_date')
+                        ->where(function ($punchDate): void {
+                            $punchDate->whereRaw('DATE(manual.punched_at) = attendance_days.work_date')
+                                ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(attendance_days.inputs, '$.work_pattern')) IN ('shift', 'security') AND manual.role = 'check_out' AND DATE(manual.punched_at) = DATE_ADD(attendance_days.work_date, INTERVAL 1 DAY) AND TIME(manual.punched_at) <= '02:00:00'");
+                        })
                         ->whereNull('manual.reverses_id')->whereNotExists(function ($reversals): void {
                             $reversals->selectRaw('1')->from('attendance_manual_punches as reversal')
                                 ->whereColumn('reversal.company_id', 'manual.company_id')

@@ -2,6 +2,7 @@
 
 use App\Enums\UserRole;
 use App\Filament\Admin\Pages\Attendance\AttendanceIssues;
+use App\Filament\Admin\Resources\EmployeeResource\Pages\EditEmployee;
 use App\Models\Attendance\DataIssue;
 use App\Models\Branch;
 use App\Models\Company;
@@ -62,6 +63,7 @@ test('a set pattern stays set and an HR change resolves a flagged security revie
 
     app(EmployeeHistory::class)->record($employee, ['work_pattern' => 'office'], today(), 'manual', $this->actor);
     expect($employee->fresh()->work_pattern?->value)->toBe('office')
+        ->and($rules->source($employee))->toBe('manual')
         ->and($issue->fresh()->status)->toBe('resolved')
         ->and($rules->apply($employee, today()))->toBeNull();
 });
@@ -97,4 +99,20 @@ test('HR may dismiss a pattern review but cannot resolve it without changing the
     Livewire::test(AttendanceIssues::class)->set('notes.'.$issue->id, 'Security role confirmed.')
         ->call('close', $issue->id, 'dismiss');
     expect($issue->fresh()->status)->toBe('dismissed');
+});
+
+test('employee profile and edit form show a rule-set pattern with its open review issue', function (): void {
+    $employee = Employee::factory()->create([
+        'branch_id' => $this->branch->id, 'position' => 'Information Security Manager', 'staff_category' => 'B',
+    ]);
+    app(PatternRule::class)->apply($employee, today());
+    expect(app(PatternRule::class)->source($employee))->toBe('rule');
+
+    $this->actingAs($this->actor)->get(route('employees.show', $employee))->assertOk()
+        ->assertSee('Set by rule')->assertSee('Review work pattern issue');
+    actingInAdminTenant($this, $this->actor, $this->company);
+    Livewire::test(EditEmployee::class, ['record' => $employee->id])
+        ->assertSee('Set by rule')->assertSee('Review work pattern issue');
+    Livewire::withQueryParams(['type' => 'pattern_review', 'subjectKey' => 'employee:'.$employee->id])
+        ->test(AttendanceIssues::class)->assertSee('employee:'.$employee->id);
 });

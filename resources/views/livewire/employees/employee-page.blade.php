@@ -11,6 +11,12 @@
             @endif
         </p>
         <p class="mt-2 text-sm text-gray-500">{{ __('Hire date') }}: <bdi dir="ltr">{{ \App\Support\Format\Ui::date($employee->hire_date) }}</bdi></p>
+        @if ($patternSource === 'rule')
+            <p class="mt-2 text-sm text-gray-500">{{ __('Work pattern') }}: {{ __('messages.employee_history.set_by_rule') }}</p>
+        @endif
+        @if ($patternIssue)
+            <a class="ui-link mt-2 inline-block" href="{{ \App\Filament\Admin\Pages\Attendance\AttendanceIssues::getUrl(panel: 'admin', tenant: $employee->company).'?'.http_build_query(['type' => 'pattern_review', 'subjectKey' => 'employee:'.$employee->id]) }}">{{ __('messages.employee_history.pattern_review_link') }}</a>
+        @endif
     </x-ui.card>
     <section aria-label="{{ __('messages.attendance.title') }}">
         <livewire:attendance.employee-attendance :employee-id="$employee->id" />

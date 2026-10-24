@@ -266,6 +266,8 @@ class AttendanceSummary
             'day_id' => (int) $day->id, 'employee_id' => (int) $day->employee_id,
             'work_date' => $day->work_date->toDateString(), 'branch_id' => $day->branch_id,
             'status' => $day->status, 'reviewed' => (bool) $day->reviewed, 'minutes' => $minutes,
+            'shift_start' => $day->shift_start, 'shift_source' => $day->shift_source,
+            'shift_confidence' => $day->shift_confidence, 'shift_minutes' => $day->policy?->shift_minutes,
             'first_in' => $day->first_in?->format('Y-m-d H:i:s'),
             'last_out' => $day->last_out?->format('Y-m-d H:i:s'),
             'required_leave_at' => $day->required_leave_at?->format('Y-m-d H:i:s'),

@@ -188,7 +188,7 @@ class DayReview
         $day = Day::query()->where('company_id', $employee->company_id)->where('employee_id', $employee->id)
             ->whereDate('work_date', $date)->whereNull('superseded_by_run_id')->first();
         if ($day === null || ($day->reviewed && $day->status !== 'missing_punch')
-            || ! in_array($day->status, ['absent', 'missing_punch'], true)) {
+            || ! in_array($day->status, ['absent', 'missing_punch', 'shift_unresolved'], true)) {
             throw ValidationException::withMessages(['review' => __('messages.office_attendance.not_reviewable')]);
         }
 

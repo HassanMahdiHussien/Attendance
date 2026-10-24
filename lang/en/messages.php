@@ -42,6 +42,7 @@ return [
         'invalid_reference' => 'The selected employee or branch is not in this company.',
         'invalid_pattern' => 'Choose a valid work pattern.',
         'pattern_review_resolved' => 'HR changed the work pattern.',
+        'set_by_rule' => 'Set by rule', 'pattern_review_link' => 'Review work pattern issue',
         'sources' => ['initial' => 'Initial', 'manual' => 'Manual', 'import' => 'Import', 'chat' => 'Chat', 'rule' => 'Rule'],
         'fields' => [
             'name' => 'Name', 'name_en' => 'English name', 'department' => 'Department',
@@ -232,7 +233,7 @@ return [
     ],
     'office_ui' => [
         'daily_title' => 'Daily attendance', 'review_title' => 'Review queue',
-        'policy_title' => 'Office policy', 'detail_title' => 'Attendance day',
+        'policy_title' => 'Attendance policy', 'detail_title' => 'Attendance day',
         'office_presence_replacement_reason' => 'Office short-hours threshold: 9 hours; absence: 8 hours',
         'date' => 'Date', 'branch' => 'Branch', 'status' => 'Status', 'all' => 'All',
         'employee' => 'Employee', 'first_in' => 'First in', 'last_out' => 'Last out',
@@ -241,7 +242,12 @@ return [
         'short' => 'Short hours', 'balance' => 'Balance', 'reviewed' => 'Reviewed',
         'yes' => 'Yes', 'no' => 'No', 'from' => 'From', 'to' => 'To',
         'review_state' => 'Review state', 'awaiting' => 'Awaiting review',
-        'reviewed_days' => 'Reviewed days', 'review_action' => 'Review day',
+        'reviewed_days' => 'Reviewed days', 'review_action' => 'Review day', 'needs_shift' => 'Needs shift',
+        'shift' => 'Shift', 'shift_source' => 'Shift source', 'shift_confidence' => 'Confidence',
+        'shift_evidence' => 'Shift evidence', 'pick_shift' => 'Pick shift', 'withdraw_shift' => 'Withdraw shift choice',
+        'shift_sources' => ['inferred' => 'Inferred', 'hr' => 'Chosen by HR', 'unknown' => 'Unknown'],
+        'shift_confidences' => ['clear' => 'Clear', 'leave_explained' => 'Explained by leave', 'unresolved' => 'Unresolved'],
+        'shift_evidence_fields' => ['first_in' => 'First in', 'last_out' => 'Last out', 'approved_leave_minutes' => 'Approved leave (minutes)'],
         'role' => 'Role', 'time' => 'Time', 'reason' => 'Reason',
         'check_in' => 'Check-in', 'check_out' => 'Check-out',
         'add_time' => 'Add missing time', 'confirm_absence' => 'Confirm absence',
@@ -274,8 +280,13 @@ return [
             'workday_minutes' => 'Workday (minutes)', 'min_presence_minutes' => 'Minimum presence (minutes)',
             'close_grace_minutes' => 'Close grace (minutes)',
             'exits_count_toward_balance' => 'Count exits in balance',
-            'office_rest_days' => 'Office rest days',
+            'office_rest_days' => 'Office rest days', 'absence_minutes' => 'Absence (minutes)',
+            'shift_starts' => 'Shift starts', 'shift_minutes' => 'Shift length (minutes)',
+            'shift_break_minutes' => 'Shift break (minutes)', 'shift_min_presence_minutes' => 'Shift short-hours threshold (minutes)',
+            'shift_rest_days' => 'Shift rest days', 'security_min_presence_minutes' => 'Security short-hours threshold (minutes)',
+            'inference_tolerance_minutes' => 'Inference tolerance (minutes)',
         ],
+        'policy_sections' => ['office' => 'Office', 'shift' => 'Shift', 'security' => 'Security', 'inference' => 'Shift inference'],
         'inputs' => [
             'policy_version' => 'Policy version', 'work_pattern' => 'Work pattern',
             'hire_date' => 'Hire date', 'exit_status' => 'Exit status', 'last_working_day' => 'Last working day',
@@ -291,9 +302,12 @@ return [
             'balance_minutes' => 'Balance', 'required_leave_at' => 'Required leaving',
             'intervals' => 'Intervals', 'exits' => 'Exits',
             'policy_id' => 'Policy', 'inputs' => 'Employee and rule inputs', 'reviewed' => 'Reviewed',
+            'shift_start' => 'Shift start', 'shift_source' => 'Shift source',
+            'shift_confidence' => 'Shift confidence', 'shift_evidence' => 'Shift evidence',
         ],
         'decisions_list' => [
             'confirm_absence' => 'Confirmed absence', 'withdraw_confirmation' => 'Withdrew confirmation',
+            'pick_shift' => 'Picked shift', 'withdraw_shift' => 'Withdrew shift choice',
         ],
         'triggers' => [
             'punches' => 'Punch processing', 'coverage' => 'Coverage change',
@@ -304,7 +318,7 @@ return [
         'weekdays' => [1 => 'Monday', 2 => 'Tuesday', 3 => 'Wednesday', 4 => 'Thursday', 5 => 'Friday', 6 => 'Saturday', 7 => 'Sunday'],
     ],
     'office_attendance' => [
-        'reassess_command' => 'Reassess pending office attendance days after their close time.',
+        'reassess_command' => 'Reassess pending attendance days after their close time.',
         'outage_cleared' => 'Approved check-in activity was found for this date.',
         'invalid_time' => 'Enter a valid check-in or check-out time.',
         'invalid_shift' => 'Choose a valid shift for this day.',
@@ -314,7 +328,7 @@ return [
     ],
     'office_policy' => [
         'reason_required' => 'A reason is required for a policy change.',
-        'invalid' => 'The office policy values are invalid.',
+        'invalid' => 'The attendance policy values are invalid.',
     ],
     'leave_ui' => [
         'navigation' => 'Leave',
@@ -516,9 +530,9 @@ return [
         'pending_note' => 'This day is pending and is not a completed absence.',
         'tiles' => [
             'active_employees' => 'Active employees', 'office_employees_assessed' => 'Office employees assessed',
-            'assessed_working_days' => 'Assessed office days',
+            'assessed_working_days' => 'Assessed working days',
             'present' => 'Present days', 'absent' => 'Absent days', 'missing_punch' => 'Missing punches',
-            'pending' => 'Pending days', 'late' => 'Lateness', 'early' => 'Early departure',
+            'pending' => 'Pending days', 'shift_unresolved' => 'Needs shift', 'late' => 'Lateness', 'early' => 'Early departure',
             'short_hours_alerts' => 'Short-hours alerts', 'balance' => 'Balance requiring reconciliation',
             'reconciled' => 'Reconciled minutes', 'remaining' => 'Remaining minutes',
             'leave_status:pending' => 'Leave pending approval', 'leave_status:draft' => 'Draft leave',

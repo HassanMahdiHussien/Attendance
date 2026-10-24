@@ -44,7 +44,7 @@ class DailyAttendance extends AttendancePage
 
     public function days(): LengthAwarePaginator
     {
-        return $this->query()->with(['employee', 'branch'])->orderBy('employee_id')->paginate(50);
+        return $this->query()->with(['employee', 'branch', 'policy'])->orderBy('employee_id')->paginate(50);
     }
 
     public function summary(): array
@@ -81,6 +81,6 @@ class DailyAttendance extends AttendancePage
 
     public static function statuses(): array
     {
-        return ['pending', 'present', 'missing_punch', 'absent', 'rest_day', 'not_employed', 'pattern_missing', 'device_outage'];
+        return ['pending', 'present', 'missing_punch', 'shift_unresolved', 'absent', 'rest_day', 'not_employed', 'pattern_missing', 'device_outage'];
     }
 }

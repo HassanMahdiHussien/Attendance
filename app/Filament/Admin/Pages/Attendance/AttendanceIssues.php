@@ -6,6 +6,7 @@ use App\Filament\Admin\Resources\Attendance\AttendancePage;
 use App\Models\Attendance\DataIssue;
 use App\Services\Attendance\DataIssues;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Livewire\Attributes\Url;
 
 class AttendanceIssues extends AttendancePage
 {
@@ -13,7 +14,11 @@ class AttendanceIssues extends AttendancePage
 
     protected string $view = 'filament.admin.pages.attendance.issues';
 
+    #[Url]
     public string $type = '';
+
+    #[Url]
+    public string $subjectKey = '';
 
     public string $status = 'open';
 
@@ -33,6 +38,7 @@ class AttendanceIssues extends AttendancePage
     {
         return DataIssue::query()->where('company_id', $this->company()->id)
             ->when($this->type !== '', fn ($query) => $query->where('type', $this->type))
+            ->when($this->subjectKey !== '', fn ($query) => $query->where('subject_key', $this->subjectKey))
             ->when($this->status !== '', fn ($query) => $query->where('status', $this->status))
             ->latest('id')->paginate(25);
     }

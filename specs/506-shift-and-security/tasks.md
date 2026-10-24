@@ -17,8 +17,8 @@
 - [x] T007 Feature tests: PRD §25 7, 8, 9; office 9 h alert with 8 h absence for leave; night shifts; outage; recalculation; isolation
 
 ## Step 3 — Statuses and screens
-- [ ] T008 shift_unresolved in review gate/queue/filters/summary/exports; DayReview pick/withdraw shift
-- [ ] T009 Daily attendance + day detail shift and evidence; "Attendance policy" page sections; translations, UI inventory; Livewire + browser smoke tests
+- [x] T008 shift_unresolved in review gate/queue/filters/summary/exports; DayReview pick/withdraw shift
+- [x] T009 Daily attendance + day detail shift and evidence; "Attendance policy" page sections; translations, UI inventory; Livewire + browser smoke tests
 
 ## Step 4 — Verification (orchestrator)
 - [ ] T010 Real HC + punches with an assumed pattern split; docs; PR
