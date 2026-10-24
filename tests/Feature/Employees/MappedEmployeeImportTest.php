@@ -269,3 +269,25 @@ test('unknown branches name the bad mapped value and unmatched managers remain w
     expect($review->errors())->toBe(0)
         ->and($review->rows[0]['warnings'])->not->toBeEmpty();
 });
+
+test('a new employee counts from the hire date and later imports from their effective date', function (): void {
+    $mapping = app(ColumnMapping::class)->suggest(hcHeaders());
+    $import = app(EmployeeImport::class);
+    $first = hcFile([hcRow(12345679, 'Fake Manager', '', 39151), hcRow(12345678, 'Fake Person', '', 39151, '12345679', '', 'Al Waha Company')]);
+    $preview = $import->previewMapped($this->company, $first, 'full', today()->toDateString(), $mapping);
+    $import->commitMapped($this->company, $first, $this->actor, 'full', today()->toDateString(), $mapping, $preview->token);
+    $employee = Employee::query()->where('employee_code', '12345678')->firstOrFail();
+    $manager = Employee::query()->where('employee_code', '12345679')->firstOrFail();
+    $history = app(EmployeeHistory::class);
+
+    expect($history->asOf($employee, '2020-01-01')['legal_entity'])->toBe('Al Waha Company')
+        ->and($history->asOf($employee, '2020-01-01')['manager_employee_id'])->toBe($manager->id)
+        ->and($history->asOf($employee, '2007-03-09')['legal_entity'])->toBeNull();
+
+    $second = hcFile([hcRow(12345679, 'Fake Manager', '', 39151), hcRow(12345678, 'Fake Person', '', 39151, '12345679', '', 'Sardkar Company')]);
+    $repeat = $import->previewMapped($this->company, $second, 'full', today()->toDateString(), $mapping);
+    $import->commitMapped($this->company, $second, $this->actor, 'full', today()->toDateString(), $mapping, $repeat->token);
+
+    expect($history->asOf($employee->fresh(), today()->subDay())['legal_entity'])->toBe('Al Waha Company')
+        ->and($history->asOf($employee->fresh(), today())['legal_entity'])->toBe('Sardkar Company');
+});

@@ -286,7 +286,8 @@ class MappedEmployeeImport
                     $identity = Arr::only($values, ['name', 'name_en', 'branch_id', 'hire_date', 'gender'])
                         + ['employee_code' => $row['code'], 'company_id' => $company->id];
                     $identity['gender'] ??= 'unspecified';
-                    $employee = $this->history->create($identity, $values, $effectiveDate, 'import', $actor, batchId: $batch->id);
+                    $employee = $this->history->create($identity, $values, $this->firstImportDate($values, $effectiveDate),
+                        'import', $actor, batchId: $batch->id);
                     $byCode->put($row['code'], $employee);
                 }
                 foreach ($preview->rows as $row) {
@@ -296,7 +297,8 @@ class MappedEmployeeImport
                         $values['manager_employee_id'] = $byCode->get($row['resolved_manager_code'])?->id;
                     }
                     if ($values !== []) {
-                        $this->history->record($employee, $values, $effectiveDate, 'import', $actor, batchId: $batch->id);
+                        $this->history->record($employee, $values, $row['status'] === 'new'
+                            ? $this->firstImportDate($row['values'], $effectiveDate) : $effectiveDate, 'import', $actor, batchId: $batch->id);
                     }
                     if ($mode === 'full' && $employee->exit_status === EmployeeExitStatus::PendingReview) {
                         $this->exitReview->reappear($employee, $batch, $actor);
@@ -326,6 +328,15 @@ class MappedEmployeeImport
     {
         return hash_hmac('sha256', json_encode([$company->id, auth()->id(), $preview->hash, $mode, $date, $mapping,
             $preview->rows, $preview->missing], JSON_THROW_ON_ERROR), config('app.key'));
+    }
+
+    // A new employee's first imported values are their record since hiring; dating them from the upload
+    // would leave earlier days (holidays, history) without legal entity, department or manager.
+    private function firstImportDate(array $values, string $effectiveDate): string
+    {
+        $hired = $values['hire_date'] ?? null;
+
+        return is_string($hired) && $hired !== '' && $hired < $effectiveDate ? $hired : $effectiveDate;
     }
 
     private function effectiveValues(Employee $employee, string $date): array
