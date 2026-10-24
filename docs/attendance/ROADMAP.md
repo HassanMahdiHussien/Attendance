@@ -78,4 +78,5 @@ Each spec is one branch and one PR, built with the spec-kit flow (`/speckit-plan
 | 505 employee-page-and-dashboard | Attendance section on the employee page, attendance dashboard, search, Excel export and printable statement | 504, Q5 |
 | 506 shift-and-security | Shift/security inference (±2 h, HR picks unresolved), default pattern rule, attendance policy page | 505 |
 | 507 holidays | Official holidays: announcement upload (PDF/image/email) read by Claude into a proposal, HR approval with append-only versions, scope by legal entity/branch/pattern, `holiday` / `holiday_worked` / `rest_day_worked` days, leave skips holidays, retroactive reprocessing | 506, Q7 |
-| later | Overtime & compensatory entitlements; notifications; description AI; admin chat; **merge back into Displanary** | — |
+| 508 leave-balance | Annual leave balance upload (company report, separate from HC), dated append-only snapshots, current balance + history on the employee page, dashboard and statement | 507 |
+| later | 509 overtime & compensatory entitlements; notifications; description AI; admin chat; **merge back into Displanary** | — |

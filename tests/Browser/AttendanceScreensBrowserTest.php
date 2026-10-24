@@ -76,6 +76,23 @@ test('HR opens the leave pages', function (): void {
         ->assertSee('Leave request')->assertNoJavaScriptErrors();
 });
 
+test('HR opens leave balance upload and uploads pages', function (): void {
+    $company = Company::factory()->create();
+    completeCompanySetup($company);
+    $user = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::HrStaff]);
+    app(TenantContext::class)->clear();
+
+    $browser = visitBound('/login')
+        ->fill('email', $user->email)
+        ->fill('password', 'password')
+        ->press('Log in')
+        ->assertSee('Attendance dashboard');
+    $browser->navigate('/admin/'.$company->id.'/leave/balance/upload')
+        ->assertSee('Upload leave balance')->assertNoJavaScriptErrors();
+    $browser->navigate('/admin/'.$company->id.'/leave/balance/uploads')
+        ->assertSee('Leave balance uploads')->assertNoJavaScriptErrors();
+});
+
 test('HR opens the holidays list and a draft review', function (): void {
     $company = Company::factory()->create();
     completeCompanySetup($company);

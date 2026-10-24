@@ -6,6 +6,7 @@ use App\Models\Attendance\DataIssue;
 use App\Models\Employee;
 use App\Models\User;
 use App\Policies\EmployeeProfilePolicy;
+use App\Services\Leave\LeaveBalances;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -37,6 +38,9 @@ class EmployeeProfile
                 'patternSource' => app(PatternRule::class)->source($employee),
                 'patternIssue' => DataIssue::query()->where('company_id', $employee->company_id)
                     ->where('open_key', 'pattern_review|employee|employee:'.$employee->id)->first(),
+                'annualBalance' => app(LeaveBalances::class)->current($employee),
+                'annualBalanceHistory' => app(LeaveBalances::class)->history($employee),
+                'annualBalancePresent' => app(LeaveBalances::class)->presentInLatestUpload($employee),
             ];
         });
     }

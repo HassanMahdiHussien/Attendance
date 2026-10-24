@@ -6,6 +6,7 @@ use App\Services\Attendance\Reporting\ReportTiles;
 use App\Services\Attendance\TransactionFile;
 use App\Services\Employees\ColumnMapping;
 use App\Services\Employees\EmployeeHistory;
+use App\Services\Leave\LeaveBalanceFile;
 use App\Services\Leave\LeaveFile;
 use Illuminate\Support\Facades\File;
 
@@ -229,6 +230,44 @@ test('office attendance dynamic labels exist in both languages', function (): vo
     foreach ($labels as $label) {
         expect(data_get($english, 'office_ui.'.$label))->not->toBeNull()
             ->and(data_get($arabic, 'office_ui.'.$label))->not->toBeNull();
+    }
+});
+
+test('leave balance import errors and issue type exist in both languages', function (): void {
+    $english = File::getRequire(lang_path('en/messages.php'));
+    $arabic = File::getRequire(lang_path('ar/messages.php'));
+    foreach (['formula_without_value', 'ambiguous_code', 'invalid_number', 'employee_code_required', 'remaining_days_required'] as $reason) {
+        expect(data_get($english, 'leave_balance.reasons.'.$reason))->not->toBeNull()
+            ->and(data_get($arabic, 'leave_balance.reasons.'.$reason))->not->toBeNull();
+    }
+    foreach (['attendance_import', 'attendance_ui'] as $group) {
+        expect(data_get($english, $group.'.issue_types.leave_balance_unknown'))->not->toBeNull()
+            ->and(data_get($arabic, $group.'.issue_types.leave_balance_unknown'))->not->toBeNull();
+    }
+});
+
+test('leave balance screen labels exist in both languages', function (): void {
+    $english = File::getRequire(lang_path('en/messages.php'));
+    $arabic = File::getRequire(lang_path('ar/messages.php'));
+    foreach (LeaveBalanceFile::FIELDS as $field) {
+        expect(data_get($english, 'leave_balance_ui.fields.'.$field))->not->toBeNull()
+            ->and(data_get($arabic, 'leave_balance_ui.fields.'.$field))->not->toBeNull();
+    }
+    foreach (['rows', 'matched', 'unknown', 'duplicate', 'invalid', 'negative', 'changed', 'unchanged', 'missing', 'imported'] as $count) {
+        expect(data_get($english, 'leave_balance_ui.counts.'.$count))->not->toBeNull()
+            ->and(data_get($arabic, 'leave_balance_ui.counts.'.$count))->not->toBeNull();
+    }
+    foreach (['queued', 'running', 'completed', 'failed'] as $state) {
+        expect(data_get($english, 'leave_balance_ui.states.'.$state))->not->toBeNull()
+            ->and(data_get($arabic, 'leave_balance_ui.states.'.$state))->not->toBeNull();
+    }
+    foreach (['unknown', 'duplicate', 'invalid'] as $outcome) {
+        expect(data_get($english, 'leave_balance_ui.outcomes.'.$outcome))->not->toBeNull()
+            ->and(data_get($arabic, 'leave_balance_ui.outcomes.'.$outcome))->not->toBeNull();
+    }
+    foreach (['invalid_file', 'stored_file_unavailable', 'processing_failed'] as $failure) {
+        expect(data_get($english, 'leave_balance_ui.failures.'.$failure))->not->toBeNull()
+            ->and(data_get($arabic, 'leave_balance_ui.failures.'.$failure))->not->toBeNull();
     }
 });
 

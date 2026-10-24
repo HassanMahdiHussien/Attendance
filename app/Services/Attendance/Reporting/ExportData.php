@@ -10,6 +10,7 @@ use App\Models\Leave\Allocation;
 use App\Models\Leave\LeaveRequest;
 use App\Models\Leave\RequestDay;
 use App\Models\Leave\RequestDecision;
+use App\Services\Leave\LeaveBalances;
 use App\Services\Leave\LeaveExplanation;
 use Generator;
 
@@ -53,7 +54,7 @@ class ExportData
         $managers = $filters->managerEmployeeIds === [] ? __('messages.reporting_ui.all')
             : Employee::query()->whereIn('id', $filters->managerEmployeeIds)->pluck('employee_code')->implode(', ');
 
-        return [
+        $header = [
             [__('messages.export_ui.report'), __('messages.export_ui.kinds.'.$export->kind)],
             [__('messages.export_ui.company'), $company->name],
             [__('messages.export_ui.period'), $filters->from.' — '.$filters->to],
@@ -67,6 +68,16 @@ class ExportData
             [__('messages.export_ui.generated_by'), $requestedBy],
             [__('messages.export_ui.last_update'), $freshness['runs']['reconciliation'] ?? $freshness['runs']['assessment'] ?? $freshness['sources']['punches'] ?? __('messages.export_ui.never')],
         ];
+        if ($export->kind === 'employee_statement_xlsx' && count($filters->employeeIds) === 1) {
+            $employee = Employee::query()->findOrFail($filters->employeeIds[0]);
+            $balance = app(LeaveBalances::class)->current($employee);
+            if ($balance !== null) {
+                $header[] = [__('messages.leave_balance_ui.annual_balance'), number_format((float) $balance->remaining_days, 2).' '.__('messages.leave_balance_ui.days')];
+                $header[] = [__('messages.leave_balance_ui.balance_date'), $balance->balance_date->toDateString()];
+            }
+        }
+
+        return $header;
     }
 
     public function rows(AttendanceExport $export, ReportFilters $filters): Generator
@@ -206,7 +217,8 @@ class ExportData
         $days = iterator_to_array($this->rows($export, $filters), false);
 
         return ['company' => $company, 'employee' => $employee, 'filters' => $filters,
-            'totals' => $totals, 'days' => $days, 'header' => $this->header($export, $company, $filters)];
+            'totals' => $totals, 'days' => $days, 'header' => $this->header($export, $company, $filters),
+            'annual_balance' => app(LeaveBalances::class)->current($employee)];
     }
 
     private function meals(ReportFilters $filters): Generator

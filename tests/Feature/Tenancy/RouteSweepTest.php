@@ -8,6 +8,7 @@ use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\EmployeeImportBatch;
+use App\Models\Leave\BalanceBatch;
 use App\Models\Leave\ImportBatch as LeaveImportBatch;
 use App\Models\Leave\LeaveRequest;
 use App\Models\Location;
@@ -53,6 +54,9 @@ test('a company user cannot reach another company through any parameterised GET 
         $leaveBatch = LeaveImportBatch::factory()->create([
             'company_id' => $b->id, 'uploaded_by' => $user->id, 'file_path' => 'sweep/'.$marker.'.txt',
         ]);
+        $balanceBatch = BalanceBatch::factory()->create([
+            'company_id' => $b->id, 'uploaded_by' => $user->id, 'file_path' => 'sweep/'.$marker.'.txt',
+        ]);
         $export = AttendanceExport::factory()->create([
             'company_id' => $b->id, 'requested_by' => $user->id, 'file_path' => 'sweep/'.$marker.'.txt',
         ]);
@@ -73,6 +77,7 @@ test('a company user cannot reach another company through any parameterised GET 
         return [
             'company' => $b->id, 'tenant' => $b->id, 'employee' => $employee->id,
             'batch' => $batch->id, 'attendanceBatch' => $attendanceBatch->id, 'leaveBatch' => $leaveBatch->id,
+            'balanceBatch' => $balanceBatch->id,
             'export' => $export->id, 'source' => $holidaySource->id, 'part' => 0,
             'foreignLeaveRequest' => $foreignLeaveRequest->id,
             'path' => 'sweep/'.$marker.'.txt',

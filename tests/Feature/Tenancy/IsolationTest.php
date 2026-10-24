@@ -32,6 +32,11 @@ use App\Models\EmployeeImportBatch;
 use App\Models\EmployeeImportMapping;
 use App\Models\EmployeeVersion;
 use App\Models\Leave\Allocation as LeaveAllocation;
+use App\Models\Leave\Balance as LeaveBalance;
+use App\Models\Leave\BalanceBatch as LeaveBalanceBatch;
+use App\Models\Leave\BalanceBatchEvent as LeaveBalanceBatchEvent;
+use App\Models\Leave\BalanceMapping as LeaveBalanceMapping;
+use App\Models\Leave\BalanceRow as LeaveBalanceRow;
 use App\Models\Leave\Credit as LeaveCredit;
 use App\Models\Leave\ImportBatch as LeaveImportBatch;
 use App\Models\Leave\ImportBatchEvent as LeaveImportBatchEvent;
@@ -58,6 +63,8 @@ dataset('tenant models', [
     Holiday::class, HolidaySource::class, HolidayVersion::class,
     AttendanceExport::class, AttendanceExportEvent::class,
     LeaveImportBatch::class, LeaveImportBatchEvent::class, LeaveImportMapping::class,
+    LeaveBalanceBatch::class, LeaveBalanceBatchEvent::class, LeaveBalanceMapping::class,
+    LeaveBalance::class, LeaveBalanceRow::class,
     LeaveType::class, LeaveRequest::class, LeaveImportRow::class, LeaveRequestVersion::class,
     LeaveRequestDecision::class, LeaveProcessingRun::class, LeaveRequestDay::class,
     LeaveCredit::class, LeaveAllocation::class,
