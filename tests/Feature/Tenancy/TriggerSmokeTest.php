@@ -22,9 +22,11 @@ use App\Models\Leave\Balance as LeaveBalance;
 use App\Models\Leave\BalanceBatch as LeaveBalanceBatch;
 use App\Models\Leave\BalanceBatchEvent as LeaveBalanceBatchEvent;
 use App\Models\Leave\BalanceRow as LeaveBalanceRow;
+use App\Models\Leave\EntitlementConsumption;
 use App\Models\Leave\ImportBatch as LeaveImportBatch;
 use App\Models\Leave\ImportBatchEvent as LeaveImportBatchEvent;
 use App\Models\Leave\ImportRow as LeaveImportRow;
+use App\Models\Leave\ProcessingRun as LeaveProcessingRun;
 use App\Models\Leave\RequestDecision as LeaveRequestDecision;
 use App\Models\Leave\RequestVersion as LeaveRequestVersion;
 use App\Support\Tenancy\TenantContext;
@@ -91,6 +93,27 @@ test('rest day entitlements permit only one supersession and never a rewrite or 
         'DELETE FROM `attendance_rest_day_entitlements` WHERE `id` = ?',
     ] as $index => $sql) {
         $bindings = $index === 1 ? [$run->id, $entitlement->id] : [$entitlement->id];
+        expect(fn () => DB::statement($sql, $bindings))->toThrow(QueryException::class);
+    }
+});
+
+test('entitlement consumption rows permit only one supersession', function (): void {
+    $company = Company::factory()->create();
+    app(TenantContext::class)->setCompany($company);
+    $consumption = EntitlementConsumption::factory()->create();
+    $run = LeaveProcessingRun::factory()->create();
+
+    expect(DB::table('information_schema.TRIGGERS')->where('EVENT_OBJECT_SCHEMA', DB::getDatabaseName())
+        ->where('EVENT_OBJECT_TABLE', 'leave_entitlement_consumptions')->count())->toBe(2);
+    DB::table('leave_entitlement_consumptions')->where('id', $consumption->id)
+        ->update(['superseded_by_run_id' => $run->id]);
+    expect($consumption->fresh()->superseded_by_run_id)->toBe($run->id);
+    foreach ([
+        'UPDATE `leave_entitlement_consumptions` SET `quantity` = 1.0 WHERE `id` = ?',
+        'UPDATE `leave_entitlement_consumptions` SET `superseded_by_run_id` = ? WHERE `id` = ?',
+        'DELETE FROM `leave_entitlement_consumptions` WHERE `id` = ?',
+    ] as $index => $sql) {
+        $bindings = $index === 1 ? [$run->id, $consumption->id] : [$consumption->id];
         expect(fn () => DB::statement($sql, $bindings))->toThrow(QueryException::class);
     }
 });

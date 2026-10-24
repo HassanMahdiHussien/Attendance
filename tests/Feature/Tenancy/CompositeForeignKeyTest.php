@@ -38,6 +38,7 @@ use App\Models\Leave\BalanceBatchEvent as LeaveBalanceBatchEvent;
 use App\Models\Leave\BalanceMapping as LeaveBalanceMapping;
 use App\Models\Leave\BalanceRow as LeaveBalanceRow;
 use App\Models\Leave\Credit as LeaveCredit;
+use App\Models\Leave\EntitlementConsumption;
 use App\Models\Leave\ImportBatch as LeaveImportBatch;
 use App\Models\Leave\ImportBatchEvent as LeaveImportBatchEvent;
 use App\Models\Leave\ImportMapping as LeaveImportMapping;
@@ -102,6 +103,7 @@ test('every kept composite tenant foreign key rejects another company through mo
         'leave_request_days' => LeaveRequestDay::class,
         'leave_credits' => LeaveCredit::class,
         'leave_allocations' => LeaveAllocation::class,
+        'leave_entitlement_consumptions' => EntitlementConsumption::class,
         'data_issues' => DataIssue::class,
         'branch_user' => BranchUser::class,
         'users' => User::class,
@@ -142,6 +144,14 @@ test('every kept composite tenant foreign key rejects another company through mo
         }
         if ($key->source_table === 'attendance_rest_day_entitlements' && $key->foreign_column !== 'source_day_id') {
             $attributes['source_day_id'] = $context->runForCompany($a, fn () => Day::factory()->create())->id;
+        }
+        if ($key->source_table === 'leave_entitlement_consumptions') {
+            if ($key->foreign_column !== 'request_id') {
+                $attributes['request_id'] = $context->runForCompany($a, fn () => LeaveRequest::factory()->create())->id;
+            }
+            if ($key->foreign_column !== 'entitlement_id') {
+                $attributes['entitlement_id'] = $context->runForCompany($a, fn () => RestDayEntitlement::factory()->create())->id;
+            }
         }
         if (isset($attributes['employee_code'])) {
             $attributes['employee_code'] = 'CROSS-'.$target->id;

@@ -168,6 +168,7 @@ return [
             'leave_with_attendance_nothing_to_reconcile' => 'إجازة معتمدة مع حضور دون رصيد يحتاج إلى تسوية',
             'leave_duration_mismatch' => 'مدة الإجازة لا تطابق أيام العمل',
             'leave_rest_day_missing' => 'يجب مراجعة يوم راحة موظف الأمن',
+            'leave_entitlement_exceeded' => 'الإجازة التعويضية تتجاوز استحقاق أيام الراحة المتاح',
         ],
     ],
     'attendance_ui' => [
@@ -181,6 +182,7 @@ return [
             'leave_type_unmapped' => 'نوع الإجازة يحتاج إلى ربط',
             'leave_unknown_employee' => 'طلب الإجازة يحمل رقم موظف غير معروف',
             'leave_balance_unknown' => 'تقرير رصيد الإجازات يحتوي على أرقام موظفين غير معروفة',
+            'leave_entitlement_exceeded' => 'الإجازة التعويضية تتجاوز استحقاق أيام الراحة المتاح',
             'leave_invalid_dates' => 'تواريخ طلب الإجازة تحتاج إلى مراجعة',
             'leave_unknown_status' => 'حالة الإجازة تحتاج إلى مراجعة',
             'leave_invalid_duration' => 'مدة الإجازة تحتاج إلى مراجعة',
@@ -405,6 +407,7 @@ return [
             'unmapped_type' => 'نوع غير مربوط', 'invalid_dates' => 'تواريخ غير صالحة',
             'duration_mismatch' => 'المدة لا تطابق الأيام', 'missing_from_report' => 'غائب من التقرير',
             'nothing_to_reconcile' => 'لا شيء للتسوية', 'unknown_status' => 'حالة غير معروفة',
+            'entitlement_exceeded' => 'تجاوز استحقاق أيام الراحة',
             'invalid_duration' => 'مدة غير صالحة', 'missing_duration' => 'المدة مفقودة',
             'column_count' => 'عدد الأعمدة غير صحيح',
         ],
@@ -414,6 +417,7 @@ return [
             'leave_unknown_status' => 'حالة غير معروفة', 'leave_invalid_duration' => 'مدة غير صالحة',
             'leave_duration_mismatch' => 'المدة لا تطابق الأيام', 'leave_request_missing' => 'غائب من التقرير الكامل',
             'leave_rest_day_missing' => 'يوم راحة موظف الأمن مفقود',
+            'leave_entitlement_exceeded' => 'تجاوز استحقاق أيام الراحة',
             'leave_with_attendance_nothing_to_reconcile' => 'إجازة مع حضور: لا شيء للتسوية',
         ],
         'row_errors' => [
@@ -434,6 +438,7 @@ return [
         'explanations' => [
             'leave_same_day' => ':minutes من الطلب :request بتاريخ :source_date يغطي :kind بتاريخ :target_date.',
             'leave_credit_applied' => ':minutes من رصيد الطلب :request بتاريخ :source_date يغطي :kind بتاريخ :target_date.',
+            'rest_day_entitlement_used' => 'استُخدم :quantity يوم من استحقاق يوم الراحة المكتسب بتاريخ :entitlement_date للطلب :request.',
             'unknown' => 'شرح التخصيص غير متاح.',
         ],
     ],
@@ -509,6 +514,7 @@ return [
         'invalid_leave_calendar' => 'اختر أيام راحة صحيحة لتقويم الإجازات واذكر السبب.',
         'distribution_resolved' => 'تم تأكيد توزيع الإجازة أو تصحيحه.',
         'issue_resolved' => 'تغير مصدر الإجازة أو يوم الحضور.',
+        'entitlement_resolved' => 'أصبح استحقاق يوم الراحة يغطي الطلب أو لم يعد الطلب يحتاج إليه.',
     ],
     'holiday_ui' => [
         'title' => 'العطل', 'upload' => 'رفع إعلان', 'new' => 'عطلة جديدة',

@@ -257,6 +257,10 @@ class DayAssessor
                         $candidate, $policies[$date], $values, $holidayIds, $dailyPunches, $dailyManual, $now,
                     );
                     $differences = $this->differences($old, $result);
+                    $entitlementChange = $this->entitlementChange($entitlements->get($key), $entitlement);
+                    if ($entitlementChange !== null) {
+                        $differences['entitlement'] = $entitlementChange;
+                    }
                     if ($differences !== []) {
                         if ($old !== null) {
                             $old->update(['superseded_by_run_id' => $run->id]);
@@ -299,6 +303,10 @@ class DayAssessor
                     $result, $policies[$date], $values, [], $dailyPunches, $dailyManual, $now,
                 );
                 $differences = $this->differences($old, $result);
+                $entitlementChange = $this->entitlementChange($entitlements->get($key), $entitlement);
+                if ($entitlementChange !== null) {
+                    $differences['entitlement'] = $entitlementChange;
+                }
                 if ($differences === []) {
                     continue;
                 }
@@ -394,6 +402,19 @@ class DayAssessor
             'work_date' => $day->work_date, 'source_day_id' => $day->id,
             'run_id' => $run->id,
         ]);
+    }
+
+    private function entitlementChange(?RestDayEntitlement $old, ?array $new): ?array
+    {
+        $before = $old === null ? null : [
+            'quantity' => (float) $old->quantity, 'worked_minutes' => (int) $old->worked_minutes,
+            'basis' => $old->basis, 'holiday' => (bool) $old->holiday,
+        ];
+        if ($before == $new) {
+            return null;
+        }
+
+        return ['before' => $before, 'after' => $new];
     }
 
     private function differences(?Day $old, array $result): array

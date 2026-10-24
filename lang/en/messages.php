@@ -167,6 +167,7 @@ return [
             'leave_with_attendance_nothing_to_reconcile' => 'Approved leave meets attendance with no balance to reconcile',
             'leave_duration_mismatch' => 'Leave duration does not match working days',
             'leave_rest_day_missing' => 'Security rest day needs HR review',
+            'leave_entitlement_exceeded' => 'Compensation leave exceeds available rest-day entitlement',
             'pattern_review' => 'Security work pattern needs HR review',
         ],
     ],
@@ -181,6 +182,7 @@ return [
             'leave_type_unmapped' => 'Leave type needs mapping',
             'leave_unknown_employee' => 'Leave request has an unknown employee ID',
             'leave_balance_unknown' => 'Leave balance report has unknown employee IDs',
+            'leave_entitlement_exceeded' => 'Compensation leave exceeds available rest-day entitlement',
             'leave_invalid_dates' => 'Leave request dates need review',
             'leave_unknown_status' => 'Leave status needs review',
             'leave_invalid_duration' => 'Leave duration needs review',
@@ -405,6 +407,7 @@ return [
             'unmapped_type' => 'Unmapped type', 'invalid_dates' => 'Invalid dates',
             'duration_mismatch' => 'Duration mismatch', 'missing_from_report' => 'Missing from report',
             'nothing_to_reconcile' => 'Nothing to reconcile', 'unknown_status' => 'Unknown status',
+            'entitlement_exceeded' => 'Rest-day entitlement exceeded',
             'invalid_duration' => 'Invalid duration', 'missing_duration' => 'Missing duration',
             'column_count' => 'Wrong number of columns',
         ],
@@ -414,6 +417,7 @@ return [
             'leave_unknown_status' => 'Unknown status', 'leave_invalid_duration' => 'Invalid duration',
             'leave_duration_mismatch' => 'Duration mismatch', 'leave_request_missing' => 'Missing from full report',
             'leave_rest_day_missing' => 'Security rest day missing',
+            'leave_entitlement_exceeded' => 'Rest-day entitlement exceeded',
             'leave_with_attendance_nothing_to_reconcile' => 'Leave with attendance: nothing to reconcile',
         ],
         'row_errors' => [
@@ -434,6 +438,7 @@ return [
         'explanations' => [
             'leave_same_day' => ':minutes from request :request on :source_date covers :kind on :target_date.',
             'leave_credit_applied' => ':minutes credit from request :request on :source_date covers :kind on :target_date.',
+            'rest_day_entitlement_used' => ':quantity day(s) from the rest-day entitlement earned on :entitlement_date were used by request :request.',
             'unknown' => 'Allocation explanation unavailable.',
         ],
     ],
@@ -509,6 +514,7 @@ return [
         'invalid_leave_calendar' => 'Choose valid leave-calendar rest days and give a reason.',
         'distribution_resolved' => 'The leave distribution was confirmed or corrected.',
         'issue_resolved' => 'The leave source or attendance day changed.',
+        'entitlement_resolved' => 'The rest-day entitlement now covers the request or the request no longer needs it.',
     ],
     'holiday_ui' => [
         'title' => 'Holidays', 'upload' => 'Upload announcement', 'new' => 'New holiday',
