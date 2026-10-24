@@ -9,6 +9,7 @@ use App\Models\Attendance\ManualPunch;
 use App\Models\Attendance\Policy;
 use App\Models\Attendance\ProcessingRun;
 use App\Models\Attendance\Punch;
+use App\Models\Attendance\RestDayEntitlement;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\EmployeeVersion;
@@ -34,6 +35,7 @@ class DayAssessor
         private ShiftDayCalculator $shiftCalculator,
         private ShiftPunchOwnership $ownership,
         private HolidayCalendar $holidays,
+        private OvertimeCalculator $overtime,
     ) {}
 
     public function run(Company $company, array $scope, string $trigger): ProcessingRun
@@ -151,6 +153,9 @@ class DayAssessor
         $current = Day::query()->where('company_id', $company->id)->whereIn('employee_id', $ids)
             ->whereBetween('work_date', [$from, $to])->whereNull('superseded_by_run_id')->get()
             ->keyBy(fn (Day $day): string => $day->employee_id.'|'.$day->work_date->toDateString());
+        $entitlements = RestDayEntitlement::query()->where('company_id', $company->id)->whereIn('employee_id', $ids)
+            ->whereBetween('work_date', [$from, $to])->whereNull('superseded_by_run_id')->get()
+            ->keyBy(fn (RestDayEntitlement $row): string => $row->employee_id.'|'.$row->work_date->toDateString());
         $now = now('Asia/Baghdad');
         $changed = 0;
         foreach ($employees as $employee) {
@@ -205,6 +210,7 @@ class DayAssessor
                     || $policies[$date] === null) {
                     if ($old !== null) {
                         $old->update(['superseded_by_run_id' => $run->id]);
+                        $this->supersedeEntitlement($entitlements->get($key), $run);
                         $changed++;
                         $changedEmployees[$employee->id] = true;
                         $changedDates[$date] = true;
@@ -247,16 +253,20 @@ class DayAssessor
                 }
                 $candidate['holiday_ids'] = $holidayIds === [] ? null : $holidayIds;
                 if (in_array($candidate['status'], ['holiday', 'holiday_worked', 'rest_day', 'rest_day_worked'], true)) {
-                    $result = $candidate;
+                    [$result, $entitlement] = $this->withOvertime(
+                        $candidate, $policies[$date], $values, $holidayIds, $dailyPunches, $dailyManual, $now,
+                    );
                     $differences = $this->differences($old, $result);
                     if ($differences !== []) {
                         if ($old !== null) {
                             $old->update(['superseded_by_run_id' => $run->id]);
                         }
-                        Day::create($result + [
+                        $this->supersedeEntitlement($entitlements->get($key), $run);
+                        $newDay = Day::create($result + [
                             'company_id' => $company->id, 'employee_id' => $employee->id,
                             'run_id' => $run->id, 'changes' => $differences,
                         ]);
+                        $this->createEntitlement($company, $employee, $newDay, $run, $entitlement);
                         $changed++;
                         $changedEmployees[$employee->id] = true;
                         $changedDates[$date] = true;
@@ -285,6 +295,9 @@ class DayAssessor
                 }
                 $result = $calculate($covered, $outage);
                 $result['holiday_ids'] = null;
+                [$result, $entitlement] = $this->withOvertime(
+                    $result, $policies[$date], $values, [], $dailyPunches, $dailyManual, $now,
+                );
                 $differences = $this->differences($old, $result);
                 if ($differences === []) {
                     continue;
@@ -292,10 +305,12 @@ class DayAssessor
                 if ($old !== null) {
                     $old->update(['superseded_by_run_id' => $run->id]);
                 }
-                Day::create($result + [
+                $this->supersedeEntitlement($entitlements->get($key), $run);
+                $newDay = Day::create($result + [
                     'company_id' => $company->id, 'employee_id' => $employee->id,
                     'run_id' => $run->id, 'changes' => $differences,
                 ]);
+                $this->createEntitlement($company, $employee, $newDay, $run, $entitlement);
                 $changed++;
                 $changedEmployees[$employee->id] = true;
                 $changedDates[$date] = true;
@@ -303,6 +318,82 @@ class DayAssessor
         }
 
         return $changed;
+    }
+
+    private function withOvertime(array $result, array $policy, array $values, array $holidayIds, array $punches, array $manual, DateTimeInterface $now): array
+    {
+        $result['intervals_complete'] = $this->intervalsComplete($result, $punches, $manual);
+        $restOrHoliday = in_array($result['status'], ['rest_day_worked', 'holiday_worked'], true);
+        $result['assessment_closed'] = $restOrHoliday
+            ? ($result['last_out'] !== null && $now >= CarbonImmutable::parse($result['last_out'], 'Asia/Baghdad'))
+            : $result['status'] === 'present';
+        $calculated = $this->overtime->calculate($result, $policy, $values, $holidayIds);
+        unset($result['intervals_complete'], $result['assessment_closed']);
+        $entitlement = $calculated['entitlement'];
+        unset($calculated['entitlement']);
+
+        return [array_replace($result, $calculated), $entitlement];
+    }
+
+    private function intervalsComplete(array $result, array $punches, array $manual): bool
+    {
+        if (($result['intervals'] ?? []) === []) {
+            return false;
+        }
+        $reversed = [];
+        foreach ($manual as $row) {
+            if (($row['reverses_id'] ?? null) !== null) {
+                $reversed[(int) $row['reverses_id']] = true;
+            }
+        }
+        $rows = [];
+        foreach ($punches as $row) {
+            if (($row['status'] ?? 'used') === 'used') {
+                $rows[] = $row + ['manual' => false];
+            }
+        }
+        foreach ($manual as $row) {
+            if (($row['reverses_id'] ?? null) === null && ! isset($reversed[(int) $row['id']])) {
+                $rows[] = $row + ['manual' => true];
+            }
+        }
+        usort($rows, fn (array $a, array $b): int => [$a['punched_at'], $a['manual'], $a['id']]
+            <=> [$b['punched_at'], $b['manual'], $b['id']]);
+        $open = false;
+        $pairs = 0;
+        foreach ($rows as $row) {
+            if ($row['role'] === 'check_in') {
+                if ($open) {
+                    return false;
+                }
+                $open = true;
+            } elseif ($row['role'] === 'check_out') {
+                if (! $open) {
+                    return false;
+                }
+                $open = false;
+                $pairs++;
+            }
+        }
+
+        return ! $open && $pairs === count($result['intervals']);
+    }
+
+    private function supersedeEntitlement(?RestDayEntitlement $entitlement, ProcessingRun $run): void
+    {
+        $entitlement?->update(['superseded_by_run_id' => $run->id]);
+    }
+
+    private function createEntitlement(Company $company, Employee $employee, Day $day, ProcessingRun $run, ?array $entitlement): void
+    {
+        if ($entitlement === null) {
+            return;
+        }
+        RestDayEntitlement::create($entitlement + [
+            'company_id' => $company->id, 'employee_id' => $employee->id,
+            'work_date' => $day->work_date, 'source_day_id' => $day->id,
+            'run_id' => $run->id,
+        ]);
     }
 
     private function differences(?Day $old, array $result): array

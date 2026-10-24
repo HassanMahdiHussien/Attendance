@@ -21,6 +21,7 @@ use App\Models\Attendance\Person;
 use App\Models\Attendance\Policy;
 use App\Models\Attendance\ProcessingRun;
 use App\Models\Attendance\Punch;
+use App\Models\Attendance\RestDayEntitlement;
 use App\Models\Attendance\Transaction;
 use App\Models\Attendance\TransactionSource;
 use App\Models\Branch;
@@ -59,7 +60,7 @@ dataset('tenant models', [
     Device::class, DeviceSetting::class, AttendanceImportBatch::class, ImportBatchEvent::class,
     AttendanceImportMapping::class, Transaction::class, TransactionSource::class, Person::class,
     CoverageInterval::class, DataIssue::class, ProcessingRun::class, Punch::class, Meal::class,
-    Policy::class, ManualPunch::class, DayDecision::class, Day::class,
+    Policy::class, ManualPunch::class, DayDecision::class, Day::class, RestDayEntitlement::class,
     Holiday::class, HolidaySource::class, HolidayVersion::class,
     AttendanceExport::class, AttendanceExportEvent::class,
     LeaveImportBatch::class, LeaveImportBatchEvent::class, LeaveImportMapping::class,

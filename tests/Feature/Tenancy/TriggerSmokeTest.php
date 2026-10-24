@@ -10,6 +10,8 @@ use App\Models\Attendance\ImportBatch as AttendanceImportBatch;
 use App\Models\Attendance\ImportBatchEvent;
 use App\Models\Attendance\ManualPunch;
 use App\Models\Attendance\Policy;
+use App\Models\Attendance\ProcessingRun;
+use App\Models\Attendance\RestDayEntitlement;
 use App\Models\Attendance\Transaction;
 use App\Models\Attendance\TransactionSource;
 use App\Models\AuditLog;
@@ -71,5 +73,24 @@ test('holiday source original file fields cannot change or be deleted while proc
     foreach (["UPDATE `attendance_holiday_sources` SET `file_name` = 'changed.pdf' WHERE `id` = {$source->id}",
         "DELETE FROM `attendance_holiday_sources` WHERE `id` = {$source->id}"] as $sql) {
         expect(fn () => DB::statement($sql))->toThrow(QueryException::class);
+    }
+});
+
+test('rest day entitlements permit only one supersession and never a rewrite or deletion', function (): void {
+    $company = Company::factory()->create();
+    app(TenantContext::class)->setCompany($company);
+    $entitlement = RestDayEntitlement::factory()->create();
+    $run = ProcessingRun::factory()->create();
+
+    DB::table('attendance_rest_day_entitlements')->where('id', $entitlement->id)
+        ->update(['superseded_by_run_id' => $run->id]);
+    expect($entitlement->fresh()->superseded_by_run_id)->toBe($run->id);
+    foreach ([
+        'UPDATE `attendance_rest_day_entitlements` SET `quantity` = 1.0 WHERE `id` = ?',
+        'UPDATE `attendance_rest_day_entitlements` SET `superseded_by_run_id` = ? WHERE `id` = ?',
+        'DELETE FROM `attendance_rest_day_entitlements` WHERE `id` = ?',
+    ] as $index => $sql) {
+        $bindings = $index === 1 ? [$run->id, $entitlement->id] : [$entitlement->id];
+        expect(fn () => DB::statement($sql, $bindings))->toThrow(QueryException::class);
     }
 });

@@ -33,6 +33,11 @@ class OfficePolicy
         'shift_rest_days' => [5],
         'security_min_presence_minutes' => 480,
         'inference_tolerance_minutes' => 120,
+        'overtime_min_minutes' => 30,
+        'overtime_step_minutes' => 15,
+        'rest_day_half_minutes' => 240,
+        'rest_day_full_minutes' => 480,
+        'compensatory_rest_days' => ['office' => [5], 'shift' => [5], 'security' => 'individual'],
     ];
 
     public function __construct(private AuditLogger $audit) {}
@@ -120,7 +125,15 @@ class OfficePolicy
         $days = $values['office_rest_days'] ?? null;
         $shiftDays = $values['shift_rest_days'] ?? null;
         $starts = $values['shift_starts'] ?? null;
+        $compensatoryDays = $values['compensatory_rest_days'] ?? null;
         if (! is_array($days) || array_diff($days, range(1, 7)) !== [] || count($days) !== count(array_unique($days))
+            || ! is_array($compensatoryDays) || count($compensatoryDays) !== 3
+            || array_diff_key(array_flip(['office', 'shift', 'security']), $compensatoryDays) !== []
+            || ! is_array($compensatoryDays['office']) || array_diff($compensatoryDays['office'], range(1, 7)) !== []
+            || count($compensatoryDays['office']) !== count(array_unique($compensatoryDays['office']))
+            || ! is_array($compensatoryDays['shift']) || array_diff($compensatoryDays['shift'], range(1, 7)) !== []
+            || count($compensatoryDays['shift']) !== count(array_unique($compensatoryDays['shift']))
+            || $compensatoryDays['security'] !== 'individual'
             || ! is_array($shiftDays) || array_diff($shiftDays, range(1, 7)) !== [] || count($shiftDays) !== count(array_unique($shiftDays))
             || ! is_array($starts) || $starts === [] || count($starts) !== count(array_unique($starts))
             || count(array_filter($starts, fn ($start): bool => is_string($start) && preg_match('/^([01][0-9]|2[0-3]):[0-5][0-9]$/', $start) === 1)) !== count($starts)
@@ -134,6 +147,12 @@ class OfficePolicy
             || ! is_numeric($values['shift_min_presence_minutes']) || (int) $values['shift_min_presence_minutes'] <= 0 || (int) $values['shift_min_presence_minutes'] > (int) $values['shift_minutes']
             || ! is_numeric($values['security_min_presence_minutes']) || (int) $values['security_min_presence_minutes'] <= 0 || (int) $values['security_min_presence_minutes'] > (int) $values['shift_minutes']
             || ! is_numeric($values['inference_tolerance_minutes']) || (int) $values['inference_tolerance_minutes'] <= 0 || (int) $values['inference_tolerance_minutes'] > 1440
+            || ! is_numeric($values['overtime_min_minutes']) || (int) $values['overtime_min_minutes'] < 0 || (int) $values['overtime_min_minutes'] > 1440
+            || ! is_numeric($values['overtime_step_minutes']) || (int) $values['overtime_step_minutes'] <= 0 || (int) $values['overtime_step_minutes'] > 1440
+            || ! is_numeric($values['rest_day_half_minutes']) || (int) $values['rest_day_half_minutes'] <= 0
+            || (int) $values['rest_day_half_minutes'] > 1440
+            || ! is_numeric($values['rest_day_full_minutes']) || (int) $values['rest_day_full_minutes'] < (int) $values['rest_day_half_minutes']
+            || (int) $values['rest_day_full_minutes'] > 1440
             || ! is_numeric($values['flex_minutes']) || (int) $values['flex_minutes'] < 0
             || (int) $values['flex_minutes'] > (int) $values['workday_minutes']
             || ! is_numeric($values['close_grace_minutes']) || (int) $values['close_grace_minutes'] < 0

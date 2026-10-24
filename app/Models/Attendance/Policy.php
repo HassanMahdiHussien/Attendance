@@ -26,6 +26,11 @@ class Policy extends Model
         'shift_rest_days' => '[5]',
         'security_min_presence_minutes' => 480,
         'inference_tolerance_minutes' => 120,
+        'overtime_min_minutes' => 30,
+        'overtime_step_minutes' => 15,
+        'rest_day_half_minutes' => 240,
+        'rest_day_full_minutes' => 480,
+        'compensatory_rest_days' => '{"office":[5],"shift":[5],"security":"individual"}',
     ];
 
     public $timestamps = false;
@@ -39,6 +44,7 @@ class Policy extends Model
             'office_rest_days' => 'array',
             'shift_starts' => 'array',
             'shift_rest_days' => 'array',
+            'compensatory_rest_days' => 'array',
             'exits_count_toward_balance' => 'boolean',
             'created_at' => 'datetime',
         ];
