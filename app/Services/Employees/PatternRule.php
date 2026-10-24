@@ -7,6 +7,7 @@ use App\Models\Employee;
 use App\Models\EmployeeVersion;
 use App\Models\User;
 use App\Services\Attendance\DataIssues;
+use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 
@@ -31,8 +32,14 @@ class PatternRule
             if ($rule === null) {
                 return null;
             }
+            // A rule fills a pattern that was never set, so it describes the whole employment, not a change from
+            // the import date: punches imported for earlier months must be assessed with it too.
+            $from = CarbonImmutable::parse($effectiveFrom);
+            if ($employee->hire_date !== null && $employee->hire_date->lt($from)) {
+                $from = CarbonImmutable::parse($employee->hire_date);
+            }
             $version = $this->history->record(
-                $employee, ['work_pattern' => $rule['pattern']], $effectiveFrom, 'rule',
+                $employee, ['work_pattern' => $rule['pattern']], $from, 'rule',
                 reason: 'pattern rule: '.$rule['name'], batchId: $batchId,
             );
             if ($version !== null && $this->needsReview((string) ($values['position'] ?? ''))) {

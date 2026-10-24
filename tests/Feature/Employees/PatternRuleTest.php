@@ -116,3 +116,17 @@ test('employee profile and edit form show a rule-set pattern with its open revie
     Livewire::withQueryParams(['type' => 'pattern_review', 'subjectKey' => 'employee:'.$employee->id])
         ->test(AttendanceIssues::class)->assertSee('employee:'.$employee->id);
 });
+
+test('a rule-set pattern covers the whole employment so earlier punches are assessed', function (): void {
+    // Real data: the rule runs on the day HR imports the list, but punches from earlier months are imported too.
+    $employee = Employee::factory()->create([
+        'branch_id' => $this->branch->id, 'position' => 'Technician', 'staff_category' => 'B', 'hire_date' => '2015-03-01',
+    ]);
+
+    app(PatternRule::class)->apply($employee, '2026-10-22');
+
+    $history = app(EmployeeHistory::class);
+    expect($history->asOf($employee, '2026-10-18')['work_pattern'])->toBe('shift')
+        ->and($history->asOf($employee, '2015-03-01')['work_pattern'])->toBe('shift')
+        ->and($employee->fresh()->work_pattern?->value)->toBe('shift');
+});
