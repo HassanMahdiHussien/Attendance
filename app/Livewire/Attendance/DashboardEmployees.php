@@ -8,6 +8,7 @@ use App\Models\Employee;
 use App\Services\Attendance\Reporting\AttendanceSummary;
 use App\Services\Attendance\Reporting\ReportFilters;
 use App\Services\Attendance\Reporting\ReportTiles;
+use App\Services\Leave\LeaveBalances;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Locked;
@@ -52,9 +53,11 @@ class DashboardEmployees extends Component
             $ids = $summary->drillDown($filters, $this->tile);
             $employees = $ids === [] ? collect() : Employee::query()->where('company_id', $company->id)
                 ->whereIn('id', $ids)->with('branch')->orderBy('name')->get();
+            $balances = app(LeaveBalances::class)->currentFor($company->id, $employees->pluck('id')->all());
 
             return view('livewire.attendance.dashboard-employees', [
-                'company' => $company, 'employees' => $employees, 'from' => $filters->from, 'to' => $filters->to,
+                'company' => $company, 'employees' => $employees, 'balances' => $balances,
+                'from' => $filters->from, 'to' => $filters->to,
             ])->layout('layouts.workspace');
         });
     }

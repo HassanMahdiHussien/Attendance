@@ -88,6 +88,28 @@ test('reader uses cached formula values and the ACT subheader', function (): voi
         ->and($row['values']['used_01'])->toBe('2.1667');
 });
 
+test('reader resolves a first worksheet whose file is not sheet1', function (): void {
+    $file = balanceSheet([[12345678, 1.5, 6, 2.1667, new FormulaCell('=B3+C3-D3', null), 2.1667, null]]);
+    $zip = new ZipArchive;
+    $zip->open($file->getRealPath());
+    $xml = $zip->getFromName('xl/worksheets/sheet1.xml');
+    $relations = $zip->getFromName('xl/_rels/workbook.xml.rels');
+    $types = $zip->getFromName('[Content_Types].xml');
+    $zip->deleteName('xl/worksheets/sheet1.xml');
+    $zip->addFromString('xl/worksheets/sheet7.xml', $xml);
+    $zip->addFromString('xl/_rels/workbook.xml.rels', str_replace('worksheets/sheet1.xml', 'worksheets/sheet7.xml', $relations));
+    $zip->addFromString('[Content_Types].xml', str_replace('worksheets/sheet1.xml', 'worksheets/sheet7.xml', $types));
+    $zip->close();
+
+    $reader = app(LeaveBalanceFile::class);
+    $sheet = $reader->inspect($file);
+    $mapping = $reader->suggest($sheet['headers'], $sheet['subheaders']);
+    $row = iterator_to_array($reader->rows($file, $mapping, codeLength: 8), false)[0];
+
+    expect($row['values']['remaining_days'])->toBe('3.8333')
+        ->and($row['errors'])->toBe([]);
+});
+
 test('preview, import, retry and dated history preserve valid rows and skipped reasons', function (): void {
     $file = balanceSheet([
         [12345678, 1.5, 6, 2.1667, new FormulaCell('=B3+C3-D3', null), 2.1667, null],

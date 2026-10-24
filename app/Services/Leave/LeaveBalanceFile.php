@@ -2,6 +2,8 @@
 
 namespace App\Services\Leave;
 
+use DOMDocument;
+use DOMXPath;
 use Generator;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Validation\ValidationException;
@@ -298,11 +300,37 @@ class LeaveBalanceFile
     private function missingFormulaValues(string $path): array
     {
         $zip = new ZipArchive;
-        if ($zip->open($path) !== true || $zip->locateName('xl/worksheets/sheet1.xml') === false) {
+        if ($zip->open($path) !== true) {
+            throw ValidationException::withMessages(['sourceFile' => __('messages.leave_balance.invalid_file')]);
+        }
+        $sheetPath = 'xl/worksheets/sheet1.xml';
+        $workbook = $zip->getFromName('xl/workbook.xml');
+        $relations = $zip->getFromName('xl/_rels/workbook.xml.rels');
+        if ($workbook !== false && $relations !== false) {
+            $document = new DOMDocument;
+            $relationDocument = new DOMDocument;
+            if (@$document->loadXML($workbook, LIBXML_NONET) && @$relationDocument->loadXML($relations, LIBXML_NONET)) {
+                $sheets = (new DOMXPath($document))->query('//*[local-name()="sheets"]/*[local-name()="sheet"]');
+                $id = $sheets?->item(0)?->getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id');
+                foreach ((new DOMXPath($relationDocument))->query('//*[local-name()="Relationship"]') as $relation) {
+                    if ($relation->getAttribute('Id') !== $id || ! str_ends_with($relation->getAttribute('Type'), '/worksheet')) {
+                        continue;
+                    }
+                    $target = ltrim($relation->getAttribute('Target'), '/');
+                    $candidate = str_starts_with($target, 'xl/') ? $target : 'xl/'.$target;
+                    if (! str_contains($candidate, '..')) {
+                        $sheetPath = $candidate;
+                    }
+                    break;
+                }
+            }
+        }
+        if ($zip->locateName($sheetPath) === false) {
+            $zip->close();
             throw ValidationException::withMessages(['sourceFile' => __('messages.leave_balance.invalid_file')]);
         }
         $zip->close();
-        $uri = 'zip://'.str_replace('\\', '/', $path).'#xl/worksheets/sheet1.xml';
+        $uri = 'zip://'.str_replace('\\', '/', $path).'#'.$sheetPath;
         $reader = XMLReader::open($uri, null, LIBXML_NONET);
         if ($reader === false) {
             throw ValidationException::withMessages(['sourceFile' => __('messages.leave_balance.invalid_file')]);

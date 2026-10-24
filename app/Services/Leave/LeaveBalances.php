@@ -9,6 +9,7 @@ use App\Models\Leave\BalanceRow;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class LeaveBalances
@@ -18,6 +19,25 @@ class LeaveBalances
         $this->assertTenant($employee);
 
         return $this->completed($employee)->orderByDesc('balance_date')->orderByDesc('batch_id')->first();
+    }
+
+    public function currentFor(int $companyId, array $employeeIds): Collection
+    {
+        abort_unless(app(TenantContext::class)->companyId() === $companyId, 403);
+        if ($employeeIds === []) {
+            return collect();
+        }
+        $ranked = DB::table('leave_balances')->where('company_id', $companyId)
+            ->whereIn('employee_id', $employeeIds)->whereIn('batch_id', $this->completedBatchIds($companyId))
+            ->select('leave_balances.*')->selectRaw('ROW_NUMBER() OVER (PARTITION BY employee_id ORDER BY balance_date DESC, batch_id DESC) AS balance_rank');
+
+        return Balance::hydrate(DB::query()->fromSub($ranked, 'ranked')->where('balance_rank', 1)->get()
+            ->map(function ($row): array {
+                $values = (array) $row;
+                unset($values['balance_rank']);
+
+                return $values;
+            })->all())->keyBy('employee_id');
     }
 
     public function history(Employee $employee): array

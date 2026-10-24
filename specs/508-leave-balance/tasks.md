@@ -9,8 +9,8 @@
 - [x] T004 Tests: synthetic fixture with formulas and a sub-header, fractional/negative values, numeric codes, unknown/duplicate/invalid rows, idempotency (same file + date; same file + new date), out-of-order dates, retry, isolation, composite FKs, triggers
 
 ## Step 2 — Screens
-- [ ] T005 Upload/preview/commit page, batch list + detail (skipped rows), HC upload link, original download route (audited)
-- [ ] T006 Employee page balance card + history, dashboard employee view, statement XLSX + PDF; translations, UI inventory, route sweep, Livewire + browser tests
+- [x] T005 Upload/preview/commit page, batch list + detail (skipped rows), HC upload link, original download route (audited)
+- [x] T006 Employee page balance card + history, dashboard employee view, statement XLSX + PDF; translations, UI inventory, route sweep, Livewire + browser tests
 
 ## Step 3 — Verification (orchestrator)
 - [ ] T007 Real report on the smoke DB (matched 974, unknown 4, missing 41, negative 5; a second upload with a later date shows history), ROADMAP renumbering, docs, PR

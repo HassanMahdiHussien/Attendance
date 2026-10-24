@@ -15,6 +15,7 @@ use App\Models\Attendance\HolidaySource;
 use App\Models\Attendance\ImportBatch;
 use App\Models\Company;
 use App\Models\EmployeeImportBatch;
+use App\Models\Leave\BalanceBatch;
 use App\Models\Leave\ImportBatch as LeaveImportBatch;
 use App\Services\AuditLogger;
 use Filament\Facades\Filament;
@@ -87,6 +88,17 @@ Route::middleware('auth')->group(function (): void {
 
         return Storage::disk('local')->download($record->file_path, $record->file_name);
     })->name('leave.import.file');
+    Route::get('/admin/{company}/leave-balances/{balanceBatch}/file', function (Company $company, int $balanceBatch) {
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+        abort_unless(auth()->user()->canAccessTenant($company), 404);
+        Filament::setTenant($company);
+        $record = BalanceBatch::query()->where('company_id', $company->id)->findOrFail($balanceBatch);
+        Gate::authorize('viewOriginal', $record);
+        abort_unless(Storage::disk('local')->exists($record->file_path), 404);
+        app(AuditLogger::class)->log('leave.balance.file.downloaded', $record, ['batch_id' => $record->id]);
+
+        return Storage::disk('local')->download($record->file_path, $record->file_name);
+    })->name('leave.balance.file');
     Route::get('/admin/{company}/attendance-exports/{export}/file', function (Company $company, int $export) {
         Filament::setCurrentPanel(Filament::getPanel('admin'));
         abort_unless(auth()->user()->canAccessTenant($company), 404);

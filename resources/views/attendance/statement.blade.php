@@ -26,6 +26,13 @@
     @foreach ($header as $line)
         <p class="muted">{{ $line[0] }}: <bdi dir="auto">{{ $line[1] }}</bdi></p>
     @endforeach
+    @if ($annual_balance)
+        <div class="note">
+            <strong>{{ __('messages.leave_balance_ui.annual_balance') }}</strong>:
+            <bdi class="mono">{{ number_format((float) $annual_balance->remaining_days, 2) }}</bdi> {{ __('messages.leave_balance_ui.days') }} ·
+            <bdi class="mono">{{ $annual_balance->balance_date->toDateString() }}</bdi>
+        </div>
+    @endif
     <h2>{{ __('messages.export_ui.summary') }}</h2>
     <table><tbody>
         <tr><th>{{ __('messages.export_ui.assessed_days') }}</th><td class="mono">{{ $totals['assessed_working_days'] }}</td></tr>
