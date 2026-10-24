@@ -7,6 +7,11 @@
                 <x-ui.badge :tone="match ($day->status) { 'present' => 'green', 'absent', 'device_outage' => 'red', 'missing_punch', 'pending' => 'amber', default => 'gray' }">{{ __('messages.office_ui.statuses.'.$day->status) }}</x-ui.badge>
             </div>
             <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                @if (in_array($day->inputs['work_pattern'] ?? null, ['shift', 'security'], true))
+                    <div><span class="text-sm text-gray-600">{{ __('messages.office_ui.shift') }}</span><strong class="block font-mono" dir="ltr">{{ \App\Services\Attendance\ShiftDisplay::hours($day->shift_start, $day->policy?->shift_minutes) ?? '—' }}</strong></div>
+                    <div><span class="text-sm text-gray-600">{{ __('messages.office_ui.shift_source') }}</span><strong class="block">{{ __('messages.office_ui.shift_sources.'.($day->shift_source ?? 'unknown')) }}</strong></div>
+                    <div><span class="text-sm text-gray-600">{{ __('messages.office_ui.shift_confidence') }}</span><strong class="block">{{ __('messages.office_ui.shift_confidences.'.($day->shift_confidence ?? 'unresolved')) }}</strong></div>
+                @endif
                 @foreach (['first_in', 'last_out', 'required_leave_at'] as $field)
                     <div><span class="text-sm text-gray-600">{{ __('messages.office_ui.'.$field) }}</span><strong class="block font-mono" dir="ltr">{{ $day->{$field}?->format('H:i') ?? '—' }}</strong></div>
                 @endforeach
@@ -16,6 +21,13 @@
                 <div><span class="text-sm text-gray-600">{{ __('messages.office_ui.reviewed') }}</span><strong class="block">{{ $day->reviewed ? __('messages.office_ui.yes') : __('messages.office_ui.no') }}</strong></div>
             </div>
         </x-ui.card>
+        @if (in_array($day->inputs['work_pattern'] ?? null, ['shift', 'security'], true))
+            <x-ui.card :title="__('messages.office_ui.shift_evidence')">
+                @foreach (['first_in', 'last_out', 'approved_leave_minutes'] as $field)
+                    <p>{{ __('messages.office_ui.shift_evidence_fields.'.$field) }}: <bdi dir="ltr">{{ $day->shift_evidence[$field] ?? '—' }}</bdi></p>
+                @endforeach
+            </x-ui.card>
+        @endif
         <div class="grid gap-5 lg:grid-cols-2">
             <x-ui.card :title="__('messages.office_ui.intervals')">
                 @forelse ($day->intervals ?? [] as $interval)<p class="font-mono" dir="ltr">{{ substr($interval['from'], 11, 5) }} → {{ substr($interval['to'], 11, 5) }}</p>@empty <p>—</p> @endforelse
@@ -30,7 +42,7 @@
                     @if (array_key_exists($field, $day->inputs ?? []))<div><span class="text-sm text-gray-600">{{ __('messages.office_ui.inputs.'.$field) }}</span><strong class="block break-all font-mono text-sm" dir="ltr">{{ $this->displayValue($day->inputs[$field]) }}</strong></div>@endif
                 @endforeach
                 @if ($day->policy)<div><span class="text-sm text-gray-600">{{ __('messages.office_ui.policy_fields.office_start') }}</span><strong class="block font-mono" dir="ltr">{{ $day->policy->office_start }}</strong></div>
-                    @foreach (['flex_minutes', 'workday_minutes', 'min_presence_minutes', 'close_grace_minutes', 'exits_count_toward_balance', 'office_rest_days'] as $field)
+                    @foreach (['flex_minutes', 'workday_minutes', 'min_presence_minutes', 'absence_minutes', 'close_grace_minutes', 'exits_count_toward_balance', 'office_rest_days', 'shift_starts', 'shift_minutes', 'shift_break_minutes', 'shift_min_presence_minutes', 'shift_rest_days', 'security_min_presence_minutes', 'inference_tolerance_minutes'] as $field)
                         <div><span class="text-sm text-gray-600">{{ __('messages.office_ui.policy_fields.'.$field) }}</span><strong class="block font-mono" dir="ltr">{{ $this->displayValue($day->policy->{$field}) }}</strong></div>
                     @endforeach
                 @endif
@@ -44,26 +56,27 @@
                 @forelse ($this->decisions() as $decision)<p class="border-b py-2">{{ __('messages.office_ui.decisions_list.'.$decision->decision) }} · {{ $decision->reason }} · {{ __('messages.office_ui.by') }} {{ $decision->creator?->name ?? '—' }}</p>@empty <p>—</p> @endforelse
             </x-ui.card>
         </div>
-        @if ($day->status === 'missing_punch' || ($day->status === 'absent' && ! $day->reviewed) || $latest)
+        @if (in_array($day->status, ['missing_punch', 'shift_unresolved'], true) || ($day->status === 'absent' && ! $day->reviewed) || $latest)
             <x-ui.card :title="__('messages.office_ui.review_action')">
-                @if (! $day->reviewed && in_array($day->status, ['missing_punch', 'absent'], true))
+                @if (! $day->reviewed && in_array($day->status, ['missing_punch', 'absent', 'shift_unresolved'], true))
                     <button class="underline" wire:click="selectReviewDay({{ $day->id }})">{{ __('messages.office_ui.review_action') }}</button>
                 @endif
                 @if ($latest)
-                    <button class="ms-3 underline" wire:click="selectReviewDay({{ $day->id }})">{{ __('messages.office_ui.withdraw') }}</button>
+                    <button class="ms-3 underline" wire:click="selectReviewDay({{ $day->id }})">{{ ($latest['shift'] ?? false) ? __('messages.office_ui.withdraw_shift') : __('messages.office_ui.withdraw') }}</button>
                 @endif
                 @if ($reviewDayId === $day->id)
                     <div class="mt-3 flex flex-wrap gap-3">
-                        @if (! $day->reviewed && in_array($day->status, ['missing_punch', 'absent'], true))
+                        @if (! $day->reviewed && in_array($day->status, ['missing_punch', 'absent', 'shift_unresolved'], true))
                             <label>{{ __('messages.office_ui.role') }} <select wire:model="reviewRole" class="rounded-xl border border-gray-200 p-2"><option value="check_in">{{ __('messages.office_ui.check_in') }}</option><option value="check_out">{{ __('messages.office_ui.check_out') }}</option></select></label>
                             <label>{{ __('messages.office_ui.time') }} <input type="time" wire:model="reviewTime" dir="ltr" class="rounded-xl border border-gray-200 p-2"></label>
+                            @if ($reviewIsShift)<label>{{ __('messages.office_ui.shift') }} <select wire:model="reviewShiftStart" dir="ltr" class="rounded-xl border border-gray-200 p-2">@foreach ($reviewShiftStarts as $start)<option value="{{ substr($start, 0, 5) }}">{{ substr($start, 0, 5) }}</option>@endforeach</select></label>@endif
                         @endif
                         <label>{{ __('messages.office_ui.reason') }} <input type="text" wire:model="reviewReason" class="rounded-xl border border-gray-200 p-2"></label>
                     </div>
-                    @error('reviewTime') <p class="text-red-600">{{ $message }}</p> @enderror @error('reviewReason') <p class="text-red-600">{{ $message }}</p> @enderror
+                    @error('reviewTime') <p class="text-red-600">{{ $message }}</p> @enderror @error('reviewShiftStart') <p class="text-red-600">{{ $message }}</p> @enderror @error('reviewReason') <p class="text-red-600">{{ $message }}</p> @enderror
                     <div class="mt-3 flex flex-wrap gap-3">
-                        @if (! $day->reviewed && in_array($day->status, ['missing_punch', 'absent'], true))<x-filament::button wire:click="addMissingTime">{{ __('messages.office_ui.add_time') }}</x-filament::button><button class="underline" wire:click="confirmAbsence">{{ __('messages.office_ui.confirm_absence') }}</button>@endif
-                        @if ($latest)<button class="underline" wire:click="withdrawLatest({{ $day->id }})">{{ __('messages.office_ui.confirm_withdraw') }}</button>@endif
+                        @if (! $day->reviewed && in_array($day->status, ['missing_punch', 'absent', 'shift_unresolved'], true))<x-filament::button wire:click="addMissingTime">{{ __('messages.office_ui.add_time') }}</x-filament::button><button class="underline" wire:click="confirmAbsence">{{ __('messages.office_ui.confirm_absence') }}</button>@if ($reviewIsShift)<button class="underline" wire:click="pickShift">{{ __('messages.office_ui.pick_shift') }}</button>@endif@endif
+                        @if ($latest)<button class="underline" wire:click="withdrawLatest({{ $day->id }})">{{ ($latest['shift'] ?? false) ? __('messages.office_ui.withdraw_shift') : __('messages.office_ui.confirm_withdraw') }}</button>@endif
                     </div>
                 @endif
             </x-ui.card>

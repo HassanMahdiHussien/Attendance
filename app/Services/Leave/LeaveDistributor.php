@@ -25,7 +25,8 @@ class LeaveDistributor
         $values = [];
         $versionIndex = 0;
         $policyIndex = 0;
-        $restDays = [5, 6];
+        $officeRestDays = [5, 6];
+        $shiftRestDays = [5];
         $working = [];
         $leaveCalendarCount = 0;
         $calendarCount = 0;
@@ -43,10 +44,16 @@ class LeaveDistributor
                 $versionIndex++;
             }
             while (isset($policies[$policyIndex]) && $policies[$policyIndex]['effective_from'] <= $day) {
-                $restDays = $policies[$policyIndex]['office_rest_days'];
+                $officeRestDays = $policies[$policyIndex]['office_rest_days'];
+                $shiftRestDays = $policies[$policyIndex]['shift_rest_days'] ?? [5];
                 $policyIndex++;
             }
-            if (! in_array($weekday, $values['rest_days'] ?? $restDays, true)) {
+            $pattern = $values['work_pattern'] ?? 'office';
+            if ($pattern === 'security' && ($values['rest_days'] ?? null) === null) {
+                return ['days' => [], 'flag' => 'rest_day_missing', 'counting_method' => null];
+            }
+            $restDays = $values['rest_days'] ?? ($pattern === 'shift' ? $shiftRestDays : $officeRestDays);
+            if (! in_array($weekday, $restDays, true)) {
                 $working[] = $day;
             }
         }

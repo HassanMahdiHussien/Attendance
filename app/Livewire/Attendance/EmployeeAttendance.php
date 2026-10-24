@@ -188,7 +188,7 @@ class EmployeeAttendance extends Component
         if ($tile === '' || $tile === 'active_employees' || $tile === 'office_employees_assessed') {
             return true;
         }
-        if (in_array($tile, ['present', 'absent', 'missing_punch', 'pending'], true)) {
+        if (in_array($tile, ['present', 'absent', 'missing_punch', 'shift_unresolved', 'pending'], true)) {
             return $day['status'] === $tile;
         }
         if ($tile === 'assessed_working_days') {

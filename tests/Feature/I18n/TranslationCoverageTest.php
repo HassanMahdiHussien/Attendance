@@ -68,7 +68,7 @@ test('dynamic employee history labels exist in both languages', function (): voi
         expect(data_get($english, 'employee_history.fields.'.$field))->not->toBeNull()
             ->and(data_get($arabic, 'employee_history.fields.'.$field))->not->toBeNull();
     }
-    foreach (['initial', 'manual', 'import', 'chat'] as $source) {
+    foreach (['initial', 'manual', 'import', 'chat', 'rule'] as $source) {
         expect(data_get($english, 'employee_history.sources.'.$source))->not->toBeNull()
             ->and(data_get($arabic, 'employee_history.sources.'.$source))->not->toBeNull();
     }
@@ -84,6 +84,16 @@ test('mapped import fields and statuses exist in both languages', function (): v
     foreach (['new', 'update', 'unchanged', 'error'] as $status) {
         expect(data_get($english, 'employee_import_ui.status.'.$status))->not->toBeNull()
             ->and(data_get($arabic, 'employee_import_ui.status.'.$status))->not->toBeNull();
+    }
+});
+
+test('pattern review issue labels exist in both languages', function (): void {
+    $english = File::getRequire(lang_path('en/messages.php'));
+    $arabic = File::getRequire(lang_path('ar/messages.php'));
+
+    foreach (['attendance_import', 'attendance_ui'] as $group) {
+        expect(data_get($english, $group.'.issue_types.pattern_review'))->not->toBeNull()
+            ->and(data_get($arabic, $group.'.issue_types.pattern_review'))->not->toBeNull();
     }
 });
 
@@ -141,7 +151,7 @@ test('office attendance dynamic labels exist in both languages', function (): vo
     $arabic = File::getRequire(lang_path('ar/messages.php'));
     $labels = [
         ...array_map(fn (string $state): string => 'statuses.'.$state, [
-            'pending', 'present', 'missing_punch', 'absent', 'rest_day', 'not_employed', 'pattern_missing', 'device_outage',
+            'pending', 'present', 'missing_punch', 'shift_unresolved', 'absent', 'rest_day', 'not_employed', 'pattern_missing', 'device_outage',
         ]),
         ...array_map(fn (string $field): string => 'minutes.'.$field, [
             'elapsed_minutes', 'presence_minutes', 'late_minutes', 'early_minutes',
@@ -149,21 +159,28 @@ test('office attendance dynamic labels exist in both languages', function (): vo
         ]),
         ...array_map(fn (string $field): string => 'policy_fields.'.$field, [
             'office_start', 'flex_minutes', 'workday_minutes', 'min_presence_minutes',
-            'close_grace_minutes', 'exits_count_toward_balance', 'office_rest_days',
+            'absence_minutes', 'close_grace_minutes', 'exits_count_toward_balance', 'office_rest_days',
+            'shift_starts', 'shift_minutes', 'shift_break_minutes', 'shift_min_presence_minutes',
+            'shift_rest_days', 'security_min_presence_minutes', 'inference_tolerance_minutes',
         ]),
         ...array_map(fn (string $field): string => 'change_fields.'.$field, [
             'work_date', 'branch_id', 'status', 'first_in', 'last_out', 'elapsed_minutes',
             'presence_minutes', 'late_minutes', 'early_minutes', 'exit_minutes',
             'short_minutes', 'balance_minutes', 'required_leave_at', 'intervals',
-            'exits', 'policy_id', 'inputs', 'reviewed',
+            'exits', 'policy_id', 'inputs', 'reviewed', 'shift_start', 'shift_source',
+            'shift_confidence', 'shift_evidence',
         ]),
         ...array_map(fn (string $field): string => 'inputs.'.$field, [
             'policy_version', 'work_pattern', 'hire_date', 'exit_status', 'last_working_day',
             'branch_id', 'schedule_start', 'schedule_end', 'rest_days', 'reason',
         ]),
         ...array_map(fn (string $decision): string => 'decisions_list.'.$decision, [
-            'confirm_absence', 'withdraw_confirmation',
+            'confirm_absence', 'withdraw_confirmation', 'pick_shift', 'withdraw_shift',
         ]),
+        ...array_map(fn (string $source): string => 'shift_sources.'.$source, ['inferred', 'hr', 'unknown']),
+        ...array_map(fn (string $confidence): string => 'shift_confidences.'.$confidence, ['clear', 'leave_explained', 'unresolved']),
+        ...array_map(fn (string $field): string => 'shift_evidence_fields.'.$field, ['first_in', 'last_out', 'approved_leave_minutes']),
+        ...array_map(fn (string $section): string => 'policy_sections.'.$section, ['office', 'shift', 'security', 'inference']),
         ...array_map(fn (int $day): string => 'weekdays.'.$day, range(1, 7)),
         ...array_map(fn (string $trigger): string => 'triggers.'.$trigger, [
             'punches', 'coverage', 'exit', 'employee', 'policy', 'review', 'pending', 'unknown',
@@ -189,7 +206,7 @@ test('leave screen dynamic labels exist in both languages', function (): void {
         ...array_map(fn (string $kind): string => 'consumes_values.'.$kind, ['none', 'rest_day_entitlement', 'overtime_or_credit']),
         ...array_map(fn (string $kind): string => 'explanations.'.$kind, ['leave_same_day', 'leave_credit_applied', 'unknown']),
         ...array_map(fn (string $kind): string => 'flags.'.$kind, ['unmapped_type', 'invalid_dates', 'duration_mismatch', 'missing_from_report', 'nothing_to_reconcile']),
-        ...array_map(fn (string $kind): string => 'issue_types.'.$kind, ['leave_unknown_employee', 'leave_invalid_dates', 'leave_unknown_status', 'leave_invalid_duration', 'leave_duration_mismatch', 'leave_request_missing', 'leave_with_attendance_nothing_to_reconcile']),
+        ...array_map(fn (string $kind): string => 'issue_types.'.$kind, ['leave_unknown_employee', 'leave_invalid_dates', 'leave_unknown_status', 'leave_invalid_duration', 'leave_duration_mismatch', 'leave_rest_day_missing', 'leave_request_missing', 'leave_with_attendance_nothing_to_reconcile']),
         ...array_map(fn (string $kind): string => 'counts.'.$kind, ['rows', 'errors', 'duplicates', 'unknown_employees', 'unmapped_types', 'invalid_dates', 'new', 'changed', 'unchanged', 'versions', 'missing_from_full', 'requests', 'through_row']),
         ...array_map(fn (string $kind): string => 'row_errors.'.$kind, ['required', 'too_long', 'invalid_dates', 'duration_mismatch', 'unknown_status', 'invalid_duration', 'missing_duration', 'column_count']),
     ];

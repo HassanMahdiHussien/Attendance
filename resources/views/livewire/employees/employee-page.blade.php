@@ -1,8 +1,22 @@
 <div class="space-y-6">
     <x-ui.page-header :title="$employee->name" :back="route('employees.index')" />
     <x-ui.card>
-        <p class="text-gray-500"><bdi dir="ltr">{{ \App\Support\Format\Ui::number($employee->employee_code) }}</bdi> · {{ $employee->department }} · {{ $employee->position }} · {{ $employee->branch?->name }}</p>
+        <p class="text-gray-500">
+            <bdi dir="ltr">{{ \App\Support\Format\Ui::number($employee->employee_code) }}</bdi> · {{ $employee->department }} · {{ $employee->position }} · {{ $employee->branch?->name }}
+            @if ($employee->staff_category)
+                · {{ __('messages.employee_history.fields.staff_category') }}: <bdi dir="ltr">{{ $employee->staff_category }}</bdi>
+            @endif
+            @if ($employee->legal_entity)
+                · {{ __('messages.employee_history.fields.legal_entity') }}: <bdi dir="auto">{{ $employee->legal_entity }}</bdi>
+            @endif
+        </p>
         <p class="mt-2 text-sm text-gray-500">{{ __('Hire date') }}: <bdi dir="ltr">{{ \App\Support\Format\Ui::date($employee->hire_date) }}</bdi></p>
+        @if ($patternSource === 'rule')
+            <p class="mt-2 text-sm text-gray-500">{{ __('Work pattern') }}: {{ __('messages.employee_history.set_by_rule') }}</p>
+        @endif
+        @if ($patternIssue)
+            <a class="ui-link mt-2 inline-block" href="{{ \App\Filament\Admin\Pages\Attendance\AttendanceIssues::getUrl(panel: 'admin', tenant: $employee->company).'?'.http_build_query(['type' => 'pattern_review', 'subjectKey' => 'employee:'.$employee->id]) }}">{{ __('messages.employee_history.pattern_review_link') }}</a>
+        @endif
     </x-ui.card>
     <section aria-label="{{ __('messages.attendance.title') }}">
         <livewire:attendance.employee-attendance :employee-id="$employee->id" />

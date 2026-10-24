@@ -2,6 +2,7 @@
 
 namespace App\Services\Employees;
 
+use App\Models\Attendance\DataIssue;
 use App\Models\Employee;
 use App\Models\User;
 use App\Policies\EmployeeProfilePolicy;
@@ -33,6 +34,9 @@ class EmployeeProfile
             return [
                 'employee' => $employee->loadMissing(['branch', 'company']),
                 'changes' => $employee->versions()->with('actor')->orderByDesc('effective_from')->orderByDesc('id')->limit(10)->get(),
+                'patternSource' => app(PatternRule::class)->source($employee),
+                'patternIssue' => DataIssue::query()->where('company_id', $employee->company_id)
+                    ->where('open_key', 'pattern_review|employee|employee:'.$employee->id)->first(),
             ];
         });
     }

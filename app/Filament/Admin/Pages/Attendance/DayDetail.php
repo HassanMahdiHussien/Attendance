@@ -9,6 +9,7 @@ use App\Models\Attendance\DayDecision;
 use App\Models\Attendance\ManualPunch;
 use App\Models\Employee;
 use App\Services\Leave\DayReconciliation;
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Livewire\Attributes\Locked;
 
@@ -78,8 +79,17 @@ class DayDetail extends AttendancePage
 
     public function manualPunches(): array
     {
+        $next = CarbonImmutable::parse($this->date)->addDay()->toDateString();
+        $isShift = in_array($this->day()->inputs['work_pattern'] ?? null, ['shift', 'security'], true);
+
         return ManualPunch::query()->with('creator')->where('company_id', $this->company()->id)
-            ->where('employee_id', $this->employeeId)->whereDate('punched_at', $this->date)
+            ->where('employee_id', $this->employeeId)->where(function ($query) use ($next, $isShift): void {
+                $query->whereDate('punched_at', $this->date);
+                if ($isShift) {
+                    $query->orWhere(fn ($nextDay) => $nextDay->where('role', 'check_out')
+                        ->whereBetween('punched_at', [$next.' 00:00:00', $next.' 02:00:00']));
+                }
+            })
             ->latest('id')->get()->all();
     }
 

@@ -23,6 +23,8 @@ test('company onboarding creates a default dated office policy', function (): vo
         expect($policy)->not->toBeNull()
             ->and($policy->version)->toBe(1)
             ->and($policy->office_start)->toBe('08:00:00')
+            ->and($policy->min_presence_minutes)->toBe(540)
+            ->and($policy->absence_minutes)->toBe(480)
             ->and($policy->office_rest_days)->toBe([5, 6])
             ->and($policy->exits_count_toward_balance)->toBeFalse();
     });

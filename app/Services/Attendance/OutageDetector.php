@@ -10,6 +10,7 @@ use App\Models\Branch;
 use App\Models\Company;
 use App\Services\AuditLogger;
 use App\Support\Tenancy\TenantContext;
+use Carbon\CarbonImmutable;
 
 class OutageDetector
 {
@@ -28,7 +29,7 @@ class OutageDetector
             ->orderByDesc('effective_from')->orderByDesc('id')->get()->groupBy('device_id')->all();
     }
 
-    public function run(Company $company, int $branchId, string $date, string $until, bool $covered, bool $expected): bool
+    public function run(Company $company, int $branchId, string $date, string $until, bool $covered, bool $expected, ?string $start = null): bool
     {
         abort_unless(app(TenantContext::class)->companyId() === $company->id, 403);
         // Serialize the branch-date decision even when concurrent assessments lock different employees.
@@ -40,37 +41,71 @@ class OutageDetector
         if ($existing !== null && $existing->status !== 'open') {
             return false;
         }
+        $start ??= $date.' 00:00:00';
+        $sameWindow = $existing === null || ! isset($existing->details['window_from'])
+            || ($existing->details['window_from'] === $start && $existing->details['window_to'] === $until);
         if (! $covered || ! $expected) {
-            $this->clear($existing, $company, $branchId, $date, $subject);
+            if ($sameWindow) {
+                $this->clear($existing, $company, $branchId, $date, $subject);
+            }
 
             return false;
         }
 
         if ($this->preparedCompany !== $company->id) {
-            $this->prepare($company, $date);
+            $this->prepare($company, substr($until, 0, 10));
         }
-        $deviceIds = [];
-        foreach ($this->settings as $deviceId => $settings) {
-            $setting = $settings->first(fn (DeviceSetting $candidate): bool => $candidate->effective_from->toDateString() <= $date);
+        $startDate = substr($start, 0, 10);
+        $approvedAtStart = false;
+        foreach ($this->settings as $settings) {
+            $setting = $settings->first(fn (DeviceSetting $candidate): bool => $candidate->effective_from->toDateString() <= $startDate);
             if ($setting !== null && (int) $setting->branch_id === $branchId && $setting->role === 'check_in') {
-                $deviceIds[] = $deviceId;
+                $approvedAtStart = true;
+
+                break;
             }
         }
-        if ($deviceIds === []) {
-            $this->clear($existing, $company, $branchId, $date, $subject);
+        if (! $approvedAtStart) {
+            if ($sameWindow) {
+                $this->clear($existing, $company, $branchId, $date, $subject);
+            }
 
             return false;
         }
-        $hasPunch = Transaction::query()->where('company_id', $company->id)
-            ->whereIn('device_id', $deviceIds)
-            ->whereBetween('punched_at', [$date.' 00:00:00', $until])->exists();
-        if ($hasPunch) {
-            $this->clear($existing, $company, $branchId, $date, $subject);
+        $hasApprovedDevice = false;
+        for ($day = CarbonImmutable::parse(substr($start, 0, 10)); $day->toDateString() <= substr($until, 0, 10); $day = $day->addDay()) {
+            $localDate = $day->toDateString();
+            $windowFrom = max($start, $localDate.' 00:00:00');
+            $windowTo = min($until, $localDate.' 23:59:59');
+            $deviceIds = [];
+            foreach ($this->settings as $deviceId => $settings) {
+                $setting = $settings->first(fn (DeviceSetting $candidate): bool => $candidate->effective_from->toDateString() <= $localDate);
+                if ($setting === null || (int) $setting->branch_id !== $branchId || $setting->role !== 'check_in') {
+                    continue;
+                }
+                $hasApprovedDevice = true;
+                $deviceIds[] = $deviceId;
+            }
+            if ($deviceIds !== [] && Transaction::query()->where('company_id', $company->id)
+                ->whereIn('device_id', $deviceIds)->whereBetween('punched_at', [$windowFrom, $windowTo])->exists()) {
+                if ($sameWindow) {
+                    $this->clear($existing, $company, $branchId, $date, $subject);
+                }
+
+                return false;
+            }
+        }
+        if (! $hasApprovedDevice) {
+            if ($sameWindow) {
+                $this->clear($existing, $company, $branchId, $date, $subject);
+            }
 
             return false;
         }
         if ($existing === null) {
-            $this->issues->open($company, 'device_outage', 'branch_date', $subject, details: ['branch_id' => $branchId, 'work_date' => $date]);
+            $this->issues->open($company, 'device_outage', 'branch_date', $subject, details: [
+                'branch_id' => $branchId, 'work_date' => $date, 'window_from' => $start, 'window_to' => $until,
+            ]);
         }
 
         return true;

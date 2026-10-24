@@ -5,7 +5,7 @@ namespace App\Services\Attendance\Reporting;
 class ReportTiles
 {
     public const KEYS = [
-        'active_employees', 'office_employees_assessed', 'assessed_working_days', 'present', 'absent', 'missing_punch', 'pending',
+        'active_employees', 'office_employees_assessed', 'assessed_working_days', 'present', 'absent', 'missing_punch', 'shift_unresolved', 'pending',
         'late', 'early', 'short_hours_alerts', 'balance', 'reconciled', 'remaining',
         'leave_status:pending', 'leave_status:draft', 'leave_status:rejected',
         'credit_created', 'credit_used', 'credit_available', 'data_issues', 'restaurant', 'without_work_pattern',
@@ -24,6 +24,7 @@ class ReportTiles
             'present' => $totals['days']['present'],
             'absent' => $totals['days']['absent'],
             'missing_punch' => $totals['days']['missing_punch'],
+            'shift_unresolved' => $totals['days']['shift_unresolved'],
             'pending' => $totals['days']['pending'],
             'late' => $minutes['late']['gross'],
             'early' => $minutes['early']['gross'],

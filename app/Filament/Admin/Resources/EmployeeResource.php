@@ -3,10 +3,13 @@
 namespace App\Filament\Admin\Resources;
 
 use App\Enums\EmployeeExitStatus;
+use App\Filament\Admin\Pages\Attendance\AttendanceIssues;
 use App\Filament\Admin\Resources\EmployeeResource\Pages;
+use App\Models\Attendance\DataIssue;
 use App\Models\Branch;
 use App\Models\Employee;
 use App\Services\Employees\ExitReview;
+use App\Services\Employees\PatternRule;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\CheckboxList;
@@ -48,11 +51,23 @@ class EmployeeResource extends Resource
             TextInput::make('department_en')->label(__('English department')),
             TextInput::make('position')->label(__('Position')),
             TextInput::make('position_en')->label(__('English position')),
+            Select::make('staff_category')->label(__('messages.employee_history.fields.staff_category'))->options([
+                'B' => __('messages.employee.staff_categories.B'), 'W' => __('messages.employee.staff_categories.W'),
+            ]),
+            TextInput::make('legal_entity')->label(__('messages.employee_history.fields.legal_entity')),
             DatePicker::make('hire_date')->label(__('Hire date'))->required(),
             TextInput::make('email')->label(__('Email address'))->email()->extraInputAttributes(['dir' => 'ltr']),
-            Select::make('work_pattern')->label(__('Work pattern'))->options([
-                'office' => __('Office'), 'shift' => __('Shift'), 'security' => __('Security'),
-            ]),
+            Select::make('work_pattern')->label(__('Work pattern'))
+                ->helperText(fn (?Employee $record): ?string => $record !== null && app(PatternRule::class)->source($record) === 'rule'
+                    ? __('messages.employee_history.set_by_rule') : null)
+                ->hintAction(Action::make('patternReview')->label(__('messages.employee_history.pattern_review_link'))
+                    ->url(fn (?Employee $record): ?string => $record === null ? null : AttendanceIssues::getUrl(panel: 'admin', tenant: $record->company)
+                        .'?'.http_build_query(['type' => 'pattern_review', 'subjectKey' => 'employee:'.$record->id]))
+                    ->visible(fn (?Employee $record): bool => $record !== null && DataIssue::query()
+                        ->where('company_id', $record->company_id)
+                        ->where('open_key', 'pattern_review|employee|employee:'.$record->id)->exists()))->options([
+                            'office' => __('Office'), 'shift' => __('Shift'), 'security' => __('Security'),
+                        ]),
             CheckboxList::make('rest_days')->label(__('Rest days'))->options([
                 1 => __('Monday'), 2 => __('Tuesday'), 3 => __('Wednesday'), 4 => __('Thursday'),
                 5 => __('Friday'), 6 => __('Saturday'), 7 => __('Sunday'),

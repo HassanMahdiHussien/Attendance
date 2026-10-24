@@ -248,7 +248,7 @@ test('a device approved after the work date cannot create an earlier outage', fu
     expect(officeAssess($fixture)->status)->toBe('absent');
 });
 
-test('a missing office pattern records a reviewable explanation but another pattern has no office day', function (): void {
+test('a missing pattern records a reviewable explanation and a shift gets its own day', function (): void {
     $fixture = officeFixture();
     $this->actingAs($fixture['hr']);
     app(TenantContext::class)->runForCompany($fixture['company'], function () use ($fixture): void {
@@ -261,11 +261,11 @@ test('a missing office pattern records a reviewable explanation but another patt
     app(TenantContext::class)->runForCompany($fixture['company'], function () use ($fixture): void {
         app(EmployeeHistory::class)->record($fixture['employee'], ['work_pattern' => 'shift'], '2026-10-19', 'manual', $fixture['hr']);
     });
-    expect(officeAssess($fixture))->toBeNull();
+    expect(officeAssess($fixture)?->status)->toBe('absent');
     app(TenantContext::class)->runForCompany($fixture['company'], function () use ($fixture, $missing): void {
         expect($missing->fresh()->superseded_by_run_id)->not->toBeNull()
             ->and(Day::query()->where('employee_id', $fixture['employee']->id)
-                ->whereNull('superseded_by_run_id')->exists())->toBeFalse();
+                ->whereDate('work_date', '2026-10-19')->whereNull('superseded_by_run_id')->exists())->toBeTrue();
     });
 });
 

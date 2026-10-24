@@ -19,7 +19,7 @@ class PolicyFactory extends Factory
             'office_start' => '08:00:00',
             'flex_minutes' => 60,
             'workday_minutes' => 540,
-            'min_presence_minutes' => 480,
+            'min_presence_minutes' => 540,
             'close_grace_minutes' => 120,
             'exits_count_toward_balance' => false,
             'office_rest_days' => [5, 6],

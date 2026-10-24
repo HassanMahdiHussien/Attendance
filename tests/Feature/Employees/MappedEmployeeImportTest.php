@@ -12,6 +12,7 @@ use App\Models\EmployeeImportMapping;
 use App\Models\EmployeeVersion;
 use App\Models\User;
 use App\Services\Employees\ColumnMapping;
+use App\Services\Employees\EmployeeHistory;
 use App\Services\Employees\EmployeeImport;
 use App\Services\Employees\SpreadsheetReader;
 use App\Support\Tenancy\TenantContext;
@@ -33,7 +34,7 @@ function hcHeaders(): array
         'Certificate', 'Pers.No.', 'Personnel number of superior (', 'Cost Ctr', 'Cost Center', 'Personnel Area'];
 }
 
-function hcRow(int|string $code, string $englishName, mixed $arabicName, int|DateTimeInterface $entry, string $managerCode = ''): array
+function hcRow(int|string $code, string $englishName, mixed $arabicName, int|DateTimeInterface $entry, string $managerCode = '', string $category = '', string $entity = ''): array
 {
     $row = array_fill(0, 24, '');
     $row[0] = $code;
@@ -41,8 +42,10 @@ function hcRow(int|string $code, string $englishName, mixed $arabicName, int|Dat
     $row[2] = $arabicName;
     $row[3] = 'Analyst';
     $row[4] = $entry;
+    $row[10] = $category;
     $row[13] = 'Female';
     $row[15] = 'Operations';
+    $row[16] = $entity;
     $row[19] = $managerCode;
     $row[20] = $managerCode === '' ? '' : 'Fake Manager';
     $row[23] = 'Hilla';
@@ -93,12 +96,13 @@ afterEach(function (): void {
 
 test('HC headers map by position and numeric codes and dates survive preview and commit', function (): void {
     $file = hcFile([
-        hcRow(12345678, 'Fake Person', '#N/A', 39151, '87654321'),
-        hcRow(87654321, 'Fake Manager', 'اسم تجريبي', new DateTimeImmutable('2008-04-05')),
+        hcRow(12345678, 'Fake Person', '#N/A', 39151, '87654321', 'B', 'Al Waha Company'),
+        hcRow(87654321, 'Fake Manager', 'اسم تجريبي', new DateTimeImmutable('2008-04-05'), '', 'W', 'Sardkar for Bvr. Ind/Ltd'),
     ], true);
     $sheet = app(SpreadsheetReader::class)->read($file);
     $mapping = app(ColumnMapping::class)->suggest($sheet['headers']);
     expect($mapping[0])->toBe('employee_code')->and($mapping[2])->toBe('name')
+        ->and($mapping[10])->toBe('staff_category')->and($mapping[16])->toBe('legal_entity')
         ->and($mapping[19])->toBe('manager_code')->and($mapping[20])->toBe('manager_name')
         ->and($sheet['headers'][2])->toBe('');
     $import = app(EmployeeImport::class);
@@ -107,12 +111,21 @@ test('HC headers map by position and numeric codes and dates survive preview and
         ->and($preview->rows[0]['code'])->toBe('12345678')
         ->and($preview->rows[0]['name'])->toBe('Fake Person')
         ->and($preview->rows[0]['values']['hire_date'])->toBe('2007-03-10')
+        ->and($preview->rows[0]['values']['staff_category'])->toBe('B')
+        ->and($preview->rows[0]['values']['legal_entity'])->toBe('Al Waha Company')
+        ->and($preview->rows[0]['diff']['work_pattern']['after'])->toBe('shift')
         ->and($preview->rows[0]['resolved_manager_code'])->toBe('87654321');
     $result = $import->commitMapped($this->company, $file, $this->actor, 'full', today()->toDateString(), $mapping, $preview->token);
     $person = Employee::query()->where('employee_code', '12345678')->firstOrFail();
     $manager = Employee::query()->where('employee_code', '87654321')->firstOrFail();
     expect($result['committed'])->toBeTrue()->and($person->manager_employee_id)->toBe($manager->id)
         ->and($person->name_en)->toBe('Fake Person')
+        ->and($person->staff_category)->toBe('B')
+        ->and($person->legal_entity)->toBe('Al Waha Company')
+        ->and($person->work_pattern?->value)->toBe('shift')
+        ->and($manager->work_pattern?->value)->toBe('office')
+        ->and(app(EmployeeHistory::class)->asOf($person, today())['legal_entity'])->toBe('Al Waha Company')
+        ->and(app(EmployeeHistory::class)->asOf($person, today())['staff_category'])->toBe('B')
         ->and(EmployeeImportBatch::query()->count())->toBe(1)
         ->and(EmployeeImportMapping::query()->count())->toBe(1)
         ->and(EmployeeVersion::query()->where('employee_id', $person->id)->where('employee_import_batch_id', $result['batch']->id)->exists())->toBeTrue()
@@ -121,6 +134,40 @@ test('HC headers map by position and numeric codes and dates survive preview and
     $repeat = $import->previewMapped($this->company, $file, 'partial', '2025-01-01', $mapping);
     expect($repeat->alreadyImported)->not->toBeNull()->and($repeat->token)->toBeNull();
     expect($import->commitMapped($this->company, $file, $this->actor, 'partial', '2025-01-01', $mapping, $preview->token)['committed'])->toBeFalse();
+});
+
+test('a later HC import cannot replace an HR work pattern', function (): void {
+    $import = app(EmployeeImport::class);
+    $mapping = app(ColumnMapping::class)->suggest(hcHeaders());
+    $first = hcFile([hcRow(12345678, 'Fake Person', '', 39151, '', 'B', 'Al Waha Company')]);
+    $preview = $import->previewMapped($this->company, $first, 'partial', today()->toDateString(), $mapping);
+    $import->commitMapped($this->company, $first, $this->actor, 'partial', today()->toDateString(), $mapping, $preview->token);
+    $employee = Employee::query()->where('employee_code', '12345678')->firstOrFail();
+    app(EmployeeHistory::class)->record($employee, ['work_pattern' => 'security'], today(), 'manual', $this->actor);
+
+    $later = hcFile([hcRow(12345678, 'Fake Person', '', 39151, '', 'W', 'Al Waha Company')]);
+    $next = $import->previewMapped($this->company, $later, 'partial', today()->toDateString(), $mapping);
+    $import->commitMapped($this->company, $later, $this->actor, 'partial', today()->toDateString(), $mapping, $next->token);
+
+    expect($employee->fresh()->staff_category)->toBe('W')
+        ->and($employee->fresh()->work_pattern?->value)->toBe('security')
+        ->and($employee->versions()->where('source', 'rule')->count())->toBe(1);
+});
+
+test('collar aliases are case insensitive and invalid values stop the import', function (): void {
+    $mapping = app(ColumnMapping::class)->suggest(hcHeaders());
+    $file = hcFile([
+        hcRow(12345678, 'Fake Blue', '', 39151, '', 'bLuE'),
+        hcRow(87654321, 'Fake White', '', 39151, '', 'WHITE'),
+    ]);
+    $preview = app(EmployeeImport::class)->previewMapped($this->company, $file, 'partial', today()->toDateString(), $mapping);
+
+    expect($preview->errors())->toBe(0)
+        ->and($preview->rows[0]['values']['staff_category'])->toBe('B')
+        ->and($preview->rows[1]['values']['staff_category'])->toBe('W');
+
+    $invalid = hcFile([hcRow(12345678, 'Fake Unknown', '', 39151, '', 'X')]);
+    expect(app(EmployeeImport::class)->previewMapped($this->company, $invalid, 'partial', today()->toDateString(), $mapping)->errors())->toBe(1);
 });
 
 test('full files send missing employees to exit review and reappearance clears the review without deactivation', function (): void {

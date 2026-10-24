@@ -83,7 +83,7 @@ class AttendanceSummary
                 $row['without_work_pattern'] = $employee->work_pattern === null ? 1 : 0;
                 foreach ($employeeDays as $day) {
                     $this->addDay($row, $this->project($day, $allocations->get($day->id, collect()),
-                        isset($nothingDays[$employee->id.'|'.$day->work_date->toDateString()])));
+                        isset($nothingDays[$employee->id.'|'.$day->work_date->toDateString()])), $employee->work_pattern?->value);
                 }
                 $row['leave'] = $leave[$employee->id] ?? [];
                 $row['leave_day_equivalents'] = array_map(fn (int $minutes): float => $minutes / 480, $row['leave']);
@@ -246,7 +246,7 @@ class AttendanceSummary
     {
         $gross = array_fill_keys(self::KINDS, 0);
         if ($day->status === 'absent') {
-            $gross['absence'] = (int) ($day->inputs['min_presence_minutes'] ?? $day->policy?->min_presence_minutes ?? 480);
+            $gross['absence'] = (int) ($day->inputs['absence_minutes'] ?? $day->policy?->absence_minutes ?? 480);
         } elseif ($day->status === 'present') {
             $gross['late'] = (int) $day->late_minutes;
             $gross['early'] = (int) $day->early_minutes;
@@ -266,6 +266,8 @@ class AttendanceSummary
             'day_id' => (int) $day->id, 'employee_id' => (int) $day->employee_id,
             'work_date' => $day->work_date->toDateString(), 'branch_id' => $day->branch_id,
             'status' => $day->status, 'reviewed' => (bool) $day->reviewed, 'minutes' => $minutes,
+            'shift_start' => $day->shift_start, 'shift_source' => $day->shift_source,
+            'shift_confidence' => $day->shift_confidence, 'shift_minutes' => $day->policy?->shift_minutes,
             'first_in' => $day->first_in?->format('Y-m-d H:i:s'),
             'last_out' => $day->last_out?->format('Y-m-d H:i:s'),
             'required_leave_at' => $day->required_leave_at?->format('Y-m-d H:i:s'),
@@ -304,12 +306,15 @@ class AttendanceSummary
         ];
     }
 
-    private function addDay(array &$row, array $day): void
+    private function addDay(array &$row, array $day, ?string $employeePattern): void
     {
         $row['days'][$day['status']]++;
         $row['day_ids'][$day['status']][] = $day['day_id'];
         if (in_array($day['status'], ['present', 'absent', 'missing_punch'], true)) {
             $row['assessed_working_days']++;
+            if (($day['inputs']['work_pattern'] ?? $employeePattern) === 'office') {
+                $row['office_employees_assessed'] = 1;
+            }
         }
         foreach (self::KINDS as $kind) {
             foreach ($day['minutes'][$kind] as $measure => $value) {
@@ -327,7 +332,7 @@ class AttendanceSummary
 
     private function merge(array &$totals, array $row): void
     {
-        $totals['office_employees_assessed'] += (int) ($row['assessed_working_days'] > 0);
+        $totals['office_employees_assessed'] += $row['office_employees_assessed'];
         foreach (['active_employees', 'without_work_pattern', 'assessed_working_days', 'short_hours_alerts'] as $key) {
             $totals[$key] += $row[$key];
         }
@@ -622,7 +627,7 @@ class AttendanceSummary
 
         return match ($tile) {
             'active_employees', 'without_work_pattern', 'assessed_working_days', 'short_hours_alerts' => $row[$tile] > 0,
-            'office_employees_assessed' => $row['assessed_working_days'] > 0,
+            'office_employees_assessed' => $row['office_employees_assessed'] > 0,
             'late', 'early', 'absence', 'exit' => $row['minutes'][$tile]['gross'] > 0,
             'balance', 'reconciled', 'remaining' => $this->hasMinutes($row, match ($tile) {
                 'balance' => 'gross', 'reconciled' => 'reconciled_by_leave', 'remaining' => 'remaining',

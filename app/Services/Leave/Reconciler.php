@@ -2,6 +2,7 @@
 
 namespace App\Services\Leave;
 
+use App\Jobs\Attendance\AssessDaysJob;
 use App\Models\Attendance\DataIssue;
 use App\Models\Attendance\Day;
 use App\Models\Attendance\Policy;
@@ -18,6 +19,7 @@ use App\Models\Leave\Setting;
 use App\Services\Attendance\DataIssues;
 use App\Services\AuditLogger;
 use App\Support\Tenancy\TenantContext;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
@@ -36,13 +38,18 @@ class Reconciler
         ]);
         try {
             $changed = 0;
+            $assessmentDates = [];
             foreach (array_chunk($ids, 100) as $chunk) {
-                $changed += DB::transaction(function () use ($company, $chunk, $run): int {
+                $changed += DB::transaction(function () use ($company, $chunk, $run, &$assessmentDates): int {
                     $employees = Employee::query()->where('company_id', $company->id)->whereIn('id', $chunk)
                         ->orderBy('id')->lockForUpdate()->get();
                     $count = 0;
                     foreach ($employees as $employee) {
-                        $count += (int) $this->replayEmployee($company, $employee, $run);
+                        $result = $this->replayEmployee($company, $employee, $run);
+                        $count += (int) $result['changed'];
+                        if ($result['dates'] !== []) {
+                            $assessmentDates[$employee->id] = $result['dates'];
+                        }
                     }
 
                     return $count;
@@ -50,6 +57,9 @@ class Reconciler
             }
             $run->update(['status' => 'completed', 'counts' => ['employees_changed' => $changed], 'finished_at' => now()]);
             $this->audit->log('leave.reconciled', $run, ['employee_ids' => $ids, 'employees_changed' => $changed]);
+            foreach ($assessmentDates as $employeeId => $dates) {
+                $this->dispatchChangedDays($company->id, (int) $employeeId, $dates);
+            }
         } catch (Throwable $exception) {
             $run->update(['status' => 'failed', 'finished_at' => now()]);
 
@@ -59,7 +69,7 @@ class Reconciler
         return $run->fresh();
     }
 
-    private function replayEmployee(Company $company, Employee $employee, ProcessingRun $run): bool
+    private function replayEmployee(Company $company, Employee $employee, ProcessingRun $run): array
     {
         $requests = LeaveRequest::query()->where('company_id', $company->id)->where('employee_id', $employee->id)
             ->with('leaveType')->orderBy('id')->get();
@@ -71,7 +81,7 @@ class Reconciler
         $policies = Policy::query()->where('company_id', $company->id)->orderBy('effective_from')->orderBy('version')->get()
             ->map(fn (Policy $policy): array => [
                 'effective_from' => $policy->effective_from->toDateString(), 'version' => $policy->version,
-                'office_rest_days' => $policy->office_rest_days,
+                'office_rest_days' => $policy->office_rest_days, 'shift_rest_days' => $policy->shift_rest_days,
             ])->all();
         $decisions = RequestDecision::query()->where('company_id', $company->id)->where('employee_id', $employee->id)
             ->orWhere(function ($query) use ($requests, $company): void {
@@ -150,6 +160,17 @@ class Reconciler
                     $this->audit->log('leave.issue.resolved', $mismatch, ['type' => $mismatch->type, 'subject_key' => $mismatch->subject_key]);
                 }
             }
+            $restKey = 'leave_rest_day_missing|leave_request|request:'.$request->id;
+            if ($distribution['flag'] === 'rest_day_missing') {
+                $this->issues->open($company, 'leave_rest_day_missing', 'leave_request', 'request:'.$request->id);
+            } else {
+                $restIssue = DataIssue::query()->where('company_id', $company->id)->where('open_key', $restKey)->first();
+                if ($restIssue !== null) {
+                    $restIssue->update(['status' => 'resolved', 'open_key' => null,
+                        'note' => __('messages.leave_reconciliation.distribution_resolved'), 'resolved_at' => now()]);
+                    $this->audit->log('leave.issue.resolved', $restIssue, ['type' => $restIssue->type, 'subject_key' => $restIssue->subject_key]);
+                }
+            }
             if ($distribution['flag'] !== null) {
                 continue;
             }
@@ -167,7 +188,7 @@ class Reconciler
             $date = $day->work_date->toDateString();
             if ($day->status === 'absent') {
                 $targets[] = ['day_id' => $day->id, 'work_date' => $date, 'kind' => 'absence',
-                    'minutes' => (int) ($day->inputs['min_presence_minutes'] ?? $day->policy?->min_presence_minutes ?? 480)];
+                    'minutes' => (int) ($day->inputs['absence_minutes'] ?? $day->policy?->absence_minutes ?? 480)];
             } elseif ($day->status === 'present') {
                 foreach (['late' => 'late_minutes', 'early' => 'early_minutes', 'exit' => 'exit_minutes'] as $kind => $column) {
                     if ($kind === 'exit' && ! $day->policy?->exits_count_toward_balance) {
@@ -186,6 +207,19 @@ class Reconciler
         foreach ($plannedDays as $day) {
             $sameDays = $sameDays && (int) ($oldByKey->get($day['key'])?->minutes ?? -1) === $day['minutes'];
         }
+        $newByKey = collect($plannedDays)->keyBy('key');
+        $changedDates = [];
+        foreach ($oldByKey as $key => $oldDay) {
+            if ((int) ($newByKey->get($key)['minutes'] ?? -1) !== (int) $oldDay->minutes) {
+                $changedDates[] = $oldDay->work_date->toDateString();
+            }
+        }
+        foreach ($plannedDays as $day) {
+            if ((int) ($oldByKey->get($day['key'])?->minutes ?? -1) !== $day['minutes']) {
+                $changedDates[] = $day['work_date'];
+            }
+        }
+        $changedDates = array_values(array_unique($changedDates));
         $oldCredits = Credit::query()->where('company_id', $company->id)->where('employee_id', $employee->id)
             ->whereNull('superseded_by_run_id')->get();
         $oldAllocations = Allocation::query()->where('company_id', $company->id)->where('employee_id', $employee->id)
@@ -217,7 +251,7 @@ class Reconciler
                 $this->audit->log('leave.issue.resolved', $issue, ['type' => $issue->type, 'subject_key' => $issue->subject_key]);
             });
         if (! $methodsChanged && $sameDays && $this->sameLedger($plan, $oldCredits, $oldAllocations, $oldDays)) {
-            return false;
+            return ['changed' => false, 'dates' => []];
         }
         $oldAllocations->each(fn (Allocation $allocation) => $allocation->update(['superseded_by_run_id' => $run->id]));
         $oldCredits->each(fn (Credit $credit) => $credit->update(['superseded_by_run_id' => $run->id]));
@@ -256,7 +290,39 @@ class Reconciler
             ]);
         }
 
-        return true;
+        return ['changed' => true, 'dates' => $changedDates];
+    }
+
+    private function dispatchChangedDays(int $companyId, int $employeeId, array $dates): void
+    {
+        sort($dates);
+        $from = null;
+        $to = null;
+        foreach ($dates as $date) {
+            if ($from !== null && CarbonImmutable::parse($to)->addDay()->toDateString() < $date) {
+                $this->queueAssessment($companyId, $employeeId, $from, $to);
+                $from = null;
+            }
+            $from ??= $date;
+            $to = $date;
+        }
+        if ($from !== null) {
+            $this->queueAssessment($companyId, $employeeId, $from, $to);
+        }
+    }
+
+    private function queueAssessment(int $companyId, int $employeeId, string $from, string $to): void
+    {
+        $today = today('Asia/Baghdad')->toDateString();
+        $scopeFrom = CarbonImmutable::parse($from)->subDay()->toDateString();
+        if ($scopeFrom > $today) {
+            return;
+        }
+        AssessDaysJob::dispatch($companyId, [
+            'employee_ids' => [$employeeId],
+            'from' => $scopeFrom,
+            'to' => min(CarbonImmutable::parse($to)->addDay()->toDateString(), $today),
+        ], 'leave_distribution')->afterCommit();
     }
 
     private function sameLedger(array $plan, $credits, $allocations, $days): bool

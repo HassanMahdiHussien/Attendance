@@ -33,10 +33,14 @@ class CoverageWindows
 
     public function covers(?int $branchId, string $date, string $until): bool
     {
+        return $this->coversWindow($branchId, $date.' 00:00:00', $until);
+    }
+
+    public function coversWindow(?int $branchId, string $start, string $until): bool
+    {
         if ($branchId === null) {
             return false;
         }
-        $start = $date.' 00:00:00';
         foreach ($this->windows[$branchId] ?? [] as [$from, $to]) {
             if ($from <= $start && $to >= $until) {
                 return true;

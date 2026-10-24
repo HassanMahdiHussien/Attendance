@@ -62,6 +62,9 @@
                             <a class="ui-link" href="{{ $punchUrl.'?'.http_build_query(['employee' => $employee->id, 'from' => $day['work_date'], 'to' => $day['work_date']]) }}">{{ __('messages.reporting_ui.punches') }}</a>
                         </div>
                         <p>{{ __('messages.reporting_ui.in_out') }}: <bdi dir="ltr">{{ $day['first_in'] ? substr($day['first_in'], 11, 5) : '—' }} / {{ $day['last_out'] ? substr($day['last_out'], 11, 5) : '—' }}</bdi></p>
+                        @if (in_array($day['inputs']['work_pattern'] ?? null, ['shift', 'security'], true))
+                            <p>{{ __('messages.office_ui.shift') }}: <bdi dir="ltr">{{ \App\Services\Attendance\ShiftDisplay::hours($day['shift_start'], $day['shift_minutes']) ?? '—' }}</bdi> · {{ __('messages.office_ui.shift_sources.'.($day['shift_source'] ?? 'unknown')) }}</p>
+                        @endif
                         <p>{{ __('messages.reporting_ui.elapsed') }} <bdi dir="ltr">{{ sprintf('%d:%02d', intdiv((int) $day['observed']['elapsed'], 60), $day['observed']['elapsed'] % 60) }}</bdi> · {{ __('messages.reporting_ui.presence') }} <bdi dir="ltr">{{ sprintf('%d:%02d', intdiv((int) $day['observed']['presence'], 60), $day['observed']['presence'] % 60) }}</bdi> · {{ __('messages.reporting_ui.short') }} <bdi dir="ltr">{{ sprintf('%d:%02d', intdiv((int) $day['observed']['short'], 60), $day['observed']['short'] % 60) }}</bdi></p>
                         @foreach (['absence', 'late', 'early', 'exit'] as $kind)
                             @if ($day['minutes'][$kind]['gross'] > 0)

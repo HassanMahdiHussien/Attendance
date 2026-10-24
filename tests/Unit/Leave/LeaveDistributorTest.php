@@ -77,3 +77,20 @@ test('unexplained duration remains a mismatch without distributed days', functio
         ->and($result['counting_method'])->toBeNull()
         ->and($result['days'])->toBe([]);
 });
+
+test('shift leave uses shift rest days while security needs an individual rest day', function (): void {
+    $request = ['start_date' => '2026-10-16', 'end_date' => '2026-10-17', 'duration_days' => 1.0];
+    $policies = [['effective_from' => '2000-01-01', 'version' => 1,
+        'office_rest_days' => [5, 6], 'shift_rest_days' => [5]]];
+    $shift = (new LeaveDistributor)->distribute($request, [
+        ['id' => 1, 'effective_from' => '2026-10-16', 'changes' => ['work_pattern' => 'shift']],
+    ], $policies);
+    $security = (new LeaveDistributor)->distribute($request, [
+        ['id' => 1, 'effective_from' => '2026-10-16', 'changes' => ['work_pattern' => 'security']],
+    ], $policies);
+
+    expect($shift['counting_method'])->toBe('employee')
+        ->and($shift['days'])->toBe([['work_date' => '2026-10-17', 'minutes' => 480]])
+        ->and($security['flag'])->toBe('rest_day_missing')
+        ->and($security['days'])->toBe([]);
+});

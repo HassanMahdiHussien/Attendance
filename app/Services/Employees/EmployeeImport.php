@@ -21,7 +21,7 @@ use Illuminate\Validation\ValidationException;
 
 class EmployeeImport
 {
-    public function __construct(private CsvReader $reader, private SequenceService $sequences, private AuditLogger $audit, private EmployeeHistory $history) {}
+    public function __construct(private CsvReader $reader, private SequenceService $sequences, private AuditLogger $audit, private EmployeeHistory $history, private PatternRule $patternRule) {}
 
     public function inspect(Company $company, UploadedFile $file): array
     {
@@ -70,7 +70,7 @@ class EmployeeImport
                     $errors[] = __('messages.employee_import.field_required', ['field' => __('messages.employee_import.fields.'.$field)]);
                 }
             }
-            foreach (['name', 'employee_code', 'department', 'position', 'email'] as $field) {
+            foreach (['name', 'employee_code', 'department', 'position', 'email', 'legal_entity'] as $field) {
                 if (mb_strlen($input[$field] ?? '') > 255) {
                     $errors[] = __('messages.employee_import.field_too_long', ['field' => $field]);
                 }
@@ -99,6 +99,15 @@ class EmployeeImport
             if ($gender === false) {
                 $errors[] = __('messages.employee_import.gender_invalid');
             }
+            $category = match ($this->normalise($input['staff_category'] ?? '')) {
+                'b', 'blue' => 'B',
+                'w', 'white' => 'W',
+                '' => null,
+                default => false,
+            };
+            if ($category === false) {
+                $errors[] = __('messages.employee.staff_category_invalid');
+            }
             $values = [
                 'name' => $input['name'] ?? '',
                 'employee_code' => $existing?->employee_code ?? $code,
@@ -108,10 +117,12 @@ class EmployeeImport
                 'branch_id' => $branchMatches->count() === 1 ? $branchMatches->first()->id : null,
                 'email' => ($input['email'] ?? '') !== '' ? $input['email'] : ($existing?->email),
                 'gender' => $gender ?: ($existing?->gender?->value ?? 'unspecified'),
+                'staff_category' => $category ?: $existing?->staff_category,
+                'legal_entity' => ($input['legal_entity'] ?? '') !== '' ? $input['legal_entity'] : $existing?->legal_entity,
             ];
             $diff = [];
             if ($existing) {
-                foreach (['name', 'department', 'position', 'hire_date', 'branch_id', 'email', 'gender'] as $field) {
+                foreach (['name', 'department', 'position', 'hire_date', 'branch_id', 'email', 'gender', 'staff_category', 'legal_entity'] as $field) {
                     $before = $field === 'hire_date' ? $existing->hire_date?->toDateString()
                         : ($field === 'gender' ? $existing->gender?->value : $existing->{$field});
                     if ((string) $before !== (string) $values[$field]) {
@@ -123,6 +134,9 @@ class EmployeeImport
                         $warnings[] = __('messages.employee_import.linked_user_permissions_unchanged');
                     }
                 }
+            }
+            if ($existing?->work_pattern === null && ($rule = $this->patternRule->suggest($values)) !== null) {
+                $diff[] = 'work_pattern';
             }
             $rowIndex = count($rows);
             if ($key !== '') {
@@ -194,11 +208,13 @@ class EmployeeImport
                     }
                 }
                 $changed = [];
+                $touchedEmployeeIds = [];
                 foreach ($preview->rows as $row) {
                     if ($row['employee_id'] === null) {
                         continue;
                     }
                     $employee = Employee::withoutGlobalScopes()->where('company_id', $company->id)->findOrFail($row['employee_id']);
+                    $touchedEmployeeIds[] = $employee->id;
                     $this->history->record($employee, Arr::except($row['values'], ['employee_code']), today(), 'import', $actor, batchId: $batch->id);
                     if ($row['diff'] !== []) {
                         $changed[] = ['id' => $employee->id, 'fields' => $row['diff']];
@@ -216,7 +232,7 @@ class EmployeeImport
                         } while (isset($used[$this->normalise($values['employee_code'])]));
                     }
                     $used[$this->normalise($values['employee_code'])] = true;
-                    $this->history->create(
+                    $employee = $this->history->create(
                         Arr::only($values, ['name', 'employee_code', 'branch_id', 'hire_date', 'gender']) + ['company_id' => $company->id],
                         Arr::except($values, ['employee_code']),
                         today(),
@@ -224,6 +240,10 @@ class EmployeeImport
                         $actor,
                         batchId: $batch->id,
                     );
+                    $touchedEmployeeIds[] = $employee->id;
+                }
+                foreach ($touchedEmployeeIds as $employeeId) {
+                    $this->patternRule->apply(Employee::query()->findOrFail($employeeId), today()->toDateString(), $batch->id);
                 }
                 $this->audit->log('employees.imported', $company, [
                     'sha256' => $preview->hash, 'added' => $preview->added(), 'updated' => $preview->updated(),

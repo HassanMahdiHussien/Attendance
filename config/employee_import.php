@@ -18,6 +18,8 @@ return [
         'branch' => ['Personnel Area', 'branch', 'الفرع'],
         'email' => ['email', 'البريد'],
         'work_pattern' => ['work_pattern', 'نمط العمل'],
+        'staff_category' => ['AG HR Collar', 'staff_category', 'Staff category'],
+        'legal_entity' => ['Company Code', 'legal_entity', 'Legal entity'],
         'rest_days' => ['rest_days', 'أيام الراحة'],
         'schedule_start' => ['schedule_start', 'بداية الدوام'],
         'schedule_end' => ['schedule_end', 'نهاية الدوام'],

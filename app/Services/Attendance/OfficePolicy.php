@@ -21,10 +21,18 @@ class OfficePolicy
         'office_start' => '08:00:00',
         'flex_minutes' => 60,
         'workday_minutes' => 540,
-        'min_presence_minutes' => 480,
+        'min_presence_minutes' => 540,
+        'absence_minutes' => 480,
         'close_grace_minutes' => 120,
         'exits_count_toward_balance' => false,
         'office_rest_days' => [5, 6],
+        'shift_starts' => ['00:00', '08:00', '16:00'],
+        'shift_minutes' => 480,
+        'shift_break_minutes' => 30,
+        'shift_min_presence_minutes' => 480,
+        'shift_rest_days' => [5],
+        'security_min_presence_minutes' => 480,
+        'inference_tolerance_minutes' => 120,
     ];
 
     public function __construct(private AuditLogger $audit) {}
@@ -110,11 +118,22 @@ class OfficePolicy
     private function validate(array $values): void
     {
         $days = $values['office_rest_days'] ?? null;
+        $shiftDays = $values['shift_rest_days'] ?? null;
+        $starts = $values['shift_starts'] ?? null;
         if (! is_array($days) || array_diff($days, range(1, 7)) !== [] || count($days) !== count(array_unique($days))
+            || ! is_array($shiftDays) || array_diff($shiftDays, range(1, 7)) !== [] || count($shiftDays) !== count(array_unique($shiftDays))
+            || ! is_array($starts) || $starts === [] || count($starts) !== count(array_unique($starts))
+            || count(array_filter($starts, fn ($start): bool => is_string($start) && preg_match('/^([01][0-9]|2[0-3]):[0-5][0-9]$/', $start) === 1)) !== count($starts)
             || ! preg_match('/^([01][0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/', (string) ($values['office_start'] ?? ''))
             || ! is_numeric($values['workday_minutes']) || (int) $values['workday_minutes'] <= 0 || (int) $values['workday_minutes'] > 1440
             || ! is_numeric($values['min_presence_minutes']) || (int) $values['min_presence_minutes'] <= 0
             || (int) $values['min_presence_minutes'] > (int) $values['workday_minutes']
+            || ! is_numeric($values['absence_minutes']) || (int) $values['absence_minutes'] <= 0
+            || ! is_numeric($values['shift_minutes']) || (int) $values['shift_minutes'] <= 0 || (int) $values['shift_minutes'] > 1440
+            || ! is_numeric($values['shift_break_minutes']) || (int) $values['shift_break_minutes'] < 0 || (int) $values['shift_break_minutes'] > (int) $values['shift_minutes']
+            || ! is_numeric($values['shift_min_presence_minutes']) || (int) $values['shift_min_presence_minutes'] <= 0 || (int) $values['shift_min_presence_minutes'] > (int) $values['shift_minutes']
+            || ! is_numeric($values['security_min_presence_minutes']) || (int) $values['security_min_presence_minutes'] <= 0 || (int) $values['security_min_presence_minutes'] > (int) $values['shift_minutes']
+            || ! is_numeric($values['inference_tolerance_minutes']) || (int) $values['inference_tolerance_minutes'] <= 0 || (int) $values['inference_tolerance_minutes'] > 1440
             || ! is_numeric($values['flex_minutes']) || (int) $values['flex_minutes'] < 0
             || (int) $values['flex_minutes'] > (int) $values['workday_minutes']
             || ! is_numeric($values['close_grace_minutes']) || (int) $values['close_grace_minutes'] < 0
