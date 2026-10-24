@@ -235,7 +235,9 @@ class EmployeeImport
                     $employee = $this->history->create(
                         Arr::only($values, ['name', 'employee_code', 'branch_id', 'hire_date', 'gender']) + ['company_id' => $company->id],
                         Arr::except($values, ['employee_code']),
-                        today(),
+                        // First imported values count from hiring (see MappedEmployeeImport::firstImportDate).
+                        is_string($values['hire_date'] ?? null) && $values['hire_date'] !== ''
+                            && $values['hire_date'] < today()->toDateString() ? $values['hire_date'] : today(),
                         'import',
                         $actor,
                         batchId: $batch->id,
