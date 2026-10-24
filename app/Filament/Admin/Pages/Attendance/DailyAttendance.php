@@ -5,6 +5,7 @@ namespace App\Filament\Admin\Pages\Attendance;
 use App\Filament\Admin\Resources\Attendance\AttendancePage;
 use App\Models\Attendance\Day;
 use App\Models\Branch;
+use App\Services\Attendance\HolidayLabels;
 use App\Services\Attendance\Reporting\ReportFilters;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -46,6 +47,16 @@ class DailyAttendance extends AttendancePage
     public function days(): LengthAwarePaginator
     {
         return $this->query()->with(['employee', 'branch', 'policy'])->orderBy('employee_id')->paginate(50);
+    }
+
+    public function holidayNames(): array
+    {
+        $ids = [];
+        foreach ($this->days()->items() as $day) {
+            array_push($ids, ...($day->holiday_ids ?? []));
+        }
+
+        return app(HolidayLabels::class)->forIds($this->company()->id, $ids);
     }
 
     public function summary(): array

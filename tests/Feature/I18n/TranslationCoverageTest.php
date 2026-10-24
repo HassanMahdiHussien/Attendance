@@ -107,6 +107,35 @@ test('holiday issue labels exist wherever attendance and leave render them', fun
     }
 });
 
+test('holiday screen dynamic labels exist in English and Arabic', function (): void {
+    $english = File::getRequire(lang_path('en/messages.php'));
+    $arabic = File::getRequire(lang_path('ar/messages.php'));
+    $labels = [
+        ...array_map(fn (string $status): string => 'statuses.'.$status,
+            ['draft', 'approved', 'rejected', 'withdrawn']),
+        ...array_map(fn (string $status): string => 'ai_statuses.'.$status,
+            ['pending', 'done', 'failed', 'unavailable']),
+        ...array_map(fn (string $pattern): string => 'patterns.'.$pattern,
+            ['office', 'shift', 'security']),
+        ...array_map(fn (string $confidence): string => 'confidence.'.$confidence,
+            ['high', 'medium', 'low']),
+        ...array_map(fn (string $field): string => 'fields.'.$field,
+            ['name_en', 'name_ar', 'ranges', 'legal_entities', 'branch_ids', 'work_patterns',
+                'exceptions_note', 'status', 'source_id']),
+    ];
+    foreach ($labels as $label) {
+        expect(data_get($english, 'holiday_ui.'.$label))->not->toBeNull()
+            ->and(data_get($arabic, 'holiday_ui.'.$label))->not->toBeNull();
+    }
+    foreach (['unsupported_file', 'empty_file', 'request_too_large', 'invalid_image', 'invalid_pdf',
+        'encrypted_pdf', 'too_many_pages', 'pdf_render_failed', 'no_key', 'daily_cap', 'refused',
+        'truncated', 'unexpected_stop', 'invalid_json', 'invalid_schema', 'read_failed', 'connection',
+        'rate_limited', 'api_unavailable', 'api_error', 'sdk_error'] as $code) {
+        expect(data_get($english, 'holidays.ai_errors.'.$code))->not->toBeNull()
+            ->and(data_get($arabic, 'holidays.ai_errors.'.$code))->not->toBeNull();
+    }
+});
+
 test('every attendance overview tile has English and Arabic labels', function (): void {
     $english = File::getRequire(lang_path('en/messages.php'));
     $arabic = File::getRequire(lang_path('ar/messages.php'));

@@ -11,6 +11,7 @@ use App\Livewire\Help\HelpArticlePage;
 use App\Livewire\Help\HelpIndex;
 use App\Livewire\Home;
 use App\Models\Attendance\AttendanceExport;
+use App\Models\Attendance\HolidaySource;
 use App\Models\Attendance\ImportBatch;
 use App\Models\Company;
 use App\Models\EmployeeImportBatch;
@@ -97,6 +98,39 @@ Route::middleware('auth')->group(function (): void {
 
         return Storage::disk('local')->download($record->file_path, $record->file_name);
     })->name('attendance.exports.file');
+    Route::get('/admin/{company}/holidays/sources/{source}/original', function (Company $company, int $source) {
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+        abort_unless(auth()->user()->canAccessTenant($company), 404);
+        Filament::setTenant($company);
+        Gate::authorize('update', $company);
+        $record = HolidaySource::query()->where('company_id', $company->id)->findOrFail($source);
+        abort_unless(Storage::disk('local')->exists($record->file_path), 404);
+        app(AuditLogger::class)->log('attendance.holiday_source.original.downloaded', $record, ['source_id' => $record->id]);
+
+        return Storage::disk('local')->download($record->file_path, $record->file_name);
+    })->name('attendance.holidays.original');
+    Route::get('/admin/{company}/holidays/sources/{source}/parts/{part}', function (Company $company, int $source, int $part) {
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+        abort_unless(auth()->user()->canAccessTenant($company), 404);
+        Filament::setTenant($company);
+        Gate::authorize('update', $company);
+        $record = HolidaySource::query()->where('company_id', $company->id)->findOrFail($source);
+        $entry = $record->parts[$part] ?? null;
+        abort_unless(is_array($entry) && in_array($entry['kind'] ?? null, ['text', 'image', 'page', 'pdf'], true)
+            && isset($entry['path']) && str_starts_with($entry['path'], 'attendance/holidays/'.$company->id.'/'.$record->id.'/parts/')
+            && ! str_contains($entry['path'], '..')
+            && Storage::disk('local')->exists($entry['path']), 404);
+        app(AuditLogger::class)->log('attendance.holiday_source.part.viewed', $record,
+            ['source_id' => $record->id, 'part' => $part]);
+        $mime = match ($entry['kind']) {
+            'text' => 'text/plain; charset=UTF-8', 'pdf' => 'application/pdf',
+            default => strtolower(pathinfo($entry['path'], PATHINFO_EXTENSION)) === 'png' ? 'image/png' : 'image/jpeg',
+        };
+
+        return response(Storage::disk('local')->get($entry['path']), 200, [
+            'Content-Type' => $mime, 'Content-Disposition' => 'inline', 'X-Content-Type-Options' => 'nosniff',
+        ]);
+    })->name('attendance.holidays.part');
     Route::post('/logout', function (Request $request): RedirectResponse {
         Auth::logout();
         $request->session()->invalidate();

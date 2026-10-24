@@ -21,6 +21,13 @@
                 <div><span class="text-sm text-gray-600">{{ __('messages.office_ui.reviewed') }}</span><strong class="block">{{ $day->reviewed ? __('messages.office_ui.yes') : __('messages.office_ui.no') }}</strong></div>
             </div>
         </x-ui.card>
+        @if ($day->holiday_ids)
+            <x-ui.card :title="__('messages.holiday_ui.holiday_names')">
+                @foreach ($this->holidayNames() as $holidayId => $name)
+                    <a class="ui-link block" href="{{ \App\Filament\Admin\Pages\Attendance\HolidayReview::getUrl(panel: 'admin', tenant: $this->company()).'?'.http_build_query(['holiday' => $holidayId]) }}">{{ $name }}</a>
+                @endforeach
+            </x-ui.card>
+        @endif
         @if (in_array($day->inputs['work_pattern'] ?? null, ['shift', 'security'], true))
             <x-ui.card :title="__('messages.office_ui.shift_evidence')">
                 @foreach (['first_in', 'last_out', 'approved_leave_minutes'] as $field)

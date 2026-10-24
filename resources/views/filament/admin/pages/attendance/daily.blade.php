@@ -1,4 +1,5 @@
 <x-filament-panels::page>
+    @php $holidayNames = $this->holidayNames(); @endphp
     <div class="space-y-5">
         <x-ui.card>
             <div class="flex flex-wrap gap-4">
@@ -15,6 +16,7 @@
         <x-ui.card padding="none">
             <div class="overflow-x-auto"><table class="w-full text-start text-sm"><thead><tr>
                 @foreach (['employee', 'branch', 'status', 'shift', 'first_in', 'last_out', 'elapsed', 'presence', 'late', 'early', 'short', 'balance', 'reviewed'] as $column)<th class="whitespace-nowrap p-3">{{ __('messages.office_ui.'.$column) }}</th>@endforeach
+                <th class="p-3">{{ __('messages.holiday_ui.holiday_names') }}</th>
             </tr></thead><tbody>
                 @forelse ($this->days() as $day)
                     <tr class="border-t" wire:key="office-day-{{ $day->id }}">
@@ -25,8 +27,9 @@
                         <td class="p-3 font-mono" dir="ltr">{{ $day->first_in?->format('H:i') ?? '—' }}</td><td class="p-3 font-mono" dir="ltr">{{ $day->last_out?->format('H:i') ?? '—' }}</td>
                         @foreach (['elapsed_minutes', 'presence_minutes', 'late_minutes', 'early_minutes', 'short_minutes', 'balance_minutes'] as $field)<td class="p-3 font-mono" dir="ltr">{{ $this->minutes($day->{$field}) }}</td>@endforeach
                         <td class="p-3">{{ $day->reviewed ? __('messages.office_ui.yes') : '—' }}</td>
+                        <td class="p-3">@foreach ($day->holiday_ids ?? [] as $holidayId)<a class="ui-link block" href="{{ \App\Filament\Admin\Pages\Attendance\HolidayReview::getUrl(panel: 'admin', tenant: $this->company()).'?'.http_build_query(['holiday' => $holidayId]) }}">{{ $holidayNames[$holidayId] ?? '' }}</a>@endforeach</td>
                     </tr>
-                @empty <tr><td colspan="13" class="p-5">{{ __('messages.office_ui.no_days') }}</td></tr> @endforelse
+                @empty <tr><td colspan="14" class="p-5">{{ __('messages.office_ui.no_days') }}</td></tr> @endforelse
             </tbody></table></div>
             <div class="p-3">{{ $this->days()->links() }}</div>
         </x-ui.card>

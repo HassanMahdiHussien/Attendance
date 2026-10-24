@@ -15,7 +15,7 @@
 - [x] T008 Tests: refusal, invalid JSON, unavailable key, cap, hash reuse, prompt-injection text, logging without content
 
 ## Step 3 — Screens
-- [ ] T009 Holidays list, upload, review with all source parts beside the form, history; routes + downloads; UI inventory, route sweep, translations; Livewire + browser tests
+- [x] T009 Holidays list, upload, review with all source parts beside the form, history; routes + downloads; UI inventory, route sweep, translations; Livewire + browser tests
 
 ## Step 4 — Verification (orchestrator)
 - [ ] T010 Sovereignty Day 2026 on the smoke DB (manual approval for Al-Waha; AI reading if a key is configured), reassess, report; docs; PR

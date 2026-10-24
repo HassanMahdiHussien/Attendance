@@ -61,6 +61,13 @@
                             <a class="ui-link" href="{{ $dayUrl.'?'.http_build_query(['employee' => $employee->id, 'date' => $day['work_date']]) }}">{{ __('messages.reporting_ui.day_detail') }}</a>
                             <a class="ui-link" href="{{ $punchUrl.'?'.http_build_query(['employee' => $employee->id, 'from' => $day['work_date'], 'to' => $day['work_date']]) }}">{{ __('messages.reporting_ui.punches') }}</a>
                         </div>
+                        @if ($day['holiday_ids'])
+                            <p>{{ __('messages.holiday_ui.holiday_names') }}:
+                                @foreach ($day['holiday_ids'] as $holidayId)
+                                    <a class="ui-link" href="{{ \App\Filament\Admin\Pages\Attendance\HolidayReview::getUrl(panel: 'admin', tenant: $employee->company).'?'.http_build_query(['holiday' => $holidayId]) }}">{{ $holidayNames[$holidayId] ?? '' }}</a>
+                                @endforeach
+                            </p>
+                        @endif
                         <p>{{ __('messages.reporting_ui.in_out') }}: <bdi dir="ltr">{{ $day['first_in'] ? substr($day['first_in'], 11, 5) : '—' }} / {{ $day['last_out'] ? substr($day['last_out'], 11, 5) : '—' }}</bdi></p>
                         @if (in_array($day['inputs']['work_pattern'] ?? null, ['shift', 'security'], true))
                             <p>{{ __('messages.office_ui.shift') }}: <bdi dir="ltr">{{ \App\Services\Attendance\ShiftDisplay::hours($day['shift_start'], $day['shift_minutes']) ?? '—' }}</bdi> · {{ __('messages.office_ui.shift_sources.'.($day['shift_source'] ?? 'unknown')) }}</p>

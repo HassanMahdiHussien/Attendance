@@ -12,6 +12,7 @@ use App\Models\Leave\LeaveRequest;
 use App\Models\Leave\RequestDay;
 use App\Models\Leave\RequestVersion;
 use App\Policies\EmployeeProfilePolicy;
+use App\Services\Attendance\HolidayLabels;
 use App\Services\Attendance\Reporting\AttendanceExports;
 use App\Services\Attendance\Reporting\AttendanceSummary;
 use App\Services\Attendance\Reporting\LastUpdate;
@@ -110,6 +111,11 @@ class EmployeeAttendance extends Component
             $days = $this->tab === 'days' ? array_values(array_filter(iterator_to_array($summary->perDay($filters, $employee->id)),
                 fn (array $day): bool => $this->matchesDay($day))) : [];
             $detail = $this->tab === 'days' ? $reconciliation->for($employee, $filters->from, $filters->to) : [];
+            $holidayIds = [];
+            foreach ($days as $day) {
+                array_push($holidayIds, ...$day['holiday_ids']);
+            }
+            $holidayNames = app(HolidayLabels::class)->forIds($employee->company_id, $holidayIds);
             $requests = $this->tab === 'leave' ? LeaveRequest::query()->with(['leaveType', 'currentVersion'])
                 ->where('employee_id', $employee->id)->where('start_date', '<=', $filters->to)
                 ->where('end_date', '>=', $filters->from)->orderByDesc('start_date')->get() : collect();
@@ -165,7 +171,7 @@ class EmployeeAttendance extends Component
                     'active_employees', 'office_employees_assessed', 'without_work_pattern',
                 ])),
                 'freshness' => $lastUpdate->for($filters),
-                'days' => $days, 'detail' => $detail, 'requests' => $requests,
+                'days' => $days, 'detail' => $detail, 'holidayNames' => $holidayNames, 'requests' => $requests,
                 'requestVersions' => $requestVersions, 'credits' => $credits,
                 'used' => $used, 'changes' => $changes, 'issues' => $issues,
                 'dayUrl' => DayDetail::getUrl(panel: 'admin', tenant: $employee->company),
