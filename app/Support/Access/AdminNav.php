@@ -7,6 +7,7 @@ use App\Filament\Admin\Pages\Attendance\AttendanceDevices;
 use App\Filament\Admin\Pages\Attendance\AttendanceIssues;
 use App\Filament\Admin\Pages\Attendance\AttendancePunches;
 use App\Filament\Admin\Pages\Attendance\DailyAttendance;
+use App\Filament\Admin\Pages\Attendance\HolidaysPage;
 use App\Filament\Admin\Pages\Attendance\OfficePolicyPage;
 use App\Filament\Admin\Pages\Attendance\ReviewQueue;
 use App\Filament\Admin\Pages\Attendance\UploadAttendance;
@@ -43,6 +44,7 @@ class AdminNav
         [DailyAttendance::class, 'users', 'heroicon-o-calendar-days'],
         [ReviewQueue::class, 'folder', 'heroicon-o-clipboard-document-check'],
         [OfficePolicyPage::class, 'settings', 'heroicon-o-adjustments-horizontal'],
+        [HolidaysPage::class, 'folder', 'heroicon-o-sun'],
     ];
 
     private const LEAVE_ENTRIES = [

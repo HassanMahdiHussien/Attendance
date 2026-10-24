@@ -67,6 +67,8 @@ class LeaveRequests extends LeavePage
             $query->whereHas('leaveType', fn ($types) => $types->where('is_mapped', false));
         } elseif ($this->flag === 'invalid_dates') {
             $query->whereJsonContains('flags', 'invalid_dates');
+        } elseif ($this->flag === 'counted_holiday') {
+            $query->whereJsonContains('flags', 'counted_holiday');
         } elseif ($this->flag === 'nothing_to_reconcile') {
             $query->whereIn('id', DataIssue::query()->where('company_id', $this->company()->id)
                 ->where('type', 'leave_with_attendance_nothing_to_reconcile')->where('status', 'open')

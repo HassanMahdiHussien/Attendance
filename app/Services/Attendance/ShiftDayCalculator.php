@@ -66,7 +66,8 @@ class ShiftDayCalculator
             return $result;
         }
         $restDays = $values['rest_days'] ?? $policy['shift_rest_days'] ?? [5];
-        if (in_array((int) $day->format('N'), $restDays, true)) {
+        $restDay = in_array((int) $day->format('N'), $restDays, true);
+        if ($restDay && $punches === [] && $manualPunches === []) {
             $result['status'] = 'rest_day';
 
             return $result;
@@ -117,6 +118,15 @@ class ShiftDayCalculator
         }
         $result['presence_minutes'] = $intervals === [] ? null : $presence;
         $result['exit_minutes'] = array_sum(array_column($result['exits'], 'minutes'));
+        if ($restDay) {
+            $result['status'] = $timeline === [] ? 'rest_day' : 'rest_day_worked';
+            $result['late_minutes'] = 0;
+            $result['early_minutes'] = 0;
+            $result['short_minutes'] = 0;
+            $result['balance_minutes'] = 0;
+
+            return $result;
+        }
 
         usort($decisions, fn (array $a, array $b): int => [($a['created_at'] ?? ''), (int) ($a['id'] ?? 0)]
             <=> [($b['created_at'] ?? ''), (int) ($b['id'] ?? 0)]);

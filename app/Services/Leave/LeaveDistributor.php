@@ -6,7 +6,7 @@ use Carbon\CarbonImmutable;
 
 class LeaveDistributor
 {
-    public function distribute(array $request, array $versions, array $policies, ?array $confirmation = null, array $leaveCalendarRestDays = [5]): array
+    public function distribute(array $request, array $versions, array $policies, ?array $confirmation = null, array $leaveCalendarRestDays = [5], array $holidayDates = []): array
     {
         $start = $request['start_date'] ?? null;
         $end = $request['end_date'] ?? null;
@@ -30,12 +30,23 @@ class LeaveDistributor
         $working = [];
         $leaveCalendarCount = 0;
         $calendarCount = 0;
+        $workingWithHolidays = 0;
+        $leaveCalendarWithHolidays = 0;
+        $calendarWithHolidays = 0;
+        $holidays = array_fill_keys($holidayDates, true);
         for ($date = $startDay; $date <= $endDay; $date = $date->addDay()) {
             $day = $date->toDateString();
             $weekday = (int) $date->format('N');
-            $calendarCount++;
+            $calendarWithHolidays++;
+            $holiday = isset($holidays[$day]);
+            if (! $holiday) {
+                $calendarCount++;
+            }
             if (! in_array($weekday, $leaveCalendarRestDays, true)) {
-                $leaveCalendarCount++;
+                $leaveCalendarWithHolidays++;
+                if (! $holiday) {
+                    $leaveCalendarCount++;
+                }
             }
             while (isset($versions[$versionIndex]) && $versions[$versionIndex]['effective_from'] <= $day) {
                 foreach ($versions[$versionIndex]['changes'] as $field => $value) {
@@ -54,7 +65,10 @@ class LeaveDistributor
             }
             $restDays = $values['rest_days'] ?? ($pattern === 'shift' ? $shiftRestDays : $officeRestDays);
             if (! in_array($weekday, $restDays, true)) {
-                $working[] = $day;
+                $workingWithHolidays++;
+                if (! $holiday) {
+                    $working[] = $day;
+                }
             }
         }
         $whole = (int) floor((float) $duration);
@@ -68,6 +82,18 @@ class LeaveDistributor
                 break;
             }
         }
+        $flag = null;
+        if ($method === null) {
+            foreach (['employee' => $workingWithHolidays, 'leave_calendar' => $leaveCalendarWithHolidays,
+                'calendar' => $calendarWithHolidays] as $candidate => $count) {
+                if ($count === $needed) {
+                    $method = $candidate;
+                    $flag = 'counted_holiday';
+
+                    break;
+                }
+            }
+        }
         $dates = array_slice($working, 0, $needed);
         if ($confirmation !== null) {
             if (($confirmation['mode'] ?? null) === 'from_start') {
@@ -75,11 +101,12 @@ class LeaveDistributor
             } elseif (($confirmation['mode'] ?? null) === 'dates') {
                 $dates = array_values(array_unique($confirmation['dates'] ?? []));
                 sort($dates);
-                if (array_diff($dates, $working) !== []) {
+                if (array_diff($dates, $working) !== [] || array_intersect($dates, $holidayDates) !== []) {
                     return ['days' => [], 'flag' => 'duration_mismatch', 'counting_method' => null];
                 }
             }
             $method = 'hr_confirmed';
+            $flag = null;
         } elseif ($method === null) {
             return ['days' => [], 'flag' => 'duration_mismatch', 'counting_method' => null];
         }
@@ -91,6 +118,6 @@ class LeaveDistributor
             $days[] = ['work_date' => $date, 'minutes' => $index < $whole ? 480 : 240];
         }
 
-        return ['days' => $days, 'flag' => null, 'counting_method' => $method];
+        return ['days' => $days, 'flag' => $flag, 'counting_method' => $method];
     }
 }

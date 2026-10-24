@@ -26,7 +26,7 @@ class Day extends Model
         return [
             'work_date' => 'date', 'first_in' => 'datetime', 'last_out' => 'datetime',
             'required_leave_at' => 'datetime', 'intervals' => 'array', 'exits' => 'array',
-            'inputs' => 'array', 'changes' => 'array', 'shift_evidence' => 'array',
+            'inputs' => 'array', 'changes' => 'array', 'shift_evidence' => 'array', 'holiday_ids' => 'array',
             'reviewed' => 'boolean', 'created_at' => 'datetime',
         ];
     }

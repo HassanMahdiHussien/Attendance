@@ -268,6 +268,7 @@ class AttendanceSummary
             'status' => $day->status, 'reviewed' => (bool) $day->reviewed, 'minutes' => $minutes,
             'shift_start' => $day->shift_start, 'shift_source' => $day->shift_source,
             'shift_confidence' => $day->shift_confidence, 'shift_minutes' => $day->policy?->shift_minutes,
+            'holiday_ids' => $day->holiday_ids ?? [],
             'first_in' => $day->first_in?->format('Y-m-d H:i:s'),
             'last_out' => $day->last_out?->format('Y-m-d H:i:s'),
             'required_leave_at' => $day->required_leave_at?->format('Y-m-d H:i:s'),
@@ -293,6 +294,7 @@ class AttendanceSummary
     {
         return [
             'active_employees' => 0, 'without_work_pattern' => 0, 'assessed_working_days' => 0,
+            'holiday_work_minutes' => 0, 'rest_day_work_minutes' => 0,
             'office_employees_assessed' => 0,
             'days' => array_fill_keys(ReportFilters::STATUSES, 0),
             'minutes' => array_fill_keys(self::KINDS, ['gross' => 0, 'reconciled_by_leave' => 0, 'reconciled_by_credit' => 0, 'remaining' => 0]),
@@ -310,6 +312,11 @@ class AttendanceSummary
     {
         $row['days'][$day['status']]++;
         $row['day_ids'][$day['status']][] = $day['day_id'];
+        if ($day['status'] === 'holiday_worked') {
+            $row['holiday_work_minutes'] += (int) $day['observed']['presence'];
+        } elseif ($day['status'] === 'rest_day_worked') {
+            $row['rest_day_work_minutes'] += (int) $day['observed']['presence'];
+        }
         if (in_array($day['status'], ['present', 'absent', 'missing_punch'], true)) {
             $row['assessed_working_days']++;
             if (($day['inputs']['work_pattern'] ?? $employeePattern) === 'office') {
@@ -333,7 +340,8 @@ class AttendanceSummary
     private function merge(array &$totals, array $row): void
     {
         $totals['office_employees_assessed'] += $row['office_employees_assessed'];
-        foreach (['active_employees', 'without_work_pattern', 'assessed_working_days', 'short_hours_alerts'] as $key) {
+        foreach (['active_employees', 'without_work_pattern', 'assessed_working_days', 'short_hours_alerts',
+            'holiday_work_minutes', 'rest_day_work_minutes'] as $key) {
             $totals[$key] += $row[$key];
         }
         foreach (['days', 'flags', 'credits', 'meals'] as $key) {
@@ -628,6 +636,7 @@ class AttendanceSummary
         return match ($tile) {
             'active_employees', 'without_work_pattern', 'assessed_working_days', 'short_hours_alerts' => $row[$tile] > 0,
             'office_employees_assessed' => $row['office_employees_assessed'] > 0,
+            'holiday_work_minutes', 'rest_day_work_minutes' => $row[$tile] > 0,
             'late', 'early', 'absence', 'exit' => $row['minutes'][$tile]['gross'] > 0,
             'balance', 'reconciled', 'remaining' => $this->hasMinutes($row, match ($tile) {
                 'balance' => 'gross', 'reconciled' => 'reconciled_by_leave', 'remaining' => 'remaining',

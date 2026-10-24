@@ -12,4 +12,5 @@ return [
     'preview_sample_limit' => 50,
     'max_file_bytes' => 100 * 1024 * 1024,
     'pdf' => ['chrome_path' => env('ATTENDANCE_CHROME_PATH', '/usr/local/bin/chrome-headless-shell')],
+    'holidays' => ['ai_daily_cap' => 20],
 ];

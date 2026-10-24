@@ -108,7 +108,7 @@ test('summary, dashboard, employee tile, Excel totals and PDF data agree for the
     $rows = attendanceExportRows($excel);
     $total = collect($rows)->first(fn (array $row): bool => ($row[0] ?? null) === 'Total');
     $detailLate = collect($rows)->filter(fn (array $row): bool => ($row[0] ?? null) === '00001234')
-        ->sum(fn (array $row): int => (int) $row[7]);
+        ->sum(fn (array $row): int => (int) $row[8]);
     expect($totals['minutes']['late']['gross'])->toBe(15)
         ->and($excel->row_count)->toBe(2)
         ->and(collect($rows)->pluck(0))->toContain('00001234')
@@ -116,9 +116,9 @@ test('summary, dashboard, employee tile, Excel totals and PDF data agree for the
         ->and(collect($rows)->pluck(4))->toContain('09:15')
         ->and(collect($rows)->pluck(5))->toContain('18:00')
         ->and(collect($rows)->pluck(4))->not->toContain('2026-10-21 09:15:00')
-        ->and((int) $total[7])->toBe(15)
-        ->and((int) $total[7])->toBe($detailLate)
-        ->and((int) $total[10])->toBe(15);
+        ->and((int) $total[8])->toBe(15)
+        ->and((int) $total[8])->toBe($detailLate)
+        ->and((int) $total[11])->toBe(15);
 
     $pdf = AttendanceExport::factory()->create(['requested_by' => $fixture['hr']->id,
         'kind' => 'statement_pdf', 'filters' => $filters->toArray(), 'file_name' => 'statement.pdf']);

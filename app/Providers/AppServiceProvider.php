@@ -17,6 +17,7 @@ use App\Models\Leave\ImportBatch as LeaveImportBatch;
 use App\Policies\Attendance\AttendanceExportPolicy;
 use App\Policies\Attendance\ImportBatchPolicy as AttendanceImportBatchPolicy;
 use App\Policies\Leave\ImportBatchPolicy as LeaveImportBatchPolicy;
+use App\Services\Attendance\Ai\HolidayClient;
 use App\Services\Attendance\AssessmentTriggers;
 use App\Services\Attendance\EmployeeChangeListener;
 use App\Services\Leave\ReconciliationTriggers;
@@ -44,6 +45,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->scoped(TenantContext::class, fn () => new TenantContext);
+        $this->app->bind(HolidayClient::class, fn () => new HolidayClient);
     }
 
     /**

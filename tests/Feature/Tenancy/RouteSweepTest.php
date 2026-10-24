@@ -2,6 +2,7 @@
 
 use App\Enums\UserRole;
 use App\Models\Attendance\AttendanceExport;
+use App\Models\Attendance\HolidaySource;
 use App\Models\Attendance\ImportBatch as AttendanceImportBatch;
 use App\Models\Branch;
 use App\Models\Company;
@@ -55,6 +56,15 @@ test('a company user cannot reach another company through any parameterised GET 
         $export = AttendanceExport::factory()->create([
             'company_id' => $b->id, 'requested_by' => $user->id, 'file_path' => 'sweep/'.$marker.'.txt',
         ]);
+        $holidaySource = HolidaySource::factory()->create([
+            'company_id' => $b->id, 'uploaded_by' => $user->id,
+            'file_path' => 'sweep/'.$marker.'.txt',
+            'parts' => [['kind' => 'text', 'name' => 'body.txt',
+                'path' => 'attendance/holidays/'.$b->id.'/source/parts/0001.txt']],
+        ]);
+        $holidaySource->update(['parts' => [['kind' => 'text', 'name' => 'body.txt',
+            'path' => 'attendance/holidays/'.$b->id.'/'.$holidaySource->id.'/parts/0001.txt']]]);
+        Storage::disk('local')->put($holidaySource->parts[0]['path'], $marker);
         $foreignLeaveRequest = LeaveRequest::factory()->create([
             'company_id' => $b->id, 'employee_id' => $employee->id, 'owner_code' => $employee->employee_code,
         ]);
@@ -63,7 +73,7 @@ test('a company user cannot reach another company through any parameterised GET 
         return [
             'company' => $b->id, 'tenant' => $b->id, 'employee' => $employee->id,
             'batch' => $batch->id, 'attendanceBatch' => $attendanceBatch->id, 'leaveBatch' => $leaveBatch->id,
-            'export' => $export->id,
+            'export' => $export->id, 'source' => $holidaySource->id, 'part' => 0,
             'foreignLeaveRequest' => $foreignLeaveRequest->id,
             'path' => 'sweep/'.$marker.'.txt',
             // Help paths name shared static content, never a tenant record.

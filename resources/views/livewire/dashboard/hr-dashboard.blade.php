@@ -75,6 +75,9 @@
             <a href="{{ $this->tileUrl($key) }}" class="rounded-2xl border border-gray-200 bg-white p-4 hover:border-primary focus-visible:outline-2 focus-visible:outline-primary">
                 <span class="block text-sm text-gray-500">{{ \App\Services\Attendance\Reporting\ReportTiles::label($key) }}</span>
                 <strong class="mt-1 block font-mono text-xl text-ink" dir="ltr">{{ \App\Services\Attendance\Reporting\ReportTiles::isMinutes($key) ? sprintf('%d:%02d', intdiv($value, 60), $value % 60) : \App\Support\Format\Ui::number($value) }}</strong>
+                @if ($key === 'holiday_worked')
+                    <span class="block text-sm text-gray-600">{{ __('messages.holiday_ui.hours') }} <bdi dir="ltr">{{ sprintf('%d:%02d', intdiv($totals['holiday_work_minutes'], 60), $totals['holiday_work_minutes'] % 60) }}</bdi></span>
+                @endif
             </a>
         @endforeach
     </div>

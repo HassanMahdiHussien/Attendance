@@ -94,7 +94,7 @@ class GenerateAttendanceExportJob implements ShouldQueue
         $writer = new Writer;
         $writer->openToFile($path);
         $columns = $data->columns($export->kind);
-        $numeric = ['absence', 'late', 'early', 'exit', 'gross', 'leave', 'credit', 'remaining', 'request_count',
+        $numeric = ['presence', 'absence', 'late', 'early', 'exit', 'gross', 'leave', 'credit', 'remaining', 'request_count',
             'minutes', 'created', 'used', 'available', 'applied_minutes', 'meals', 'repetitions', 'issues'];
         $sums = array_fill_keys(array_intersect($columns, $numeric), 0);
         $count = 0;

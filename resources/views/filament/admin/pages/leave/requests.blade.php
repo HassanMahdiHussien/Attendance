@@ -17,7 +17,7 @@
             </div>
             <label>{{ __('messages.leave_ui.period_from') }} <input type="date" wire:model.live="from" dir="ltr" class="rounded-xl border border-gray-200 p-2"></label>
             <label>{{ __('messages.leave_ui.period_to') }} <input type="date" wire:model.live="to" dir="ltr" class="rounded-xl border border-gray-200 p-2"></label>
-            <label>{{ __('messages.leave_ui.flag') }} <select wire:model.live="flag" class="rounded-xl border border-gray-200 p-2"><option value="">{{ __('messages.leave_ui.all') }}</option>@foreach (['unmapped_type', 'invalid_dates', 'duration_mismatch', 'missing_from_report', 'nothing_to_reconcile'] as $value)<option value="{{ $value }}">{{ __('messages.leave_ui.flags.'.$value) }}</option>@endforeach</select></label>
+            <label>{{ __('messages.leave_ui.flag') }} <select wire:model.live="flag" class="rounded-xl border border-gray-200 p-2"><option value="">{{ __('messages.leave_ui.all') }}</option>@foreach (['unmapped_type', 'invalid_dates', 'duration_mismatch', 'counted_holiday', 'missing_from_report', 'nothing_to_reconcile'] as $value)<option value="{{ $value }}">{{ __('messages.leave_ui.flags.'.$value) }}</option>@endforeach</select></label>
         </div>
     </x-ui.card>
     <x-ui.card :title="__('messages.leave_ui.requests_title')">
