@@ -60,7 +60,7 @@ The full requirements are in `docs/attendance/PRD-EN.md`. This file records what
 | Q1–Q4 | Resolved 2026-10-21 — see §2. | — |
 | Q5 | Resolved 2026-10-23: side by side only; attendance never opens or suggests a disciplinary case. | — |
 | Q6 | Resolved 2026-10-22: active list = `HC.xlsx` (columns in spec 501 Clarifications); the email / work-pattern file is still to come and is uploaded as a partial update. | — |
-| Q7 | Holiday email sample received 2026-10-23 (Iraq Sovereignty Day, 30 Sep–3 Oct 2026, Al-Waha employees only; announcement is an image inside the PDF). Still pending: leave export with descriptions; overtime report. | 507 / later |
+| Q7 | Holiday email sample received 2026-10-23 (Iraq Sovereignty Day, 30 Sep–3 Oct 2026, Al-Waha employees only; announcement is an image inside the PDF). Used by spec 507. Still pending: leave export with descriptions; overtime report. | later |
 | Q8 | PRD §26 items (office departure after 09:00 arrival, overtime thresholds, credit allocation mechanism — including which overtime/credit hours `Overtime Equivelant Leave` draws from, …). | 503 onward |
 | Q8a | Resolved 2026-10-22 for office staff (spec 503): arrival after 09:00 → required leave 18:00; before 08:00 → 17:00; exits not in the balance; a day is assessed once coverage passes its end + 2 h. Overtime thresholds and credit allocation remain open. | — |
 
@@ -76,4 +76,6 @@ Each spec is one branch and one PR, built with the spec-kit flow (`/speckit-plan
 | 503 office-attendance | Work-pattern policies (versioned), daily sessions, two time fields, office flexibility, lateness, early departure, short hours, missing punches + HR correction, pending/incomplete days | 502 |
 | 504 leave-import-and-matching | Leave requests with source + status history, coverage rules, hour allocation, surplus credit, manual cancellation and reversal, per-company leave-type mapping (coverage flag, unmapped-type alert) | 503 |
 | 505 employee-page-and-dashboard | Attendance section on the employee page, attendance dashboard, search, Excel export and printable statement | 504, Q5 |
-| later | Shift/security inference; holidays (AI extraction + HR approval); overtime & compensatory entitlements; notifications; description AI; admin chat; **merge back into Displanary** | — |
+| 506 shift-and-security | Shift/security inference (±2 h, HR picks unresolved), default pattern rule, attendance policy page | 505 |
+| 507 holidays | Official holidays: announcement upload (PDF/image/email) read by Claude into a proposal, HR approval with append-only versions, scope by legal entity/branch/pattern, `holiday` / `holiday_worked` / `rest_day_worked` days, leave skips holidays, retroactive reprocessing | 506, Q7 |
+| later | Overtime & compensatory entitlements; notifications; description AI; admin chat; **merge back into Displanary** | — |
