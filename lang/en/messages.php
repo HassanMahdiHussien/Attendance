@@ -710,4 +710,18 @@ return [
         'invalid_approver' => 'Choose an approver in this company and enter their reported name.',
         'issue_resolved' => 'The notification routing information is now available.',
     ],
+    'follow_up_mail' => [
+        'subject' => 'Attendance follow-up required',
+        'heading' => 'Attendance follow-up',
+        'intro' => 'Please review the following attendance records.',
+        'employee' => 'Employee', 'code' => 'Code', 'date' => 'Date',
+        'issue' => 'Issue', 'minutes' => 'Time', 'action' => 'Required action',
+        'form' => 'Leave form',
+        'footer' => 'Please use the attendance system to review and respond.',
+        'issue_types' => [
+            'absence' => 'Absence', 'late' => 'Lateness', 'early' => 'Early departure',
+            'exit' => 'Exit', 'missing_punch' => 'Missing punch',
+        ],
+        'actions' => ['manager' => 'Review with HR', 'approver' => 'Review the leave form'],
+    ],
 ];

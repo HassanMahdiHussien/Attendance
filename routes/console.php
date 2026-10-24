@@ -22,6 +22,7 @@ Schedule::command('app:heartbeat --dispatch')->everyMinute();
 Schedule::command('employees:apply-effective-changes')->dailyAt('00:15')->timezone('Asia/Baghdad')->withoutOverlapping();
 Schedule::command('attendance:assess-pending')->hourly()->timezone('Asia/Baghdad')->withoutOverlapping();
 Schedule::command('attendance:clean-exports')->dailyAt('03:00')->timezone('Asia/Baghdad')->withoutOverlapping();
+Schedule::command('attendance:build-notifications')->everyFifteenMinutes()->timezone('Asia/Baghdad')->withoutOverlapping();
 
 Schedule::command('backup:run')->dailyAt('01:00')->timezone('Asia/Baghdad')
     ->when(fn () => config('displanery.backups.enabled'))->withoutOverlapping();

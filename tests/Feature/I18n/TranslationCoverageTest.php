@@ -98,6 +98,20 @@ test('pattern review issue labels exist in both languages', function (): void {
     }
 });
 
+test('notification mail dynamic labels exist in both languages', function (): void {
+    $english = File::getRequire(lang_path('en/messages.php'));
+    $arabic = File::getRequire(lang_path('ar/messages.php'));
+
+    foreach (['absence', 'late', 'early', 'exit', 'missing_punch'] as $kind) {
+        expect(data_get($english, 'follow_up_mail.issue_types.'.$kind))->not->toBeNull()
+            ->and(data_get($arabic, 'follow_up_mail.issue_types.'.$kind))->not->toBeNull();
+    }
+    foreach (['manager', 'approver'] as $kind) {
+        expect(data_get($english, 'follow_up_mail.actions.'.$kind))->not->toBeNull()
+            ->and(data_get($arabic, 'follow_up_mail.actions.'.$kind))->not->toBeNull();
+    }
+});
+
 test('holiday issue labels exist wherever attendance and leave render them', function (): void {
     $english = File::getRequire(lang_path('en/messages.php'));
     $arabic = File::getRequire(lang_path('ar/messages.php'));

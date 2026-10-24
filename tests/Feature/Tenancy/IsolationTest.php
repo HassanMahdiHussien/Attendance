@@ -20,6 +20,11 @@ use App\Models\Attendance\ImportBatchEvent;
 use App\Models\Attendance\ImportMapping as AttendanceImportMapping;
 use App\Models\Attendance\ManualPunch;
 use App\Models\Attendance\Meal;
+use App\Models\Attendance\NotificationAttempt;
+use App\Models\Attendance\NotificationBatch;
+use App\Models\Attendance\NotificationMessage;
+use App\Models\Attendance\NotificationMessageCase;
+use App\Models\Attendance\NotificationRoute;
 use App\Models\Attendance\NotificationSetting;
 use App\Models\Attendance\Person;
 use App\Models\Attendance\Policy;
@@ -69,6 +74,8 @@ dataset('tenant models', [
     Holiday::class, HolidaySource::class, HolidayVersion::class,
     AttendanceExport::class, AttendanceExportEvent::class,
     FollowUpCase::class, CaseEvent::class, ApproverMapping::class,
+    NotificationBatch::class, NotificationMessage::class, NotificationRoute::class,
+    NotificationMessageCase::class, NotificationAttempt::class,
     LeaveImportBatch::class, LeaveImportBatchEvent::class, LeaveImportMapping::class,
     LeaveBalanceBatch::class, LeaveBalanceBatchEvent::class, LeaveBalanceMapping::class,
     LeaveBalance::class, LeaveBalanceRow::class,
