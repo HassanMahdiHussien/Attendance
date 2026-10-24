@@ -22,6 +22,7 @@ use App\Policies\Leave\ImportBatchPolicy as LeaveImportBatchPolicy;
 use App\Services\Attendance\Ai\HolidayClient;
 use App\Services\Attendance\AssessmentTriggers;
 use App\Services\Attendance\EmployeeChangeListener;
+use App\Services\Attendance\FollowUp\CaseSync;
 use App\Services\Leave\ReconciliationTriggers;
 use App\Services\Leave\UnknownEmployeeIssues;
 use App\Support\HealthPing;
@@ -81,6 +82,7 @@ class AppServiceProvider extends ServiceProvider
         });
         Event::listen(BackupHasFailed::class, fn () => app(HealthPing::class)->failure('backup', 'Backup failed'));
         Event::listen(EmployeeVersionChanged::class, [EmployeeChangeListener::class, 'handle']);
+        Event::listen(EmployeeVersionChanged::class, [CaseSync::class, 'employeeVersionChanged']);
         Event::listen(EmployeeVersionChanged::class, [AssessmentTriggers::class, 'employeeVersionChanged']);
         Event::listen(EmployeeVersionChanged::class, [UnknownEmployeeIssues::class, 'employeeVersionChanged']);
         Event::listen(EmployeeExitChanged::class, [AssessmentTriggers::class, 'employeeExitChanged']);
@@ -93,6 +95,10 @@ class AppServiceProvider extends ServiceProvider
             && (int) Filament::getTenant()->id === (int) $company->id
             && $user->canAccessTenant($company));
         Gate::define('manageLeave', fn ($user, Company $company): bool => $user->is_active
+            && in_array($user->primary_role, [UserRole::HrStaff, UserRole::PlatformAdmin], true)
+            && app(TenantContext::class)->companyId() === $company->id
+            && $user->canAccessTenant($company));
+        Gate::define('sendAttendanceNotifications', fn ($user, Company $company): bool => $user->is_active
             && in_array($user->primary_role, [UserRole::HrStaff, UserRole::PlatformAdmin], true)
             && app(TenantContext::class)->companyId() === $company->id
             && $user->canAccessTenant($company));

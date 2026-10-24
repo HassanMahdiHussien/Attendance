@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Jobs\Attendance\AssessDaysJob;
+use App\Jobs\Leave\ReconcileLeaveJob;
 use App\Models\Company;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
@@ -36,6 +37,10 @@ class ReassessAllAttendance extends Command
                 if ($from !== null) {
                     $this->queue($company->id, $from, $to);
                 }
+                DB::table('employees')->where('company_id', $company->id)->orderBy('id')->select('id')
+                    ->chunkById(100, function ($rows) use ($company): void {
+                        ReconcileLeaveJob::dispatch($company->id, $rows->pluck('id')->all(), 'case_backfill')->afterCommit();
+                    });
             }
         });
 

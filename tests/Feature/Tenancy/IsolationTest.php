@@ -1,14 +1,17 @@
 <?php
 
 use App\Exceptions\TenantMismatch;
+use App\Models\Attendance\ApproverMapping;
 use App\Models\Attendance\AttendanceExport;
 use App\Models\Attendance\AttendanceExportEvent;
+use App\Models\Attendance\CaseEvent;
 use App\Models\Attendance\CoverageInterval;
 use App\Models\Attendance\DataIssue;
 use App\Models\Attendance\Day;
 use App\Models\Attendance\DayDecision;
 use App\Models\Attendance\Device;
 use App\Models\Attendance\DeviceSetting;
+use App\Models\Attendance\FollowUpCase;
 use App\Models\Attendance\Holiday;
 use App\Models\Attendance\HolidaySource;
 use App\Models\Attendance\HolidayVersion;
@@ -17,6 +20,7 @@ use App\Models\Attendance\ImportBatchEvent;
 use App\Models\Attendance\ImportMapping as AttendanceImportMapping;
 use App\Models\Attendance\ManualPunch;
 use App\Models\Attendance\Meal;
+use App\Models\Attendance\NotificationSetting;
 use App\Models\Attendance\Person;
 use App\Models\Attendance\Policy;
 use App\Models\Attendance\ProcessingRun;
@@ -64,6 +68,7 @@ dataset('tenant models', [
     Policy::class, ManualPunch::class, DayDecision::class, Day::class, RestDayEntitlement::class,
     Holiday::class, HolidaySource::class, HolidayVersion::class,
     AttendanceExport::class, AttendanceExportEvent::class,
+    FollowUpCase::class, CaseEvent::class, ApproverMapping::class,
     LeaveImportBatch::class, LeaveImportBatchEvent::class, LeaveImportMapping::class,
     LeaveBalanceBatch::class, LeaveBalanceBatchEvent::class, LeaveBalanceMapping::class,
     LeaveBalance::class, LeaveBalanceRow::class,
@@ -117,5 +122,20 @@ test('one leave setting per company remains tenant scoped', function (): void {
         ->and(LeaveSetting::find($other->id))->toBeNull()
         ->and(LeaveSetting::query()->whereKey($other->id)->update(['credit_expiry_days' => 30]))->toBe(0)
         ->and(fn () => LeaveSetting::factory()->create(['company_id' => $b->id]))->toThrow(TenantMismatch::class);
+    $context->clear();
+});
+
+test('one notification setting per company remains tenant scoped', function (): void {
+    $a = Company::factory()->create();
+    $b = Company::factory()->create();
+    $context = app(TenantContext::class);
+    $own = $context->runForCompany($a, fn () => NotificationSetting::factory()->create());
+    $other = $context->runForCompany($b, fn () => NotificationSetting::factory()->create());
+
+    $context->setCompany($a);
+    expect(NotificationSetting::query()->pluck('id')->all())->toBe([$own->id])
+        ->and(NotificationSetting::find($other->id))->toBeNull()
+        ->and(NotificationSetting::query()->whereKey($other->id)->update(['mode' => 'auto']))->toBe(0)
+        ->and(fn () => NotificationSetting::factory()->create(['company_id' => $b->id]))->toThrow(TenantMismatch::class);
     $context->clear();
 });

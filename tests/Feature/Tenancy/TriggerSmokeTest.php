@@ -2,6 +2,7 @@
 
 use App\Models\AiGenerationLog;
 use App\Models\Attendance\AttendanceExportEvent;
+use App\Models\Attendance\CaseEvent;
 use App\Models\Attendance\DayDecision;
 use App\Models\Attendance\DeviceSetting;
 use App\Models\Attendance\HolidaySource;
@@ -45,6 +46,7 @@ test('kept append-only triggers reject raw SQL updates and deletes', function ()
         LeaveBalanceBatch::factory()->create(), LeaveBalanceBatchEvent::factory()->create(),
         LeaveBalance::factory()->create(), LeaveBalanceRow::factory()->create(),
         AttendanceExportEvent::factory()->create(),
+        CaseEvent::factory()->create(),
         LeaveImportBatchEvent::factory()->create(), LeaveImportRow::factory()->create(),
         LeaveRequestVersion::factory()->create(), LeaveRequestDecision::factory()->create()] as $record) {
         $table = $record->getTable();

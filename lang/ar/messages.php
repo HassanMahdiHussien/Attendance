@@ -191,6 +191,8 @@ return [
             'leave_with_attendance_nothing_to_reconcile' => 'إجازة معتمدة مع حضور دون رصيد يحتاج إلى تسوية',
             'leave_duration_mismatch' => 'مدة الإجازة لا تطابق أيام العمل',
             'leave_rest_day_missing' => 'يجب مراجعة يوم راحة موظف الأمن',
+            'approver_unmapped' => 'معتمد طلب الإجازة المعلق يحتاج إلى ربط من الموارد البشرية',
+            'notification_recipient_missing' => 'عنوان مستلم الإشعار يحتاج إلى مراجعة الموارد البشرية',
         ],
         'upload_title' => 'رفع ملف الحضور', 'batches_title' => 'دفعات الحضور',
         'devices_title' => 'الأجهزة', 'devices' => 'الأجهزة', 'issues_title' => 'مشكلات البيانات', 'punches_title' => 'عرض البصمات',
@@ -702,5 +704,10 @@ return [
     ],
     'user' => [
         'last_active_hr_required' => 'لا يمكن إزالة آخر مستخدم نشط للموارد البشرية في الشركة.',
+    ],
+    'follow_up' => [
+        'reason_required' => 'أدخل سبب إغلاق هذه الحالة.',
+        'invalid_approver' => 'اختر معتمداً في هذه الشركة وأدخل اسمه كما ورد في التقرير.',
+        'issue_resolved' => 'أصبحت بيانات توجيه الإشعار متاحة.',
     ],
 ];

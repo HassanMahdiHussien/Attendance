@@ -325,3 +325,16 @@ test('leave screen dynamic labels exist in both languages', function (): void {
             ->and(data_get($arabic, 'leave_ui.'.$label))->not->toBeNull();
     }
 });
+
+test('follow-up case issue and validation labels exist in both languages', function (): void {
+    $english = File::getRequire(lang_path('en/messages.php'));
+    $arabic = File::getRequire(lang_path('ar/messages.php'));
+    foreach (['approver_unmapped', 'notification_recipient_missing'] as $type) {
+        expect(data_get($english, 'attendance_ui.issue_types.'.$type))->not->toBeNull()
+            ->and(data_get($arabic, 'attendance_ui.issue_types.'.$type))->not->toBeNull();
+    }
+    foreach (['reason_required', 'invalid_approver', 'issue_resolved'] as $key) {
+        expect(data_get($english, 'follow_up.'.$key))->not->toBeNull()
+            ->and(data_get($arabic, 'follow_up.'.$key))->not->toBeNull();
+    }
+});

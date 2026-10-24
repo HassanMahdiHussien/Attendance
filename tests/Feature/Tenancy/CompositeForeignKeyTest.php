@@ -2,14 +2,17 @@
 
 use App\Exceptions\TenantMismatch;
 use App\Models\AiGenerationLog;
+use App\Models\Attendance\ApproverMapping;
 use App\Models\Attendance\AttendanceExport;
 use App\Models\Attendance\AttendanceExportEvent;
+use App\Models\Attendance\CaseEvent;
 use App\Models\Attendance\CoverageInterval;
 use App\Models\Attendance\DataIssue;
 use App\Models\Attendance\Day;
 use App\Models\Attendance\DayDecision;
 use App\Models\Attendance\Device;
 use App\Models\Attendance\DeviceSetting;
+use App\Models\Attendance\FollowUpCase;
 use App\Models\Attendance\Holiday;
 use App\Models\Attendance\HolidaySource;
 use App\Models\Attendance\HolidayVersion;
@@ -86,6 +89,9 @@ test('every kept composite tenant foreign key rejects another company through mo
         'attendance_holiday_versions' => HolidayVersion::class,
         'attendance_exports' => AttendanceExport::class,
         'attendance_export_events' => AttendanceExportEvent::class,
+        'attendance_cases' => FollowUpCase::class,
+        'attendance_case_events' => CaseEvent::class,
+        'attendance_approver_mappings' => ApproverMapping::class,
         'leave_import_batches' => LeaveImportBatch::class,
         'leave_balance_batches' => LeaveBalanceBatch::class,
         'leave_balance_batch_events' => LeaveBalanceBatchEvent::class,
@@ -173,6 +179,12 @@ test('every kept composite tenant foreign key rejects another company through mo
         }
         if (isset($attributes['balance_date']) && $key->source_table === 'leave_balance_batches') {
             $attributes['balance_date'] = '2001-01-01';
+        }
+        if ($key->source_table === 'attendance_cases' && $key->foreign_column === 'day_id') {
+            $attributes['work_date'] = '2001-01-01';
+        }
+        if (isset($attributes['approver_key'])) {
+            $attributes['approver_key'] = 'cross-'.$key->foreign_column.'-'.$target->id;
         }
         foreach (['row_number', 'sequence', 'version'] as $unique) {
             if (isset($attributes[$unique])) {

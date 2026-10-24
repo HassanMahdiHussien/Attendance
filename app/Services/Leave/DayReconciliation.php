@@ -62,6 +62,7 @@ class DayReconciliation
                 'closed_at' => $closedAt,
                 'pending_requests' => $pending->filter(fn (LeaveRequest $request): bool => $request->start_date->toDateString() <= $date && $request->end_date->toDateString() >= $date)
                     ->map(fn (LeaveRequest $request): array => [
+                        'request_id' => (int) $request->id,
                         'external_id' => $request->external_id, 'approver_name' => $request->approver_name,
                     ])->values()->all(),
                 'explanations' => $explanations,

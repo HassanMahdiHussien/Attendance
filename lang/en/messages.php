@@ -191,6 +191,8 @@ return [
             'leave_with_attendance_nothing_to_reconcile' => 'Approved leave meets attendance with no balance to reconcile',
             'leave_duration_mismatch' => 'Leave duration does not match working days',
             'leave_rest_day_missing' => 'Security rest day needs HR review',
+            'approver_unmapped' => 'Pending leave approver needs HR mapping',
+            'notification_recipient_missing' => 'Notification recipient address needs HR review',
         ],
         'upload_title' => 'Upload attendance', 'batches_title' => 'Attendance batches',
         'devices_title' => 'Devices', 'devices' => 'Devices', 'issues_title' => 'Data issues', 'punches_title' => 'Punch viewer',
@@ -702,5 +704,10 @@ return [
     ],
     'user' => [
         'last_active_hr_required' => 'The last active HR user in the company cannot be removed.',
+    ],
+    'follow_up' => [
+        'reason_required' => 'Enter a reason for closing this case.',
+        'invalid_approver' => 'Choose an approver in this company and enter their reported name.',
+        'issue_resolved' => 'The notification routing information is now available.',
     ],
 ];
