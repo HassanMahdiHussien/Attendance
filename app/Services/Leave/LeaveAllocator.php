@@ -39,7 +39,8 @@ class LeaveAllocator
                     $available -= $used;
                 }
             }
-            if ($available > 0 && ($creditEligibleDates === null || in_array($source['work_date'], $creditEligibleDates, true))) {
+            if ($available > 0 && ($source['credit_allowed'] ?? true)
+                && ($creditEligibleDates === null || in_array($source['work_date'], $creditEligibleDates, true))) {
                 $credits[] = [
                     'source_day_id' => $source['id'], 'work_date' => $source['work_date'],
                     'external_id' => $source['external_id'], 'minutes' => $available,

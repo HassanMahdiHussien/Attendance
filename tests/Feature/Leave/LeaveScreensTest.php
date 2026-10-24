@@ -166,6 +166,17 @@ test('request detail records HR actions and type page maps an unmapped type', fu
     expect($type->fresh()->is_mapped)->toBeTrue();
 });
 
+test('a compensation request shows its exceeded entitlement flag', function (): void {
+    $type = LeaveType::factory()->create(['covers' => true, 'is_mapped' => true,
+        'consumes' => 'rest_day_entitlement']);
+    $request = LeaveRequest::factory()->create(['employee_id' => $this->employee->id,
+        'owner_code' => $this->employee->employee_code, 'leave_type_id' => $type->id,
+        'external_id' => 'COMP-FORM', 'flags' => ['entitlement_exceeded']]);
+
+    Livewire::withQueryParams(['request' => $request->id])->test(LeaveRequestDetail::class)
+        ->assertSee('COMP-FORM')->assertSee('Rest-day entitlement exceeded');
+});
+
 test('credit ledger changes expiry and reverses a current deduction', function (): void {
     $type = LeaveType::factory()->create(['covers' => true, 'is_mapped' => true]);
     LeaveRequest::factory()->create(['company_id' => $this->company->id,

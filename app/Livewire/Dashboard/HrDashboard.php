@@ -6,6 +6,7 @@ use App\Enums\UserRole;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Employee;
+use App\Services\Attendance\Overtime;
 use App\Services\Attendance\Reporting\AttendanceExports;
 use App\Services\Attendance\Reporting\AttendanceSummary;
 use App\Services\Attendance\Reporting\EmployeeFilterSearch;
@@ -146,18 +147,20 @@ class HrDashboard extends Component
         return route($route, $parameters).'?'.http_build_query(['tile' => $tile] + $this->filters());
     }
 
-    public function render(AttendanceSummary $summary, LastUpdate $lastUpdate, EmployeeFilterSearch $search): View
+    public function render(AttendanceSummary $summary, LastUpdate $lastUpdate, EmployeeFilterSearch $search, Overtime $overtime): View
     {
         $company = $this->company();
 
-        return app(TenantContext::class)->runForCompany($company, function () use ($company, $summary, $lastUpdate, $search): View {
+        return app(TenantContext::class)->runForCompany($company, function () use ($company, $summary, $lastUpdate, $search, $overtime): View {
             $filters = ReportFilters::fromArray($company, $this->filters());
             $totals = $summary->totals($filters);
+            $overtimeTotals = $overtime->totals($filters);
             $employees = $this->employeeId === '' ? $search->find(auth()->user(), $company, $this->employeeSearch) : [];
             $managers = $this->managerId === '' ? $search->find(auth()->user(), $company, $this->managerSearch) : [];
 
             return view('livewire.dashboard.hr-dashboard', [
-                'company' => $company, 'tiles' => ReportTiles::fromTotals($totals), 'totals' => $totals,
+                'company' => $company, 'tiles' => ReportTiles::fromTotals($totals) + ReportTiles::overtime($overtimeTotals),
+                'totals' => $totals,
                 'freshness' => $lastUpdate->for($filters), 'employees' => $employees, 'managers' => $managers,
                 'branches' => Branch::query()->where('company_id', $company->id)->orderBy('name')->get(),
                 'departments' => Employee::query()->where('company_id', $company->id)

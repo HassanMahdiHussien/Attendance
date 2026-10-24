@@ -11,6 +11,7 @@ class ReportTiles
         'leave_status:pending', 'leave_status:draft', 'leave_status:rejected',
         'credit_created', 'credit_used', 'credit_available', 'data_issues', 'restaurant', 'without_work_pattern',
         'hr_confirmed_absence', 'absence_closed_by_request',
+        'overtime_minutes', 'entitled_employees', 'entitlements_available_now', 'entitlements_overdue_now',
     ];
 
     public static function fromTotals(array $totals): array
@@ -66,10 +67,25 @@ class ReportTiles
             || (str_starts_with($tile, 'issue_type:') && preg_match('/\Aissue_type:[a-z_]+\z/', $tile) === 1);
     }
 
+    public static function overtime(array $totals): array
+    {
+        return [
+            'overtime_minutes' => $totals['overtime_minutes'],
+            'entitled_employees' => $totals['entitled_employees'],
+            'entitlements_available_now' => $totals['entitlements_available_now'],
+            'entitlements_overdue_now' => $totals['entitlements_overdue_now'],
+        ];
+    }
+
     public static function isMinutes(string $tile): bool
     {
         return str_starts_with($tile, 'leave:') || in_array($tile, ['late', 'early', 'balance', 'reconciled', 'remaining',
-            'credit_created', 'credit_used', 'credit_available', 'holiday_work_minutes', 'rest_day_work_minutes'], true);
+            'credit_created', 'credit_used', 'credit_available', 'holiday_work_minutes', 'rest_day_work_minutes', 'overtime_minutes'], true);
+    }
+
+    public static function isDays(string $tile): bool
+    {
+        return in_array($tile, ['entitlements_available_now', 'entitlements_overdue_now'], true);
     }
 
     public static function label(string $tile): string

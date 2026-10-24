@@ -95,34 +95,64 @@ class GenerateAttendanceExportJob implements ShouldQueue
         $writer->openToFile($path);
         $columns = $data->columns($export->kind);
         $numeric = ['presence', 'absence', 'late', 'early', 'exit', 'gross', 'leave', 'credit', 'remaining', 'request_count',
-            'minutes', 'created', 'used', 'available', 'applied_minutes', 'meals', 'repetitions', 'issues'];
-        $sums = array_fill_keys(array_intersect($columns, $numeric), 0);
+            'minutes', 'created', 'applied_minutes', 'meals', 'repetitions', 'issues',
+            'overtime_minutes', 'early_arrival_minutes'];
+        $decimal = ['earned', 'used', 'available', 'overdue'];
+        $sums = array_fill_keys(array_intersect($columns, [...$numeric, ...$decimal]), 0);
         $count = 0;
         try {
             foreach ($data->header($export, $company, $filters) as $header) {
                 $writer->addRow(Row::fromValues($header));
             }
             $writer->addRow(Row::fromValues(['']));
-            $writer->addRow(Row::fromValues(array_map(fn (string $column): string => __('messages.export_ui.columns.'.$column), $columns)));
+            $writer->addRow(Row::fromValues(array_map(fn (string $column): string => $export->kind === 'compensatory_days'
+                && in_array($column, ['earned', 'used', 'available', 'overdue'], true)
+                    ? __('messages.overtime_ui.'.$column) : __('messages.export_ui.columns.'.$column), $columns)));
             foreach ($data->rows($export, $filters) as $row) {
                 $values = [];
                 foreach ($columns as $column) {
                     $value = $row[$column] ?? '';
-                    $values[] = in_array($column, $numeric, true) ? (int) $value : (string) $value;
+                    $values[] = in_array($column, $decimal, true) && $export->kind === 'compensatory_days'
+                        ? (float) $value : (in_array($column, $numeric, true) || in_array($column, ['used', 'available'], true)
+                            ? (int) $value : (string) $value);
                     if (isset($sums[$column])) {
-                        $sums[$column] += (int) $value;
+                        $sums[$column] += $export->kind === 'compensatory_days' ? (float) $value : (int) $value;
                     }
                 }
                 $writer->addRow(Row::fromValues($values));
                 $count++;
             }
-            $writer->addRow(Row::fromValues(array_map(fn (string $column): string|int => $column === $columns[0]
+            $writer->addRow(Row::fromValues(array_map(fn (string $column): string|int|float => $column === $columns[0]
                 ? __('messages.export_ui.total') : ($sums[$column] ?? ''), $columns)));
             if ($export->kind === 'employee_statement_xlsx') {
                 $totals = $summary->totals($filters);
                 $writer->addRow(Row::fromValues([__('messages.export_ui.assessed_days'), $totals['assessed_working_days']]));
                 $writer->addRow(Row::fromValues([__('messages.export_ui.present_days'), $totals['days']['present']]));
                 $writer->addRow(Row::fromValues([__('messages.export_ui.pending_days'), $totals['days']['pending']]));
+                $statement = $data->statement($export, $company, $filters);
+                $writer->addRow(Row::fromValues([__('messages.overtime_ui.section'), $statement['overtime']['overtime_minutes']]));
+                foreach ($statement['overtime']['overtime_by_basis'] as $basis => $minutes) {
+                    $writer->addRow(Row::fromValues([__('messages.overtime_ui.basis.'.$basis), $minutes]));
+                }
+                $writer->addRow(Row::fromValues([__('messages.overtime_ui.earned'), $statement['overtime']['entitlements_earned']]));
+                $writer->addRow(Row::fromValues([__('messages.overtime_ui.used'), $statement['overtime']['entitlements_used']]));
+                $writer->addRow(Row::fromValues([__('messages.overtime_ui.available'), $statement['overtime']['entitlements_available_now']]));
+                $writer->addRow(Row::fromValues([__('messages.overtime_ui.overdue'), $statement['overtime']['entitlements_overdue_now']]));
+                $writer->addRow(Row::fromValues([__('messages.export_ui.columns.date'),
+                    __('messages.export_ui.columns.overtime_minutes'), __('messages.export_ui.columns.overtime_basis'),
+                    __('messages.export_ui.columns.early_arrival_minutes')]));
+                foreach ($statement['overtime_days'] as $day) {
+                    $writer->addRow(Row::fromValues([$day['work_date'], $day['overtime_minutes'] ?? 0,
+                        $day['overtime_basis'] === null ? '' : __('messages.overtime_ui.basis.'.$day['overtime_basis']),
+                        $day['early_arrival_minutes'] ?? 0]));
+                }
+                $writer->addRow(Row::fromValues([__('messages.export_ui.columns.date'),
+                    __('messages.export_ui.columns.earned'), __('messages.export_ui.columns.used'),
+                    __('messages.export_ui.columns.available'), __('messages.export_ui.columns.overdue')]));
+                foreach ($statement['entitlements'] as $entitlement) {
+                    $writer->addRow(Row::fromValues([$entitlement['work_date'], $entitlement['earned'],
+                        $entitlement['used'], $entitlement['available'], $entitlement['overdue']]));
+                }
             }
         } finally {
             $writer->close();

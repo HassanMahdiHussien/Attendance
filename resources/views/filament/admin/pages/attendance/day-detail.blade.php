@@ -1,5 +1,5 @@
 <x-filament-panels::page>
-    @php $day = $this->day(); $latest = $this->latestReview($day); @endphp
+    @php $day = $this->day(); $latest = $this->latestReview($day); $overtime = $this->overtime(); $entitlement = $this->entitlement(); @endphp
     <div class="space-y-5">
         <x-ui.card>
             <div class="flex flex-wrap items-center justify-between gap-3">
@@ -19,6 +19,9 @@
                     <div><span class="text-sm text-gray-600">{{ __('messages.office_ui.minutes.'.$field) }}</span><strong class="block font-mono" dir="ltr">{{ $this->minutes($day->{$field}) }}</strong></div>
                 @endforeach
                 <div><span class="text-sm text-gray-600">{{ __('messages.office_ui.reviewed') }}</span><strong class="block">{{ $day->reviewed ? __('messages.office_ui.yes') : __('messages.office_ui.no') }}</strong></div>
+                <div><span class="text-sm text-gray-600">{{ __('messages.overtime_ui.overtime') }}</span><strong class="block font-mono" dir="ltr">{{ $this->minutes($overtime['overtime_minutes'] ?? null) }}</strong>@if ($overtime['overtime_basis'] ?? null)<span>{{ __('messages.overtime_ui.basis.'.$overtime['overtime_basis']) }}</span>@endif</div>
+                @if (($overtime['early_arrival_minutes'] ?? 0) > 0)<div><span class="text-sm text-gray-600">{{ __('messages.overtime_ui.early_marker') }}</span><strong class="block font-mono" dir="ltr">{{ $this->minutes($overtime['early_arrival_minutes']) }}</strong></div>@endif
+                @if ($entitlement)<div><span class="text-sm text-gray-600">{{ __('messages.overtime_ui.entitlement') }}</span><a class="ui-link block font-mono" dir="ltr" href="{{ route('employees.show', $this->employee()).'?attendance_tab=overtime' }}">{{ number_format($entitlement['earned'], 1) }}</a><span>{{ __('messages.overtime_ui.entitlement_basis.'.$entitlement['basis']) }}</span></div>@endif
             </div>
         </x-ui.card>
         @if ($day->holiday_ids)
@@ -49,7 +52,7 @@
                     @if (array_key_exists($field, $day->inputs ?? []))<div><span class="text-sm text-gray-600">{{ __('messages.office_ui.inputs.'.$field) }}</span><strong class="block break-all font-mono text-sm" dir="ltr">{{ $this->displayValue($day->inputs[$field]) }}</strong></div>@endif
                 @endforeach
                 @if ($day->policy)<div><span class="text-sm text-gray-600">{{ __('messages.office_ui.policy_fields.office_start') }}</span><strong class="block font-mono" dir="ltr">{{ $day->policy->office_start }}</strong></div>
-                    @foreach (['flex_minutes', 'workday_minutes', 'min_presence_minutes', 'absence_minutes', 'close_grace_minutes', 'exits_count_toward_balance', 'office_rest_days', 'shift_starts', 'shift_minutes', 'shift_break_minutes', 'shift_min_presence_minutes', 'shift_rest_days', 'security_min_presence_minutes', 'inference_tolerance_minutes'] as $field)
+                    @foreach (['flex_minutes', 'workday_minutes', 'min_presence_minutes', 'absence_minutes', 'close_grace_minutes', 'exits_count_toward_balance', 'office_rest_days', 'shift_starts', 'shift_minutes', 'shift_break_minutes', 'shift_min_presence_minutes', 'shift_rest_days', 'security_min_presence_minutes', 'inference_tolerance_minutes', 'overtime_min_minutes', 'overtime_step_minutes', 'rest_day_half_minutes', 'rest_day_full_minutes', 'compensatory_rest_days'] as $field)
                         <div><span class="text-sm text-gray-600">{{ __('messages.office_ui.policy_fields.'.$field) }}</span><strong class="block font-mono" dir="ltr">{{ $this->displayValue($day->policy->{$field}) }}</strong></div>
                     @endforeach
                 @endif

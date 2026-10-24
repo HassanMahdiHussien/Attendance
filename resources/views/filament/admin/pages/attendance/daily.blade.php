@@ -1,5 +1,5 @@
 <x-filament-panels::page>
-    @php $holidayNames = $this->holidayNames(); @endphp
+    @php $holidayNames = $this->holidayNames(); $overtimeRows = $this->overtimeRows(); $entitlementRows = $this->entitlementRows(); @endphp
     <div class="space-y-5">
         <x-ui.card>
             <div class="flex flex-wrap gap-4">
@@ -16,6 +16,7 @@
         <x-ui.card padding="none">
             <div class="overflow-x-auto"><table class="w-full text-start text-sm"><thead><tr>
                 @foreach (['employee', 'branch', 'status', 'shift', 'first_in', 'last_out', 'elapsed', 'presence', 'late', 'early', 'short', 'balance', 'reviewed'] as $column)<th class="whitespace-nowrap p-3">{{ __('messages.office_ui.'.$column) }}</th>@endforeach
+                <th class="p-3">{{ __('messages.overtime_ui.overtime') }}</th><th class="p-3">{{ __('messages.overtime_ui.early_marker') }}</th><th class="p-3">{{ __('messages.overtime_ui.entitlement') }}</th>
                 <th class="p-3">{{ __('messages.holiday_ui.holiday_names') }}</th>
             </tr></thead><tbody>
                 @forelse ($this->days() as $day)
@@ -27,9 +28,12 @@
                         <td class="p-3 font-mono" dir="ltr">{{ $day->first_in?->format('H:i') ?? '—' }}</td><td class="p-3 font-mono" dir="ltr">{{ $day->last_out?->format('H:i') ?? '—' }}</td>
                         @foreach (['elapsed_minutes', 'presence_minutes', 'late_minutes', 'early_minutes', 'short_minutes', 'balance_minutes'] as $field)<td class="p-3 font-mono" dir="ltr">{{ $this->minutes($day->{$field}) }}</td>@endforeach
                         <td class="p-3">{{ $day->reviewed ? __('messages.office_ui.yes') : '—' }}</td>
+                        <td class="p-3"><bdi dir="ltr">{{ $this->minutes($overtimeRows[$day->id]['overtime_minutes'] ?? null) }}</bdi>@if ($overtimeRows[$day->id]['overtime_basis'] ?? null)<span class="block text-xs">{{ __('messages.overtime_ui.basis.'.$overtimeRows[$day->id]['overtime_basis']) }}</span>@endif</td>
+                        <td class="p-3"><bdi dir="ltr">{{ $this->minutes($overtimeRows[$day->id]['early_arrival_minutes'] ?? null) }}</bdi></td>
+                        <td class="p-3">@if (isset($entitlementRows[$day->id]))<a class="ui-link" href="{{ $this->detailUrl($day) }}"><bdi dir="ltr">{{ number_format($entitlementRows[$day->id]['earned'], 1) }}</bdi></a>@else — @endif</td>
                         <td class="p-3">@foreach ($day->holiday_ids ?? [] as $holidayId)<a class="ui-link block" href="{{ \App\Filament\Admin\Pages\Attendance\HolidayReview::getUrl(panel: 'admin', tenant: $this->company()).'?'.http_build_query(['holiday' => $holidayId]) }}">{{ $holidayNames[$holidayId] ?? '' }}</a>@endforeach</td>
                     </tr>
-                @empty <tr><td colspan="14" class="p-5">{{ __('messages.office_ui.no_days') }}</td></tr> @endforelse
+                @empty <tr><td colspan="17" class="p-5">{{ __('messages.office_ui.no_days') }}</td></tr> @endforelse
             </tbody></table></div>
             <div class="p-3">{{ $this->days()->links() }}</div>
         </x-ui.card>

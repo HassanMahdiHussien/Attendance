@@ -43,6 +43,10 @@ abstract class LeavePage extends Page
 
     public function errorLabel(string $code): string
     {
+        if ($code === 'entitlement_exceeded') {
+            return __('messages.leave_ui.flags.entitlement_exceeded');
+        }
+
         foreach (['_required' => 'required', '_too_long' => 'too_long'] as $suffix => $kind) {
             if (str_ends_with($code, $suffix)) {
                 $field = substr($code, 0, -strlen($suffix));

@@ -6,11 +6,13 @@ use App\Jobs\Attendance\AssessDaysJob;
 use App\Models\Attendance\DataIssue;
 use App\Models\Attendance\Day;
 use App\Models\Attendance\Policy;
+use App\Models\Attendance\RestDayEntitlement;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\EmployeeVersion;
 use App\Models\Leave\Allocation;
 use App\Models\Leave\Credit;
+use App\Models\Leave\EntitlementConsumption;
 use App\Models\Leave\LeaveRequest;
 use App\Models\Leave\ProcessingRun;
 use App\Models\Leave\RequestDay;
@@ -26,7 +28,13 @@ use Throwable;
 
 class Reconciler
 {
-    public function __construct(private LeaveDistributor $distributor, private LeaveAllocator $allocator, private AuditLogger $audit, private DataIssues $issues) {}
+    public function __construct(
+        private LeaveDistributor $distributor,
+        private LeaveAllocator $allocator,
+        private LeaveEntitlementAllocator $entitlementAllocator,
+        private AuditLogger $audit,
+        private DataIssues $issues,
+    ) {}
 
     public function run(Company $company, array $employeeIds, string $trigger, ?string $from = null, ?string $to = null): ProcessingRun
     {
@@ -118,10 +126,15 @@ class Reconciler
             }
         }
         $plannedDays = [];
+        $compensationRequests = [];
+        $compensationIds = [];
         $setting = Setting::query()->where('company_id', $company->id)->first();
         $leaveCalendarRestDays = $setting?->leave_calendar_rest_days ?? [5];
         $methodsChanged = false;
         foreach ($requests as $request) {
+            if ($request->leaveType?->consumes === 'rest_day_entitlement') {
+                $compensationIds[$request->id] = true;
+            }
             $requestDecisions = $byRequest->get($request->id, collect());
             if ($request->status !== 'approved' || ! $request->leaveType?->covers || ! $request->leaveType->is_mapped
                 || $requestDecisions->contains('decision', 'cancel')) {
@@ -195,10 +208,19 @@ class Reconciler
             if ($distribution['flag'] !== null && $distribution['flag'] !== 'counted_holiday') {
                 continue;
             }
+            if (isset($compensationIds[$request->id])) {
+                $compensationRequests[] = [
+                    'request_id' => $request->id, 'external_id' => $request->external_id,
+                    'start_date' => $values['start_date'], 'quantity' => (float) $values['duration_days'],
+                    'request_day_key' => isset($distribution['days'][0])
+                        ? $request->id.'|'.$distribution['days'][0]['work_date'] : null,
+                ];
+            }
             foreach ($distribution['days'] as $day) {
                 $plannedDays[] = [
                     'key' => $request->id.'|'.$day['work_date'], 'request_id' => $request->id,
                     'external_id' => $request->external_id, 'work_date' => $day['work_date'], 'minutes' => $day['minutes'],
+                    'credit_allowed' => ! isset($compensationIds[$request->id]),
                 ];
             }
         }
@@ -245,11 +267,27 @@ class Reconciler
             ->whereNull('superseded_by_run_id')->get();
         $oldAllocations = Allocation::query()->where('company_id', $company->id)->where('employee_id', $employee->id)
             ->whereNull('superseded_by_run_id')->get();
+        $oldConsumptions = EntitlementConsumption::query()->with('requestDay')
+            ->where('company_id', $company->id)->where('employee_id', $employee->id)
+            ->whereNull('superseded_by_run_id')->get();
+        $availableEntitlements = RestDayEntitlement::query()->where('company_id', $company->id)
+            ->where('employee_id', $employee->id)->whereNull('superseded_by_run_id')
+            ->orderBy('work_date')->orderBy('id')->get()
+            ->map(fn (RestDayEntitlement $entitlement): array => [
+                'id' => $entitlement->id, 'work_date' => $entitlement->work_date->toDateString(),
+                'quantity' => $entitlement->quantity,
+            ])->all();
+        $entitlementPlan = $this->entitlementAllocator->allocate($compensationRequests, $availableEntitlements);
+        $exceeded = array_fill_keys($entitlementPlan['exceeded'], true);
+        foreach ($requests as $request) {
+            $methodsChanged = $this->syncEntitlementExceeded($company, $request, isset($exceeded[$request->id])) || $methodsChanged;
+        }
         $expiry = $setting?->credit_expiry_days;
         $sourceDays = [];
         foreach ($plannedDays as $day) {
             $sourceDays[] = ['id' => $day['key'], 'external_id' => $day['external_id'],
-                'work_date' => $day['work_date'], 'minutes' => $day['minutes']];
+                'work_date' => $day['work_date'], 'minutes' => $day['minutes'],
+                'credit_allowed' => $day['credit_allowed']];
         }
         $targetlessPresentDates = $days->filter(fn (Day $day): bool => $day->status === 'present'
             && ! collect($targets)->contains('work_date', $day->work_date->toDateString()))
@@ -271,7 +309,9 @@ class Reconciler
                     'note' => __('messages.leave_reconciliation.issue_resolved'), 'resolved_at' => now()]);
                 $this->audit->log('leave.issue.resolved', $issue, ['type' => $issue->type, 'subject_key' => $issue->subject_key]);
             });
-        if (! $methodsChanged && $sameDays && $this->sameLedger($plan, $oldCredits, $oldAllocations, $oldDays)) {
+        $sameConsumptions = $this->sameConsumptionLedger($entitlementPlan['consumptions'], $oldConsumptions);
+        if (! $methodsChanged && $sameDays && $this->sameLedger($plan, $oldCredits, $oldAllocations, $oldDays)
+            && $sameConsumptions) {
             return ['changed' => false, 'dates' => []];
         }
         $oldAllocations->each(fn (Allocation $allocation) => $allocation->update(['superseded_by_run_id' => $run->id]));
@@ -310,6 +350,29 @@ class Reconciler
                 ],
             ]);
         }
+        if (! $sameConsumptions || (! $sameDays && $oldConsumptions->isNotEmpty())) {
+            foreach ($oldConsumptions as $consumption) {
+                $consumption->update(['superseded_by_run_id' => $run->id]);
+                $this->audit->log('leave.entitlement.consumption_superseded', $consumption, [
+                    'request_id' => $consumption->request_id, 'entitlement_id' => $consumption->entitlement_id,
+                    'before' => ['run_id' => $consumption->run_id], 'after' => ['superseded_by_run_id' => $run->id],
+                ]);
+            }
+            foreach ($entitlementPlan['consumptions'] as $consumption) {
+                $created = EntitlementConsumption::create([
+                    'company_id' => $company->id, 'employee_id' => $employee->id,
+                    'request_id' => $consumption['request_id'],
+                    'request_day_id' => $consumption['request_day_key'] === null ? null : $ids[$consumption['request_day_key']],
+                    'entitlement_id' => $consumption['entitlement_id'],
+                    'quantity' => $consumption['quantity'], 'explanation' => $consumption['explanation'],
+                    'run_id' => $run->id,
+                ]);
+                $this->audit->log('leave.entitlement.consumed', $created, [
+                    'request_id' => $created->request_id, 'entitlement_id' => $created->entitlement_id,
+                    'quantity' => $created->quantity, 'run_id' => $run->id,
+                ]);
+            }
+        }
 
         return ['changed' => true, 'dates' => $changedDates];
     }
@@ -341,6 +404,52 @@ class Reconciler
         }
 
         return $has !== $counted;
+    }
+
+    private function syncEntitlementExceeded(Company $company, LeaveRequest $request, bool $exceeded): bool
+    {
+        $flags = $request->flags ?? [];
+        $hadFlag = in_array('entitlement_exceeded', $flags, true);
+        if ($hadFlag !== $exceeded) {
+            $flags = array_values(array_diff($flags, ['entitlement_exceeded']));
+            if ($exceeded) {
+                $flags[] = 'entitlement_exceeded';
+            }
+            $request->update(['flags' => $flags]);
+            $this->audit->log('leave.request.entitlement_flag_changed', $request, [
+                'request_id' => $request->id, 'exceeded' => $exceeded,
+            ]);
+        }
+        $key = 'leave_entitlement_exceeded|leave_request|request:'.$request->id;
+        if ($exceeded) {
+            $this->issues->open($company, 'leave_entitlement_exceeded', 'leave_request', 'request:'.$request->id);
+        } else {
+            $issue = DataIssue::query()->where('company_id', $company->id)->where('open_key', $key)->first();
+            if ($issue !== null) {
+                $issue->update(['status' => 'resolved', 'open_key' => null,
+                    'note' => __('messages.leave_reconciliation.entitlement_resolved'), 'resolved_at' => now()]);
+                $this->audit->log('leave.issue.resolved', $issue, ['type' => $issue->type, 'subject_key' => $issue->subject_key]);
+            }
+        }
+
+        return $hadFlag !== $exceeded;
+    }
+
+    private function sameConsumptionLedger(array $planned, $current): bool
+    {
+        $plannedRows = array_map(fn (array $row): array => [
+            $row['request_id'], $row['request_day_key'] ?? '', $row['entitlement_id'],
+            (int) round($row['quantity'] * 2),
+        ], $planned);
+        $currentRows = $current->map(fn (EntitlementConsumption $row): array => [
+            (int) $row->request_id,
+            $row->requestDay === null ? '' : $row->requestDay->request_id.'|'.$row->requestDay->work_date->toDateString(),
+            (int) $row->entitlement_id, (int) round((float) $row->quantity * 2),
+        ])->all();
+        sort($plannedRows);
+        sort($currentRows);
+
+        return $plannedRows === $currentRows;
     }
 
     private function dispatchChangedDays(int $companyId, int $employeeId, array $dates): void

@@ -53,7 +53,7 @@
         <form wire:submit="requestExport" class="mt-3 flex flex-wrap items-end gap-3">
             <label class="text-sm">{{ __('messages.export_ui.report') }}
                 <select wire:model="exportKind" class="ui-control block rounded-xl border border-gray-200 px-3 py-2">
-                    @foreach (['lateness_reconciliation', 'absence', 'missing_punches', 'leave_and_credit', 'restaurant_usage', 'data_issues'] as $kind)
+                    @foreach (['lateness_reconciliation', 'absence', 'missing_punches', 'leave_and_credit', 'restaurant_usage', 'data_issues', 'overtime', 'compensatory_days'] as $kind)
                         <option value="{{ $kind }}">{{ __('messages.export_ui.kinds.'.$kind) }}</option>
                     @endforeach
                 </select>
@@ -74,7 +74,7 @@
         @foreach ($tiles as $key => $value)
             <a href="{{ $this->tileUrl($key) }}" class="rounded-2xl border border-gray-200 bg-white p-4 hover:border-primary focus-visible:outline-2 focus-visible:outline-primary">
                 <span class="block text-sm text-gray-500">{{ \App\Services\Attendance\Reporting\ReportTiles::label($key) }}</span>
-                <strong class="mt-1 block font-mono text-xl text-ink" dir="ltr">{{ \App\Services\Attendance\Reporting\ReportTiles::isMinutes($key) ? sprintf('%d:%02d', intdiv($value, 60), $value % 60) : \App\Support\Format\Ui::number($value) }}</strong>
+                <strong class="mt-1 block font-mono text-xl text-ink" dir="ltr">{{ \App\Services\Attendance\Reporting\ReportTiles::isMinutes($key) ? sprintf('%d:%02d', intdiv($value, 60), $value % 60) : (\App\Services\Attendance\Reporting\ReportTiles::isDays($key) ? number_format($value, 1) : \App\Support\Format\Ui::number($value)) }}</strong>
                 @if ($key === 'holiday_worked')
                     <span class="block text-sm text-gray-600">{{ __('messages.holiday_ui.hours') }} <bdi dir="ltr">{{ sprintf('%d:%02d', intdiv($totals['holiday_work_minutes'], 60), $totals['holiday_work_minutes'] % 60) }}</bdi></span>
                 @endif

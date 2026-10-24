@@ -42,14 +42,14 @@
         @foreach ($tiles as $key => $value)
             <button type="button" wire:click="showTile(@js($key))" class="rounded-2xl border border-gray-200 bg-white p-4 text-start hover:border-primary focus-visible:outline-2 focus-visible:outline-primary">
                 <span class="block text-sm text-gray-500">{{ \App\Services\Attendance\Reporting\ReportTiles::label($key) }}</span>
-                <strong class="mt-1 block font-mono text-xl text-ink" dir="ltr">{{ \App\Services\Attendance\Reporting\ReportTiles::isMinutes($key) ? sprintf('%d:%02d', intdiv($value, 60), $value % 60) : \App\Support\Format\Ui::number($value) }}</strong>
+                <strong class="mt-1 block font-mono text-xl text-ink" dir="ltr">{{ \App\Services\Attendance\Reporting\ReportTiles::isMinutes($key) ? sprintf('%d:%02d', intdiv($value, 60), $value % 60) : (\App\Services\Attendance\Reporting\ReportTiles::isDays($key) ? number_format($value, 1) : \App\Support\Format\Ui::number($value)) }}</strong>
             </button>
         @endforeach
     </div>
 
     <x-ui.card>
         <div class="flex flex-wrap gap-4 border-b border-gray-200 pb-3">
-            @foreach (['days', 'leave', 'credits', 'changes', 'issues'] as $section)
+            @foreach (['days', 'leave', 'credits', 'overtime', 'changes', 'issues'] as $section)
                 <button type="button" wire:click="show('{{ $section }}')" class="{{ $tab === $section ? 'font-bold text-ink' : 'ui-link' }}">{{ __('messages.reporting_ui.tabs.'.$section) }}</button>
             @endforeach
         </div>
@@ -73,6 +73,13 @@
                             <p>{{ __('messages.office_ui.shift') }}: <bdi dir="ltr">{{ \App\Services\Attendance\ShiftDisplay::hours($day['shift_start'], $day['shift_minutes']) ?? '—' }}</bdi> · {{ __('messages.office_ui.shift_sources.'.($day['shift_source'] ?? 'unknown')) }}</p>
                         @endif
                         <p>{{ __('messages.reporting_ui.elapsed') }} <bdi dir="ltr">{{ sprintf('%d:%02d', intdiv((int) $day['observed']['elapsed'], 60), $day['observed']['elapsed'] % 60) }}</bdi> · {{ __('messages.reporting_ui.presence') }} <bdi dir="ltr">{{ sprintf('%d:%02d', intdiv((int) $day['observed']['presence'], 60), $day['observed']['presence'] % 60) }}</bdi> · {{ __('messages.reporting_ui.short') }} <bdi dir="ltr">{{ sprintf('%d:%02d', intdiv((int) $day['observed']['short'], 60), $day['observed']['short'] % 60) }}</bdi></p>
+                        @if ($overtimeDays->has($day['work_date']))
+                            @php $extra = $overtimeDays->get($day['work_date']); @endphp
+                            @if ($extra['overtime_minutes'] !== null)
+                                <p>{{ __('messages.overtime_ui.overtime') }}: <bdi dir="ltr">{{ sprintf('%d:%02d', intdiv($extra['overtime_minutes'], 60), $extra['overtime_minutes'] % 60) }}</bdi> · {{ __('messages.overtime_ui.basis.'.$extra['overtime_basis']) }}</p>
+                            @endif
+                            @if ($extra['early_arrival_minutes'] > 0)<p>{{ __('messages.overtime_ui.early_marker') }} <bdi dir="ltr">{{ sprintf('%d:%02d', intdiv($extra['early_arrival_minutes'], 60), $extra['early_arrival_minutes'] % 60) }}</bdi></p>@endif
+                        @endif
                         @foreach (['absence', 'late', 'early', 'exit'] as $kind)
                             @if ($day['minutes'][$kind]['gross'] > 0)
                                 <p>{{ app()->getLocale() === 'en' ? ucfirst(__('messages.leave_ui.target_kinds.'.$kind)) : __('messages.leave_ui.target_kinds.'.$kind) }}: {{ __('messages.reporting_ui.gross') }} <bdi dir="ltr">{{ $day['minutes'][$kind]['gross'] }}</bdi> · {{ __('messages.reporting_ui.reconciled') }} <bdi dir="ltr">{{ $day['minutes'][$kind]['reconciled_by_leave'] + $day['minutes'][$kind]['reconciled_by_credit'] }}</bdi> · {{ __('messages.reporting_ui.remaining') }} <bdi dir="ltr">{{ $day['minutes'][$kind]['remaining'] }}</bdi> {{ __('messages.reporting_ui.minutes') }}</p>
@@ -98,6 +105,22 @@
             @forelse ($credits as $credit)
                 <p class="border-b border-gray-100 py-3 text-sm"><bdi dir="ltr">{{ $credit->sourceDay?->request?->external_id }} · {{ $credit->sourceDay?->work_date?->toDateString() }}</bdi> · {{ __('messages.reporting_ui.created') }} <bdi dir="ltr">{{ $credit->minutes }}</bdi> · {{ __('messages.reporting_ui.used') }} <bdi dir="ltr">{{ $used->get($credit->id, collect())->sum('minutes') }}</bdi> · {{ __('messages.reporting_ui.available') }} <bdi dir="ltr">{{ $credit->expires_on && $credit->expires_on->toDateString() < $to ? 0 : max(0, $credit->minutes - $used->get($credit->id, collect())->sum('minutes')) }}</bdi></p>
             @empty <p class="mt-3 text-sm text-gray-500">{{ __('messages.reporting_ui.none') }}</p> @endforelse
+        @elseif ($tab === 'overtime')
+            <h3 class="mt-3 font-bold">{{ __('messages.overtime_ui.section') }}</h3>
+            @foreach ($overtime['overtime_by_basis'] as $basis => $minutes)
+                <p>{{ __('messages.overtime_ui.basis.'.$basis) }}: <bdi dir="ltr">{{ sprintf('%d:%02d', intdiv($minutes, 60), $minutes % 60) }}</bdi></p>
+            @endforeach
+            <p>{{ __('messages.overtime_ui.earned') }} <bdi dir="ltr">{{ number_format($overtime['entitlements_earned'], 1) }}</bdi> · {{ __('messages.overtime_ui.used') }} <bdi dir="ltr">{{ number_format($overtime['entitlements_used'], 1) }}</bdi> · {{ __('messages.overtime_ui.available') }} <bdi dir="ltr">{{ number_format($overtime['entitlements_available_now'], 1) }}</bdi> · {{ __('messages.overtime_ui.overdue') }} <bdi dir="ltr">{{ number_format($overtime['entitlements_overdue_now'], 1) }}</bdi></p>
+            @forelse ($entitlements as $entitlement)
+                <div class="border-b border-gray-100 py-3 text-sm">
+                    <a class="ui-link" href="{{ $dayUrl.'?'.http_build_query(['employee' => $employee->id, 'date' => $entitlement['work_date']]) }}"><bdi dir="ltr">{{ $entitlement['work_date'] }}</bdi></a> · {{ __('messages.overtime_ui.entitlement_basis.'.$entitlement['basis']) }}@if ($entitlement['holiday']) · {{ __('messages.overtime_ui.holiday') }}@endif
+                    <p>{{ __('messages.overtime_ui.earned') }} <bdi dir="ltr">{{ number_format($entitlement['earned'], 1) }}</bdi> · {{ __('messages.overtime_ui.used') }} <bdi dir="ltr">{{ number_format($entitlement['used'], 1) }}</bdi> · {{ __('messages.overtime_ui.available') }} <bdi dir="ltr">{{ number_format($entitlement['available'], 1) }}</bdi></p>
+                    @if ($entitlement['overdue'] > 0)<p class="text-amber-800">{{ __('messages.overtime_ui.overdue_since') }} <bdi dir="ltr">{{ $entitlement['alert_on'] }}</bdi></p>@endif
+                    @foreach ($consumptions->where('entitlement_id', $entitlement['id']) as $consumption)
+                        <p>{{ __('messages.overtime_ui.consumed_by') }} <a class="ui-link" href="{{ \App\Filament\Admin\Pages\Leave\LeaveRequestDetail::getUrl(panel: 'admin', tenant: $employee->company).'?'.http_build_query(['request' => $consumption['request_id']]) }}"><bdi dir="ltr">{{ $consumption['external_id'] }}</bdi></a> · <bdi dir="ltr">{{ number_format($consumption['quantity'], 1) }}</bdi></p>
+                    @endforeach
+                </div>
+            @empty <p>{{ __('messages.reporting_ui.none') }}</p> @endforelse
         @elseif ($tab === 'changes')
             @forelse ($changes as $change)
                 <div class="border-b border-gray-100 py-3 text-sm">

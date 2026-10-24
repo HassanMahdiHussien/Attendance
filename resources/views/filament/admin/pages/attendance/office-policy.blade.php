@@ -22,6 +22,15 @@
                 <p>{{ __('messages.office_ui.policy_fields.security_min_presence_minutes') }}: <bdi dir="ltr">{{ $current->security_min_presence_minutes }}</bdi></p>
                 <h3 class="mt-4 font-semibold">{{ __('messages.office_ui.policy_sections.inference') }}</h3>
                 <p>{{ __('messages.office_ui.policy_fields.inference_tolerance_minutes') }}: <bdi dir="ltr">{{ $current->inference_tolerance_minutes }}</bdi></p>
+                <h3 class="mt-4 font-semibold">{{ __('messages.overtime_ui.policy') }}</h3>
+                <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    @foreach (['overtime_min_minutes', 'overtime_step_minutes', 'rest_day_half_minutes', 'rest_day_full_minutes'] as $field)
+                        <p>{{ __('messages.office_ui.policy_fields.'.$field) }}: <bdi dir="ltr">{{ $current->{$field} }}</bdi></p>
+                    @endforeach
+                </div>
+                @foreach ($current->compensatory_rest_days ?? [] as $pattern => $days)
+                    <p>{{ __('messages.reporting_ui.patterns.'.$pattern) }}: {{ is_array($days) ? implode(', ', array_map(fn ($day) => __('messages.office_ui.weekdays.'.$day), $days)) : __('messages.overtime_ui.individual_rest_days') }}</p>
+                @endforeach
             @else <p>{{ __('messages.office_ui.no_policy') }}</p> @endif
         </x-ui.card>
         <x-ui.card :title="__('messages.office_ui.add_version')">
@@ -50,8 +59,15 @@
                 <label>{{ __('messages.office_ui.policy_fields.security_min_presence_minutes') }} <input type="number" wire:model="securityMinPresenceMinutes" min="1" class="block w-full rounded-xl border border-gray-200 p-2" dir="ltr"></label>
                 <h3 class="font-semibold">{{ __('messages.office_ui.policy_sections.inference') }}</h3>
                 <label>{{ __('messages.office_ui.policy_fields.inference_tolerance_minutes') }} <input type="number" wire:model="inferenceToleranceMinutes" min="1" class="block w-full rounded-xl border border-gray-200 p-2" dir="ltr"></label>
+                <h3 class="font-semibold">{{ __('messages.overtime_ui.policy') }}</h3>
+                <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    @foreach (['overtimeMinMinutes' => 'overtime_min_minutes', 'overtimeStepMinutes' => 'overtime_step_minutes', 'restDayHalfMinutes' => 'rest_day_half_minutes', 'restDayFullMinutes' => 'rest_day_full_minutes'] as $property => $field)
+                        <label>{{ __('messages.office_ui.policy_fields.'.$field) }} <input type="number" wire:model="{{ $property }}" min="0" class="block w-full rounded-xl border border-gray-200 p-2" dir="ltr"></label>
+                    @endforeach
+                </div>
+                <p class="text-sm text-gray-600">{{ __('messages.overtime_ui.eligible_rest_days') }}: {{ __('messages.overtime_ui.office_friday') }} · {{ __('messages.overtime_ui.shift_friday') }} · {{ __('messages.overtime_ui.security_individual') }}</p>
                 <label class="block">{{ __('messages.office_ui.reason') }} <input type="text" wire:model="reason" class="block w-full rounded-xl border border-gray-200 p-2"></label>
-                @foreach (['effectiveFrom', 'officeStart', 'flexMinutes', 'workdayMinutes', 'minPresenceMinutes', 'absenceMinutes', 'closeGraceMinutes', 'officeRestDays', 'shiftStarts', 'shiftMinutes', 'shiftBreakMinutes', 'shiftMinPresenceMinutes', 'shiftRestDays', 'securityMinPresenceMinutes', 'inferenceToleranceMinutes', 'reason'] as $field) @error($field) <p class="text-red-600">{{ $message }}</p> @enderror @endforeach
+                @foreach (['effectiveFrom', 'officeStart', 'flexMinutes', 'workdayMinutes', 'minPresenceMinutes', 'absenceMinutes', 'closeGraceMinutes', 'officeRestDays', 'shiftStarts', 'shiftMinutes', 'shiftBreakMinutes', 'shiftMinPresenceMinutes', 'shiftRestDays', 'securityMinPresenceMinutes', 'inferenceToleranceMinutes', 'overtimeMinMinutes', 'overtimeStepMinutes', 'restDayHalfMinutes', 'restDayFullMinutes', 'reason'] as $field) @error($field) <p class="text-red-600">{{ $message }}</p> @enderror @endforeach
                 <x-filament::button type="submit">{{ __('messages.office_ui.add_version') }}</x-filament::button>
             </form>
         </x-ui.card>

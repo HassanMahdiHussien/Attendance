@@ -21,6 +21,7 @@ use App\Models\Attendance\Person;
 use App\Models\Attendance\Policy;
 use App\Models\Attendance\ProcessingRun;
 use App\Models\Attendance\Punch;
+use App\Models\Attendance\RestDayEntitlement;
 use App\Models\Attendance\Transaction;
 use App\Models\Attendance\TransactionSource;
 use App\Models\Branch;
@@ -38,6 +39,7 @@ use App\Models\Leave\BalanceBatchEvent as LeaveBalanceBatchEvent;
 use App\Models\Leave\BalanceMapping as LeaveBalanceMapping;
 use App\Models\Leave\BalanceRow as LeaveBalanceRow;
 use App\Models\Leave\Credit as LeaveCredit;
+use App\Models\Leave\EntitlementConsumption;
 use App\Models\Leave\ImportBatch as LeaveImportBatch;
 use App\Models\Leave\ImportBatchEvent as LeaveImportBatchEvent;
 use App\Models\Leave\ImportMapping as LeaveImportMapping;
@@ -59,7 +61,7 @@ dataset('tenant models', [
     Device::class, DeviceSetting::class, AttendanceImportBatch::class, ImportBatchEvent::class,
     AttendanceImportMapping::class, Transaction::class, TransactionSource::class, Person::class,
     CoverageInterval::class, DataIssue::class, ProcessingRun::class, Punch::class, Meal::class,
-    Policy::class, ManualPunch::class, DayDecision::class, Day::class,
+    Policy::class, ManualPunch::class, DayDecision::class, Day::class, RestDayEntitlement::class,
     Holiday::class, HolidaySource::class, HolidayVersion::class,
     AttendanceExport::class, AttendanceExportEvent::class,
     LeaveImportBatch::class, LeaveImportBatchEvent::class, LeaveImportMapping::class,
@@ -67,7 +69,7 @@ dataset('tenant models', [
     LeaveBalance::class, LeaveBalanceRow::class,
     LeaveType::class, LeaveRequest::class, LeaveImportRow::class, LeaveRequestVersion::class,
     LeaveRequestDecision::class, LeaveProcessingRun::class, LeaveRequestDay::class,
-    LeaveCredit::class, LeaveAllocation::class,
+    LeaveCredit::class, LeaveAllocation::class, EntitlementConsumption::class,
 ]);
 
 test('every kept tenant model isolates reads and builder writes and stamps creation', function (string $model): void {

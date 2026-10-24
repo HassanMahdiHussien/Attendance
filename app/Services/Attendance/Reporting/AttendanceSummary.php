@@ -96,6 +96,33 @@ class AttendanceSummary
         }
     }
 
+    public function selectedDays(ReportFilters $filters, array $employeeIds = []): Generator
+    {
+        $this->assertCompany($filters);
+        $employees = Employee::query()->where('company_id', $filters->companyId);
+        if ($filters->employeeIds !== []) {
+            $employees->whereIn('id', $filters->employeeIds);
+        }
+        if ($employeeIds !== []) {
+            $employees->whereIn('id', $employeeIds);
+        }
+        $lastId = 0;
+        while (true) {
+            $chunk = (clone $employees)->where('id', '>', $lastId)->orderBy('id')->limit(100)->get();
+            if ($chunk->isEmpty()) {
+                break;
+            }
+            $lastId = (int) $chunk->last()->id;
+            $days = $this->filterHistoricalAttributes(
+                $this->days($filters, $chunk->pluck('id')->all())->orderBy('employee_id')->orderBy('work_date')->get(),
+                $filters, $chunk,
+            );
+            foreach ($days as $day) {
+                yield $day;
+            }
+        }
+    }
+
     public function perDay(ReportFilters $filters, int $employeeId): Generator
     {
         $this->assertCompany($filters);

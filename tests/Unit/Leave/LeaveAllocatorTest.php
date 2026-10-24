@@ -87,6 +87,27 @@ test('overlapping leave never spends a target minute twice', function (): void {
         ->and(array_sum(array_column($result['credits'], 'minutes')))->toBe(180);
 });
 
+test('compensation leave covers its own day but never creates surplus credit', function (): void {
+    $source = leaveSource('a', '2026-10-19', 240);
+    $source['credit_allowed'] = false;
+    $result = (new LeaveAllocator)->allocate([$source], [leaveTarget(1, '2026-10-19', 'late', 30)],
+        creditEligibleDates: ['2026-10-19']);
+
+    expect($result['allocations'])->toHaveCount(1)
+        ->and($result['allocations'][0]['minutes'])->toBe(30)
+        ->and($result['credits'])->toBe([]);
+});
+
+test('other approved leave retains surplus credit when its type permits it', function (): void {
+    $source = leaveSource('a', '2026-10-19', 240);
+    $source['credit_allowed'] = true;
+    $result = (new LeaveAllocator)->allocate([$source], [leaveTarget(1, '2026-10-19', 'late', 30)],
+        creditEligibleDates: ['2026-10-19']);
+
+    expect($result['credits'])->toHaveCount(1)
+        ->and($result['credits'][0]['minutes'])->toBe(210);
+});
+
 test('a present day applies leave to late then early then exit minutes', function (): void {
     $result = (new LeaveAllocator)->allocate(
         [leaveSource('a', '2026-10-19', 240)],

@@ -22,6 +22,7 @@ use App\Models\Attendance\Person;
 use App\Models\Attendance\Policy;
 use App\Models\Attendance\ProcessingRun;
 use App\Models\Attendance\Punch;
+use App\Models\Attendance\RestDayEntitlement;
 use App\Models\Attendance\Transaction;
 use App\Models\Attendance\TransactionSource;
 use App\Models\Branch;
@@ -37,6 +38,7 @@ use App\Models\Leave\BalanceBatchEvent as LeaveBalanceBatchEvent;
 use App\Models\Leave\BalanceMapping as LeaveBalanceMapping;
 use App\Models\Leave\BalanceRow as LeaveBalanceRow;
 use App\Models\Leave\Credit as LeaveCredit;
+use App\Models\Leave\EntitlementConsumption;
 use App\Models\Leave\ImportBatch as LeaveImportBatch;
 use App\Models\Leave\ImportBatchEvent as LeaveImportBatchEvent;
 use App\Models\Leave\ImportMapping as LeaveImportMapping;
@@ -78,6 +80,7 @@ test('every kept composite tenant foreign key rejects another company through mo
         'attendance_manual_punches' => ManualPunch::class,
         'attendance_day_decisions' => DayDecision::class,
         'attendance_days' => Day::class,
+        'attendance_rest_day_entitlements' => RestDayEntitlement::class,
         'attendance_holidays' => Holiday::class,
         'attendance_holiday_sources' => HolidaySource::class,
         'attendance_holiday_versions' => HolidayVersion::class,
@@ -100,6 +103,7 @@ test('every kept composite tenant foreign key rejects another company through mo
         'leave_request_days' => LeaveRequestDay::class,
         'leave_credits' => LeaveCredit::class,
         'leave_allocations' => LeaveAllocation::class,
+        'leave_entitlement_consumptions' => EntitlementConsumption::class,
         'data_issues' => DataIssue::class,
         'branch_user' => BranchUser::class,
         'users' => User::class,
@@ -137,6 +141,17 @@ test('every kept composite tenant foreign key rejects another company through mo
         $attributes[$key->foreign_column] = $target->id;
         if ($key->source_table === 'leave_allocations' && $key->foreign_column === 'source_credit_id') {
             $attributes['source_request_day_id'] = null;
+        }
+        if ($key->source_table === 'attendance_rest_day_entitlements' && $key->foreign_column !== 'source_day_id') {
+            $attributes['source_day_id'] = $context->runForCompany($a, fn () => Day::factory()->create())->id;
+        }
+        if ($key->source_table === 'leave_entitlement_consumptions') {
+            if ($key->foreign_column !== 'request_id') {
+                $attributes['request_id'] = $context->runForCompany($a, fn () => LeaveRequest::factory()->create())->id;
+            }
+            if ($key->foreign_column !== 'entitlement_id') {
+                $attributes['entitlement_id'] = $context->runForCompany($a, fn () => RestDayEntitlement::factory()->create())->id;
+            }
         }
         if (isset($attributes['employee_code'])) {
             $attributes['employee_code'] = 'CROSS-'.$target->id;

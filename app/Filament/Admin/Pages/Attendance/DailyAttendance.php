@@ -6,6 +6,7 @@ use App\Filament\Admin\Resources\Attendance\AttendancePage;
 use App\Models\Attendance\Day;
 use App\Models\Branch;
 use App\Services\Attendance\HolidayLabels;
+use App\Services\Attendance\Overtime;
 use App\Services\Attendance\Reporting\ReportFilters;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -57,6 +58,42 @@ class DailyAttendance extends AttendancePage
         }
 
         return app(HolidayLabels::class)->forIds($this->company()->id, $ids);
+    }
+
+    public function overtimeRows(): array
+    {
+        if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $this->date)) {
+            return [];
+        }
+        $filters = ReportFilters::fromArray($this->company(), [
+            'from' => $this->date, 'to' => $this->date,
+            'branch_ids' => $this->branchId === '' ? [] : [$this->branchId],
+            'statuses' => $this->status === '' ? [] : [$this->status],
+        ]);
+        $rows = [];
+        foreach (app(Overtime::class)->dayRows($filters) as $row) {
+            $rows[$row['day_id']] = $row;
+        }
+
+        return $rows;
+    }
+
+    public function entitlementRows(): array
+    {
+        if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $this->date)) {
+            return [];
+        }
+        $filters = ReportFilters::fromArray($this->company(), [
+            'from' => $this->date, 'to' => $this->date,
+            'branch_ids' => $this->branchId === '' ? [] : [$this->branchId],
+            'statuses' => $this->status === '' ? [] : [$this->status],
+        ]);
+        $rows = [];
+        foreach (app(Overtime::class)->entitlements($filters) as $row) {
+            $rows[$row['source_day_id']] = $row;
+        }
+
+        return $rows;
     }
 
     public function summary(): array

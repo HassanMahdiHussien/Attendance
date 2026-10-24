@@ -10,6 +10,7 @@ use App\Models\Attendance\Day;
 use App\Models\Attendance\DayDecision;
 use App\Models\Attendance\ManualPunch;
 use App\Models\Attendance\Policy;
+use App\Models\Attendance\RestDayEntitlement;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Employee;
@@ -116,6 +117,30 @@ test('attendance policy shows every pattern section and appends an effective ver
     $latest = Policy::query()->where('company_id', $this->company->id)->orderByDesc('version')->firstOrFail();
     expect($latest->version)->toBe(2)->and($latest->flex_minutes)->toBe(45)
         ->and($latest->reason)->toBe('Approved hours update');
+});
+
+test('overtime appears on the daily and detail pages and policy edits retain other values', function (): void {
+    $day = Day::factory()->create([
+        'employee_id' => $this->employee->id, 'branch_id' => $this->branch->id,
+        'policy_id' => $this->policy->id, 'work_date' => '2026-10-20',
+        'status' => 'rest_day_worked', 'overtime_minutes' => 240,
+        'overtime_basis' => 'rest_day', 'early_arrival_minutes' => 30,
+        'inputs' => ['work_pattern' => 'office'],
+    ]);
+    RestDayEntitlement::factory()->create(['employee_id' => $this->employee->id,
+        'source_day_id' => $day->id, 'work_date' => '2026-10-20', 'quantity' => 0.5]);
+    Livewire::test(DailyAttendance::class)->set('date', '2026-10-20')
+        ->assertSee('4:00')->assertSee('0:30')->assertSee('Rest day');
+    Livewire::withQueryParams(['employee' => (string) $this->employee->id, 'date' => '2026-10-20'])
+        ->test(DayDetail::class)->assertSee('Compensatory day earned')->assertSee('4:00');
+    Queue::fake([AssessDaysJob::class]);
+    Livewire::test(OfficePolicyPage::class)->assertSee('Overtime')
+        ->set('effectiveFrom', '2026-10-21')->set('overtimeMinMinutes', 45)
+        ->set('reason', 'Reviewed overtime minimum')->call('addVersion')->assertHasNoErrors();
+    $latest = Policy::query()->where('company_id', $this->company->id)->orderByDesc('version')->firstOrFail();
+    expect($latest->overtime_min_minutes)->toBe(45)
+        ->and($latest->overtime_step_minutes)->toBe($this->policy->overtime_step_minutes)
+        ->and($latest->compensatory_rest_days)->toEqual($this->policy->compensatory_rest_days);
 });
 
 test('review actions and detail requests cannot cross company boundaries', function (): void {
