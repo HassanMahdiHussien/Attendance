@@ -88,6 +88,22 @@ test('reader uses cached formula values and the ACT subheader', function (): voi
         ->and($row['values']['used_01'])->toBe('2.1667');
 });
 
+test('an ACT column with a blank header takes its month from the PLAN column before it', function (): void {
+    $mapping = app(LeaveBalanceFile::class)->suggest(
+        ['Pers.No.', 'Total Remaining Annual Leave Days', 'JANUARY ', '', 'FEBRUARY', ''],
+        ['', '', 'PLAN', 'ACT', 'PLAN', 'ACT'],
+    );
+
+    // The real report: a title over the month block, then a month-name row, then a PLAN/ACT row.
+    $real = app(LeaveBalanceFile::class)->suggest(
+        ['Pers.No.', 'Total Remaining Annual Leave Days', 'ANNUAL LEAVE DAYS 2026 -PLAN VS ACTUAL', '', '', ''],
+        ['', '', 'JANUARY PLAN', 'ACT', 'FEBRUARY PLAN', 'ACT'],
+    );
+
+    expect($mapping)->toBe([0 => 'employee_code', 1 => 'remaining_days', 3 => 'used_01', 5 => 'used_02'])
+        ->and($real)->toBe([0 => 'employee_code', 1 => 'remaining_days', 3 => 'used_01', 5 => 'used_02']);
+});
+
 test('reader resolves a first worksheet whose file is not sheet1', function (): void {
     $file = balanceSheet([[12345678, 1.5, 6, 2.1667, new FormulaCell('=B3+C3-D3', null), 2.1667, null]]);
     $zip = new ZipArchive;

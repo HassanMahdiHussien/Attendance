@@ -29,17 +29,32 @@ class LeaveBalanceFile
             $headers = array_map(fn ($cell): string => trim((string) $cell->getValue()), $row['cells']);
             $found = collect($headers)->contains(fn (string $header): bool => $this->headerKey($header) === 'totalremainingannualleavedays');
             if ($found) {
+                // The company report has up to two label rows under the header (month names, then PLAN/ACT);
+                // their labels are joined per column and the rows are skipped as data.
                 $subheaders = [];
+                $structuralRows = [];
                 foreach ($this->rawRows($path, $name) as $candidate) {
-                    if ($candidate['number'] === $row['number'] + 1) {
-                        $subheaders = array_map(fn ($cell): string => trim((string) $cell->getValue()), $candidate['cells']);
+                    if ($candidate['number'] <= $row['number']) {
+                        continue;
+                    }
+                    if ($candidate['number'] > $row['number'] + 2 || ! $this->isLabelRow($candidate['cells'])) {
                         break;
                     }
+                    $structuralRows[] = $candidate['number'];
+                    foreach ($candidate['cells'] as $index => $cell) {
+                        $label = trim((string) $cell->getValue());
+                        if ($label !== '') {
+                            $subheaders[$index] = trim(($subheaders[$index] ?? '').' '.$label);
+                        }
+                    }
                 }
+                $width = max(count($headers), $subheaders === [] ? 0 : max(array_keys($subheaders)) + 1);
+                $subheaders = array_map(fn (int $index): string => $subheaders[$index] ?? '', range(0, max(0, $width - 1)));
                 $signature = hash('sha256', json_encode([$headers, $subheaders], JSON_THROW_ON_ERROR));
 
                 return [
                     'headers' => $headers, 'subheaders' => $subheaders, 'header_row' => $row['number'],
+                    'label_rows' => $structuralRows,
                     'header_signature' => $signature, 'hash' => hash_file('sha256', $path),
                     'suggested_year' => $this->suggestedYear($headers),
                 ];
@@ -66,8 +81,11 @@ class LeaveBalanceFile
                 str_starts_with($key, 'ytdactused') => 'used_days',
                 default => null,
             };
-            if ($field === null && $this->normalized($subheaders[$index] ?? '') === 'act') {
-                $month = $this->month($name);
+            if ($field === null && preg_match('/\bact\b/', $this->normalized($subheaders[$index] ?? '')) === 1) {
+                // The company report puts the month name over PLAN and leaves it blank over ACT.
+                $month = $this->month($name) ?? $this->month($this->normalized($subheaders[$index] ?? ''))
+                    ?? $this->month($this->normalized($headers[$index - 1] ?? ''))
+                    ?? $this->month($this->normalized($subheaders[$index - 1] ?? ''));
                 $field = $month === null ? null : sprintf('used_%02d', $month);
             }
             if ($field !== null && ! in_array($field, $mapping, true)) {
@@ -111,9 +129,7 @@ class LeaveBalanceFile
                 continue;
             }
             $cells = $row['cells'];
-            $subheader = $row['number'] === $sheet['header_row'] + 1
-                && collect($cells)->contains(fn ($cell): bool => in_array($this->normalized((string) $cell->getValue()), ['plan', 'act'], true));
-            if ($subheader) {
+            if (in_array($row['number'], $sheet['label_rows'], true)) {
                 continue;
             }
             $values = array_fill_keys(self::FIELDS, null);
@@ -283,6 +299,21 @@ class LeaveBalanceFile
         }
 
         return $years === [] ? null : max($years);
+    }
+
+    private function isLabelRow(array $cells): bool
+    {
+        $labels = false;
+        foreach ($cells as $cell) {
+            $value = $cell instanceof FormulaCell ? $cell->getComputedValue() : $cell->getValue();
+            if (is_int($value) || is_float($value)) {
+                return false;
+            }
+            $text = $this->normalized((string) $value);
+            $labels = $labels || in_array($text, ['plan', 'act'], true) || ($text !== '' && $this->month($text) !== null);
+        }
+
+        return $labels;
     }
 
     private function month(string $header): ?int
