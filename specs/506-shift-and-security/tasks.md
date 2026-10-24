@@ -21,4 +21,4 @@
 - [x] T009 Daily attendance + day detail shift and evidence; "Attendance policy" page sections; translations, UI inventory; Livewire + browser smoke tests
 
 ## Step 4 — Verification (orchestrator)
-- [ ] T010 Real HC + punches with an assumed pattern split; docs; PR
+- [x] T010 Real HC + punches with the pattern rule (431 office / 535 shift / 49 security), 18–19 Oct: shift 467 present / 152 missing punch / 82 absent / 13 unresolved (2%); security 5 unresolved; found and fixed: rule patterns dated from the import date left history unassessed (now from the hire date). Docs; PR
