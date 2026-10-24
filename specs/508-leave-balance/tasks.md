@@ -3,10 +3,10 @@
 **Input**: [spec.md](spec.md), [plan.md](plan.md) — "Revisions after Codex plan review" overrides earlier plan text. Each step ends green in WSL (Unit, Feature, Browser, Pint).
 
 ## Step 1 — Import and snapshots
-- [ ] T001 Migration: balance batches (immutable), batch events, balances, row results; composite FKs, unique keys, triggers, FK-safe down(); models with BelongsToCompany
-- [ ] T002 `LeaveBalanceFile` (header + PLAN/ACT sub-header scan, cached formula values, code rules, mapping suggest/validate/save)
-- [ ] T003 `LeaveBalanceImport` preview/commit, `ImportLeaveBalanceJob` (idempotent), unknown-code issue, `LeaveBalances` current/history/presence; translations for new errors
-- [ ] T004 Tests: synthetic fixture with formulas and a sub-header, fractional/negative values, numeric codes, unknown/duplicate/invalid rows, idempotency (same file + date; same file + new date), out-of-order dates, retry, isolation, composite FKs, triggers
+- [x] T001 Migration: balance batches (immutable), batch events, balances, row results; composite FKs, unique keys, triggers, FK-safe down(); models with BelongsToCompany
+- [x] T002 `LeaveBalanceFile` (header + PLAN/ACT sub-header scan, cached formula values, code rules, mapping suggest/validate/save)
+- [x] T003 `LeaveBalanceImport` preview/commit, `ImportLeaveBalanceJob` (idempotent), unknown-code issue, `LeaveBalances` current/history/presence; translations for new errors
+- [x] T004 Tests: synthetic fixture with formulas and a sub-header, fractional/negative values, numeric codes, unknown/duplicate/invalid rows, idempotency (same file + date; same file + new date), out-of-order dates, retry, isolation, composite FKs, triggers
 
 ## Step 2 — Screens
 - [ ] T005 Upload/preview/commit page, batch list + detail (skipped rows), HC upload link, original download route (audited)

@@ -232,6 +232,19 @@ test('office attendance dynamic labels exist in both languages', function (): vo
     }
 });
 
+test('leave balance import errors and issue type exist in both languages', function (): void {
+    $english = File::getRequire(lang_path('en/messages.php'));
+    $arabic = File::getRequire(lang_path('ar/messages.php'));
+    foreach (['formula_without_value', 'ambiguous_code', 'invalid_number', 'employee_code_required', 'remaining_days_required'] as $reason) {
+        expect(data_get($english, 'leave_balance.reasons.'.$reason))->not->toBeNull()
+            ->and(data_get($arabic, 'leave_balance.reasons.'.$reason))->not->toBeNull();
+    }
+    foreach (['attendance_import', 'attendance_ui'] as $group) {
+        expect(data_get($english, $group.'.issue_types.leave_balance_unknown'))->not->toBeNull()
+            ->and(data_get($arabic, $group.'.issue_types.leave_balance_unknown'))->not->toBeNull();
+    }
+});
+
 test('leave screen dynamic labels exist in both languages', function (): void {
     $english = File::getRequire(lang_path('en/messages.php'));
     $arabic = File::getRequire(lang_path('ar/messages.php'));

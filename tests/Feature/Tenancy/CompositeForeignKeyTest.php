@@ -31,6 +31,11 @@ use App\Models\Employee;
 use App\Models\EmployeeImportBatch;
 use App\Models\EmployeeVersion;
 use App\Models\Leave\Allocation as LeaveAllocation;
+use App\Models\Leave\Balance as LeaveBalance;
+use App\Models\Leave\BalanceBatch as LeaveBalanceBatch;
+use App\Models\Leave\BalanceBatchEvent as LeaveBalanceBatchEvent;
+use App\Models\Leave\BalanceMapping as LeaveBalanceMapping;
+use App\Models\Leave\BalanceRow as LeaveBalanceRow;
 use App\Models\Leave\Credit as LeaveCredit;
 use App\Models\Leave\ImportBatch as LeaveImportBatch;
 use App\Models\Leave\ImportBatchEvent as LeaveImportBatchEvent;
@@ -79,6 +84,11 @@ test('every kept composite tenant foreign key rejects another company through mo
         'attendance_exports' => AttendanceExport::class,
         'attendance_export_events' => AttendanceExportEvent::class,
         'leave_import_batches' => LeaveImportBatch::class,
+        'leave_balance_batches' => LeaveBalanceBatch::class,
+        'leave_balance_batch_events' => LeaveBalanceBatchEvent::class,
+        'leave_balance_mappings' => LeaveBalanceMapping::class,
+        'leave_balances' => LeaveBalance::class,
+        'leave_balance_rows' => LeaveBalanceRow::class,
         'leave_import_batch_events' => LeaveImportBatchEvent::class,
         'leave_import_mappings' => LeaveImportMapping::class,
         'leave_types' => LeaveType::class,
@@ -145,6 +155,9 @@ test('every kept composite tenant foreign key rejects another company through mo
         }
         if (isset($attributes['sha256'])) {
             $attributes['sha256'] = hash('sha256', 'cross-'.$key->foreign_column.'-'.$target->id);
+        }
+        if (isset($attributes['balance_date']) && $key->source_table === 'leave_balance_batches') {
+            $attributes['balance_date'] = '2001-01-01';
         }
         foreach (['row_number', 'sequence', 'version'] as $unique) {
             if (isset($attributes[$unique])) {

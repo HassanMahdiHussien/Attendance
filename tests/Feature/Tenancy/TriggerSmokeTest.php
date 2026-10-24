@@ -16,6 +16,10 @@ use App\Models\AuditLog;
 use App\Models\Company;
 use App\Models\EmployeeImportBatch;
 use App\Models\EmployeeVersion;
+use App\Models\Leave\Balance as LeaveBalance;
+use App\Models\Leave\BalanceBatch as LeaveBalanceBatch;
+use App\Models\Leave\BalanceBatchEvent as LeaveBalanceBatchEvent;
+use App\Models\Leave\BalanceRow as LeaveBalanceRow;
 use App\Models\Leave\ImportBatch as LeaveImportBatch;
 use App\Models\Leave\ImportBatchEvent as LeaveImportBatchEvent;
 use App\Models\Leave\ImportRow as LeaveImportRow;
@@ -34,6 +38,8 @@ test('kept append-only triggers reject raw SQL updates and deletes', function ()
         Transaction::factory()->create(), TransactionSource::factory()->create(), Policy::factory()->create(),
         ManualPunch::factory()->create(), DayDecision::factory()->create(), HolidayVersion::factory()->create(),
         LeaveImportBatch::factory()->create(),
+        LeaveBalanceBatch::factory()->create(), LeaveBalanceBatchEvent::factory()->create(),
+        LeaveBalance::factory()->create(), LeaveBalanceRow::factory()->create(),
         AttendanceExportEvent::factory()->create(),
         LeaveImportBatchEvent::factory()->create(), LeaveImportRow::factory()->create(),
         LeaveRequestVersion::factory()->create(), LeaveRequestDecision::factory()->create()] as $record) {
