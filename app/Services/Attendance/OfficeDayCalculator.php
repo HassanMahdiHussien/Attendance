@@ -58,7 +58,8 @@ class OfficeDayCalculator
             return $result;
         }
         $restDays = $values['rest_days'] ?? $policy['office_rest_days'] ?? [5, 6];
-        if (in_array((int) $day->format('N'), $restDays, true)) {
+        $restDay = in_array((int) $day->format('N'), $restDays, true);
+        if ($restDay && $punches === [] && $manualPunches === []) {
             $result['status'] = 'rest_day';
 
             return $result;
@@ -177,6 +178,15 @@ class OfficeDayCalculator
         }
         $confirmedAbsence = ($latestDecision['decision'] ?? null) === 'confirm_absence';
         $result['reviewed'] = $confirmedAbsence;
+        if ($restDay) {
+            $result['status'] = $timeline === [] ? 'rest_day' : 'rest_day_worked';
+            $result['late_minutes'] = 0;
+            $result['early_minutes'] = 0;
+            $result['short_minutes'] = 0;
+            $result['balance_minutes'] = 0;
+
+            return $result;
+        }
         if (! $coverage || $current < $requiredEnd->modify('+'.(int) ($policy['close_grace_minutes'] ?? 120).' minutes')) {
             return $result;
         }

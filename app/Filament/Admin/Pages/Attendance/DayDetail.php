@@ -121,7 +121,7 @@ class DayDetail extends AttendancePage
 
     public function triggerLabel(?string $trigger): string
     {
-        $known = ['punches', 'coverage', 'exit', 'employee', 'policy', 'review', 'pending'];
+        $known = ['punches', 'coverage', 'holiday', 'exit', 'employee', 'policy', 'review', 'pending'];
 
         return __('messages.office_ui.triggers.'.(in_array($trigger, $known, true) ? $trigger : 'unknown'));
     }

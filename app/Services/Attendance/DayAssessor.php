@@ -33,6 +33,7 @@ class DayAssessor
         private OfficePolicy $policy,
         private ShiftDayCalculator $shiftCalculator,
         private ShiftPunchOwnership $ownership,
+        private HolidayCalendar $holidays,
     ) {}
 
     public function run(Company $company, array $scope, string $trigger): ProcessingRun
@@ -87,6 +88,7 @@ class DayAssessor
                     $policyByDate[$date] = $policies->first(fn (Policy $policy): bool => $policy->effective_from->toDateString() <= $date)?->toArray();
                 }
                 $this->coverage->load($company, $sliceFrom, $sliceEnd->addDays(3)->toDateString());
+                $this->holidays->load($company, $sliceFrom, $sliceTo);
                 $this->outages->prepare($company, $sliceEnd->addDay()->toDateString());
                 $outageCache = [];
                 $employees = Employee::query()->where('company_id', $company->id);
@@ -230,6 +232,38 @@ class DayAssessor
                     ? $calculator->calculate($input, $policies[$date], $dailyPunches, $dailyManual, $dailyDecisions, $covered, $outage, $date, $now, $leaveMinutes)
                     : $calculator->calculate($input, $policies[$date], $dailyPunches, $dailyManual, $dailyDecisions, $covered, $outage, $date, $now);
                 $candidate = $calculate(false, false);
+                $holidayIds = $this->holidays->idsFor($date, $values);
+                if (in_array($candidate['status'], ['not_employed', 'pattern_missing'], true)) {
+                    $holidayIds = [];
+                }
+                if ($holidayIds !== [] && ! in_array($candidate['status'], ['rest_day', 'rest_day_worked'], true)) {
+                    $candidate['status'] = $candidate['first_in'] === null && $candidate['last_out'] === null
+                        ? 'holiday' : 'holiday_worked';
+                    $candidate['late_minutes'] = 0;
+                    $candidate['early_minutes'] = 0;
+                    $candidate['short_minutes'] = 0;
+                    $candidate['balance_minutes'] = 0;
+                    $candidate['reviewed'] = false;
+                }
+                $candidate['holiday_ids'] = $holidayIds === [] ? null : $holidayIds;
+                if (in_array($candidate['status'], ['holiday', 'holiday_worked', 'rest_day', 'rest_day_worked'], true)) {
+                    $result = $candidate;
+                    $differences = $this->differences($old, $result);
+                    if ($differences !== []) {
+                        if ($old !== null) {
+                            $old->update(['superseded_by_run_id' => $run->id]);
+                        }
+                        Day::create($result + [
+                            'company_id' => $company->id, 'employee_id' => $employee->id,
+                            'run_id' => $run->id, 'changes' => $differences,
+                        ]);
+                        $changed++;
+                        $changedEmployees[$employee->id] = true;
+                        $changedDates[$date] = true;
+                    }
+
+                    continue;
+                }
                 $required = $candidate['required_leave_at'];
                 $until = $required === null ? null : CarbonImmutable::parse($required)->addMinutes((int) $policies[$date]['close_grace_minutes'])->format('Y-m-d H:i:s');
                 $windowStart = $isShift && ($candidate['shift_start'] ?? null) !== null
@@ -250,6 +284,7 @@ class DayAssessor
                     $outage = $outageCache[$outageKey];
                 }
                 $result = $calculate($covered, $outage);
+                $result['holiday_ids'] = null;
                 $differences = $this->differences($old, $result);
                 if ($differences === []) {
                     continue;

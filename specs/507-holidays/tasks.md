@@ -3,11 +3,11 @@
 **Input**: [spec.md](spec.md), [plan.md](plan.md) — "Revisions after Codex plan review" overrides earlier plan text. Each step ends green in WSL (Unit, Feature, Browser, Pint).
 
 ## Step 1 — Holidays without AI
-- [ ] T001 Migrations: holiday sources (immutable file fields), holidays (nullable current version), versions (append-only, unique version), day `holiday_ids`; composite FKs; FK-safe down()
-- [ ] T002 `Holidays` service (manual create, approve, edit, withdraw, reject; atomic versions; audit) and `HolidayCalendar` (scope semantics revision 4, historical values)
-- [ ] T003 Assessor: holiday / holiday_worked / rest_day_worked (revision 2); leave counting methods and distribution with holidays (revision 3); reprocessing chain (revision 1)
-- [ ] T004 Reporting, filters, drill-downs, exports, labels, employee view, review queue (revision 6); translations
-- [ ] T005 Tests: PRD §25 25 (manual path), Al-Waha vs Sardkar scope, holiday worked, rest day worked, night shift on a holiday, leave skipping + counted_holiday, edit/withdraw reprocessing with differences, overlaps, isolation, triggers
+- [x] T001 Migrations: holiday sources (immutable file fields), holidays (nullable current version), versions (append-only, unique version), day `holiday_ids`; composite FKs; FK-safe down()
+- [x] T002 `Holidays` service (manual create, approve, edit, withdraw, reject; atomic versions; audit) and `HolidayCalendar` (scope semantics revision 4, historical values)
+- [x] T003 Assessor: holiday / holiday_worked / rest_day_worked (revision 2); leave counting methods and distribution with holidays (revision 3); reprocessing chain (revision 1)
+- [x] T004 Reporting, filters, drill-downs, exports, labels, employee view, review queue (revision 6); translations
+- [x] T005 Tests: PRD §25 25 (manual path), Al-Waha vs Sardkar scope, holiday worked, rest day worked, night shift on a holiday, leave skipping + counted_holiday, edit/withdraw reprocessing with differences, overlaps, isolation, triggers
 
 ## Step 2 — AI reading
 - [ ] T006 SDK probe test (v0.55 beta create with document block + outputConfig json_schema + fallbacks) against a fake transport; `.eml`/`.msg` parser probes with fixtures

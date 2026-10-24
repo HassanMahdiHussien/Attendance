@@ -9,6 +9,9 @@ use App\Models\Attendance\Day;
 use App\Models\Attendance\DayDecision;
 use App\Models\Attendance\Device;
 use App\Models\Attendance\DeviceSetting;
+use App\Models\Attendance\Holiday;
+use App\Models\Attendance\HolidaySource;
+use App\Models\Attendance\HolidayVersion;
 use App\Models\Attendance\ImportBatch as AttendanceImportBatch;
 use App\Models\Attendance\ImportBatchEvent;
 use App\Models\Attendance\ImportMapping as AttendanceImportMapping;
@@ -52,6 +55,7 @@ dataset('tenant models', [
     AttendanceImportMapping::class, Transaction::class, TransactionSource::class, Person::class,
     CoverageInterval::class, DataIssue::class, ProcessingRun::class, Punch::class, Meal::class,
     Policy::class, ManualPunch::class, DayDecision::class, Day::class,
+    Holiday::class, HolidaySource::class, HolidayVersion::class,
     AttendanceExport::class, AttendanceExportEvent::class,
     LeaveImportBatch::class, LeaveImportBatchEvent::class, LeaveImportMapping::class,
     LeaveType::class, LeaveRequest::class, LeaveImportRow::class, LeaveRequestVersion::class,

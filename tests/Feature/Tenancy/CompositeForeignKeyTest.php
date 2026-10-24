@@ -1,6 +1,7 @@
 <?php
 
 use App\Exceptions\TenantMismatch;
+use App\Models\AiGenerationLog;
 use App\Models\Attendance\AttendanceExport;
 use App\Models\Attendance\AttendanceExportEvent;
 use App\Models\Attendance\CoverageInterval;
@@ -9,6 +10,9 @@ use App\Models\Attendance\Day;
 use App\Models\Attendance\DayDecision;
 use App\Models\Attendance\Device;
 use App\Models\Attendance\DeviceSetting;
+use App\Models\Attendance\Holiday;
+use App\Models\Attendance\HolidaySource;
+use App\Models\Attendance\HolidayVersion;
 use App\Models\Attendance\ImportBatch as AttendanceImportBatch;
 use App\Models\Attendance\ImportBatchEvent;
 use App\Models\Attendance\ImportMapping as AttendanceImportMapping;
@@ -47,6 +51,7 @@ use Illuminate\Validation\ValidationException;
 
 test('every kept composite tenant foreign key rejects another company through models and raw SQL', function (): void {
     $models = [
+        'ai_generation_logs' => AiGenerationLog::class,
         'branches' => Branch::class,
         'locations' => Location::class,
         'employees' => Employee::class,
@@ -68,6 +73,9 @@ test('every kept composite tenant foreign key rejects another company through mo
         'attendance_manual_punches' => ManualPunch::class,
         'attendance_day_decisions' => DayDecision::class,
         'attendance_days' => Day::class,
+        'attendance_holidays' => Holiday::class,
+        'attendance_holiday_sources' => HolidaySource::class,
+        'attendance_holiday_versions' => HolidayVersion::class,
         'attendance_exports' => AttendanceExport::class,
         'attendance_export_events' => AttendanceExportEvent::class,
         'leave_import_batches' => LeaveImportBatch::class,
@@ -134,6 +142,9 @@ test('every kept composite tenant foreign key rejects another company through mo
         }
         if (isset($attributes['file_sha256'])) {
             $attributes['file_sha256'] = hash('sha256', 'cross-'.$key->foreign_column.'-'.$target->id);
+        }
+        if (isset($attributes['sha256'])) {
+            $attributes['sha256'] = hash('sha256', 'cross-'.$key->foreign_column.'-'.$target->id);
         }
         foreach (['row_number', 'sequence', 'version'] as $unique) {
             if (isset($attributes[$unique])) {

@@ -4,6 +4,8 @@ use App\Models\AiGenerationLog;
 use App\Models\Attendance\AttendanceExportEvent;
 use App\Models\Attendance\DayDecision;
 use App\Models\Attendance\DeviceSetting;
+use App\Models\Attendance\HolidaySource;
+use App\Models\Attendance\HolidayVersion;
 use App\Models\Attendance\ImportBatch as AttendanceImportBatch;
 use App\Models\Attendance\ImportBatchEvent;
 use App\Models\Attendance\ManualPunch;
@@ -30,7 +32,8 @@ test('kept append-only triggers reject raw SQL updates and deletes', function ()
     foreach ([AuditLog::factory()->create(), AiGenerationLog::factory()->create(), EmployeeImportBatch::factory()->create(), EmployeeVersion::factory()->create(),
         DeviceSetting::factory()->create(), AttendanceImportBatch::factory()->create(), ImportBatchEvent::factory()->create(),
         Transaction::factory()->create(), TransactionSource::factory()->create(), Policy::factory()->create(),
-        ManualPunch::factory()->create(), DayDecision::factory()->create(), LeaveImportBatch::factory()->create(),
+        ManualPunch::factory()->create(), DayDecision::factory()->create(), HolidayVersion::factory()->create(),
+        LeaveImportBatch::factory()->create(),
         AttendanceExportEvent::factory()->create(),
         LeaveImportBatchEvent::factory()->create(), LeaveImportRow::factory()->create(),
         LeaveRequestVersion::factory()->create(), LeaveRequestDecision::factory()->create()] as $record) {
@@ -48,5 +51,19 @@ test('kept append-only triggers reject raw SQL updates and deletes', function ()
                 expect($exception->getMessage())->toContain('IMMUTABLE:');
             }
         }
+    }
+});
+
+test('holiday source original file fields cannot change or be deleted while processing metadata can', function (): void {
+    $company = Company::factory()->create();
+    app(TenantContext::class)->setCompany($company);
+    $source = HolidaySource::factory()->create();
+
+    DB::table('attendance_holiday_sources')->where('id', $source->id)->update(['ai_status' => 'done']);
+    expect(DB::table('attendance_holiday_sources')->where('id', $source->id)->value('ai_status'))->toBe('done');
+
+    foreach (["UPDATE `attendance_holiday_sources` SET `file_name` = 'changed.pdf' WHERE `id` = {$source->id}",
+        "DELETE FROM `attendance_holiday_sources` WHERE `id` = {$source->id}"] as $sql) {
+        expect(fn () => DB::statement($sql))->toThrow(QueryException::class);
     }
 });

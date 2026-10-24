@@ -6,6 +6,7 @@ class ReportTiles
 {
     public const KEYS = [
         'active_employees', 'office_employees_assessed', 'assessed_working_days', 'present', 'absent', 'missing_punch', 'shift_unresolved', 'pending',
+        'holiday', 'holiday_worked', 'rest_day_worked', 'holiday_work_minutes', 'rest_day_work_minutes',
         'late', 'early', 'short_hours_alerts', 'balance', 'reconciled', 'remaining',
         'leave_status:pending', 'leave_status:draft', 'leave_status:rejected',
         'credit_created', 'credit_used', 'credit_available', 'data_issues', 'restaurant', 'without_work_pattern',
@@ -26,6 +27,10 @@ class ReportTiles
             'missing_punch' => $totals['days']['missing_punch'],
             'shift_unresolved' => $totals['days']['shift_unresolved'],
             'pending' => $totals['days']['pending'],
+            'holiday' => $totals['days']['holiday'] ?? 0, 'holiday_worked' => $totals['days']['holiday_worked'] ?? 0,
+            'rest_day_worked' => $totals['days']['rest_day_worked'] ?? 0,
+            'holiday_work_minutes' => $totals['holiday_work_minutes'] ?? 0,
+            'rest_day_work_minutes' => $totals['rest_day_work_minutes'] ?? 0,
             'late' => $minutes['late']['gross'],
             'early' => $minutes['early']['gross'],
             'short_hours_alerts' => $totals['short_hours_alerts'],
@@ -63,7 +68,8 @@ class ReportTiles
 
     public static function isMinutes(string $tile): bool
     {
-        return str_starts_with($tile, 'leave:') || in_array($tile, ['late', 'early', 'balance', 'reconciled', 'remaining', 'credit_created', 'credit_used', 'credit_available'], true);
+        return str_starts_with($tile, 'leave:') || in_array($tile, ['late', 'early', 'balance', 'reconciled', 'remaining',
+            'credit_created', 'credit_used', 'credit_available', 'holiday_work_minutes', 'rest_day_work_minutes'], true);
     }
 
     public static function label(string $tile): string

@@ -5,6 +5,7 @@ namespace App\Filament\Admin\Pages\Attendance;
 use App\Filament\Admin\Resources\Attendance\AttendancePage;
 use App\Models\Attendance\Day;
 use App\Models\Branch;
+use App\Services\Attendance\Reporting\ReportFilters;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -81,6 +82,6 @@ class DailyAttendance extends AttendancePage
 
     public static function statuses(): array
     {
-        return ['pending', 'present', 'missing_punch', 'shift_unresolved', 'absent', 'rest_day', 'not_employed', 'pattern_missing', 'device_outage'];
+        return ReportFilters::STATUSES;
     }
 }

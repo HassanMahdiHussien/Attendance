@@ -152,6 +152,7 @@ return [
         'device_date_invalid' => 'Enter a valid effective date.',
         'issue_types' => [
             'unknown_person' => 'Punches for an ID not in the employee list',
+            'leave_counted_holiday' => 'Leave duration counts a holiday',
             'device_outage' => 'Suspected check-in device outage',
             'device_pending' => 'Device awaiting approval',
             'import_row_error' => 'Attendance import row error',
@@ -170,6 +171,7 @@ return [
     ],
     'attendance_ui' => [
         'issue_types' => [
+            'leave_counted_holiday' => 'Leave duration counts a holiday',
             'pattern_review' => 'Security work pattern needs HR review',
             'unknown_person' => 'Punches for an ID not in the employee list',
             'device_outage' => 'Suspected check-in device outage',
@@ -267,6 +269,8 @@ return [
             'pending' => 'Pending', 'present' => 'Present', 'missing_punch' => 'Missing punch',
             'shift_unresolved' => 'Shift needs HR review',
             'absent' => 'Absent', 'rest_day' => 'Rest day', 'not_employed' => 'Not employed',
+            'rest_day_worked' => 'Worked on rest day', 'holiday' => 'Holiday',
+            'holiday_worked' => 'Worked on holiday',
             'pattern_missing' => 'Pattern missing', 'device_outage' => 'Device outage',
         ],
         'minutes' => [
@@ -304,13 +308,14 @@ return [
             'policy_id' => 'Policy', 'inputs' => 'Employee and rule inputs', 'reviewed' => 'Reviewed',
             'shift_start' => 'Shift start', 'shift_source' => 'Shift source',
             'shift_confidence' => 'Shift confidence', 'shift_evidence' => 'Shift evidence',
+            'holiday_ids' => 'Holiday sources',
         ],
         'decisions_list' => [
             'confirm_absence' => 'Confirmed absence', 'withdraw_confirmation' => 'Withdrew confirmation',
             'pick_shift' => 'Picked shift', 'withdraw_shift' => 'Withdrew shift choice',
         ],
         'triggers' => [
-            'punches' => 'Punch processing', 'coverage' => 'Coverage change',
+            'punches' => 'Punch processing', 'coverage' => 'Coverage change', 'holiday' => 'Holiday change',
             'exit' => 'Exit review', 'employee' => 'Employee change',
             'policy' => 'Policy change', 'review' => 'HR review',
             'pending' => 'Scheduled reassessment', 'unknown' => 'Assessment',
@@ -394,6 +399,7 @@ return [
         'states' => ['queued' => 'Queued', 'processing' => 'Processing', 'completed' => 'Completed', 'failed' => 'Failed'],
         'failures' => ['invalid_file' => 'Invalid file', 'stored_file_unavailable' => 'Stored file unavailable', 'processing_failed' => 'Processing failed'],
         'flags' => [
+            'counted_holiday' => 'Holiday counted in leave duration',
             'unmapped_type' => 'Unmapped type', 'invalid_dates' => 'Invalid dates',
             'duration_mismatch' => 'Duration mismatch', 'missing_from_report' => 'Missing from report',
             'nothing_to_reconcile' => 'Nothing to reconcile', 'unknown_status' => 'Unknown status',
@@ -401,6 +407,7 @@ return [
             'column_count' => 'Wrong number of columns',
         ],
         'issue_types' => [
+            'leave_counted_holiday' => 'Holiday counted in leave duration',
             'leave_unknown_employee' => 'Unknown employee', 'leave_invalid_dates' => 'Invalid dates',
             'leave_unknown_status' => 'Unknown status', 'leave_invalid_duration' => 'Invalid duration',
             'leave_duration_mismatch' => 'Duration mismatch', 'leave_request_missing' => 'Missing from full report',
@@ -441,6 +448,7 @@ return [
         'unknown_issue_grouped' => 'Unknown employee requests are grouped by owner code.',
     ],
     'leave_reconciliation' => [
+        'holiday_date' => 'Leave cannot be distributed to a holiday.',
         'invalid_distribution' => 'Choose valid working dates for this leave request.',
         'invalid_dates' => 'Enter valid leave dates and a whole or half-day duration.',
         'invalid_target' => 'Choose an absence, lateness, early departure or exit target.',
@@ -452,6 +460,12 @@ return [
         'invalid_leave_calendar' => 'Choose valid leave-calendar rest days and give a reason.',
         'distribution_resolved' => 'The leave distribution was confirmed or corrected.',
         'issue_resolved' => 'The leave source or attendance day changed.',
+    ],
+    'holidays' => [
+        'manual_draft' => 'Manual holiday draft',
+        'reason_required' => 'Give a reason for this holiday decision.',
+        'invalid' => 'Enter valid holiday dates, scope and name.',
+        'invalid_branch' => 'Select branches belonging to this company.',
     ],
     'reporting' => [
         'invalid_period' => 'Choose a valid report period.',
@@ -495,7 +509,7 @@ return [
         'columns' => [
             'employee_code' => 'Employee code', 'employee_name' => 'Employee name',
             'date' => 'Date', 'status' => 'Status', 'first_in' => 'First in', 'last_out' => 'Last out',
-            'absence' => 'Absence minutes', 'late' => 'Late minutes', 'early' => 'Early minutes',
+            'presence' => 'Presence minutes', 'absence' => 'Absence minutes', 'late' => 'Late minutes', 'early' => 'Early minutes',
             'exit' => 'Exit minutes', 'gross' => 'Gross minutes', 'leave' => 'Leave minutes',
             'credit' => 'Credit minutes', 'remaining' => 'Remaining minutes',
             'request_numbers' => 'Leave request numbers', 'explanations' => 'How it was linked',
@@ -533,6 +547,9 @@ return [
             'assessed_working_days' => 'Assessed working days',
             'present' => 'Present days', 'absent' => 'Absent days', 'missing_punch' => 'Missing punches',
             'pending' => 'Pending days', 'shift_unresolved' => 'Needs shift', 'late' => 'Lateness', 'early' => 'Early departure',
+            'holiday' => 'Holiday days', 'holiday_worked' => 'Holiday work days',
+            'rest_day_worked' => 'Rest-day work days', 'holiday_work_minutes' => 'Holiday work hours',
+            'rest_day_work_minutes' => 'Rest-day work hours',
             'short_hours_alerts' => 'Short-hours alerts', 'balance' => 'Balance requiring reconciliation',
             'reconciled' => 'Reconciled minutes', 'remaining' => 'Remaining minutes',
             'leave_status:pending' => 'Leave pending approval', 'leave_status:draft' => 'Draft leave',

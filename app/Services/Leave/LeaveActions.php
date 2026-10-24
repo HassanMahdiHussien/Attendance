@@ -8,6 +8,7 @@ use App\Models\Leave\Allocation;
 use App\Models\Leave\LeaveRequest;
 use App\Models\Leave\RequestDecision;
 use App\Models\User;
+use App\Services\Attendance\HolidayCalendar;
 use App\Services\AuditLogger;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Support\Facades\DB;
@@ -25,8 +26,21 @@ class LeaveActions
 
     public function confirmDistribution(LeaveRequest $request, string $mode, ?array $dates, string $reason, User $actor): RequestDecision
     {
+        $this->authorize($request->company_id, $actor);
         if (! in_array($mode, ['from_start', 'dates'], true) || ($mode === 'dates' && ($dates === null || $dates === []))) {
             throw ValidationException::withMessages(['distribution' => __('messages.leave_reconciliation.invalid_distribution')]);
+        }
+        if ($mode === 'dates' && array_filter($dates, fn ($date): bool => ! is_string($date)
+            || ! preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) !== []) {
+            throw ValidationException::withMessages(['distribution' => __('messages.leave_reconciliation.invalid_distribution')]);
+        }
+        if ($mode === 'dates' && $request->employee !== null) {
+            $company = Company::findOrFail($request->company_id);
+            $holidayDates = app(HolidayCalendar::class)->forEmployeeDates($company, collect([$request->employee]),
+                min($dates), max($dates))[$request->employee_id] ?? [];
+            if (array_intersect($dates, array_keys($holidayDates)) !== []) {
+                throw ValidationException::withMessages(['distribution' => __('messages.leave_reconciliation.holiday_date')]);
+            }
         }
 
         return $this->record($request, 'confirm_distribution', ['mode' => $mode, 'dates' => $dates], $reason, $actor);

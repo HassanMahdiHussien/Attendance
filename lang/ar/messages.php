@@ -151,6 +151,7 @@ return [
         'device_state_invalid' => 'لا يمكن إجراء هذا التغيير في حالة الجهاز الحالية.',
         'device_date_invalid' => 'أدخل تاريخ سريان صالحاً.',
         'issue_types' => [
+            'leave_counted_holiday' => 'مدة الإجازة تحتسب يوم عطلة',
             'pattern_review' => 'نمط عمل الأمن يحتاج إلى مراجعة الموارد البشرية',
             'unknown_person' => 'بصمات لمعرّف غير موجود في قائمة الموظفين',
             'device_outage' => 'عطل محتمل في جهاز تسجيل الدخول',
@@ -170,6 +171,7 @@ return [
     ],
     'attendance_ui' => [
         'issue_types' => [
+            'leave_counted_holiday' => 'مدة الإجازة تحتسب يوم عطلة',
             'pattern_review' => 'نمط عمل الأمن يحتاج إلى مراجعة الموارد البشرية',
             'unknown_person' => 'بصمات لمعرّف غير موجود في قائمة الموظفين',
             'device_outage' => 'عطل محتمل في جهاز تسجيل الدخول',
@@ -267,6 +269,8 @@ return [
             'pending' => 'قيد الانتظار', 'present' => 'حاضر', 'missing_punch' => 'بصمة مفقودة',
             'shift_unresolved' => 'الوردية تحتاج إلى مراجعة الموارد البشرية',
             'absent' => 'غائب', 'rest_day' => 'يوم راحة', 'not_employed' => 'خارج مدة العمل',
+            'rest_day_worked' => 'عمل في يوم راحة', 'holiday' => 'عطلة رسمية',
+            'holiday_worked' => 'عمل في عطلة رسمية',
             'pattern_missing' => 'نمط العمل مفقود', 'device_outage' => 'عطل الجهاز',
         ],
         'minutes' => [
@@ -304,13 +308,14 @@ return [
             'policy_id' => 'السياسة', 'inputs' => 'بيانات الموظف والقواعد', 'reviewed' => 'تمت المراجعة',
             'shift_start' => 'بداية الوردية', 'shift_source' => 'مصدر الوردية',
             'shift_confidence' => 'درجة ثقة الوردية', 'shift_evidence' => 'أدلة الوردية',
+            'holiday_ids' => 'مصادر العطلة',
         ],
         'decisions_list' => [
             'confirm_absence' => 'تأكيد الغياب', 'withdraw_confirmation' => 'سحب التأكيد',
             'pick_shift' => 'تحديد الوردية', 'withdraw_shift' => 'سحب اختيار الوردية',
         ],
         'triggers' => [
-            'punches' => 'معالجة البصمات', 'coverage' => 'تغيير التغطية',
+            'punches' => 'معالجة البصمات', 'coverage' => 'تغيير التغطية', 'holiday' => 'تغيير العطلة',
             'exit' => 'مراجعة المغادرة', 'employee' => 'تغيير بيانات الموظف',
             'policy' => 'تغيير السياسة', 'review' => 'مراجعة الموارد البشرية',
             'pending' => 'إعادة التقييم المجدولة', 'unknown' => 'تقييم الحضور',
@@ -394,6 +399,7 @@ return [
         'states' => ['queued' => 'في الانتظار', 'processing' => 'تُعالج', 'completed' => 'اكتملت', 'failed' => 'فشلت'],
         'failures' => ['invalid_file' => 'ملف غير صالح', 'stored_file_unavailable' => 'الملف المحفوظ غير متاح', 'processing_failed' => 'فشلت المعالجة'],
         'flags' => [
+            'counted_holiday' => 'يوم عطلة محتسب في مدة الإجازة',
             'unmapped_type' => 'نوع غير مربوط', 'invalid_dates' => 'تواريخ غير صالحة',
             'duration_mismatch' => 'المدة لا تطابق الأيام', 'missing_from_report' => 'غائب من التقرير',
             'nothing_to_reconcile' => 'لا شيء للتسوية', 'unknown_status' => 'حالة غير معروفة',
@@ -401,6 +407,7 @@ return [
             'column_count' => 'عدد الأعمدة غير صحيح',
         ],
         'issue_types' => [
+            'leave_counted_holiday' => 'يوم عطلة محتسب في مدة الإجازة',
             'leave_unknown_employee' => 'موظف غير معروف', 'leave_invalid_dates' => 'تواريخ غير صالحة',
             'leave_unknown_status' => 'حالة غير معروفة', 'leave_invalid_duration' => 'مدة غير صالحة',
             'leave_duration_mismatch' => 'المدة لا تطابق الأيام', 'leave_request_missing' => 'غائب من التقرير الكامل',
@@ -441,6 +448,7 @@ return [
         'unknown_issue_grouped' => 'جُمعت طلبات الإجازة ذات رقم الموظف غير المعروف حسب الرقم.',
     ],
     'leave_reconciliation' => [
+        'holiday_date' => 'لا يمكن توزيع الإجازة على يوم عطلة رسمية.',
         'invalid_distribution' => 'اختر أيام عمل صحيحة لتوزيع طلب الإجازة.',
         'invalid_dates' => 'أدخل تواريخ إجازة صحيحة ومدة بأيام كاملة أو أنصاف أيام.',
         'invalid_target' => 'اختر الغياب أو التأخر أو المغادرة المبكرة أو الخروج.',
@@ -452,6 +460,12 @@ return [
         'invalid_leave_calendar' => 'اختر أيام راحة صحيحة لتقويم الإجازات واذكر السبب.',
         'distribution_resolved' => 'تم تأكيد توزيع الإجازة أو تصحيحه.',
         'issue_resolved' => 'تغير مصدر الإجازة أو يوم الحضور.',
+    ],
+    'holidays' => [
+        'manual_draft' => 'مسودة عطلة أُنشئت يدوياً',
+        'reason_required' => 'أدخل سبب قرار العطلة.',
+        'invalid' => 'أدخل اسم العطلة وتواريخها ونطاقها بصورة صحيحة.',
+        'invalid_branch' => 'اختر فروعاً تابعة لهذه الشركة.',
     ],
     'reporting' => [
         'invalid_period' => 'اختر فترة تقرير صالحة.',
@@ -495,7 +509,7 @@ return [
         'columns' => [
             'employee_code' => 'رقم الموظف', 'employee_name' => 'اسم الموظف',
             'date' => 'التاريخ', 'status' => 'الحالة', 'first_in' => 'أول دخول', 'last_out' => 'آخر خروج',
-            'absence' => 'دقائق الغياب', 'late' => 'دقائق التأخير', 'early' => 'دقائق الخروج المبكر',
+            'presence' => 'دقائق الحضور', 'absence' => 'دقائق الغياب', 'late' => 'دقائق التأخير', 'early' => 'دقائق الخروج المبكر',
             'exit' => 'دقائق الخروج', 'gross' => 'إجمالي الدقائق', 'leave' => 'دقائق الإجازة',
             'credit' => 'دقائق الرصيد', 'remaining' => 'الدقائق المتبقية',
             'request_numbers' => 'أرقام طلبات الإجازة', 'explanations' => 'كيفية الربط',
@@ -533,6 +547,9 @@ return [
             'assessed_working_days' => 'أيام العمل المقيّمة',
             'present' => 'أيام الحضور', 'absent' => 'أيام الغياب', 'missing_punch' => 'بصمات ناقصة',
             'pending' => 'أيام معلّقة', 'shift_unresolved' => 'تحتاج إلى تحديد وردية', 'late' => 'التأخير', 'early' => 'الخروج المبكر',
+            'holiday' => 'أيام العطل الرسمية', 'holiday_worked' => 'أيام العمل في العطل',
+            'rest_day_worked' => 'أيام العمل في أيام الراحة', 'holiday_work_minutes' => 'ساعات العمل في العطل',
+            'rest_day_work_minutes' => 'ساعات العمل في أيام الراحة',
             'short_hours_alerts' => 'تنبيهات نقص الساعات', 'balance' => 'الساعات التي تحتاج مطابقة',
             'reconciled' => 'الدقائق المطابقة', 'remaining' => 'الدقائق المتبقية',
             'leave_status:pending' => 'إجازات بانتظار الموافقة', 'leave_status:draft' => 'مسودات إجازات',

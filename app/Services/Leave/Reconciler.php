@@ -17,6 +17,7 @@ use App\Models\Leave\RequestDay;
 use App\Models\Leave\RequestDecision;
 use App\Models\Leave\Setting;
 use App\Services\Attendance\DataIssues;
+use App\Services\Attendance\HolidayCalendar;
 use App\Services\AuditLogger;
 use App\Support\Tenancy\TenantContext;
 use Carbon\CarbonImmutable;
@@ -95,6 +96,21 @@ class Reconciler
         }
         $active = $decisions->reject(fn (RequestDecision $decision): bool => $decision->decision === 'withdraw' || isset($withdrawn[$decision->id]));
         $byRequest = $active->groupBy('request_id');
+        $boundaries = [];
+        foreach ($requests as $request) {
+            if ($request->start_date !== null && $request->end_date !== null
+                && $request->start_date->toDateString() >= '2000-01-01') {
+                $boundaries[] = $request->start_date->toDateString();
+                $boundaries[] = $request->end_date->toDateString();
+            }
+        }
+        foreach ($active->where('decision', 'fix_dates') as $decision) {
+            $boundaries[] = $decision->values['start_date'] ?? null;
+            $boundaries[] = $decision->values['end_date'] ?? null;
+        }
+        $boundaries = array_values(array_filter($boundaries));
+        $holidayDates = $boundaries === [] ? [] : array_keys(app(HolidayCalendar::class)
+            ->forEmployeeDates($company, collect([$employee]), min($boundaries), max($boundaries))[$employee->id] ?? []);
         $blocked = [];
         foreach ($active as $decision) {
             if ($decision->decision === 'reverse_deduction') {
@@ -109,6 +125,7 @@ class Reconciler
             $requestDecisions = $byRequest->get($request->id, collect());
             if ($request->status !== 'approved' || ! $request->leaveType?->covers || ! $request->leaveType->is_mapped
                 || $requestDecisions->contains('decision', 'cancel')) {
+                $methodsChanged = $this->syncCountedHoliday($company, $request, false) || $methodsChanged;
                 if ($request->counting_method !== null) {
                     $this->audit->log('leave.distribution.method_changed', $request, [
                         'before' => $request->counting_method, 'after' => null,
@@ -130,6 +147,7 @@ class Reconciler
             }
             if (in_array('invalid_dates', $request->flags ?? [], true)
                 && ! $requestDecisions->contains('decision', 'fix_dates')) {
+                $methodsChanged = $this->syncCountedHoliday($company, $request, false) || $methodsChanged;
                 if ($request->counting_method !== null) {
                     $this->audit->log('leave.distribution.method_changed', $request, [
                         'before' => $request->counting_method, 'after' => null,
@@ -141,7 +159,10 @@ class Reconciler
                 continue;
             }
             $confirmation = $requestDecisions->last(fn (RequestDecision $decision): bool => $decision->decision === 'confirm_distribution')?->values;
-            $distribution = $this->distributor->distribute($values, $versions, $policies, $confirmation, $leaveCalendarRestDays);
+            $distribution = $this->distributor->distribute($values, $versions, $policies, $confirmation,
+                $leaveCalendarRestDays, $holidayDates);
+            $methodsChanged = $this->syncCountedHoliday($company, $request,
+                $distribution['flag'] === 'counted_holiday') || $methodsChanged;
             if ($request->counting_method !== $distribution['counting_method']) {
                 $this->audit->log('leave.distribution.method_changed', $request, [
                     'before' => $request->counting_method, 'after' => $distribution['counting_method'],
@@ -171,7 +192,7 @@ class Reconciler
                     $this->audit->log('leave.issue.resolved', $restIssue, ['type' => $restIssue->type, 'subject_key' => $restIssue->subject_key]);
                 }
             }
-            if ($distribution['flag'] !== null) {
+            if ($distribution['flag'] !== null && $distribution['flag'] !== 'counted_holiday') {
                 continue;
             }
             foreach ($distribution['days'] as $day) {
@@ -291,6 +312,35 @@ class Reconciler
         }
 
         return ['changed' => true, 'dates' => $changedDates];
+    }
+
+    private function syncCountedHoliday(Company $company, LeaveRequest $request, bool $counted): bool
+    {
+        $flags = $request->flags ?? [];
+        $has = in_array('counted_holiday', $flags, true);
+        if ($has !== $counted) {
+            $flags = array_values(array_diff($flags, ['counted_holiday']));
+            if ($counted) {
+                $flags[] = 'counted_holiday';
+            }
+            $request->update(['flags' => $flags]);
+            $this->audit->log('leave.request.holiday_flag_changed', $request, [
+                'request_id' => $request->id, 'counted_holiday' => $counted,
+            ]);
+        }
+        $key = 'leave_counted_holiday|leave_request|request:'.$request->id;
+        if ($counted) {
+            $this->issues->open($company, 'leave_counted_holiday', 'leave_request', 'request:'.$request->id);
+        } else {
+            $issue = DataIssue::query()->where('company_id', $company->id)->where('open_key', $key)->first();
+            if ($issue !== null) {
+                $issue->update(['status' => 'resolved', 'open_key' => null,
+                    'note' => __('messages.leave_reconciliation.distribution_resolved'), 'resolved_at' => now()]);
+                $this->audit->log('leave.issue.resolved', $issue, ['type' => $issue->type, 'subject_key' => $issue->subject_key]);
+            }
+        }
+
+        return $has !== $counted;
     }
 
     private function dispatchChangedDays(int $companyId, int $employeeId, array $dates): void

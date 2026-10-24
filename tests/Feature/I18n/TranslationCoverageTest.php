@@ -97,6 +97,16 @@ test('pattern review issue labels exist in both languages', function (): void {
     }
 });
 
+test('holiday issue labels exist wherever attendance and leave render them', function (): void {
+    $english = File::getRequire(lang_path('en/messages.php'));
+    $arabic = File::getRequire(lang_path('ar/messages.php'));
+
+    foreach (['attendance_import', 'attendance_ui', 'leave_ui'] as $group) {
+        expect(data_get($english, $group.'.issue_types.leave_counted_holiday'))->not->toBeNull()
+            ->and(data_get($arabic, $group.'.issue_types.leave_counted_holiday'))->not->toBeNull();
+    }
+});
+
 test('every attendance overview tile has English and Arabic labels', function (): void {
     $english = File::getRequire(lang_path('en/messages.php'));
     $arabic = File::getRequire(lang_path('ar/messages.php'));
@@ -151,7 +161,8 @@ test('office attendance dynamic labels exist in both languages', function (): vo
     $arabic = File::getRequire(lang_path('ar/messages.php'));
     $labels = [
         ...array_map(fn (string $state): string => 'statuses.'.$state, [
-            'pending', 'present', 'missing_punch', 'shift_unresolved', 'absent', 'rest_day', 'not_employed', 'pattern_missing', 'device_outage',
+            'pending', 'present', 'missing_punch', 'shift_unresolved', 'absent', 'rest_day', 'rest_day_worked',
+            'holiday', 'holiday_worked', 'not_employed', 'pattern_missing', 'device_outage',
         ]),
         ...array_map(fn (string $field): string => 'minutes.'.$field, [
             'elapsed_minutes', 'presence_minutes', 'late_minutes', 'early_minutes',
@@ -168,7 +179,7 @@ test('office attendance dynamic labels exist in both languages', function (): vo
             'presence_minutes', 'late_minutes', 'early_minutes', 'exit_minutes',
             'short_minutes', 'balance_minutes', 'required_leave_at', 'intervals',
             'exits', 'policy_id', 'inputs', 'reviewed', 'shift_start', 'shift_source',
-            'shift_confidence', 'shift_evidence',
+            'shift_confidence', 'shift_evidence', 'holiday_ids',
         ]),
         ...array_map(fn (string $field): string => 'inputs.'.$field, [
             'policy_version', 'work_pattern', 'hire_date', 'exit_status', 'last_working_day',
@@ -183,7 +194,7 @@ test('office attendance dynamic labels exist in both languages', function (): vo
         ...array_map(fn (string $section): string => 'policy_sections.'.$section, ['office', 'shift', 'security', 'inference']),
         ...array_map(fn (int $day): string => 'weekdays.'.$day, range(1, 7)),
         ...array_map(fn (string $trigger): string => 'triggers.'.$trigger, [
-            'punches', 'coverage', 'exit', 'employee', 'policy', 'review', 'pending', 'unknown',
+            'punches', 'coverage', 'holiday', 'exit', 'employee', 'policy', 'review', 'pending', 'unknown',
         ]),
     ];
     foreach ($labels as $label) {
@@ -205,8 +216,8 @@ test('leave screen dynamic labels exist in both languages', function (): void {
         ...array_map(fn (string $kind): string => 'decision_kinds.'.$kind, ['cancel', 'confirm_distribution', 'fix_dates', 'reverse_deduction', 'withdraw']),
         ...array_map(fn (string $kind): string => 'consumes_values.'.$kind, ['none', 'rest_day_entitlement', 'overtime_or_credit']),
         ...array_map(fn (string $kind): string => 'explanations.'.$kind, ['leave_same_day', 'leave_credit_applied', 'unknown']),
-        ...array_map(fn (string $kind): string => 'flags.'.$kind, ['unmapped_type', 'invalid_dates', 'duration_mismatch', 'missing_from_report', 'nothing_to_reconcile']),
-        ...array_map(fn (string $kind): string => 'issue_types.'.$kind, ['leave_unknown_employee', 'leave_invalid_dates', 'leave_unknown_status', 'leave_invalid_duration', 'leave_duration_mismatch', 'leave_rest_day_missing', 'leave_request_missing', 'leave_with_attendance_nothing_to_reconcile']),
+        ...array_map(fn (string $kind): string => 'flags.'.$kind, ['unmapped_type', 'invalid_dates', 'duration_mismatch', 'counted_holiday', 'missing_from_report', 'nothing_to_reconcile']),
+        ...array_map(fn (string $kind): string => 'issue_types.'.$kind, ['leave_unknown_employee', 'leave_invalid_dates', 'leave_unknown_status', 'leave_invalid_duration', 'leave_duration_mismatch', 'leave_counted_holiday', 'leave_rest_day_missing', 'leave_request_missing', 'leave_with_attendance_nothing_to_reconcile']),
         ...array_map(fn (string $kind): string => 'counts.'.$kind, ['rows', 'errors', 'duplicates', 'unknown_employees', 'unmapped_types', 'invalid_dates', 'new', 'changed', 'unchanged', 'versions', 'missing_from_full', 'requests', 'through_row']),
         ...array_map(fn (string $kind): string => 'row_errors.'.$kind, ['required', 'too_long', 'invalid_dates', 'duration_mismatch', 'unknown_status', 'invalid_duration', 'missing_duration', 'column_count']),
     ];
