@@ -37,6 +37,24 @@ class Holidays
         });
     }
 
+    public function createFromSource(HolidaySource $source, User $actor): Holiday
+    {
+        $company = Company::findOrFail($source->company_id);
+        $this->authorize($company, $actor);
+        abort_unless($source->ai_status === 'done' && is_array($source->proposal), 409);
+        $proposal = $source->proposal;
+        $branches = Branch::query()->where('company_id', $company->id)
+            ->whereIn('name', $proposal['branch_names'])->pluck('id')->all();
+
+        return $this->create($company, [
+            'name_en' => $proposal['name_en'], 'name_ar' => $proposal['name_ar'],
+            'ranges' => $proposal['ranges'], 'legal_entities' => $proposal['legal_entities'],
+            'branch_ids' => $branches, 'work_patterns' => $proposal['work_patterns'],
+            'exceptions_note' => implode("\n", [...$proposal['exception_quotes'], ...$proposal['notes']]),
+            'source_id' => $source->id,
+        ], $actor);
+    }
+
     public function approve(Holiday $holiday, array $values, User $actor, string $reason): HolidayVersion
     {
         return $this->change($holiday, $values, 'approved', 'draft', $actor, $reason);

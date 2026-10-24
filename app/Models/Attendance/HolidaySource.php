@@ -23,7 +23,7 @@ class HolidaySource extends Model
 
     protected function casts(): array
     {
-        return ['proposal' => 'array'];
+        return ['proposal' => 'array', 'parts' => 'array'];
     }
 
     public function aiLog(): BelongsTo

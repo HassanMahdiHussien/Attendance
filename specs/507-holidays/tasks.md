@@ -10,9 +10,9 @@
 - [x] T005 Tests: PRD §25 25 (manual path), Al-Waha vs Sardkar scope, holiday worked, rest day worked, night shift on a holiday, leave skipping + counted_holiday, edit/withdraw reprocessing with differences, overlaps, isolation, triggers
 
 ## Step 2 — AI reading
-- [ ] T006 SDK probe test (v0.55 beta create with document block + outputConfig json_schema + fallbacks) against a fake transport; `.eml`/`.msg` parser probes with fixtures
-- [ ] T007 `HolidayReader` (prompt, schema, validation), `ReadHolidaySourceJob`, sources upload, limits, hash reuse, daily cap, logging (revision 7/8)
-- [ ] T008 Tests: refusal, invalid JSON, unavailable key, cap, hash reuse, prompt-injection text, logging without content
+- [x] T006 SDK probe test (v0.55 beta create with document block + outputConfig json_schema + fallbacks) against a fake transport; `.eml`/`.msg` parser probes with fixtures
+- [x] T007 `HolidayReader` (prompt, schema, validation), `ReadHolidaySourceJob`, sources upload, limits, hash reuse, daily cap, logging (revision 7/8)
+- [x] T008 Tests: refusal, invalid JSON, unavailable key, cap, hash reuse, prompt-injection text, logging without content
 
 ## Step 3 — Screens
 - [ ] T009 Holidays list, upload, review with all source parts beside the form, history; routes + downloads; UI inventory, route sweep, translations; Livewire + browser tests

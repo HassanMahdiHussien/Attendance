@@ -1,0 +1,23 @@
+From: hr@example.test
+To: staff@example.test
+Subject: Attachment notice
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary=boundary123
+
+--boundary123
+Content-Type: text/plain; charset=UTF-8
+
+Holiday on 2026-10-25.
+--boundary123
+Content-Type: image/png; name=notice.png
+Content-Disposition: inline; filename=notice.png
+Content-Transfer-Encoding: base64
+
+iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=
+--boundary123
+Content-Type: application/pdf; name=notice.pdf
+Content-Disposition: attachment; filename=notice.pdf
+Content-Transfer-Encoding: base64
+
+JVBERi0xLjcKJcK1wrYKJSBXcml0dGVuIGJ5IE11UERGIDEuMjguMgoKMSAwIG9iago8PC9UeXBlL0NhdGFsb2cvUGFnZXMgMiAwIFIvSW5mbzw8L1Byb2R1Y2VyKE11UERGIDEuMjguMik+Pj4+CmVuZG9iagoKMiAwIG9iago8PC9UeXBlL1BhZ2VzL0NvdW50IDEvS2lkc1s0IDAgUl0+PgplbmRvYmoKCjMgMCBvYmoKPDw+PgplbmRvYmoKCjQgMCBvYmoKPDwvVHlwZS9QYWdlL01lZGlhQm94WzAgMCAyMDAgMjAwXS9Sb3RhdGUgMC9SZXNvdXJjZXMgMyAwIFIvUGFyZW50IDIgMCBSPj4KZW5kb2JqCgp4cmVmCjAgNQowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwNDIgMDAwMDAgbiAKMDAwMDAwMDEyMCAwMDAwMCBuIAowMDAwMDAwMTcyIDAwMDAwIG4gCjAwMDAwMDAxOTMgMDAwMDAgbiAKCnRyYWlsZXIKPDwvU2l6ZSA1L1Jvb3QgMSAwIFIvSURbPEMyQkNDM0I2MDhDMkI3QzNCRUMyODg0NzM0QzM4OEMyPjw1MTM3NDZCQjAwQ0Y4NzgzQzhGMzk4M0FEMUZGQTlFND5dPj4Kc3RhcnR4cmVmCjI4NAolJUVPRgo=
+--boundary123--
