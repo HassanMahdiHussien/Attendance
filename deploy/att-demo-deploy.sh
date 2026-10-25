@@ -59,9 +59,10 @@ cat > "$units/att-web.service" <<EOF
 [Unit]
 Description=Attendance demo web ($DOMAIN)
 [Service]
-WorkingDirectory=%h/attendance
+# Laravel's router script finds index.php through the working directory, as with artisan serve.
+WorkingDirectory=%h/attendance/public
 Environment=PHP_CLI_SERVER_WORKERS=4
-ExecStart=/usr/bin/php -d upload_max_filesize=60M -d post_max_size=60M -d memory_limit=512M -S 127.0.0.1:$PORT -t public vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php
+ExecStart=/usr/bin/php -d upload_max_filesize=60M -d post_max_size=60M -d memory_limit=512M -S 127.0.0.1:$PORT -t . ../vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php
 Restart=always
 RestartSec=3
 [Install]
