@@ -62,10 +62,14 @@ class CaseSync
         $requestIds = RequestDay::query()->whereIn('id', $sourceDayIds)->pluck('request_id', 'id');
         $mappings = ApproverMapping::query()->where('company_id', $company->id)->get()->keyBy('approver_key');
         $affectedApprovers = [];
+        $affectedManagers = [];
         foreach ($cases as $case) {
             foreach ($case->routes as $route) {
                 if ($route['kind'] === 'approver') {
                     $affectedApprovers[$route['approver_key']] = true;
+                }
+                if ($route['kind'] === 'manager' && $route['recipient_employee_id'] !== null) {
+                    $affectedManagers[$route['recipient_employee_id']] = true;
                 }
             }
         }
@@ -98,7 +102,7 @@ class CaseSync
             if ($items === [] && $old === null) {
                 continue;
             }
-            $manualUnchanged = $old?->manual_closed_items !== null && $old->manual_closed_items === $items && $items !== [];
+            $manualUnchanged = $old?->manual_closed_items !== null && $old->manual_closed_items == $items && $items !== [];
             $routes = $manualUnchanged ? $old->routes : $this->routes($employee, $managerId, $items,
                 $result['pending_requests'] ?? [], $mappings, $recipients);
             $dayAllocations = $allocations->get($result['day_id'] ?? 0, collect());
@@ -112,6 +116,9 @@ class CaseSync
             foreach ($routes as $route) {
                 if ($route['kind'] === 'approver') {
                     $affectedApprovers[$route['approver_key']] = true;
+                }
+                if ($route['kind'] === 'manager' && $route['recipient_employee_id'] !== null) {
+                    $affectedManagers[$route['recipient_employee_id']] = true;
                 }
             }
             $state = $manualUnchanged ? 'closed' : $this->state($items, $routes, $old);
@@ -142,7 +149,7 @@ class CaseSync
                 $this->event($old, $this->changeEvent($before, $old), $before, $this->snapshot($old), $source);
             }
         }
-        $this->refreshIssues($company, $employee, array_keys($affectedApprovers));
+        $this->refreshIssues($company, $employee, array_keys($affectedApprovers), array_keys($affectedManagers));
     }
 
     public function reroute(Employee $employee): void
@@ -292,7 +299,7 @@ class CaseSync
             return 'waiting_approver';
         }
 
-        return $old?->state === 'waiting_manager' && $old->items === $items && $old->routes === $routes
+        return $old?->state === 'waiting_manager' && $old->items == $items && $old->routes == $routes
             ? 'waiting_manager' : 'open';
     }
 
@@ -382,14 +389,15 @@ class CaseSync
         $this->audit->log('attendance.case.'.$event, $case, $metadata, $actor);
     }
 
-    private function refreshIssues(Company $company, Employee $employee, array $affectedApprovers): void
+    private function refreshIssues(Company $company, Employee $employee, array $affectedApprovers, array $affectedManagers): void
     {
         $openCases = FollowUpCase::query()->where('employee_id', $employee->id)->where('state', '!=', 'closed')->get();
         $missingManager = false;
         $approverKeys = [];
         foreach ($openCases as $case) {
             foreach ($case->routes as $route) {
-                if ($route['kind'] === 'manager' && ! $route['recipient_available']) {
+                // A known manager without an address is one issue for all of their employees.
+                if ($route['kind'] === 'manager' && ! $route['recipient_available'] && $route['recipient_employee_id'] === null) {
                     $missingManager = true;
                 }
                 if ($route['kind'] === 'approver' && ! $route['recipient_available']) {
@@ -406,6 +414,17 @@ class CaseSync
             $this->issues->open($company, 'notification_recipient_missing', 'employee', 'employee:'.$employee->id);
         } else {
             $this->resolveIssue($company, 'notification_recipient_missing|employee|employee:'.$employee->id);
+        }
+        foreach ($affectedManagers as $managerId) {
+            $needed = FollowUpCase::query()->where('state', '!=', 'closed')
+                ->whereJsonContains('routes', ['kind' => 'manager', 'recipient_employee_id' => $managerId])->get(['routes'])
+                ->contains(fn (FollowUpCase $case): bool => collect($case->routes)->contains(fn (array $route): bool => $route['kind'] === 'manager'
+                    && $route['recipient_employee_id'] === $managerId && ! $route['recipient_available']));
+            if ($needed) {
+                $this->issues->open($company, 'notification_recipient_missing', 'manager', 'manager:'.$managerId);
+            } else {
+                $this->resolveIssue($company, 'notification_recipient_missing|manager|manager:'.$managerId);
+            }
         }
         foreach ($approverKeys as $key => $text) {
             $this->issues->open($company, 'approver_unmapped', 'approver', 'approver:'.hash('sha256', $key),

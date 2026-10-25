@@ -283,3 +283,38 @@ test('notification settings and mapping changes require the dedicated gate and c
     expect(fn () => app(ApproverMappings::class)->confirm($this->company, 'Approver', $this->employee, $outsider))
         ->toThrow(AuthorizationException::class);
 });
+
+test('an identical replay keeps a sent case waiting for the manager without an event', function (): void {
+    $manager = Employee::factory()->create(['company_id' => $this->company->id, 'email' => 'manager@example.test']);
+    app(EmployeeHistory::class)->record($this->employee, ['manager_employee_id' => $manager->id], '2026-10-01', 'manual', $this->hr);
+    followUpDay($this->employee, '2026-10-19', 'present', 30);
+    replayFollowUp($this->company, $this->employee);
+    // JSON columns reorder keys, so the stored routes must still compare equal to the derived ones.
+    FollowUpCase::query()->firstOrFail()->update(['state' => 'waiting_manager']);
+    $events = CaseEvent::query()->count();
+    replayFollowUp($this->company, $this->employee);
+
+    expect(FollowUpCase::query()->firstOrFail()->state)->toBe('waiting_manager')
+        ->and(CaseEvent::query()->count())->toBe($events);
+});
+
+test('a manager without an address raises one issue for all of their employees', function (): void {
+    $manager = Employee::factory()->create(['company_id' => $this->company->id, 'email' => null]);
+    $second = Employee::factory()->create(['company_id' => $this->company->id, 'employee_code' => '87654321',
+        'hire_date' => '2020-01-01', 'work_pattern' => 'office']);
+    foreach ([$this->employee, $second] as $employee) {
+        app(EmployeeHistory::class)->record($employee, ['manager_employee_id' => $manager->id], '2026-10-01', 'manual', $this->hr);
+        followUpDay($employee, '2026-10-19', 'absent');
+        replayFollowUp($this->company, $employee);
+    }
+    $open = fn () => DataIssue::query()->where('type', 'notification_recipient_missing')->where('status', 'open');
+    expect($open()->count())->toBe(1)
+        ->and($open()->firstOrFail()->subject_key)->toBe('manager:'.$manager->id);
+
+    app(EmployeeHistory::class)->record($manager, ['email' => 'manager@example.test'], today(), 'manual', $this->hr);
+    foreach ([$this->employee, $second] as $employee) {
+        app(CaseSync::class)->reroute($employee);
+    }
+    expect($open()->count())->toBe(0)
+        ->and(FollowUpCase::query()->pluck('state')->unique()->all())->toBe(['open']);
+});
