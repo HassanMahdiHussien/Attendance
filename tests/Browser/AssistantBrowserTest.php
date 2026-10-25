@@ -57,7 +57,8 @@ test('desktop assistant shows a fake-model answer and confirms a proposal', func
         ->assertSee('Please review the proposal.')->assertSee('Changes applied: none')
         ->assertSee('00073412')->assertSee('17:00')->assertSee('18:00')
         ->assertScript('document.documentElement.scrollWidth <= window.innerWidth')
-        ->press('Confirm')->assertSee('Applied')->assertNoJavaScriptErrors();
+        // Wait for the applied card's own note: "Applied" alone also matches the "Changes applied: none" footer.
+        ->press('Confirm')->assertSee('To reverse this change')->assertNoJavaScriptErrors();
     expect($data['employee']->fresh()->schedule_end)->toBe('18:00:00');
 });
 
