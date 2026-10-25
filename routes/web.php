@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\HelpShotController;
 use App\Http\Controllers\LocaleController;
+use App\Livewire\Attendance\Assistant;
 use App\Livewire\Attendance\DashboardEmployees;
 use App\Livewire\Auth\Login;
 use App\Livewire\Dashboard\HrDashboard;
@@ -151,6 +152,7 @@ Route::middleware('auth')->group(function (): void {
         return redirect('/login');
     })->name('logout');
     Route::get('/dashboard', HrDashboard::class)->name('dashboard.index');
+    Route::get('/assistant', Assistant::class)->name('assistant.index');
     Route::get('/dashboard/employees', DashboardEmployees::class)->name('dashboard.employees');
     Route::get('/dashboard/company/{company}', HrDashboard::class)->name('dashboard.company');
     Route::get('/dashboard/company/{company}/employees', DashboardEmployees::class)->name('dashboard.company.employees');

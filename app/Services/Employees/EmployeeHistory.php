@@ -97,7 +97,7 @@ class EmployeeHistory
                 'effective_from' => $date->toDateString(), 'before' => $previous, 'after' => $changes,
                 'source' => $source, 'reason' => $reason, 'version_id' => $version->id,
             ], $actor);
-            if ($source === 'manual' && ($changes['work_pattern'] ?? null) !== null && $actor !== null) {
+            if (in_array($source, ['manual', 'chat'], true) && ($changes['work_pattern'] ?? null) !== null && $actor !== null) {
                 app(PatternRule::class)->resolveReview($employee, $actor);
             }
             event(new EmployeeVersionChanged($employee->fresh(), $date));

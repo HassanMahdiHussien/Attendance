@@ -2,6 +2,14 @@
 
 Every kept foundation file edited since the spec-500 baseline is listed below. Removals are not listed because Displanary keeps that code. Apply only rows marked **Port**; **Do not apply** rows describe changes needed solely by Attendance.
 
+## Assistant workspace (spec 512)
+
+| File | Change | Why | Displanary |
+|---|---|---|---|
+| `app/Support/Access/Nav.php`, `routes/web.php` | Adds the gated Assistant workspace entry and route. | HR needs an attendance chat beside the employee and dashboard views. | **Do not apply** |
+| `app/Filament/Admin/Pages/CompanySettings.php`, `resources/views/filament/admin/pages/company-settings.blade.php` | Adds the audited switch for proposed employee changes from chat. | Changes stay disabled by default until a company enables them. | **Do not apply** |
+| `lang/en/messages.php`, `lang/ar/messages.php` | Adds bilingual Assistant and company-setting labels. | The workspace and proposals need English and Arabic text. | **Do not apply** |
+
 ## Employee classification fields (spec 506)
 
 | File | Change | Why | Displanary |
@@ -183,3 +191,4 @@ These test fixes are called out separately from the foundation-file inventory ab
 | 2026-10-24 | fix | `app/Services/Employees/MappedEmployeeImport.php`, `app/Services/Employees/EmployeeImport.php` | A new employee's first imported values (legal entity, department, manager, …) count from the hire date instead of the import's effective date, so back-dated history and holidays see them. Later imports keep their effective date. | **Apply to Displanary** (product owner, 2026-10-24). |
 | 2026-10-24 | 509 | `app/Livewire/Dashboard/HrDashboard.php`, `resources/views/livewire/dashboard/hr-dashboard.blade.php`, `lang/{en,ar}/messages.php` | Add overtime and compensatory-day tiles with drill-down, and their labels. | **Apply with the attendance module**. |
 | 2026-10-25 | 510 | `app/Providers/AppServiceProvider.php`, `app/Support/Access/AdminNav.php`, `routes/console.php`, `app/Console/Commands/ReassessAllAttendance.php`, `app/Livewire/Dashboard/HrDashboard.php`, `resources/views/livewire/employees/employee-page.blade.php`, `lang/{en,ar}/messages.php` | Register the `sendAttendanceNotifications` gate and the employee-change reroute listener, add Follow-up navigation, schedule the notification build every 15 minutes, backfill cases on reassess-all, add case tiles, and show follow-up cases plus email / fallback manager email entry on the employee page. | **Apply with the attendance module**. |
+| 2026-10-25 | 512 | `app/Services/Employees/EmployeeHistory.php` | A confirmed chat work-pattern edit resolves its existing pattern-review issue, as a manual edit does. | **Apply with the attendance module**. |

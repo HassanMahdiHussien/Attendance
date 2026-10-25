@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\Attendance\Ai\ChatTools;
 use App\Services\Attendance\Reporting\ExportData;
 use App\Services\Attendance\Reporting\ExportKinds;
 use App\Services\Attendance\Reporting\ReportTiles;
@@ -72,6 +73,37 @@ test('dynamic employee history labels exist in both languages', function (): voi
     foreach (['initial', 'manual', 'import', 'chat', 'rule'] as $source) {
         expect(data_get($english, 'employee_history.sources.'.$source))->not->toBeNull()
             ->and(data_get($arabic, 'employee_history.sources.'.$source))->not->toBeNull();
+    }
+});
+
+test('assistant proposal states and reasons exist in both languages', function (): void {
+    $english = File::getRequire(lang_path('en/messages.php'));
+    $arabic = File::getRequire(lang_path('ar/messages.php'));
+
+    foreach (['proposed', 'applied', 'cancelled', 'refused'] as $status) {
+        expect(data_get($english, 'chat_ui.statuses.'.$status))->not->toBeNull()
+            ->and(data_get($arabic, 'chat_ui.statuses.'.$status))->not->toBeNull();
+    }
+    foreach (['stale', 'invalid_values', 'user_cancelled'] as $reason) {
+        expect(data_get($english, 'chat_ui.reasons.'.$reason))->not->toBeNull()
+            ->and(data_get($arabic, 'chat_ui.reasons.'.$reason))->not->toBeNull();
+    }
+    foreach (range(1, 7) as $weekday) {
+        expect(data_get($english, 'office_ui.weekdays.'.$weekday))->not->toBeNull()
+            ->and(data_get($arabic, 'office_ui.weekdays.'.$weekday))->not->toBeNull();
+    }
+    foreach (ChatTools::NAMES as $name) {
+        expect(data_get($english, 'chat_ui.tool_names.'.$name))->not->toBeNull()
+            ->and(data_get($arabic, 'chat_ui.tool_names.'.$name))->not->toBeNull();
+    }
+    foreach (['queued', 'running', 'completed', 'failed', 'file_deleted', 'unavailable'] as $state) {
+        expect(data_get($english, 'chat_ui.report_states.'.$state))->not->toBeNull()
+            ->and(data_get($arabic, 'chat_ui.report_states.'.$state))->not->toBeNull();
+    }
+    foreach (['unavailable', 'refusal', 'step_limit', 'max_tokens', 'model_context_window_exceeded',
+        'model_error', 'failed'] as $state) {
+        expect(data_get($english, 'chat_ui.terminal.'.$state))->not->toBeNull()
+            ->and(data_get($arabic, 'chat_ui.terminal.'.$state))->not->toBeNull();
     }
 });
 

@@ -5,6 +5,13 @@ use App\Models\Attendance\ApproverMapping;
 use App\Models\Attendance\AttendanceExport;
 use App\Models\Attendance\AttendanceExportEvent;
 use App\Models\Attendance\CaseEvent;
+use App\Models\Attendance\ChatConversation;
+use App\Models\Attendance\ChatMessage;
+use App\Models\Attendance\ChatProposal;
+use App\Models\Attendance\ChatProposalEvent;
+use App\Models\Attendance\ChatSetting;
+use App\Models\Attendance\ChatToolCall;
+use App\Models\Attendance\ChatTurn;
 use App\Models\Attendance\CoverageInterval;
 use App\Models\Attendance\DataIssue;
 use App\Models\Attendance\Day;
@@ -74,6 +81,8 @@ dataset('tenant models', [
     Holiday::class, HolidaySource::class, HolidayVersion::class,
     AttendanceExport::class, AttendanceExportEvent::class,
     FollowUpCase::class, CaseEvent::class, ApproverMapping::class,
+    ChatConversation::class, ChatTurn::class, ChatMessage::class, ChatToolCall::class,
+    ChatProposal::class, ChatProposalEvent::class,
     NotificationBatch::class, NotificationMessage::class, NotificationRoute::class,
     NotificationMessageCase::class, NotificationAttempt::class,
     LeaveImportBatch::class, LeaveImportBatchEvent::class, LeaveImportMapping::class,
@@ -144,5 +153,21 @@ test('one notification setting per company remains tenant scoped', function (): 
         ->and(NotificationSetting::find($other->id))->toBeNull()
         ->and(NotificationSetting::query()->whereKey($other->id)->update(['mode' => 'auto']))->toBe(0)
         ->and(fn () => NotificationSetting::factory()->create(['company_id' => $b->id]))->toThrow(TenantMismatch::class);
+    $context->clear();
+});
+
+test('chat change settings are off by default and tenant scoped', function (): void {
+    $a = Company::factory()->create();
+    $b = Company::factory()->create();
+    $context = app(TenantContext::class);
+    $own = $context->runForCompany($a, fn () => ChatSetting::factory()->create());
+    $other = $context->runForCompany($b, fn () => ChatSetting::factory()->create());
+
+    $context->setCompany($a);
+    expect($own->chat_changes_enabled)->toBeFalse()
+        ->and(ChatSetting::query()->pluck('id')->all())->toBe([$own->id])
+        ->and(ChatSetting::find($other->id))->toBeNull()
+        ->and(ChatSetting::query()->whereKey($other->id)->update(['chat_changes_enabled' => true]))->toBe(0)
+        ->and(fn () => ChatSetting::factory()->create(['company_id' => $b->id]))->toThrow(TenantMismatch::class);
     $context->clear();
 });

@@ -3,6 +3,10 @@
 use App\Models\AiGenerationLog;
 use App\Models\Attendance\AttendanceExportEvent;
 use App\Models\Attendance\CaseEvent;
+use App\Models\Attendance\ChatMessage;
+use App\Models\Attendance\ChatProposal;
+use App\Models\Attendance\ChatProposalEvent;
+use App\Models\Attendance\ChatToolCall;
 use App\Models\Attendance\DayDecision;
 use App\Models\Attendance\DeviceSetting;
 use App\Models\Attendance\HolidaySource;
@@ -48,6 +52,8 @@ test('kept append-only triggers reject raw SQL updates and deletes', function ()
         LeaveBalance::factory()->create(), LeaveBalanceRow::factory()->create(),
         AttendanceExportEvent::factory()->create(),
         CaseEvent::factory()->create(),
+        ChatMessage::factory()->create(), ChatToolCall::factory()->create(),
+        ChatProposalEvent::factory()->create(),
         NotificationAttempt::factory()->create(),
         LeaveImportBatchEvent::factory()->create(), LeaveImportRow::factory()->create(),
         LeaveRequestVersion::factory()->create(), LeaveRequestDecision::factory()->create()] as $record) {
@@ -80,6 +86,22 @@ test('holiday source original file fields cannot change or be deleted while proc
         "DELETE FROM `attendance_holiday_sources` WHERE `id` = {$source->id}"] as $sql) {
         expect(fn () => DB::statement($sql))->toThrow(QueryException::class);
     }
+});
+
+test('chat proposals permit one decision and protect their original contents', function (): void {
+    $company = Company::factory()->create();
+    app(TenantContext::class)->setCompany($company);
+    $proposal = ChatProposal::factory()->create();
+
+    expect(fn () => DB::table('attendance_chat_proposals')->where('id', $proposal->id)
+        ->update(['payload' => json_encode(['employees' => [1]], JSON_THROW_ON_ERROR)]))
+        ->toThrow(QueryException::class);
+    DB::table('attendance_chat_proposals')->where('id', $proposal->id)
+        ->update(['status' => 'cancelled', 'decided_at' => now()]);
+    expect(fn () => DB::table('attendance_chat_proposals')->where('id', $proposal->id)
+        ->update(['status' => 'applied']))->toThrow(QueryException::class);
+    expect(fn () => DB::table('attendance_chat_proposals')->where('id', $proposal->id)
+        ->delete())->toThrow(QueryException::class);
 });
 
 test('rest day entitlements permit only one supersession and never a rewrite or deletion', function (): void {
