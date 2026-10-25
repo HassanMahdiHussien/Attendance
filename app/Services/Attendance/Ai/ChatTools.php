@@ -3,6 +3,8 @@
 namespace App\Services\Attendance\Ai;
 
 use App\Models\Attendance\AttendanceExport;
+use App\Models\Attendance\ChatProposal;
+use App\Models\Attendance\ChatTurn;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\User;
@@ -33,7 +35,7 @@ class ChatTools
 {
     public const NAMES = [
         'find_employees', 'employee_summary', 'company_summary', 'day_details',
-        'list_cases', 'create_report', 'report_status',
+        'list_cases', 'create_report', 'report_status', 'propose_employee_change', 'proposal_status',
     ];
 
     public function __construct(
@@ -72,6 +74,22 @@ class ChatTools
                     'locale' => ['type' => 'string', 'enum' => ['en', 'ar']]], ['kind']],
             'report_status' => ['Status of a report you requested; gives the download link once it is ready.',
                 ['export_id' => ['type' => 'integer']], ['export_id']],
+            'propose_employee_change' => ['Propose changes to at most 50 employees. Does not apply anything; the user must Confirm the proposal. Include only fields the user asked to change.',
+                ['employees' => ['type' => 'array', 'minItems' => 1, 'maxItems' => 50, 'items' => [
+                    'type' => 'object', 'properties' => ['employee_id' => ['type' => 'integer'],
+                        'changes' => ['type' => 'object', 'properties' => [
+                            'schedule_start' => ['type' => ['string', 'null'], 'description' => 'HH:MM or null'],
+                            'schedule_end' => ['type' => ['string', 'null'], 'description' => 'HH:MM or null'],
+                            'rest_days' => ['type' => ['array', 'null'], 'items' => ['type' => 'integer']],
+                            'work_pattern' => ['type' => ['string', 'null']],
+                            'manager_employee_id' => ['type' => ['integer', 'null']],
+                            'email' => ['type' => ['string', 'null']],
+                            'fallback_notification_email' => ['type' => ['string', 'null']],
+                        ]]], 'required' => ['employee_id', 'changes']]],
+                    'effective_from' => ['type' => 'string', 'description' => 'YYYY-MM-DD; omit for today in Baghdad']],
+                ['employees']],
+            'proposal_status' => ['Read the current status of one of your proposals.',
+                ['proposal_id' => ['type' => 'integer']], ['proposal_id']],
         ];
 
         return array_map(fn (string $name): array => [
@@ -81,7 +99,7 @@ class ChatTools
         ], self::NAMES);
     }
 
-    public function execute(string $name, array $input, Company $company, User $actor): array
+    public function execute(string $name, array $input, Company $company, User $actor, ?ChatTurn $turn = null): array
     {
         try {
             abort_unless($actor->is_active && (int) app(TenantContext::class)->companyId() === (int) $company->id
@@ -95,6 +113,8 @@ class ChatTools
                 'list_cases' => $this->listCases($company, $input),
                 'create_report' => $this->createReport($actor, $company, $input),
                 'report_status' => $this->reportStatus($actor, $company, $input),
+                'propose_employee_change' => $this->proposeEmployeeChange($actor, $company, $input, $turn),
+                'proposal_status' => $this->proposalStatus($actor, $company, $input),
                 default => ['error' => 'unknown_tool'],
             };
 
@@ -235,6 +255,27 @@ class ChatTools
 
         return ['export_id' => $export->id, 'status' => 'completed',
             'download_url' => route('attendance.exports.file', ['company' => $company->id, 'export' => $export->id])];
+    }
+
+    private function proposeEmployeeChange(User $actor, Company $company, array $input, ?ChatTurn $turn): array
+    {
+        if (! app(ChatSettings::class)->enabled($company)) {
+            return ['error' => 'changes_disabled', 'message' => __('messages.chat.changes_disabled')];
+        }
+        if ($turn === null) {
+            return ['error' => 'turn_required'];
+        }
+        $proposal = app(ChatProposals::class)->propose($company, $turn, $actor, $input);
+
+        return app(ChatProposals::class)->summary($proposal);
+    }
+
+    private function proposalStatus(User $actor, Company $company, array $input): array
+    {
+        $proposal = ChatProposal::query()->where('company_id', $company->id)
+            ->whereKey((int) ($input['proposal_id'] ?? 0))->firstOrFail();
+
+        return app(ChatProposals::class)->status($proposal, $actor);
     }
 
     private function filters(Company $company, mixed $input, array $employeeIds = []): ReportFilters
