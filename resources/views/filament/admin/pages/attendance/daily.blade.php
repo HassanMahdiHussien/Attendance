@@ -8,9 +8,9 @@
                 <label>{{ __('messages.office_ui.status') }} <select wire:model.live="status" class="rounded-xl border border-gray-200 p-2"><option value="">{{ __('messages.office_ui.all') }}</option>@foreach (\App\Filament\Admin\Pages\Attendance\DailyAttendance::statuses() as $state)<option value="{{ $state }}">{{ __('messages.office_ui.statuses.'.$state) }}</option>@endforeach</select></label>
             </div>
         </x-ui.card>
-        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
             @foreach ($this->summary() as $state => $count)
-                <x-ui.card><span class="text-sm text-gray-600">{{ __('messages.office_ui.statuses.'.$state) }}</span><strong class="mt-1 block font-mono text-2xl" dir="ltr">{{ $count }}</strong></x-ui.card>
+                <x-ui.card><span class="text-sm text-gray-600">{{ __('messages.office_ui.statuses.'.$state) }}</span><strong class="mt-1 block font-mono text-2xl"><bdi dir="ltr">{{ $count }}</bdi></strong></x-ui.card>
             @endforeach
         </div>
         <x-ui.card padding="none">

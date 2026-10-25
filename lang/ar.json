@@ -161,5 +161,13 @@
     "Dismissal reason": "سبب الاستبعاد",
     "Dismiss review": "استبعاد المراجعة",
     "No employees need exit review.": "لا يوجد موظفون يحتاجون إلى مراجعة المغادرة.",
-    "Download the template and fill one row per employee. Name, hire date and branch are required. Department, position, employee number, email and gender are optional. Use 2024-01-15 or 15/01/2024 for dates.": "حمّل القالب ثم املأ صفاً لكل موظف. الاسم وتاريخ التعيين والفرع مطلوبة. القسم والمنصب ورقم الموظف والبريد والجنس اختيارية. اكتب التاريخ 2024-01-15 أو 15/01/2024."
+    "Download the template and fill one row per employee. Name, hire date and branch are required. Department, position, employee number, email and gender are optional. Use 2024-01-15 or 15/01/2024 for dates.": "حمّل القالب ثم املأ صفاً لكل موظف. الاسم وتاريخ التعيين والفرع مطلوبة. القسم والمنصب ورقم الموظف والبريد والجنس اختيارية. اكتب التاريخ 2024-01-15 أو 15/01/2024.",
+    "Showing": "عرض",
+    "to": "إلى",
+    "of": "من",
+    "results": "نتيجة",
+    "Pagination Navigation": "التنقل بين الصفحات",
+    "Go to page :page": "الانتقال إلى الصفحة :page",
+    "Getting started": "البدء",
+    "HR": "الموارد البشرية"
 }

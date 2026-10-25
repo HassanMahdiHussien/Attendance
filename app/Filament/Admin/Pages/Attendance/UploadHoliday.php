@@ -49,7 +49,7 @@ class UploadHoliday extends AttendancePage
             ->where('uploaded_by', auth()->id())->latest('id')->value('id');
     }
 
-    public function upload(HolidaySources $sources): void
+    public function uploadAnnouncement(HolidaySources $sources): void
     {
         $this->validate(['sourceFile' => 'required|file|extensions:pdf,png,jpg,jpeg,eml,msg|max:25600']);
         $source = $sources->upload($this->company(), $this->sourceFile, auth()->user());

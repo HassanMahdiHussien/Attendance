@@ -1,7 +1,7 @@
 <x-filament-panels::page>
     <div class="space-y-5">
         <x-ui.card>
-            <form wire:submit="upload" class="space-y-3">
+            <form wire:submit="uploadAnnouncement" class="space-y-3">
                 <label class="block">{{ __('messages.holiday_ui.announcement') }} <input type="file" wire:model="sourceFile" accept=".pdf,.png,.jpg,.jpeg,.eml,.msg" class="block w-full rounded-xl border border-gray-200 p-2"></label>
                 @error('sourceFile') <p class="text-red-600">{{ $message }}</p> @enderror
                 @error('file') <p class="text-red-600">{{ $message }}</p> @enderror
