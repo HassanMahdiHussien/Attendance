@@ -6,6 +6,12 @@ use App\Models\Attendance\ApproverMapping;
 use App\Models\Attendance\AttendanceExport;
 use App\Models\Attendance\AttendanceExportEvent;
 use App\Models\Attendance\CaseEvent;
+use App\Models\Attendance\ChatConversation;
+use App\Models\Attendance\ChatMessage;
+use App\Models\Attendance\ChatProposal;
+use App\Models\Attendance\ChatProposalEvent;
+use App\Models\Attendance\ChatToolCall;
+use App\Models\Attendance\ChatTurn;
 use App\Models\Attendance\CoverageInterval;
 use App\Models\Attendance\DataIssue;
 use App\Models\Attendance\Day;
@@ -97,6 +103,12 @@ test('every kept composite tenant foreign key rejects another company through mo
         'attendance_export_events' => AttendanceExportEvent::class,
         'attendance_cases' => FollowUpCase::class,
         'attendance_case_events' => CaseEvent::class,
+        'attendance_chat_conversations' => ChatConversation::class,
+        'attendance_chat_turns' => ChatTurn::class,
+        'attendance_chat_messages' => ChatMessage::class,
+        'attendance_chat_tool_calls' => ChatToolCall::class,
+        'attendance_chat_proposals' => ChatProposal::class,
+        'attendance_chat_proposal_events' => ChatProposalEvent::class,
         'attendance_approver_mappings' => ApproverMapping::class,
         'attendance_notification_batches' => NotificationBatch::class,
         'attendance_notification_messages' => NotificationMessage::class,
@@ -205,6 +217,9 @@ test('every kept composite tenant foreign key rejects another company through mo
         }
         if (isset($attributes['route_key'])) {
             $attributes['route_key'] = 'cross-'.$key->foreign_column.'-'.$target->id;
+        }
+        if (isset($attributes['tool_use_id'])) {
+            $attributes['tool_use_id'] = 'cross-'.$key->foreign_column.'-'.$target->id;
         }
         if (isset($attributes['run_key'])) {
             $attributes['run_key'] = 'cross-'.$key->foreign_column.'-'.$target->id;

@@ -19,6 +19,8 @@ use App\Policies\Attendance\AttendanceExportPolicy;
 use App\Policies\Attendance\ImportBatchPolicy as AttendanceImportBatchPolicy;
 use App\Policies\Leave\BalanceBatchPolicy;
 use App\Policies\Leave\ImportBatchPolicy as LeaveImportBatchPolicy;
+use App\Services\Attendance\Ai\ChatModel;
+use App\Services\Attendance\Ai\ClaudeChatModel;
 use App\Services\Attendance\Ai\HolidayClient;
 use App\Services\Attendance\AssessmentTriggers;
 use App\Services\Attendance\EmployeeChangeListener;
@@ -49,6 +51,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->scoped(TenantContext::class, fn () => new TenantContext);
         $this->app->bind(HolidayClient::class, fn () => new HolidayClient);
+        $this->app->bind(ChatModel::class, ClaudeChatModel::class);
     }
 
     /**

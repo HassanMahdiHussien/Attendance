@@ -755,6 +755,12 @@ return [
         'delivery_errors' => ['mail_delivery_failed' => 'Mail delivery failed',
             'uncertain_delivery' => 'Delivery could not be confirmed'],
     ],
+    'chat' => [
+        'unavailable' => 'AI reading is unavailable. No changes were applied.',
+        'failed' => 'The assistant could not finish this turn. No changes were applied.',
+        'step_limit' => 'The assistant reached its step limit. No changes were applied.',
+        'verified_none' => 'Changes applied: none. Proposals require your confirmation.',
+    ],
     'follow_up_mail' => [
         'subject' => 'Attendance follow-up required',
         'heading' => 'Attendance follow-up',
