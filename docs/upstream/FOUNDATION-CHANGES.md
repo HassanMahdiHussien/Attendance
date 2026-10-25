@@ -2,6 +2,14 @@
 
 Every kept foundation file edited since the spec-500 baseline is listed below. Removals are not listed because Displanary keeps that code. Apply only rows marked **Port**; **Do not apply** rows describe changes needed solely by Attendance.
 
+## Assistant workspace (spec 512)
+
+| File | Change | Why | Displanary |
+|---|---|---|---|
+| `app/Support/Access/Nav.php`, `routes/web.php` | Adds the gated Assistant workspace entry and route. | HR needs an attendance chat beside the employee and dashboard views. | **Do not apply** |
+| `app/Filament/Admin/Pages/CompanySettings.php`, `resources/views/filament/admin/pages/company-settings.blade.php` | Adds the audited switch for proposed employee changes from chat. | Changes stay disabled by default until a company enables them. | **Do not apply** |
+| `lang/en/messages.php`, `lang/ar/messages.php` | Adds bilingual Assistant and company-setting labels. | The workspace and proposals need English and Arabic text. | **Do not apply** |
+
 ## Employee classification fields (spec 506)
 
 | File | Change | Why | Displanary |

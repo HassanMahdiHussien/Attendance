@@ -11,6 +11,11 @@ class FakeChatModel implements ChatModel
 
     public function __construct(private array $script = []) {}
 
+    public function available(): bool
+    {
+        return true;
+    }
+
     public function complete(array $messages, array $tools, string $system): array
     {
         $this->calls[] = compact('messages', 'tools', 'system');

@@ -2,6 +2,7 @@
 
 use App\Enums\UserRole;
 use App\Models\Attendance\AttendanceExport;
+use App\Models\Attendance\ChatConversation;
 use App\Models\Attendance\HolidaySource;
 use App\Models\Attendance\ImportBatch as AttendanceImportBatch;
 use App\Models\Branch;
@@ -60,6 +61,9 @@ test('a company user cannot reach another company through any parameterised GET 
         $export = AttendanceExport::factory()->create([
             'company_id' => $b->id, 'requested_by' => $user->id, 'file_path' => 'sweep/'.$marker.'.txt',
         ]);
+        $foreignConversation = ChatConversation::factory()->create([
+            'company_id' => $b->id, 'user_id' => $user->id,
+        ]);
         $holidaySource = HolidaySource::factory()->create([
             'company_id' => $b->id, 'uploaded_by' => $user->id,
             'file_path' => 'sweep/'.$marker.'.txt',
@@ -80,6 +84,7 @@ test('a company user cannot reach another company through any parameterised GET 
             'balanceBatch' => $balanceBatch->id,
             'export' => $export->id, 'source' => $holidaySource->id, 'part' => 0,
             'foreignLeaveRequest' => $foreignLeaveRequest->id,
+            'foreignConversation' => $foreignConversation->id,
             'path' => 'sweep/'.$marker.'.txt',
             // Help paths name shared static content, never a tenant record.
             'section' => 'missing', 'slug' => 'missing', 'locale' => 'xx', 'name' => 'missing',
@@ -147,6 +152,11 @@ test('a company user cannot reach another company through any parameterised GET 
     // The platform dashboard's company selector is an explicit tenant path.
     expect($this->get('/dashboard/company/'.$b->id)->getStatusCode())->toBe(404)
         ->and($this->get('/dashboard/company/'.$b->id.'/employees?tile=active_employees')->getStatusCode())->toBe(404);
+
+    // The assistant selects a conversation by query parameter; another tenant's id is never readable.
+    $assistant = $this->get('/assistant?conversation='.$records['foreignConversation']);
+    expect($assistant->getStatusCode())->toBe(404)
+        ->and((string) $assistant->getContent())->not->toContain($marker);
 
     // A filter change must not silently remove every tenant route from the sweep.
     expect($visited)->toBeGreaterThan(10)

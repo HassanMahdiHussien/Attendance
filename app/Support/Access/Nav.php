@@ -4,6 +4,7 @@ namespace App\Support\Access;
 
 use App\Enums\UserRole;
 use App\Models\User;
+use App\Policies\EmployeeProfilePolicy;
 
 class Nav
 {
@@ -20,6 +21,9 @@ class Nav
             $items[] = self::item('Employees', '/employees', 'users', 'employees*');
         } elseif ($user->primary_role === UserRole::PlatformAdmin) {
             $items[] = self::item('Employees', '/employees', 'users', 'employees*');
+        }
+        if (app(EmployeeProfilePolicy::class)->search($user)) {
+            $items[] = self::item('messages.chat_ui.title', '/assistant', 'help', 'assistant*');
         }
         request()->attributes->set($key, $items);
 

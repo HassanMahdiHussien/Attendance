@@ -14,6 +14,11 @@ class ClaudeChatModel implements ChatModel
 
     public function __construct(private ?ClientInterface $transport = null) {}
 
+    public function available(): bool
+    {
+        return (string) config('services.anthropic.key') !== '';
+    }
+
     public function complete(array $messages, array $tools, string $system): array
     {
         $key = (string) config('services.anthropic.key');

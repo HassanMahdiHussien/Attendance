@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Pages;
 
 use App\Enums\UserRole;
+use App\Services\Attendance\Ai\ChatSettings;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Checkbox;
 use Filament\Pages\Page;
@@ -24,6 +25,10 @@ class CompanySettings extends Page
 
     public ?array $data = [];
 
+    public bool $chatChangesEnabled = false;
+
+    public string $chatReason = '';
+
     public static function canAccess(): bool
     {
         $company = Filament::getTenant();
@@ -40,6 +45,7 @@ class CompanySettings extends Page
         $company = Filament::getTenant();
         abort_unless($company, 404);
         $this->form->fill(['kurdish_enabled' => in_array('ku', $company->enabled_languages, true)]);
+        $this->chatChangesEnabled = app(ChatSettings::class)->enabled($company);
     }
 
     public function form(Schema $schema): Schema
@@ -56,5 +62,16 @@ class CompanySettings extends Page
         abort_unless($company && auth()->user()->can('update', $company), 403);
         $data = $this->form->getState();
         $company->update(['enabled_languages' => ['ar', 'en', ...(($data['kurdish_enabled'] ?? false) ? ['ku'] : [])]]);
+    }
+
+    public function saveChatSettings(ChatSettings $settings): void
+    {
+        abort_unless(static::canAccess(), 403);
+        $company = Filament::getTenant();
+        abort_unless($company && auth()->user()->can('update', $company), 403);
+        $this->validate(['chatChangesEnabled' => ['required', 'boolean'],
+            'chatReason' => ['required', 'string', 'max:500']]);
+        $settings->setEnabled($company, $this->chatChangesEnabled, auth()->user(), $this->chatReason);
+        $this->chatReason = '';
     }
 }
