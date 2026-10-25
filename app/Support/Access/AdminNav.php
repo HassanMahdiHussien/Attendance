@@ -2,12 +2,15 @@
 
 namespace App\Support\Access;
 
+use App\Filament\Admin\Pages\Attendance\ApproverMappingsPage;
 use App\Filament\Admin\Pages\Attendance\AttendanceBatches;
 use App\Filament\Admin\Pages\Attendance\AttendanceDevices;
 use App\Filament\Admin\Pages\Attendance\AttendanceIssues;
 use App\Filament\Admin\Pages\Attendance\AttendancePunches;
 use App\Filament\Admin\Pages\Attendance\DailyAttendance;
+use App\Filament\Admin\Pages\Attendance\FollowUpCasesPage;
 use App\Filament\Admin\Pages\Attendance\HolidaysPage;
+use App\Filament\Admin\Pages\Attendance\NotificationsPage;
 use App\Filament\Admin\Pages\Attendance\OfficePolicyPage;
 use App\Filament\Admin\Pages\Attendance\ReviewQueue;
 use App\Filament\Admin\Pages\Attendance\UploadAttendance;
@@ -40,6 +43,9 @@ class AdminNav
         [AttendanceBatches::class, 'folder', 'heroicon-o-archive-box'],
         [AttendanceDevices::class, 'settings', 'heroicon-o-device-phone-mobile'],
         [AttendanceIssues::class, 'folder', 'heroicon-o-exclamation-triangle'],
+        [FollowUpCasesPage::class, 'folder', 'heroicon-o-clipboard-document-list'],
+        [NotificationsPage::class, 'settings', 'heroicon-o-envelope'],
+        [ApproverMappingsPage::class, 'settings', 'heroicon-o-user-plus'],
         [AttendancePunches::class, 'users', 'heroicon-o-clock'],
         [DailyAttendance::class, 'users', 'heroicon-o-calendar-days'],
         [ReviewQueue::class, 'folder', 'heroicon-o-clipboard-document-check'],

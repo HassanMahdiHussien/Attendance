@@ -27,6 +27,8 @@ class ReportFilters
         public readonly array $managerEmployeeIds = [],
         public readonly array $workPatterns = [],
         public readonly array $statuses = [],
+        public readonly ?string $caseState = null,
+        public readonly ?string $caseIssueType = null,
     ) {}
 
     public static function fromArray(Company $company, array $input): self
@@ -48,16 +50,21 @@ class ReportFilters
         $departments = self::strings($input['departments'] ?? [], 'departments');
         $patterns = self::strings($input['work_patterns'] ?? [], 'work_patterns');
         $statuses = self::strings($input['statuses'] ?? [], 'statuses');
+        $caseState = $input['case_state'] ?? null;
+        $caseIssueType = $input['case_issue_type'] ?? null;
 
         if (($ids !== [] && Employee::query()->where('company_id', $company->id)->whereIn('id', $ids)->count() !== count($ids))
             || ($managers !== [] && Employee::query()->where('company_id', $company->id)->whereIn('id', $managers)->count() !== count($managers))
             || ($branches !== [] && Branch::query()->where('company_id', $company->id)->whereIn('id', $branches)->count() !== count($branches))
             || array_diff($patterns, ['office', 'shift', 'security']) !== []
-            || array_diff($statuses, self::STATUSES) !== []) {
+            || array_diff($statuses, self::STATUSES) !== []
+            || ($caseState !== null && ! in_array($caseState, ['open_cases', 'open', 'waiting_manager', 'waiting_approver', 'waiting_hr', 'closed'], true))
+            || ($caseIssueType !== null && ! in_array($caseIssueType, ['absence', 'late', 'early', 'exit', 'missing_punch'], true))) {
             throw ValidationException::withMessages(['filters' => __('messages.reporting.invalid_filters')]);
         }
 
-        return new self((int) $company->id, $from, $to, $ids, $branches, $departments, $managers, $patterns, $statuses);
+        return new self((int) $company->id, $from, $to, $ids, $branches, $departments, $managers, $patterns, $statuses,
+            $caseState, $caseIssueType);
     }
 
     public function toArray(): array
@@ -67,7 +74,8 @@ class ReportFilters
             'employee_ids' => $this->employeeIds, 'branch_ids' => $this->branchIds,
             'departments' => $this->departments, 'manager_employee_ids' => $this->managerEmployeeIds,
             'work_patterns' => $this->workPatterns, 'statuses' => $this->statuses,
-        ];
+        ] + ($this->caseState === null ? [] : ['case_state' => $this->caseState])
+            + ($this->caseIssueType === null ? [] : ['case_issue_type' => $this->caseIssueType]);
     }
 
     private static function dateValid(string $date): bool

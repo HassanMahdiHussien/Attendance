@@ -44,4 +44,9 @@ class FollowUpCase extends Model
     {
         return $this->hasMany(CaseEvent::class, 'case_id');
     }
+
+    public function deliveryRoutes(): HasMany
+    {
+        return $this->hasMany(NotificationRoute::class, 'case_id');
+    }
 }

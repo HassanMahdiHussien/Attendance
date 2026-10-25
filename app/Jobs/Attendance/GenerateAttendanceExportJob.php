@@ -153,6 +153,14 @@ class GenerateAttendanceExportJob implements ShouldQueue
                     $writer->addRow(Row::fromValues([$entitlement['work_date'], $entitlement['earned'],
                         $entitlement['used'], $entitlement['available'], $entitlement['overdue']]));
                 }
+                $writer->addRow(Row::fromValues([__('messages.follow_up_ui.cases'), $statement['follow_up_cases']->count()]));
+                foreach ($statement['follow_up_cases'] as $case) {
+                    $writer->addRow(Row::fromValues([
+                        $case->work_date->toDateString(), __('messages.follow_up_ui.states.'.$case->state),
+                        implode(', ', array_map(fn (array $item): string => __('messages.follow_up_ui.items.'.$item['type']), $case->items ?? [])),
+                        collect($case->routes ?? [])->pluck('external_id')->filter()->implode(', '),
+                    ]));
+                }
             }
         } finally {
             $writer->close();

@@ -43,4 +43,10 @@ class NotificationMessage extends Model
     {
         return $this->hasMany(NotificationAttempt::class, 'message_id');
     }
+
+    public function attemptRows(): HasMany
+    {
+        // The attempts column is the delivery counter, so the UI needs a distinct relation name.
+        return $this->hasMany(NotificationAttempt::class, 'message_id');
+    }
 }

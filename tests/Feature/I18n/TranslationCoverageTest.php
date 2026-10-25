@@ -112,6 +112,33 @@ test('notification mail dynamic labels exist in both languages', function (): vo
     }
 });
 
+test('follow-up screen states, events and items exist in both languages', function (): void {
+    $english = File::getRequire(lang_path('en/messages.php'));
+    $arabic = File::getRequire(lang_path('ar/messages.php'));
+    $labels = [
+        ...array_map(fn (string $value): string => 'states.'.$value,
+            ['open', 'waiting_manager', 'waiting_approver', 'waiting_hr', 'closed']),
+        ...array_map(fn (string $value): string => 'items.'.$value,
+            ['absence', 'late', 'early', 'exit', 'missing_punch']),
+        ...array_map(fn (string $value): string => 'events.'.$value,
+            ['opened', 'changed', 'closed', 'reopened', 'reserved', 'excluded', 'cancelled', 'skipped_stale', 'sent', 'reminded']),
+        ...array_map(fn (string $value): string => 'routes.'.$value, ['manager', 'approver']),
+        ...array_map(fn (string $value): string => 'batch_states.'.$value,
+            ['draft', 'sending', 'sent', 'partly_failed', 'cancelled']),
+        ...array_map(fn (string $value): string => 'message_states.'.$value,
+            ['draft', 'excluded', 'queued', 'sending', 'sent', 'failed', 'uncertain', 'skipped']),
+        ...array_map(fn (string $value): string => 'attempt_results.'.$value, ['started', 'sent', 'failed']),
+        ...array_map(fn (string $value): string => 'delivery_errors.'.$value,
+            ['mail_delivery_failed', 'uncertain_delivery']),
+        ...array_map(fn (string $value): string => 'closure_kinds.'.$value,
+            ['manual', 'reconciliation', 'reassessment']),
+    ];
+    foreach ($labels as $label) {
+        expect(data_get($english, 'follow_up_ui.'.$label))->not->toBeNull()
+            ->and(data_get($arabic, 'follow_up_ui.'.$label))->not->toBeNull();
+    }
+});
+
 test('holiday issue labels exist wherever attendance and leave render them', function (): void {
     $english = File::getRequire(lang_path('en/messages.php'));
     $arabic = File::getRequire(lang_path('ar/messages.php'));
@@ -180,7 +207,8 @@ test('attendance export kinds, states and columns have English and Arabic labels
         ...array_map(fn (string $error): string => 'errors.'.$error, ['chrome_missing', 'generation_failed']),
         ...array_map(fn (string $column): string => 'columns.'.$column,
             array_unique(array_merge(ExportData::DAY_COLUMNS, ExportData::SUMMARY_COLUMNS, ExportData::MEAL_COLUMNS,
-                ExportData::ISSUE_COLUMNS, ExportData::OVERTIME_COLUMNS, ExportData::ENTITLEMENT_COLUMNS))),
+                ExportData::ISSUE_COLUMNS, ExportData::OVERTIME_COLUMNS, ExportData::ENTITLEMENT_COLUMNS,
+                ExportData::CASE_COLUMNS))),
     ];
     foreach ($labels as $label) {
         expect(data_get($english, 'export_ui.'.$label))->not->toBeNull()

@@ -39,8 +39,33 @@ class ApproverMappings
         $mapped = ApproverMapping::query()->where('company_id', $company->id)->pluck('approver_key')->flip();
 
         return LeaveRequest::query()->where('company_id', $company->id)->where('status', 'pending')
-            ->pluck('approver_name')->filter()->unique()
+            ->pluck('approver_name')->filter()->unique(fn (string $text): string => self::key($text))
             ->reject(fn (string $text): bool => $mapped->has(self::key($text)))->values()->all();
+    }
+
+    public function unmappedWithCounts(Company $company): array
+    {
+        $texts = $this->unmapped($company);
+        $counts = LeaveRequest::query()->where('company_id', $company->id)
+            ->where('status', 'pending')->whereNotNull('approver_name')->pluck('approver_name')
+            ->countBy(fn (string $text): string => self::key($text));
+        $employees = Employee::query()->where('company_id', $company->id)->get(['id', 'name', 'name_en', 'employee_code']);
+
+        return array_map(fn (string $text): array => [
+            'text' => $text, 'key' => sha1(self::key($text)),
+            'count' => $counts[self::key($text)] ?? 0,
+            'suggestions' => $employees->filter(fn (Employee $employee): bool => self::key($employee->name) === self::key($text)
+                || ($employee->name_en !== null && self::key($employee->name_en) === self::key($text)))
+                ->take(5)->values()->all(),
+        ], $texts);
+    }
+
+    public function confirmed(Company $company)
+    {
+        $this->assertCompany($company);
+
+        return ApproverMapping::query()->with('employee')->where('company_id', $company->id)
+            ->orderBy('approver_text')->get();
     }
 
     public function confirm(Company $company, string $text, Employee $employee, User $actor): ApproverMapping

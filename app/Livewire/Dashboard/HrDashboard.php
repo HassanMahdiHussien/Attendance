@@ -3,9 +3,11 @@
 namespace App\Livewire\Dashboard;
 
 use App\Enums\UserRole;
+use App\Filament\Admin\Pages\Attendance\FollowUpCasesPage;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Employee;
+use App\Services\Attendance\FollowUp\FollowUpCases;
 use App\Services\Attendance\Overtime;
 use App\Services\Attendance\Reporting\AttendanceExports;
 use App\Services\Attendance\Reporting\AttendanceSummary;
@@ -141,6 +143,10 @@ class HrDashboard extends Component
     {
         $company = $this->company();
         abort_unless(ReportTiles::allowed($tile), 404);
+        if (in_array($tile, FollowUpCases::TILES, true)) {
+            return FollowUpCasesPage::getUrl(panel: 'admin', tenant: $company)
+                .'?'.http_build_query(['state' => $tile === 'open_cases' ? 'open_cases' : $tile] + $this->filters());
+        }
         $route = auth()->user()->primary_role === UserRole::PlatformAdmin ? 'dashboard.company.employees' : 'dashboard.employees';
         $parameters = $route === 'dashboard.company.employees' ? ['company' => $company->id] : [];
 
@@ -159,7 +165,8 @@ class HrDashboard extends Component
             $managers = $this->managerId === '' ? $search->find(auth()->user(), $company, $this->managerSearch) : [];
 
             return view('livewire.dashboard.hr-dashboard', [
-                'company' => $company, 'tiles' => ReportTiles::fromTotals($totals) + ReportTiles::overtime($overtimeTotals),
+                'company' => $company, 'tiles' => ReportTiles::fromTotals($totals) + ReportTiles::overtime($overtimeTotals)
+                    + app(FollowUpCases::class)->tileTotals($filters),
                 'totals' => $totals,
                 'freshness' => $lastUpdate->for($filters), 'employees' => $employees, 'managers' => $managers,
                 'branches' => Branch::query()->where('company_id', $company->id)->orderBy('name')->get(),
