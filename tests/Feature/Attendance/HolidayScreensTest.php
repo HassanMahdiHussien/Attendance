@@ -78,7 +78,7 @@ test('holiday list filters status and year without showing another company', fun
 test('upload accepts a file and each reading state has a manual path', function (): void {
     Storage::fake('local');
     $file = UploadedFile::fake()->createWithContent('notice.pdf', '%PDF-1.4 fake announcement');
-    $page = Livewire::test(UploadHoliday::class)->set('sourceFile', $file)->call('upload')->assertHasNoErrors()
+    $page = Livewire::test(UploadHoliday::class)->set('sourceFile', $file)->call('uploadAnnouncement')->assertHasNoErrors()
         ->assertSee('Reading')->assertSee('Enter by hand');
     $source = HolidaySource::query()->where('company_id', $this->company->id)->firstOrFail();
     Queue::assertPushed(ReadHolidaySourceJob::class);
@@ -120,7 +120,7 @@ test('a completed proposal makes a draft and leaves it unapproved', function ():
     });
     $file = UploadedFile::fake()->createWithContent('notice.eml',
         file_get_contents(base_path('tests/fixtures/holidays/notice.eml')));
-    $page = Livewire::test(UploadHoliday::class)->set('sourceFile', $file)->call('upload')->assertHasNoErrors();
+    $page = Livewire::test(UploadHoliday::class)->set('sourceFile', $file)->call('uploadAnnouncement')->assertHasNoErrors();
     $source = HolidaySource::query()->where('company_id', $this->company->id)->firstOrFail();
     (new ReadHolidaySourceJob($this->company->id, $source->id))->handle(app(HolidayReader::class));
     $page->call('$refresh')->assertSee('Proposal ready')->call('createDraft')->assertHasNoErrors();
@@ -220,4 +220,11 @@ test('daily and employee records link their holiday names', function (): void {
     Livewire::test(HrDashboard::class)->assertSee('Holiday work days')->assertSee('Hours');
     Livewire::withQueryParams(['tile' => 'holiday_worked', 'from' => '2026-10-19', 'to' => '2026-10-19'])
         ->test(DashboardEmployees::class)->assertSee($this->employee->name);
+});
+
+test('upload without a file shows the required message and the form does not call Livewire upload helper', function (): void {
+    // A page method named "upload" is shadowed by Livewire's own $wire.upload() in the browser.
+    Livewire::test(UploadHoliday::class)->call('uploadAnnouncement')->assertHasErrors(['sourceFile' => 'required']);
+    expect(file_get_contents(resource_path('views/filament/admin/pages/attendance/holiday-upload.blade.php')))
+        ->toContain('wire:submit="uploadAnnouncement"');
 });
