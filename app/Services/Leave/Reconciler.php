@@ -69,9 +69,7 @@ class Reconciler
             }
             $run->update(['status' => 'completed', 'counts' => ['employees_changed' => $changed], 'finished_at' => now()]);
             $this->audit->log('leave.reconciled', $run, ['employee_ids' => $ids, 'employees_changed' => $changed]);
-            foreach ($assessmentDates as $employeeId => $dates) {
-                $this->dispatchChangedDays($company->id, (int) $employeeId, $dates);
-            }
+            $this->dispatchChangedDays($company->id, $assessmentDates);
         } catch (Throwable $exception) {
             $run->update(['status' => 'failed', 'finished_at' => now()]);
 
@@ -455,25 +453,49 @@ class Reconciler
         return $plannedRows === $currentRows;
     }
 
-    private function dispatchChangedDays(int $companyId, int $employeeId, array $dates): void
+    private function dispatchChangedDays(int $companyId, array $assessmentDates): void
     {
-        sort($dates);
-        $from = null;
-        $to = null;
-        foreach ($dates as $date) {
-            if ($from !== null && CarbonImmutable::parse($to)->addDay()->toDateString() < $date) {
-                $this->queueAssessment($companyId, $employeeId, $from, $to);
-                $from = null;
-            }
-            $from ??= $date;
-            $to = $date;
+        if ($assessmentDates === []) {
+            return;
         }
-        if ($from !== null) {
-            $this->queueAssessment($companyId, $employeeId, $from, $to);
+        // Only days that already exist are reassessed: a date without a day has no attendance coverage yet,
+        // and the coverage-driven assessment reads the leave when that coverage arrives.
+        $existing = [];
+        DB::table('attendance_days')->where('company_id', $companyId)->whereNull('superseded_by_run_id')
+            ->whereIn('employee_id', array_keys($assessmentDates))
+            ->whereIn('work_date', array_values(array_unique(array_merge(...array_values($assessmentDates)))))
+            ->select(['employee_id', 'work_date'])->orderBy('id')
+            ->each(function (object $day) use (&$existing): void {
+                $existing[(int) $day->employee_id][substr((string) $day->work_date, 0, 10)] = true;
+            });
+        $groups = [];
+        foreach ($assessmentDates as $employeeId => $dates) {
+            $dates = array_values(array_filter($dates, fn (string $date): bool => isset($existing[(int) $employeeId][$date])));
+            sort($dates);
+            $from = null;
+            $to = null;
+            foreach ($dates as $date) {
+                if ($from !== null && CarbonImmutable::parse($to)->addDay()->toDateString() < $date) {
+                    $groups[$from.'|'.$to][] = (int) $employeeId;
+                    $from = null;
+                }
+                $from ??= $date;
+                $to = $date;
+            }
+            if ($from !== null) {
+                $groups[$from.'|'.$to][] = (int) $employeeId;
+            }
+        }
+        // Employees with the same changed range share one assessment job instead of one job each.
+        foreach ($groups as $range => $employeeIds) {
+            [$from, $to] = explode('|', $range);
+            foreach (array_chunk($employeeIds, 100) as $chunk) {
+                $this->queueAssessment($companyId, $chunk, $from, $to);
+            }
         }
     }
 
-    private function queueAssessment(int $companyId, int $employeeId, string $from, string $to): void
+    private function queueAssessment(int $companyId, array $employeeIds, string $from, string $to): void
     {
         $today = today('Asia/Baghdad')->toDateString();
         $scopeFrom = CarbonImmutable::parse($from)->subDay()->toDateString();
@@ -481,7 +503,7 @@ class Reconciler
             return;
         }
         AssessDaysJob::dispatch($companyId, [
-            'employee_ids' => [$employeeId],
+            'employee_ids' => $employeeIds,
             'from' => $scopeFrom,
             'to' => min(CarbonImmutable::parse($to)->addDay()->toDateString(), $today),
         ], 'leave_distribution')->afterCommit();
