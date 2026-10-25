@@ -94,5 +94,13 @@
             @endforeach
         </tbody>
     </table>
+    <h2>{{ __('messages.follow_up_ui.cases') }}</h2>
+    <table><thead><tr><th>{{ __('messages.export_ui.columns.date') }}</th><th>{{ __('messages.export_ui.columns.status') }}</th><th>{{ __('messages.follow_up_ui.issue') }}</th><th>{{ __('messages.follow_up_ui.routes_title') }}</th></tr></thead><tbody>
+        @forelse ($follow_up_cases as $case)
+            <tr><td class="mono">{{ $case->work_date->toDateString() }}</td><td>{{ __('messages.follow_up_ui.states.'.$case->state) }}</td>
+                <td>@foreach ($case->items ?? [] as $item){{ __('messages.follow_up_ui.items.'.$item['type']) }} · @endforeach</td>
+                <td>@foreach ($case->routes ?? [] as $route){{ __('messages.follow_up_ui.routes.'.$route['kind']) }} @if ($route['external_id'] ?? null)<bdi dir="ltr">{{ $route['external_id'] }}</bdi>@endif · @endforeach</td></tr>
+        @empty <tr><td colspan="4">{{ __('messages.follow_up_ui.none') }}</td></tr> @endforelse
+    </tbody></table>
 </body>
 </html>

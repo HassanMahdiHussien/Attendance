@@ -98,6 +98,47 @@ test('pattern review issue labels exist in both languages', function (): void {
     }
 });
 
+test('notification mail dynamic labels exist in both languages', function (): void {
+    $english = File::getRequire(lang_path('en/messages.php'));
+    $arabic = File::getRequire(lang_path('ar/messages.php'));
+
+    foreach (['absence', 'late', 'early', 'exit', 'missing_punch'] as $kind) {
+        expect(data_get($english, 'follow_up_mail.issue_types.'.$kind))->not->toBeNull()
+            ->and(data_get($arabic, 'follow_up_mail.issue_types.'.$kind))->not->toBeNull();
+    }
+    foreach (['manager', 'approver'] as $kind) {
+        expect(data_get($english, 'follow_up_mail.actions.'.$kind))->not->toBeNull()
+            ->and(data_get($arabic, 'follow_up_mail.actions.'.$kind))->not->toBeNull();
+    }
+});
+
+test('follow-up screen states, events and items exist in both languages', function (): void {
+    $english = File::getRequire(lang_path('en/messages.php'));
+    $arabic = File::getRequire(lang_path('ar/messages.php'));
+    $labels = [
+        ...array_map(fn (string $value): string => 'states.'.$value,
+            ['open', 'waiting_manager', 'waiting_approver', 'waiting_hr', 'closed']),
+        ...array_map(fn (string $value): string => 'items.'.$value,
+            ['absence', 'late', 'early', 'exit', 'missing_punch']),
+        ...array_map(fn (string $value): string => 'events.'.$value,
+            ['opened', 'changed', 'closed', 'reopened', 'reserved', 'excluded', 'cancelled', 'skipped_stale', 'sent', 'reminded']),
+        ...array_map(fn (string $value): string => 'routes.'.$value, ['manager', 'approver']),
+        ...array_map(fn (string $value): string => 'batch_states.'.$value,
+            ['draft', 'sending', 'sent', 'partly_failed', 'cancelled']),
+        ...array_map(fn (string $value): string => 'message_states.'.$value,
+            ['draft', 'excluded', 'queued', 'sending', 'sent', 'failed', 'uncertain', 'skipped']),
+        ...array_map(fn (string $value): string => 'attempt_results.'.$value, ['started', 'sent', 'failed']),
+        ...array_map(fn (string $value): string => 'delivery_errors.'.$value,
+            ['mail_delivery_failed', 'uncertain_delivery']),
+        ...array_map(fn (string $value): string => 'closure_kinds.'.$value,
+            ['manual', 'reconciliation', 'reassessment']),
+    ];
+    foreach ($labels as $label) {
+        expect(data_get($english, 'follow_up_ui.'.$label))->not->toBeNull()
+            ->and(data_get($arabic, 'follow_up_ui.'.$label))->not->toBeNull();
+    }
+});
+
 test('holiday issue labels exist wherever attendance and leave render them', function (): void {
     $english = File::getRequire(lang_path('en/messages.php'));
     $arabic = File::getRequire(lang_path('ar/messages.php'));
@@ -166,7 +207,8 @@ test('attendance export kinds, states and columns have English and Arabic labels
         ...array_map(fn (string $error): string => 'errors.'.$error, ['chrome_missing', 'generation_failed']),
         ...array_map(fn (string $column): string => 'columns.'.$column,
             array_unique(array_merge(ExportData::DAY_COLUMNS, ExportData::SUMMARY_COLUMNS, ExportData::MEAL_COLUMNS,
-                ExportData::ISSUE_COLUMNS, ExportData::OVERTIME_COLUMNS, ExportData::ENTITLEMENT_COLUMNS))),
+                ExportData::ISSUE_COLUMNS, ExportData::OVERTIME_COLUMNS, ExportData::ENTITLEMENT_COLUMNS,
+                ExportData::CASE_COLUMNS))),
     ];
     foreach ($labels as $label) {
         expect(data_get($english, 'export_ui.'.$label))->not->toBeNull()
@@ -323,5 +365,18 @@ test('leave screen dynamic labels exist in both languages', function (): void {
     foreach ($labels as $label) {
         expect(data_get($english, 'leave_ui.'.$label))->not->toBeNull()
             ->and(data_get($arabic, 'leave_ui.'.$label))->not->toBeNull();
+    }
+});
+
+test('follow-up case issue and validation labels exist in both languages', function (): void {
+    $english = File::getRequire(lang_path('en/messages.php'));
+    $arabic = File::getRequire(lang_path('ar/messages.php'));
+    foreach (['approver_unmapped', 'notification_recipient_missing'] as $type) {
+        expect(data_get($english, 'attendance_ui.issue_types.'.$type))->not->toBeNull()
+            ->and(data_get($arabic, 'attendance_ui.issue_types.'.$type))->not->toBeNull();
+    }
+    foreach (['reason_required', 'invalid_approver', 'issue_resolved'] as $key) {
+        expect(data_get($english, 'follow_up.'.$key))->not->toBeNull()
+            ->and(data_get($arabic, 'follow_up.'.$key))->not->toBeNull();
     }
 });

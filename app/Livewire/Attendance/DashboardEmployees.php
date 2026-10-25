@@ -5,6 +5,7 @@ namespace App\Livewire\Attendance;
 use App\Enums\UserRole;
 use App\Models\Company;
 use App\Models\Employee;
+use App\Services\Attendance\FollowUp\FollowUpCases;
 use App\Services\Attendance\Overtime;
 use App\Services\Attendance\Reporting\AttendanceSummary;
 use App\Services\Attendance\Reporting\ReportFilters;
@@ -51,9 +52,13 @@ class DashboardEmployees extends Component
 
         return app(TenantContext::class)->runForCompany($company, function () use ($company, $summary, $overtime): View {
             $filters = ReportFilters::fromArray($company, $this->filters);
-            $ids = in_array($this->tile, ['overtime_minutes', 'entitled_employees', 'entitlements_available_now', 'entitlements_overdue_now'], true)
-                ? $overtime->drillDownEmployeeIds($filters, $this->tile)
-                : $summary->drillDown($filters, $this->tile);
+            if (in_array($this->tile, FollowUpCases::TILES, true)) {
+                $ids = app(FollowUpCases::class)->employeeIds($filters, $this->tile);
+            } elseif (in_array($this->tile, ['overtime_minutes', 'entitled_employees', 'entitlements_available_now', 'entitlements_overdue_now'], true)) {
+                $ids = $overtime->drillDownEmployeeIds($filters, $this->tile);
+            } else {
+                $ids = $summary->drillDown($filters, $this->tile);
+            }
             $employees = $ids === [] ? collect() : Employee::query()->where('company_id', $company->id)
                 ->whereIn('id', $ids)->with('branch')->orderBy('name')->get();
             $balances = app(LeaveBalances::class)->currentFor($company->id, $employees->pluck('id')->all());

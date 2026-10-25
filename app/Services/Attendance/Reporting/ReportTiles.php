@@ -12,6 +12,7 @@ class ReportTiles
         'credit_created', 'credit_used', 'credit_available', 'data_issues', 'restaurant', 'without_work_pattern',
         'hr_confirmed_absence', 'absence_closed_by_request',
         'overtime_minutes', 'entitled_employees', 'entitlements_available_now', 'entitlements_overdue_now',
+        'open_cases', 'waiting_manager', 'waiting_approver', 'waiting_hr',
     ];
 
     public static function fromTotals(array $totals): array

@@ -19,6 +19,7 @@ use App\Models\Leave\RequestDay;
 use App\Models\Leave\RequestDecision;
 use App\Models\Leave\Setting;
 use App\Services\Attendance\DataIssues;
+use App\Services\Attendance\FollowUp\CaseSync;
 use App\Services\Attendance\HolidayCalendar;
 use App\Services\AuditLogger;
 use App\Support\Tenancy\TenantContext;
@@ -34,6 +35,7 @@ class Reconciler
         private LeaveEntitlementAllocator $entitlementAllocator,
         private AuditLogger $audit,
         private DataIssues $issues,
+        private CaseSync $cases,
     ) {}
 
     public function run(Company $company, array $employeeIds, string $trigger, ?string $from = null, ?string $to = null): ProcessingRun
@@ -55,6 +57,7 @@ class Reconciler
                     $count = 0;
                     foreach ($employees as $employee) {
                         $result = $this->replayEmployee($company, $employee, $run);
+                        $this->cases->syncLocked($company, $employee, $run->trigger_source);
                         $count += (int) $result['changed'];
                         if ($result['dates'] !== []) {
                             $assessmentDates[$employee->id] = $result['dates'];

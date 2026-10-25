@@ -118,5 +118,16 @@
                 <p>{{ __('messages.leave_ui.pending_request', ['request' => "\u{2066}".$pending['external_id']."\u{2069}", 'approver' => $pending['approver_name'] ?? '']) }}</p>
             @endforeach
         </x-ui.card>
+        @if ($case = $this->followUpCase())
+            <x-ui.card :title="__('messages.follow_up_ui.cases')">
+                <p>{{ __('messages.follow_up_ui.states.'.$case->state) }}</p>
+                <p>@foreach ($case->items ?? [] as $item){{ __('messages.follow_up_ui.items.'.$item['type']) }} @if ($item['minutes'] !== null)<bdi dir="ltr">{{ $this->minutes($item['minutes']) }}</bdi>@endif · @endforeach</p>
+                <p>{{ __('messages.follow_up_ui.routes_title') }}: @foreach ($case->routes ?? [] as $route){{ __('messages.follow_up_ui.routes.'.$route['kind']) }} @if ($route['external_id'] ?? null)<bdi dir="ltr">{{ $route['external_id'] }}</bdi>@endif @if ($routeReason = app(\App\Services\Attendance\FollowUp\FollowUpCases::class)->routeReason($route)){{ $routeReason }}@endif · @endforeach</p>
+                @foreach ($case->deliveryRoutes as $delivery)<p>{{ __('messages.follow_up_ui.last_sent') }}: <bdi dir="ltr">{{ $delivery->last_sent_at ?? '—' }}</bdi> · {{ __('messages.follow_up_ui.reminders_sent') }}: <bdi dir="ltr">{{ max(0, $delivery->sent_count - 1) }}</bdi></p>@endforeach
+                @if ($case->closure_source) <p>{{ __('messages.follow_up_ui.closure_source') }}: {{ __('messages.follow_up_ui.closure_kinds.'.($case->closure_source['kind'] ?? 'reassessment')) }} @foreach (app(\App\Services\Attendance\FollowUp\FollowUpCases::class)->closureRequests($case) as $request)<a class="ui-link" href="{{ \App\Filament\Admin\Pages\Leave\LeaveRequestDetail::getUrl(panel: 'admin', tenant: $this->company()).'?'.http_build_query(['request' => $request->id]) }}"><bdi dir="ltr">{{ $request->external_id }}</bdi></a> @endforeach</p> @endif
+                @if (($case->closure_source['kind'] ?? null) === 'manual' && $case->closure_reason) <p>{{ __('messages.follow_up_ui.reason') }}: {{ $case->closure_reason }}</p> @endif
+                <details><summary>{{ __('messages.follow_up_ui.event_history') }}</summary>@foreach ($case->events as $event)<p><bdi dir="ltr">{{ $event->created_at }}</bdi> · {{ __('messages.follow_up_ui.events.'.$event->event) }}</p>@endforeach</details>
+            </x-ui.card>
+        @endif
     </div>
 </x-filament-panels::page>

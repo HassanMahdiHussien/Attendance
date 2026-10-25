@@ -45,6 +45,7 @@
     <section aria-label="{{ __('messages.attendance.title') }}">
         <livewire:attendance.employee-attendance :employee-id="$employee->id" />
     </section>
+    <livewire:attendance.employee-follow-up :employee-id="$employee->id" />
     <section aria-label="{{ __('messages.employee_history.title') }}">
         <x-ui.card>
             <h2 class="text-lg font-bold text-ink">{{ __('messages.employee_history.title') }}</h2>

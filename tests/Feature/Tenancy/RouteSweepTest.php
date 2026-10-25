@@ -133,6 +133,13 @@ test('a company user cannot reach another company through any parameterised GET 
     $dayDetail = $this->get('/admin/'.$a->id.'/attendance/day?employee='.$records['employee'].'&date='.today()->toDateString());
     expect($dayDetail->getStatusCode())->toBe(404);
 
+    // Follow-up pages must not let an HR user switch to a foreign company through the tenant path.
+    foreach (['follow-up-cases', 'notifications', 'approver-mappings'] as $page) {
+        $response = $this->get('/admin/'.$b->id.'/attendance/'.$page);
+        expect($response->getStatusCode())->not->toBe(200);
+        expect((string) $response->getContent())->not->toContain($marker);
+    }
+
     // Leave detail also selects its record through a query parameter.
     $leaveDetail = $this->get('/admin/'.$a->id.'/leave/request?request='.$records['foreignLeaveRequest']);
     expect($leaveDetail->getStatusCode())->toBe(404);

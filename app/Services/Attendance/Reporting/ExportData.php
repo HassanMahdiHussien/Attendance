@@ -10,6 +10,7 @@ use App\Models\Leave\Allocation;
 use App\Models\Leave\LeaveRequest;
 use App\Models\Leave\RequestDay;
 use App\Models\Leave\RequestDecision;
+use App\Services\Attendance\FollowUp\FollowUpCases;
 use App\Services\Attendance\Overtime;
 use App\Services\Leave\LeaveBalances;
 use App\Services\Leave\LeaveExplanation;
@@ -36,6 +37,8 @@ class ExportData
 
     public const ENTITLEMENT_COLUMNS = ['employee_code', 'employee_name', 'date', 'entitlement_basis', 'holiday', 'earned', 'used', 'available', 'overdue', 'alert_on'];
 
+    public const CASE_COLUMNS = ['employee_code', 'employee_name', 'date', 'status', 'issue_type', 'minutes', 'request_numbers', 'routes'];
+
     public function __construct(private AttendanceSummary $summary, private LastUpdate $lastUpdate, private LeaveExplanation $explanations, private Overtime $overtime) {}
 
     public function columns(string $kind): array
@@ -46,6 +49,7 @@ class ExportData
             'data_issues' => self::ISSUE_COLUMNS,
             'overtime' => self::OVERTIME_COLUMNS,
             'compensatory_days' => self::ENTITLEMENT_COLUMNS,
+            'follow_up_cases' => self::CASE_COLUMNS,
             default => self::DAY_COLUMNS,
         };
     }
@@ -109,6 +113,11 @@ class ExportData
         }
         if ($export->kind === 'compensatory_days') {
             yield from $this->entitlementRows($filters);
+
+            return;
+        }
+        if ($export->kind === 'follow_up_cases') {
+            yield from $this->caseRows($filters);
 
             return;
         }
@@ -241,7 +250,9 @@ class ExportData
             'annual_balance' => app(LeaveBalances::class)->current($employee),
             'overtime' => $this->overtime->totals($filters),
             'overtime_days' => iterator_to_array($this->overtime->perDay($filters, $employee->id), false),
-            'entitlements' => iterator_to_array($this->overtime->entitlements($filters), false)];
+            'entitlements' => iterator_to_array($this->overtime->entitlements($filters), false),
+            'follow_up_cases' => app(FollowUpCases::class)->forTile($filters, 'open_cases')
+                ->orderBy('work_date')->get()];
     }
 
     private function overtimeRows(ReportFilters $filters): Generator
@@ -321,6 +332,32 @@ class ExportData
         foreach ($this->summary->totals($filters)['issues']['company_wide'] as $type => $count) {
             yield ['employee_code' => '', 'employee_name' => '',
                 'issue_type' => __('messages.attendance_ui.issue_types.'.$type), 'issues' => $count];
+        }
+    }
+
+    private function caseRows(ReportFilters $filters): Generator
+    {
+        $service = app(FollowUpCases::class);
+        $query = $filters->caseState === 'open_cases'
+            ? $service->forTile($filters, 'open_cases')
+            : $service->query($filters, $filters->caseState, $filters->caseIssueType);
+        if ($filters->caseState === 'open_cases' && $filters->caseIssueType !== null) {
+            $query->whereJsonContains('items', ['type' => $filters->caseIssueType]);
+        }
+        foreach ($query->with('employee')->orderBy('id')->lazyById(500) as $case) {
+            $types = array_map(fn (array $item): string => __('messages.follow_up_ui.items.'.$item['type']), $case->items ?? []);
+            $routes = array_map(fn (array $route): string => __('messages.follow_up_ui.routes.'.$route['kind']), $case->routes ?? []);
+
+            yield [
+                'employee_code' => $case->employee?->employee_code ?? '',
+                'employee_name' => $case->employee?->name ?? '',
+                'date' => $case->work_date->toDateString(),
+                'status' => __('messages.follow_up_ui.states.'.$case->state),
+                'issue_type' => implode(', ', $types),
+                'minutes' => array_sum(array_column($case->items ?? [], 'minutes')),
+                'request_numbers' => collect($case->routes ?? [])->pluck('external_id')->filter()->implode(', '),
+                'routes' => implode(', ', $routes),
+            ];
         }
     }
 }

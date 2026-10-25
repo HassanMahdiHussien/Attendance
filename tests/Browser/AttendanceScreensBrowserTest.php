@@ -2,7 +2,11 @@
 
 use App\Enums\UserRole;
 use App\Models\Attendance\Day;
+use App\Models\Attendance\FollowUpCase;
 use App\Models\Attendance\Holiday;
+use App\Models\Attendance\NotificationBatch;
+use App\Models\Attendance\NotificationMessage;
+use App\Models\Attendance\NotificationMessageCase;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\Leave\LeaveRequest;
@@ -52,6 +56,44 @@ test('HR opens the four office attendance pages', function (): void {
         ->assertSee('Security')->assertNoJavaScriptErrors();
     $browser->navigate('/admin/'.$company->id.'/attendance/day?employee='.$employee->id.'&date=2026-10-21')
         ->assertSee('Attendance day')->assertNoJavaScriptErrors();
+});
+
+test('HR opens follow-up cases, notification drafts and approver mappings', function (): void {
+    $company = Company::factory()->create();
+    completeCompanySetup($company);
+    $user = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::HrStaff]);
+    app(TenantContext::class)->runForCompany($company, function () use ($company): void {
+        $employee = Employee::factory()->create(['company_id' => $company->id,
+            'employee_code' => '00000123', 'fallback_notification_email' => 'follow-up@example.test']);
+        $route = ['key' => 'manager', 'kind' => 'manager', 'request_id' => null, 'external_id' => null,
+            'recipient_employee_id' => null, 'recipient_available' => true,
+            'items' => [['type' => 'absence', 'minutes' => 480]]];
+        $case = FollowUpCase::factory()->create(['company_id' => $company->id, 'employee_id' => $employee->id,
+            'routes' => [$route]]);
+        $batch = NotificationBatch::factory()->create(['company_id' => $company->id]);
+        $message = NotificationMessage::factory()->create(['company_id' => $company->id,
+            'batch_id' => $batch->id, 'address' => 'follow-up@example.test']);
+        NotificationMessageCase::factory()->create(['company_id' => $company->id,
+            'message_id' => $message->id, 'case_id' => $case->id,
+            'snapshot' => ['employee_name' => $employee->name, 'employee_code' => $employee->employee_code,
+                'work_date' => $case->work_date->toDateString(), 'items' => $route['items'],
+                'route' => $route, 'address' => 'follow-up@example.test', 'recipient_employee_id' => null]]);
+    });
+    app(TenantContext::class)->clear();
+
+    $browser = visitBound('/login')
+        ->fill('email', $user->email)
+        ->fill('password', 'password')
+        ->press('Log in')
+        ->assertSee('Attendance dashboard');
+    foreach (['follow-up-cases' => 'Follow-up cases', 'notifications' => 'Notification settings',
+        'approver-mappings' => 'Approver mappings'] as $slug => $title) {
+        $browser->navigate('/admin/'.$company->id.'/attendance/'.$slug)
+            ->assertSee($title)->assertNoJavaScriptErrors();
+    }
+    $browser->navigate('/admin/'.$company->id.'/attendance/notifications')
+        ->press('Preview')->assertSee('Attendance follow-up')
+        ->press('Send batch')->assertSee('Sent')->assertNoJavaScriptErrors();
 });
 
 test('HR opens the leave pages', function (): void {

@@ -2,14 +2,17 @@
 
 use App\Exceptions\TenantMismatch;
 use App\Models\AiGenerationLog;
+use App\Models\Attendance\ApproverMapping;
 use App\Models\Attendance\AttendanceExport;
 use App\Models\Attendance\AttendanceExportEvent;
+use App\Models\Attendance\CaseEvent;
 use App\Models\Attendance\CoverageInterval;
 use App\Models\Attendance\DataIssue;
 use App\Models\Attendance\Day;
 use App\Models\Attendance\DayDecision;
 use App\Models\Attendance\Device;
 use App\Models\Attendance\DeviceSetting;
+use App\Models\Attendance\FollowUpCase;
 use App\Models\Attendance\Holiday;
 use App\Models\Attendance\HolidaySource;
 use App\Models\Attendance\HolidayVersion;
@@ -18,6 +21,11 @@ use App\Models\Attendance\ImportBatchEvent;
 use App\Models\Attendance\ImportMapping as AttendanceImportMapping;
 use App\Models\Attendance\ManualPunch;
 use App\Models\Attendance\Meal;
+use App\Models\Attendance\NotificationAttempt;
+use App\Models\Attendance\NotificationBatch;
+use App\Models\Attendance\NotificationMessage;
+use App\Models\Attendance\NotificationMessageCase;
+use App\Models\Attendance\NotificationRoute;
 use App\Models\Attendance\Person;
 use App\Models\Attendance\Policy;
 use App\Models\Attendance\ProcessingRun;
@@ -54,6 +62,7 @@ use App\Models\User;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 test('every kept composite tenant foreign key rejects another company through models and raw SQL', function (): void {
@@ -86,6 +95,14 @@ test('every kept composite tenant foreign key rejects another company through mo
         'attendance_holiday_versions' => HolidayVersion::class,
         'attendance_exports' => AttendanceExport::class,
         'attendance_export_events' => AttendanceExportEvent::class,
+        'attendance_cases' => FollowUpCase::class,
+        'attendance_case_events' => CaseEvent::class,
+        'attendance_approver_mappings' => ApproverMapping::class,
+        'attendance_notification_batches' => NotificationBatch::class,
+        'attendance_notification_messages' => NotificationMessage::class,
+        'attendance_notification_routes' => NotificationRoute::class,
+        'attendance_notification_message_cases' => NotificationMessageCase::class,
+        'attendance_notification_attempts' => NotificationAttempt::class,
         'leave_import_batches' => LeaveImportBatch::class,
         'leave_balance_batches' => LeaveBalanceBatch::class,
         'leave_balance_batch_events' => LeaveBalanceBatchEvent::class,
@@ -173,6 +190,24 @@ test('every kept composite tenant foreign key rejects another company through mo
         }
         if (isset($attributes['balance_date']) && $key->source_table === 'leave_balance_batches') {
             $attributes['balance_date'] = '2001-01-01';
+        }
+        if ($key->source_table === 'attendance_cases' && $key->foreign_column === 'day_id') {
+            $attributes['work_date'] = '2001-01-01';
+        }
+        if (isset($attributes['approver_key'])) {
+            $attributes['approver_key'] = 'cross-'.$key->foreign_column.'-'.$target->id;
+        }
+        if (isset($attributes['uuid'])) {
+            $attributes['uuid'] = (string) Str::uuid();
+        }
+        if (isset($attributes['address'])) {
+            $attributes['address'] = 'cross-'.$target->id.'@example.test';
+        }
+        if (isset($attributes['route_key'])) {
+            $attributes['route_key'] = 'cross-'.$key->foreign_column.'-'.$target->id;
+        }
+        if (isset($attributes['run_key'])) {
+            $attributes['run_key'] = 'cross-'.$key->foreign_column.'-'.$target->id;
         }
         foreach (['row_number', 'sequence', 'version'] as $unique) {
             if (isset($attributes[$unique])) {

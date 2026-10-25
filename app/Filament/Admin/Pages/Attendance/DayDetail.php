@@ -6,8 +6,10 @@ use App\Filament\Admin\Pages\Attendance\Concerns\ReviewsDays;
 use App\Filament\Admin\Resources\Attendance\AttendancePage;
 use App\Models\Attendance\Day;
 use App\Models\Attendance\DayDecision;
+use App\Models\Attendance\FollowUpCase;
 use App\Models\Attendance\ManualPunch;
 use App\Models\Employee;
+use App\Services\Attendance\FollowUp\FollowUpCases;
 use App\Services\Attendance\HolidayLabels;
 use App\Services\Attendance\Overtime;
 use App\Services\Attendance\Reporting\ReportFilters;
@@ -64,6 +66,11 @@ class DayDetail extends AttendancePage
         return Day::query()->with(['branch', 'policy'])->where('company_id', $this->company()->id)
             ->where('employee_id', $this->employeeId)->whereDate('work_date', $this->date)
             ->whereNull('superseded_by_run_id')->firstOrFail();
+    }
+
+    public function followUpCase(): ?FollowUpCase
+    {
+        return app(FollowUpCases::class)->forDay($this->employee(), $this->date);
     }
 
     public function holidayNames(): array

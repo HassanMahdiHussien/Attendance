@@ -1,6 +1,7 @@
 <?php
 
 use App\Jobs\Attendance\AssessDaysJob;
+use App\Jobs\Leave\ReconcileLeaveJob;
 use App\Models\Attendance\Day;
 use App\Models\Attendance\Policy;
 use App\Models\Company;
@@ -40,7 +41,7 @@ test('policy replacements preserve each effective date and all unrelated values'
 });
 
 test('reassess-all queues each company with days without touching policy history', function (): void {
-    Queue::fake([AssessDaysJob::class]);
+    Queue::fake([AssessDaysJob::class, ReconcileLeaveJob::class]);
     $company = Company::factory()->create();
     app(TenantContext::class)->runForCompany($company, function (): void {
         Day::factory()->create(['work_date' => '2026-10-19']);
@@ -52,4 +53,5 @@ test('reassess-all queues each company with days without touching policy history
     $jobs = Queue::pushed(AssessDaysJob::class);
     expect($jobs)->toHaveCount(1)
         ->and($jobs[0]->scope['from'])->toBe('2026-10-19');
+    expect(Queue::pushed(ReconcileLeaveJob::class))->toHaveCount(1);
 });
