@@ -77,3 +77,21 @@ no encrypted volume, no off-site backup).
   the demo login password is `SEED_DEFAULT_PASSWORD` in that file.
 - The app trusts forwarded headers only from `127.0.0.1`/`::1` (the tunnel), so links are `https://` behind the
   tunnel while a server facing the internet directly cannot be spoofed.
+
+## Attendance demo (`att.hasnmahdi.com`, same laptop, fake data only)
+
+Attendance runs on the demo laptop beside the Displanary demo, with invented employees, punches and leave from
+`AttendanceDemoSeeder`. Real sample files and real employee data never go there (home power and internet, no
+encrypted volume, no off-site backup). It needs no root: it reuses the PHP, MySQL and Composer that
+`dev-setup.sh` installed and the Displanary demo's MySQL account (database `testing_att_demo`, which that
+account's `testing%` grant covers), and runs as user-level systemd services `att-web` (127.0.0.1:8090),
+`att-queue` and `att-scheduler`.
+
+- One-time, in the Cloudflare Zero Trust dashboard: on the existing tunnel add the public hostname
+  `att.hasnmahdi.com` with service `HTTP` → `localhost:8090`.
+- Deploy or update from WSL: `bash deploy/att-demo-deploy.sh home@<laptop-ip>` (`ATT_REF=<branch>` for another
+  ref, `ATT_RESEED=1` to wipe and reseed so the demo period ends yesterday again). The first run writes
+  `~/attendance/.env` with a new random `SEED_DEFAULT_PASSWORD`, the password of `hr@example.test` and the other
+  demo accounts.
+- Without lingering, the services stop when the laptop user logs out or the laptop reboots. To keep them running,
+  the laptop owner runs once: `sudo loginctl enable-linger home`.
