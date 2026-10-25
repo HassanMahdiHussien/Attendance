@@ -6,7 +6,7 @@
                 <div><h2 class="text-lg font-bold">{{ $this->employee()->name }} <bdi class="font-mono text-sm" dir="ltr">{{ $this->employee()->employee_code }}</bdi></h2><p><bdi dir="ltr">{{ $day->work_date->toDateString() }}</bdi> · {{ $day->branch?->name ?? '—' }}</p></div>
                 <x-ui.badge :tone="match ($day->status) { 'present' => 'green', 'absent', 'device_outage' => 'red', 'missing_punch', 'pending' => 'amber', default => 'gray' }">{{ __('messages.office_ui.statuses.'.$day->status) }}</x-ui.badge>
             </div>
-            <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div class="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
                 @if (in_array($day->inputs['work_pattern'] ?? null, ['shift', 'security'], true))
                     <div><span class="text-sm text-gray-600">{{ __('messages.office_ui.shift') }}</span><strong class="block font-mono" dir="ltr">{{ \App\Services\Attendance\ShiftDisplay::hours($day->shift_start, $day->policy?->shift_minutes) ?? '—' }}</strong></div>
                     <div><span class="text-sm text-gray-600">{{ __('messages.office_ui.shift_source') }}</span><strong class="block">{{ __('messages.office_ui.shift_sources.'.($day->shift_source ?? 'unknown')) }}</strong></div>
@@ -49,11 +49,11 @@
         <x-ui.card :title="__('messages.office_ui.rule_inputs')">
             <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 @foreach (['policy_version', 'work_pattern', 'hire_date', 'exit_status', 'last_working_day', 'branch_id', 'schedule_start', 'schedule_end', 'rest_days', 'reason'] as $field)
-                    @if (array_key_exists($field, $day->inputs ?? []))<div><span class="text-sm text-gray-600">{{ __('messages.office_ui.inputs.'.$field) }}</span><strong class="block break-all font-mono text-sm" dir="ltr">{{ $this->displayValue($day->inputs[$field]) }}</strong></div>@endif
+                    @if (array_key_exists($field, $day->inputs ?? []))<div><span class="text-sm text-gray-600">{{ __('messages.office_ui.inputs.'.$field) }}</span><strong class="block break-words font-mono text-sm" dir="auto">{{ $this->displayValue($day->inputs[$field], $field) }}</strong></div>@endif
                 @endforeach
                 @if ($day->policy)<div><span class="text-sm text-gray-600">{{ __('messages.office_ui.policy_fields.office_start') }}</span><strong class="block font-mono" dir="ltr">{{ $day->policy->office_start }}</strong></div>
                     @foreach (['flex_minutes', 'workday_minutes', 'min_presence_minutes', 'absence_minutes', 'close_grace_minutes', 'exits_count_toward_balance', 'office_rest_days', 'shift_starts', 'shift_minutes', 'shift_break_minutes', 'shift_min_presence_minutes', 'shift_rest_days', 'security_min_presence_minutes', 'inference_tolerance_minutes', 'overtime_min_minutes', 'overtime_step_minutes', 'rest_day_half_minutes', 'rest_day_full_minutes', 'compensatory_rest_days'] as $field)
-                        <div><span class="text-sm text-gray-600">{{ __('messages.office_ui.policy_fields.'.$field) }}</span><strong class="block font-mono" dir="ltr">{{ $this->displayValue($day->policy->{$field}) }}</strong></div>
+                        <div><span class="text-sm text-gray-600">{{ __('messages.office_ui.policy_fields.'.$field) }}</span><strong class="block break-words font-mono" dir="auto">{{ $this->displayValue($day->policy->{$field}, $field) }}</strong></div>
                     @endforeach
                 @endif
             </div>
@@ -95,7 +95,7 @@
             @foreach ($this->versions() as $version)
                 <div class="border-b py-3" wire:key="office-version-{{ $version->id }}"><strong><bdi dir="ltr">#{{ $version->run_id }}</bdi> · {{ $this->triggerLabel($version->run?->trigger_source) }} · <bdi dir="ltr">{{ $version->created_at?->format('Y-m-d H:i') }}</bdi></strong>
                     @forelse ($version->changes ?? [] as $field => $change)
-                        <p class="text-sm">{{ __('messages.office_ui.change_fields.'.$field) }}: <bdi dir="{{ $field === 'status' ? 'auto' : 'ltr' }}">{{ $this->changeValue($field, $change['before'] ?? null) }}</bdi> → <bdi dir="{{ $field === 'status' ? 'auto' : 'ltr' }}">{{ $this->changeValue($field, $change['after'] ?? null) }}</bdi></p>
+                        <p class="text-sm break-words">{{ __('messages.office_ui.change_fields.'.$field) }}: <bdi dir="{{ $this->changeDir($field) }}">{{ $this->changeValue($field, $change['before'] ?? null) }}</bdi> {{ $this->changeArrow() }} <bdi dir="{{ $this->changeDir($field) }}">{{ $this->changeValue($field, $change['after'] ?? null) }}</bdi></p>
                     @empty <p>—</p> @endforelse
                 </div>
             @endforeach

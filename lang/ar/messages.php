@@ -303,7 +303,7 @@ return [
         'inputs' => [
             'policy_version' => 'إصدار السياسة', 'work_pattern' => 'نمط العمل',
             'hire_date' => 'تاريخ التعيين', 'exit_status' => 'حالة المغادرة', 'last_working_day' => 'آخر يوم عمل',
-            'branch_id' => 'رقم الفرع', 'schedule_start' => 'بداية الجدول',
+            'branch_id' => 'الفرع', 'schedule_start' => 'بداية الجدول',
             'schedule_end' => 'نهاية الجدول', 'rest_days' => 'أيام الراحة', 'reason' => 'سبب الحالة',
         ],
         'change_fields' => [
@@ -332,6 +332,7 @@ return [
             'pending' => 'إعادة التقييم المجدولة', 'unknown' => 'تقييم الحضور',
         ],
         'weekdays' => [1 => 'الإثنين', 2 => 'الثلاثاء', 3 => 'الأربعاء', 4 => 'الخميس', 5 => 'الجمعة', 6 => 'السبت', 7 => 'الأحد'],
+        'exit_statuses' => ['none' => 'على رأس العمل', 'pending_review' => 'ترك العمل بانتظار المراجعة', 'confirmed' => 'ترك العمل مؤكد'],
     ],
     'office_attendance' => [
         'reassess_command' => 'إعادة تقييم أيام الحضور المعلقة بعد وقت إغلاقها.',

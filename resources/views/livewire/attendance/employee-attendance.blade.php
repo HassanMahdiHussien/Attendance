@@ -38,11 +38,11 @@
         @error('export') <p class="text-red-700">{{ $message }}</p> @enderror
     </x-ui.card>
 
-    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
         @foreach ($tiles as $key => $value)
-            <button type="button" wire:click="showTile(@js($key))" class="rounded-2xl border border-gray-200 bg-white p-4 text-start hover:border-primary focus-visible:outline-2 focus-visible:outline-primary">
+            <button type="button" wire:click="showTile(@js($key))" class="rounded-2xl border border-gray-200 bg-white p-3 sm:p-4 text-start hover:border-primary focus-visible:outline-2 focus-visible:outline-primary">
                 <span class="block text-sm text-gray-500">{{ \App\Services\Attendance\Reporting\ReportTiles::label($key) }}</span>
-                <strong class="mt-1 block font-mono text-xl text-ink" dir="ltr">{{ \App\Services\Attendance\Reporting\ReportTiles::isMinutes($key) ? sprintf('%d:%02d', intdiv($value, 60), $value % 60) : (\App\Services\Attendance\Reporting\ReportTiles::isDays($key) ? number_format($value, 1) : \App\Support\Format\Ui::number($value)) }}</strong>
+                <strong class="mt-1 block font-mono text-xl text-ink"><bdi dir="ltr">{{ \App\Services\Attendance\Reporting\ReportTiles::isMinutes($key) ? sprintf('%d:%02d', intdiv($value, 60), $value % 60) : (\App\Services\Attendance\Reporting\ReportTiles::isDays($key) ? number_format($value, 1) : \App\Support\Format\Ui::number($value)) }}</bdi></strong>
             </button>
         @endforeach
     </div>

@@ -303,7 +303,7 @@ return [
         'inputs' => [
             'policy_version' => 'Policy version', 'work_pattern' => 'Work pattern',
             'hire_date' => 'Hire date', 'exit_status' => 'Exit status', 'last_working_day' => 'Last working day',
-            'branch_id' => 'Branch ID', 'schedule_start' => 'Schedule start',
+            'branch_id' => 'Branch', 'schedule_start' => 'Schedule start',
             'schedule_end' => 'Schedule end', 'rest_days' => 'Rest days', 'reason' => 'Status reason',
         ],
         'change_fields' => [
@@ -332,6 +332,7 @@ return [
             'pending' => 'Scheduled reassessment', 'unknown' => 'Assessment',
         ],
         'weekdays' => [1 => 'Monday', 2 => 'Tuesday', 3 => 'Wednesday', 4 => 'Thursday', 5 => 'Friday', 6 => 'Saturday', 7 => 'Sunday'],
+        'exit_statuses' => ['none' => 'Employed', 'pending_review' => 'Exit awaiting review', 'confirmed' => 'Exit confirmed'],
     ],
     'office_attendance' => [
         'reassess_command' => 'Reassess pending attendance days after their close time.',

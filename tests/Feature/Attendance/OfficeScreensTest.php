@@ -102,6 +102,22 @@ test('day detail uses the same reviewed action and shows an earlier result', fun
     expect(DayDecision::query()->where('employee_id', $this->employee->id)->count())->toBe(1);
 });
 
+test('day detail shows rule inputs and recalculation changes in words, not raw data', function (): void {
+    $this->branch->forceFill(['name' => 'Hilla'])->save();
+    $inputs = ['policy_version' => 1, 'work_pattern' => 'office', 'branch_id' => $this->branch->id,
+        'rest_days' => [5, 6], 'exit_status' => 'none'];
+    $this->day->update(['inputs' => $inputs, 'changes' => [
+        'inputs' => ['before' => null, 'after' => $inputs],
+        'late_minutes' => ['before' => null, 'after' => 65],
+        'intervals' => ['before' => [], 'after' => [['from' => '2026-10-21 09:05:00', 'to' => '2026-10-21 17:29:00']]],
+    ]]);
+    Livewire::withQueryParams(['employee' => (string) $this->employee->id, 'date' => '2026-10-21'])
+        ->test(DayDetail::class)
+        ->assertSee('Rest days: Friday, Saturday')->assertSee('Branch: Hilla')->assertSee('Work pattern: Office')
+        ->assertSee('1:05')->assertSee('09:05–17:29')->assertSee('Employed')
+        ->assertDontSee('"branch_id"')->assertDontSee('[5,6]')->assertDontSee('"from"');
+});
+
 test('office day times remain left to right in the Arabic interface', function (): void {
     $this->day->update(['first_in' => '2026-10-21 08:30:00', 'last_out' => '2026-10-21 17:30:00']);
     app()->setLocale('ar');

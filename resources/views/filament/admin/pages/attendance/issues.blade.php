@@ -1,8 +1,8 @@
 <x-filament-panels::page>
     <div class="space-y-4">
         <section class="flex flex-wrap gap-4 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-            <label>{{ __('messages.attendance_ui.type') }} <select wire:model.live="type" class="rounded-xl border border-gray-200 p-2"><option value="">{{ __('messages.attendance_ui.all') }}</option>@foreach (['unknown_person', 'device_pending', 'import_row_error', 'pattern_review'] as $type)<option value="{{ $type }}">{{ __('messages.attendance_import.issue_types.'.$type) }}</option>@endforeach</select></label>
-            <label>{{ __('messages.attendance_ui.state') }} <select wire:model.live="status" class="rounded-xl border border-gray-200 p-2"><option value="">{{ __('messages.attendance_ui.all') }}</option>@foreach (['open', 'resolved', 'dismissed'] as $state)<option value="{{ $state }}">{{ __('messages.attendance_ui.issue_states.'.$state) }}</option>@endforeach</select></label>
+            <label class="min-w-0 max-w-full">{{ __('messages.attendance_ui.type') }} <select wire:model.live="type" class="block w-full max-w-full rounded-xl border border-gray-200 p-2 sm:w-auto"><option value="">{{ __('messages.attendance_ui.all') }}</option>@foreach (['unknown_person', 'device_pending', 'import_row_error', 'pattern_review'] as $type)<option value="{{ $type }}">{{ __('messages.attendance_import.issue_types.'.$type) }}</option>@endforeach</select></label>
+            <label class="min-w-0 max-w-full">{{ __('messages.attendance_ui.state') }} <select wire:model.live="status" class="block w-full max-w-full rounded-xl border border-gray-200 p-2 sm:w-auto"><option value="">{{ __('messages.attendance_ui.all') }}</option>@foreach (['open', 'resolved', 'dismissed'] as $state)<option value="{{ $state }}">{{ __('messages.attendance_ui.issue_states.'.$state) }}</option>@endforeach</select></label>
         </section>
         <section class="space-y-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
             @foreach ($this->issues() as $issue)

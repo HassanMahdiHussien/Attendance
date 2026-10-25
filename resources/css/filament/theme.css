@@ -6,6 +6,8 @@
 @source '../../views/layouts/partials/workspace-navigation.blade.php';
 @source '../../views/components/ui/brand.blade.php';
 @source '../../views/components/ui/icon.blade.php';
+@source '../../views/components/ui/card.blade.php';
+@source '../../views/components/ui/badge.blade.php';
 @source '../../views/livewire/global-search.blade.php';
 
 /* Departures world, matching the workspace (resources/css/app.css): midnight top bar, light working ground,
@@ -24,6 +26,12 @@
     --color-signal-dark: #DE9A1A;
     --color-primary: #1D3A63;
     --color-primary-light: #E6ECF5;
+    --color-signal-light: #FDF3DD;
+    --color-amber: #9A6400;
+    --color-red: #C2272D;
+    --color-red-light: #FDECEC;
+    --color-green: #1F7A58;
+    --color-green-light: #E4F4EC;
 }
 
 [x-cloak] { display: none !important; }
@@ -31,6 +39,14 @@
 .fi-layout { padding-bottom: 5rem; }
 .fi-body .ui-control { min-height: 2.5rem; border: 1px solid var(--color-line); border-radius: .5rem; background: #fff; color: var(--color-ink); }
 @media (min-width: 1280px) { .fi-layout { padding-bottom: 0; } }
+/* Admin pages reuse the workspace <x-ui.card> and <x-ui.badge>; their styles live in app.css, which panels do not load. */
+.ui-card { min-width: 0; background: #fff; border: 1px solid var(--color-line); border-radius: .75rem; box-shadow: 0 1px 2px rgb(14 26 43 / .05); }
+.ui-badge { display: inline-flex; align-items: center; gap: .25rem; border-radius: .375rem; padding: .125rem .5rem; font-size: .75rem; font-weight: 600; line-height: 1.25; }
+.ui-badge-red { background: var(--color-red-light); color: var(--color-red); }
+.ui-badge-amber { background: var(--color-signal-light); color: var(--color-amber); }
+.ui-badge-green { background: var(--color-green-light); color: var(--color-green); }
+.ui-badge-indigo { background: var(--color-primary-light); color: var(--color-primary); }
+.ui-badge-gray { background: #f3f4f6; color: #374151; }
 
 :root {
     --dp-night: #0E1A2B;
