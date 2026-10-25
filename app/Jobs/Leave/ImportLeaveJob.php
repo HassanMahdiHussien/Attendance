@@ -116,8 +116,23 @@ class ImportLeaveJob implements ShouldBeUnique, ShouldQueue
             )));
             $employees = Employee::query()->where('company_id', $company->id)->whereIn('employee_code', $codes)
                 ->pluck('id', 'employee_code');
+            // Load what the chunk needs up front; one query per row made a 21k-row report take minutes.
+            $stored = ImportRow::query()->where('batch_id', $batch->id)
+                ->whereIn('row_number', array_column($chunk, 'number'))->pluck('row_number')->flip();
+            $externalIds = array_values(array_unique(array_filter(array_map(
+                fn (array $row): string => $row['values']['external_id'], $chunk), fn (string $id): bool => $id !== '')));
+            $requests = LeaveRequest::query()->with('currentVersion')->where('company_id', $company->id)
+                ->where('source', 'company_report')->whereIn('external_id', $externalIds)
+                ->orderBy('id')->lockForUpdate()->get()->keyBy('external_id');
+            $inBatch = ImportRow::query()->where('batch_id', $batch->id)->whereIn('request_id', $requests->pluck('id'))
+                ->distinct()->pluck('request_id')->flip()->all();
+            $missing = DataIssue::query()->where('company_id', $company->id)->where('type', 'leave_request_missing')
+                ->whereIn('open_key', $requests->pluck('id')->map(fn (int $id): string => 'leave_request_missing|leave_request|request:'.$id))
+                ->pluck('subject_key')->mapWithKeys(fn (string $key): array => [(int) substr($key, 8) => true])->all();
+            $typeIds = [];
+            $rows = [];
             foreach ($chunk as $row) {
-                if (ImportRow::query()->where('batch_id', $batch->id)->where('row_number', $row['number'])->exists()) {
+                if ($stored->has($row['number'])) {
                     continue;
                 }
                 $values = $row['values'];
@@ -125,9 +140,7 @@ class ImportLeaveJob implements ShouldBeUnique, ShouldQueue
                 $errors = $row['errors'];
                 if ($values['external_id'] !== '' && $values['owner_code'] !== '' && mb_strlen($values['external_id']) <= 255
                     && mb_strlen($values['owner_code']) <= 255) {
-                    $request = LeaveRequest::query()->where('company_id', $company->id)
-                        ->where('source', 'company_report')->where('external_id', $values['external_id'])
-                        ->lockForUpdate()->first();
+                    $request = $requests->get($values['external_id']);
                     if ($request === null) {
                         $request = LeaveRequest::create([
                             'company_id' => $company->id, 'source' => 'company_report',
@@ -135,12 +148,15 @@ class ImportLeaveJob implements ShouldBeUnique, ShouldQueue
                             'employee_id' => $employees->get($values['owner_code']), 'status' => $values['status'],
                             'raw_status' => $values['raw_status'], 'flags' => [],
                         ]);
+                        $requests->put($values['external_id'], $request);
                     }
-                    $firstInBatch = ! ImportRow::query()->where('batch_id', $batch->id)
-                        ->where('request_id', $request->id)->exists();
+                    $firstInBatch = ! isset($inBatch[$request->id]);
+                    $inBatch[$request->id] = true;
                     if ($firstInBatch) {
                         $previousOwnerCode = $request->owner_code;
-                        $type = $values['type_name'] === '' ? null : $types->findOrSeed($company, $values['type_name'], $values['other_type_name']);
+                        $typeKey = $values['type_name']."\0".$values['other_type_name'];
+                        $type = $values['type_name'] === '' ? null
+                            : ($typeIds[$typeKey] ??= $types->findOrSeed($company, $values['type_name'], $values['other_type_name']));
                         $employeeId = $employees->get($values['owner_code']);
                         if ($employeeId === null) {
                             $errors[] = 'unknown_employee';
@@ -167,20 +183,22 @@ class ImportLeaveJob implements ShouldBeUnique, ShouldQueue
                         if ($previousOwnerCode !== $request->owner_code) {
                             $previousOwnerCodes[$previousOwnerCode] = true;
                         }
-                        $this->resolveReappearance($company, $request, $batch);
+                        if (isset($missing[$request->id])) {
+                            $this->resolveReappearance($company, $request, $batch);
+                        }
                     } else {
                         $errors[] = 'duplicate_in_file';
                     }
                 } else {
                     $errors[] = 'missing_identity';
                 }
-                DB::table('leave_import_rows')->insertOrIgnore([
+                $rows[] = [
                     'company_id' => $company->id, 'batch_id' => $batch->id,
                     'request_id' => $request?->id, 'row_number' => $row['number'],
                     'raw_values' => json_encode($row['raw'], JSON_THROW_ON_ERROR),
                     'errors' => json_encode(array_values(array_unique($errors)), JSON_THROW_ON_ERROR),
                     'created_at' => now(),
-                ]);
+                ];
                 $rowIssue = $request === null;
                 foreach ($errors as $code) {
                     $rowIssue = $rowIssue || $code === 'column_count'
@@ -189,6 +207,9 @@ class ImportLeaveJob implements ShouldBeUnique, ShouldQueue
                 if ($rowIssue && $errors !== []) {
                     $issues->open($company, 'leave_import_row_error', 'batch_row', $batch->id.':'.$row['number'], details: ['codes' => $errors]);
                 }
+            }
+            foreach (array_chunk($rows, 500) as $insert) {
+                DB::table('leave_import_rows')->insertOrIgnore($insert);
             }
             foreach (array_keys($previousOwnerCodes) as $code) {
                 app(UnknownEmployeeIssues::class)->refresh($company, $code);

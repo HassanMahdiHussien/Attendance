@@ -38,6 +38,9 @@ class Reconciler
         private CaseSync $cases,
     ) {}
 
+    /** Open request-level issue keys of the employee being replayed, loaded once per replay. */
+    private array $openRequestIssues = [];
+
     public function run(Company $company, array $employeeIds, string $trigger, ?string $from = null, ?string $to = null): ProcessingRun
     {
         abort_unless(app(TenantContext::class)->companyId() === $company->id, 403);
@@ -83,6 +86,11 @@ class Reconciler
     {
         $requests = LeaveRequest::query()->where('company_id', $company->id)->where('employee_id', $employee->id)
             ->with('leaveType')->orderBy('id')->get();
+        $this->openRequestIssues = DataIssue::query()->where('company_id', $company->id)
+            ->whereIn('open_key', $requests->flatMap(fn (LeaveRequest $request): array => array_map(
+                fn (string $type): string => $type.'|leave_request|request:'.$request->id,
+                ['leave_counted_holiday', 'leave_duration_mismatch', 'leave_rest_day_missing', 'leave_entitlement_exceeded'],
+            ))->all())->pluck('open_key')->flip()->all();
         $versions = EmployeeVersion::query()->where('company_id', $company->id)->where('employee_id', $employee->id)
             ->orderBy('effective_from')->orderBy('id')->get()
             ->map(fn (EmployeeVersion $version): array => [
@@ -188,7 +196,8 @@ class Reconciler
             if ($distribution['flag'] === 'duration_mismatch') {
                 $this->issues->open($company, 'leave_duration_mismatch', 'leave_request', 'request:'.$request->id);
             } else {
-                $mismatch = DataIssue::query()->where('company_id', $company->id)->where('open_key', $mismatchKey)->first();
+                $mismatch = isset($this->openRequestIssues[$mismatchKey])
+                    ? DataIssue::query()->where('company_id', $company->id)->where('open_key', $mismatchKey)->first() : null;
                 if ($mismatch !== null) {
                     $mismatch->update(['status' => 'resolved', 'open_key' => null,
                         'note' => __('messages.leave_reconciliation.distribution_resolved'), 'resolved_at' => now()]);
@@ -199,7 +208,8 @@ class Reconciler
             if ($distribution['flag'] === 'rest_day_missing') {
                 $this->issues->open($company, 'leave_rest_day_missing', 'leave_request', 'request:'.$request->id);
             } else {
-                $restIssue = DataIssue::query()->where('company_id', $company->id)->where('open_key', $restKey)->first();
+                $restIssue = isset($this->openRequestIssues[$restKey])
+                    ? DataIssue::query()->where('company_id', $company->id)->where('open_key', $restKey)->first() : null;
                 if ($restIssue !== null) {
                     $restIssue->update(['status' => 'resolved', 'open_key' => null,
                         'note' => __('messages.leave_reconciliation.distribution_resolved'), 'resolved_at' => now()]);
@@ -396,7 +406,8 @@ class Reconciler
         if ($counted) {
             $this->issues->open($company, 'leave_counted_holiday', 'leave_request', 'request:'.$request->id);
         } else {
-            $issue = DataIssue::query()->where('company_id', $company->id)->where('open_key', $key)->first();
+            $issue = isset($this->openRequestIssues[$key])
+                ? DataIssue::query()->where('company_id', $company->id)->where('open_key', $key)->first() : null;
             if ($issue !== null) {
                 $issue->update(['status' => 'resolved', 'open_key' => null,
                     'note' => __('messages.leave_reconciliation.distribution_resolved'), 'resolved_at' => now()]);
@@ -425,7 +436,8 @@ class Reconciler
         if ($exceeded) {
             $this->issues->open($company, 'leave_entitlement_exceeded', 'leave_request', 'request:'.$request->id);
         } else {
-            $issue = DataIssue::query()->where('company_id', $company->id)->where('open_key', $key)->first();
+            $issue = isset($this->openRequestIssues[$key])
+                ? DataIssue::query()->where('company_id', $company->id)->where('open_key', $key)->first() : null;
             if ($issue !== null) {
                 $issue->update(['status' => 'resolved', 'open_key' => null,
                     'note' => __('messages.leave_reconciliation.entitlement_resolved'), 'resolved_at' => now()]);
