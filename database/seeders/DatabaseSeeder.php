@@ -17,6 +17,10 @@ class DatabaseSeeder extends Seeder
                     LocalUsersSeeder::class,
                 ]);
             });
+            // The foundation seed test checks the original 12-person pilot separately.
+            if (! app()->runningUnitTests() || config('attendance.seed_demo_in_tests', false)) {
+                $this->call(AttendanceDemoSeeder::class);
+            }
         });
     }
 }
