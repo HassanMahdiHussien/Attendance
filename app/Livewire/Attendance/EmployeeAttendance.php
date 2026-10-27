@@ -19,6 +19,7 @@ use App\Services\Attendance\Reporting\AttendanceSummary;
 use App\Services\Attendance\Reporting\LastUpdate;
 use App\Services\Attendance\Reporting\ReportFilters;
 use App\Services\Attendance\Reporting\ReportTiles;
+use App\Services\Employees\EmployeeHistory;
 use App\Services\Leave\DayReconciliation;
 use App\Support\Tenancy\TenantContext;
 use Carbon\CarbonImmutable;
@@ -172,6 +173,8 @@ class EmployeeAttendance extends Component
 
             $changes = $this->tab === 'changes' ? $employee->versions()->with('actor')->orderByDesc('effective_from')
                 ->orderByDesc('id')->get() : collect();
+            $changes = $changes->map(fn ($version): array => ['version' => $version, 'fields' => EmployeeHistory::visibleFields($version)])
+                ->filter(fn (array $entry): bool => $entry['fields'] !== []);
             $issueIds = $this->tab === 'issues' ? $summary->issueIds($filters, $employee->id) : [];
             $issues = $issueIds === [] ? collect() : DataIssue::query()->whereIn('id', $issueIds)->orderByDesc('id')->get();
             if (str_starts_with($this->selectedTile, 'issue_type:')) {

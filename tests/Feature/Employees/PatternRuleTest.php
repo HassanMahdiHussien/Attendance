@@ -114,7 +114,7 @@ test('employee profile and edit form show a rule-set pattern with its open revie
     Livewire::test(EditEmployee::class, ['record' => $employee->id])
         ->assertSee('Set by rule')->assertSee('Review work pattern issue');
     Livewire::withQueryParams(['type' => 'pattern_review', 'subjectKey' => 'employee:'.$employee->id])
-        ->test(AttendanceIssues::class)->assertSee('employee:'.$employee->id);
+        ->test(AttendanceIssues::class)->assertSee($employee->name)->assertSee($employee->employee_code);
 });
 
 test('a rule-set pattern covers the whole employment so earlier punches are assessed', function (): void {

@@ -38,8 +38,9 @@ beforeEach(function (): void {
     app(TenantContext::class)->setCompany($this->company);
     $this->hr = User::factory()->create(['company_id' => $this->company->id, 'primary_role' => UserRole::HrStaff]);
     $this->otherHr = User::factory()->create(['company_id' => $this->company->id, 'primary_role' => UserRole::HrStaff]);
+    // A fixed hire date: the factory's default (today) would start the history after the 2026-10-25 test changes.
     $this->employee = Employee::factory()->create(['company_id' => $this->company->id, 'employee_code' => '00012345',
-        'schedule_start' => '08:00:00', 'schedule_end' => '17:00:00', 'work_pattern' => 'office', 'rest_days' => [5, 6]]);
+        'hire_date' => '2026-01-01', 'schedule_start' => '08:00:00', 'schedule_end' => '17:00:00', 'work_pattern' => 'office', 'rest_days' => [5, 6]]);
     app(EmployeeHistory::class)->record($this->employee, ['schedule_start' => '08:00', 'schedule_end' => '17:00',
         'rest_days' => [5, 6], 'work_pattern' => 'office'], '2026-10-01', 'initial', $this->hr);
     $this->actingAs($this->hr);
