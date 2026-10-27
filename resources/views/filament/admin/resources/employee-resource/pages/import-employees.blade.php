@@ -4,7 +4,7 @@
             <h2 class="font-bold">{{ __('messages.employee_import_ui.upload') }}</h2>
             <a class="ui-link" href="{{ \App\Filament\Admin\Pages\Leave\UploadLeaveBalance::getUrl(panel: 'admin', tenant: \Filament\Facades\Filament::getTenant()) }}">{{ __('messages.leave_balance_ui.upload') }}</a>
             <p>{{ __('messages.employee_import_ui.instructions') }}</p>
-            <a class="underline text-primary-600" href="{{ route('employees.import.template', ['company' => \Filament\Facades\Filament::getTenant()->id]) }}">{{ __('Download CSV template') }}</a>
+            <a class="underline text-primary-700" href="{{ route('employees.import.template', ['company' => \Filament\Facades\Filament::getTenant()->id]) }}">{{ __('Download CSV template') }}</a>
             <form wire:submit="prepareMapping" class="space-y-3">
                 <input type="file" name="sourceFile" wire:model="sourceFile" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" class="block w-full rounded-xl border border-gray-200 bg-white p-2">
                 @error('sourceFile') <p class="text-red-600">{{ $message }}</p> @enderror

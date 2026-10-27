@@ -43,7 +43,7 @@
             </div>
             <label class="text-sm">{{ __('messages.reporting_ui.work_pattern') }} <select wire:model="workPattern" class="ui-control block w-full rounded-xl border border-gray-200 px-3 py-2"><option value="">{{ __('messages.reporting_ui.all') }}</option>@foreach (['office', 'shift', 'security'] as $pattern)<option value="{{ $pattern }}">{{ __('messages.reporting_ui.patterns.'.$pattern) }}</option>@endforeach</select></label>
             <label class="text-sm">{{ __('messages.reporting_ui.status') }} <select wire:model="status" class="ui-control block w-full rounded-xl border border-gray-200 px-3 py-2"><option value="">{{ __('messages.reporting_ui.all') }}</option>@foreach (\App\Services\Attendance\Reporting\ReportFilters::STATUSES as $choice)<option value="{{ $choice }}">{{ __('messages.office_ui.statuses.'.$choice) }}</option>@endforeach</select></label>
-            <button type="submit" class="ui-link text-start">{{ __('messages.reporting_ui.apply') }}</button>
+            <button type="submit" class="ui-button ui-button-primary">{{ __('messages.reporting_ui.apply') }}</button>
         </form>
         @error('period') <p class="text-red-700">{{ $message }}</p> @enderror
     </x-ui.card>
@@ -63,7 +63,7 @@
                     <option value="en">{{ __('messages.export_ui.english') }}</option><option value="ar">{{ __('messages.export_ui.arabic') }}</option>
                 </select>
             </label>
-            <button type="submit" class="ui-link">{{ __('messages.export_ui.create') }}</button>
+            <button type="submit" class="ui-button ui-button-secondary">{{ __('messages.export_ui.create') }}</button>
             <a class="ui-link" href="{{ \App\Filament\Admin\Pages\Attendance\AttendanceExportsPage::getUrl(panel: 'admin', tenant: $company) }}">{{ __('messages.export_ui.exports') }}</a>
         </form>
         @if ($exportQueued) <p class="mt-2 text-sm text-green-800">{{ __('messages.export_ui.queued_notice') }}</p> @endif

@@ -80,6 +80,7 @@
     .ui-button-ghost { @apply bg-transparent text-ink hover:bg-gray-100; }
     .ui-button-danger { @apply bg-red text-white hover:bg-red-700; }
     .ui-control { @apply min-h-10 w-full min-w-0 rounded-lg border bg-white px-3 py-2 text-sm text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary; border-color: var(--color-line); }
+    .ui-control::placeholder { color: #6B7280; opacity: 1; }
     .ui-link { @apply rounded text-primary hover:text-night focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary; text-decoration: none; text-underline-offset: 3px; }
     .ui-link:hover, .ui-link:focus-visible { text-decoration: underline; }
     .ui-button { text-decoration: none !important; }
@@ -122,6 +123,7 @@
     }
     ::selection { background: var(--color-signal); color: var(--color-night); }
     input, textarea { caret-color: var(--color-primary); }
+    input::placeholder, textarea::placeholder { color: #6B7280; opacity: 1; }
     html { scrollbar-color: #B8C1CD transparent; }
     :focus-visible { outline-color: var(--color-primary); }
     .font-mono { font-variant-numeric: tabular-nums; }

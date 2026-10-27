@@ -12,7 +12,7 @@
                 </div>
                 @if ($mode === 'auto') <p class="text-amber-700">{{ __('messages.follow_up_ui.auto_notice') }}</p> @endif
                 <label>{{ __('messages.follow_up_ui.reason') }} <input wire:model="reason" class="rounded-xl border p-2"></label>
-                <button type="button" wire:click="saveSettings" class="rounded-xl bg-amber-600 px-4 py-2 text-white">{{ __('messages.follow_up_ui.save_settings') }}</button>
+                <button type="button" wire:click="saveSettings" class="ui-button ui-button-primary">{{ __('messages.follow_up_ui.save_settings') }}</button>
                 @error('reason') <p class="text-red-600">{{ $message }}</p> @enderror
             </section>
             <button type="button" wire:click="build" class="rounded-xl border px-4 py-2">{{ __('messages.follow_up_ui.build_now') }}</button>
@@ -27,7 +27,7 @@
                         <button type="button" wire:click="cancel({{ $batch->id }})" class="rounded-xl border px-3 py-1">{{ __('messages.follow_up_ui.cancel_batch') }}</button>
                     @endif
                     @foreach ($batch->messages as $message)
-                        <div wire:key="notification-message-{{ $message->id }}" class="rounded-xl border p-3">
+                        <div wire:key="notification-message-{{ $message->id }}" class="border-t pt-3">
                             <p><bdi dir="ltr">{{ $message->address }}</bdi> · {{ __('messages.follow_up_ui.message_states.'.$message->status) }} · {{ $message->cases->count() }} {{ __('messages.follow_up_ui.cases') }}</p>
                             @if ($message->last_error) <p class="text-red-700">{{ __('messages.follow_up_ui.delivery_errors.'.$message->last_error) }}</p> @endif
                             <p>{{ __('messages.follow_up_ui.attempts') }}: {{ $message->attemptRows->count() }} @foreach ($message->attemptRows as $attempt) · {{ __('messages.follow_up_ui.attempt_results.'.$attempt->result) }} <bdi dir="ltr">{{ $attempt->started_at }}</bdi> @endforeach</p>

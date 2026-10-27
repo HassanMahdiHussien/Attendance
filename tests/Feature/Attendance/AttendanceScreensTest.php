@@ -109,6 +109,51 @@ test('HR closes a data issue with a note through the issue page', function (): v
     expect($issue->fresh()->status)->toBe('dismissed')->and($issue->fresh()->note)->toBe('Confirmed visitor.');
 });
 
+test('issue summary counts types in the selected state only for the current company', function (): void {
+    DataIssue::factory()->count(2)->create(['type' => 'unknown_person']);
+    DataIssue::factory()->create(['type' => 'device_outage', 'subject_type' => 'branch_date']);
+    DataIssue::factory()->create(['type' => 'unknown_person', 'status' => 'dismissed', 'open_key' => null]);
+    $other = Company::factory()->create();
+    app(TenantContext::class)->runForCompany($other, fn () => DataIssue::factory()->count(3)->create(['type' => 'pattern_review']));
+
+    $page = Livewire::test(AttendanceIssues::class);
+    expect($page->instance()->typeCounts()->pluck('issue_count', 'type')->map(fn ($count): int => (int) $count)->all())
+        ->toBe(['device_outage' => 1, 'unknown_person' => 2]);
+    expect($page->instance()->types()->all())->not->toContain('pattern_review');
+    $page->set('status', 'dismissed');
+    expect($page->instance()->typeCounts()->pluck('issue_count', 'type')->map(fn ($count): int => (int) $count)->all())
+        ->toBe(['unknown_person' => 1]);
+});
+
+test('bulk dismissal closes only selected issues on the current page and in the current company', function (): void {
+    $first = DataIssue::factory()->create();
+    $second = DataIssue::factory()->create();
+    $other = Company::factory()->create();
+    $foreign = app(TenantContext::class)->runForCompany($other, fn () => DataIssue::factory()->create());
+
+    Livewire::test(AttendanceIssues::class)->set('type', 'unknown_person')
+        ->set('selectedIssueIds', [$first->id, $foreign->id])->set('bulkNote', 'Reviewed together.')
+        ->call('bulkClose', 'dismiss')->assertNotFound();
+    expect($first->fresh()->status)->toBe('open')
+        ->and(app(TenantContext::class)->runForCompany($other, fn () => $foreign->fresh()->status))->toBe('open');
+
+    Livewire::test(AttendanceIssues::class)->set('type', 'unknown_person')
+        ->call('selectAllOnPage')->set('bulkNote', 'Reviewed together.')
+        ->call('bulkClose', 'dismiss');
+    expect($first->fresh()->status)->toBe('dismissed')->and($second->fresh()->status)->toBe('dismissed')
+        ->and($first->fresh()->note)->toBe('Reviewed together.')
+        ->and(app(TenantContext::class)->runForCompany($other, fn () => $foreign->fresh()->status))->toBe('open');
+});
+
+test('pattern review issues cannot be bulk resolved', function (): void {
+    $issue = DataIssue::factory()->create(['type' => 'pattern_review', 'subject_type' => 'employee']);
+
+    Livewire::test(AttendanceIssues::class)->set('type', 'pattern_review')
+        ->set('selectedIssueIds', [$issue->id])->set('bulkNote', 'Reviewed.')
+        ->call('bulkClose', 'resolve')->assertForbidden();
+    expect($issue->fresh()->status)->toBe('open');
+});
+
 test('original download is audited and restricted to the company', function (): void {
     $other = Company::factory()->create();
     $otherActor = User::factory()->create(['company_id' => $other->id, 'primary_role' => UserRole::HrStaff]);

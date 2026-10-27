@@ -169,6 +169,8 @@ return [
             'leave_rest_day_missing' => 'Security rest day needs HR review',
             'leave_entitlement_exceeded' => 'Compensation leave exceeds available rest-day entitlement',
             'pattern_review' => 'Security work pattern needs HR review',
+            'approver_unmapped' => 'Pending leave approver needs HR mapping',
+            'notification_recipient_missing' => 'Notification recipient address needs HR review',
         ],
     ],
     'attendance_ui' => [
@@ -213,6 +215,9 @@ return [
         'approve' => 'Approve', 'change' => 'Change', 'retire' => 'Retire', 'effective_from' => 'Effective from',
         'reason' => 'Reason', 'save' => 'Save', 'type' => 'Type', 'all' => 'All', 'note' => 'Note',
         'resolve' => 'Resolve', 'dismiss' => 'Dismiss', 'employee' => 'Employee', 'person_code' => 'Person code',
+        'issue_summary' => 'Issues by type', 'show_type' => 'Show', 'all_types' => 'All types', 'no_issues' => 'No issues for this state.', 'leave_request' => 'Leave request',
+        'select_page' => 'Select all on this page', 'select_issue' => 'Select issue',
+        'resolve_selected' => 'Resolve selected', 'dismiss_selected' => 'Dismiss selected',
         'meal_count' => 'Meal count', 'raw' => 'Raw transaction', 'cleaned' => 'Cleaned punch',
         'states' => ['queued' => 'Queued', 'processing' => 'Processing', 'completed' => 'Completed', 'failed' => 'Failed'],
         'failures' => ['invalid_file' => 'The stored file is invalid.', 'stored_file_unavailable' => 'The stored file is missing or changed.', 'processing_failed' => 'Processing failed. Retry the batch.'],

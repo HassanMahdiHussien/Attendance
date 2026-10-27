@@ -169,6 +169,8 @@ return [
             'leave_duration_mismatch' => 'مدة الإجازة لا تطابق أيام العمل',
             'leave_rest_day_missing' => 'يجب مراجعة يوم راحة موظف الأمن',
             'leave_entitlement_exceeded' => 'الإجازة التعويضية تتجاوز استحقاق أيام الراحة المتاح',
+            'approver_unmapped' => 'معتمد الإجازة يحتاج إلى ربط من الموارد البشرية',
+            'notification_recipient_missing' => 'عنوان مستلم الإشعار يحتاج إلى مراجعة الموارد البشرية',
         ],
     ],
     'attendance_ui' => [
@@ -214,6 +216,9 @@ return [
         'reason' => 'السبب', 'save' => 'حفظ', 'type' => 'النوع', 'all' => 'الكل', 'note' => 'ملاحظة',
         'resolve' => 'حل', 'dismiss' => 'استبعاد', 'employee' => 'الموظف', 'person_code' => 'رمز الشخص',
         'meal_count' => 'عدد الوجبات', 'raw' => 'البصمة الأصلية', 'cleaned' => 'البصمة المنقحة',
+        'issue_summary' => 'المشكلات حسب النوع', 'show_type' => 'عرض', 'all_types' => 'كل الأنواع', 'no_issues' => 'لا توجد مشكلات لهذه الحالة.', 'leave_request' => 'طلب إجازة',
+        'select_page' => 'تحديد كل ما في هذه الصفحة', 'select_issue' => 'تحديد المشكلة',
+        'resolve_selected' => 'حل المحدد', 'dismiss_selected' => 'استبعاد المحدد',
         'states' => ['queued' => 'في الطابور', 'processing' => 'قيد المعالجة', 'completed' => 'مكتمل', 'failed' => 'فشل'],
         'failures' => ['invalid_file' => 'الملف المحفوظ غير صالح.', 'stored_file_unavailable' => 'الملف المحفوظ مفقود أو متغير.', 'processing_failed' => 'فشلت المعالجة. أعد المحاولة.'],
         'device_states' => ['pending' => 'ينتظر الاعتماد', 'approved' => 'معتمد', 'retired' => 'متوقف'],

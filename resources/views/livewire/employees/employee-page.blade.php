@@ -49,12 +49,12 @@
     <section aria-label="{{ __('messages.employee_history.title') }}">
         <x-ui.card>
             <h2 class="text-lg font-bold text-ink">{{ __('messages.employee_history.title') }}</h2>
-            @forelse ($changes as $version)
+            @forelse ($changes as $entry)
                 <div class="mt-3 border-t border-gray-200 pt-3">
-                    <p class="text-sm text-gray-500"><bdi dir="ltr">{{ $version->effective_from->toDateString() }}</bdi> · {{ $version->actor?->name ?? __('messages.employee_history.system') }} · {{ __('messages.employee_history.sources.'.$version->source) }}</p>
-                    @foreach ($version->changes as $field => $after)
+                    <p class="text-sm text-gray-500"><bdi dir="ltr">{{ $entry['version']->effective_from->toDateString() }}</bdi> · {{ $entry['version']->actor?->name ?? __('messages.employee_history.system') }} · {{ __('messages.employee_history.sources.'.$entry['version']->source) }}</p>
+                    @foreach ($entry['fields'] as $field => $after)
                         <p class="mt-1 text-sm">{{ __('messages.employee_history.fields.'.$field) }}:
-                            <bdi dir="{{ in_array($field, ['email', 'schedule_start', 'schedule_end', 'fallback_notification_email']) ? 'ltr' : 'auto' }}">{{ is_array($version->previous[$field] ?? null) ? implode(', ', $version->previous[$field]) : (($version->previous[$field] ?? null) === null ? __('messages.employee_history.empty') : $version->previous[$field]) }}</bdi>
+                            <bdi dir="{{ in_array($field, ['email', 'schedule_start', 'schedule_end', 'fallback_notification_email']) ? 'ltr' : 'auto' }}">{{ is_array($entry['version']->previous[$field] ?? null) ? implode(', ', $entry['version']->previous[$field]) : (($entry['version']->previous[$field] ?? null) === null ? __('messages.employee_history.empty') : $entry['version']->previous[$field]) }}</bdi>
                             →
                             <bdi dir="{{ in_array($field, ['email', 'schedule_start', 'schedule_end', 'fallback_notification_email']) ? 'ltr' : 'auto' }}">{{ is_array($after) ? implode(', ', $after) : ($after === null ? __('messages.employee_history.empty') : $after) }}</bdi>
                         </p>

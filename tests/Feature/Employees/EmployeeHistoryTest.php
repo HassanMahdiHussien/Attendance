@@ -2,6 +2,7 @@
 
 use App\Enums\UserRole;
 use App\Events\EmployeeVersionChanged;
+use App\Livewire\Attendance\EmployeeAttendance;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Employee;
@@ -12,6 +13,7 @@ use App\Support\Tenancy\TenantContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Validation\ValidationException;
+use Livewire\Livewire;
 
 beforeEach(function (): void {
     $this->travelTo(CarbonImmutable::parse('2026-10-22 12:00:00'));
@@ -62,6 +64,30 @@ test('an unchanged value creates no version and schedule end alone leaves other 
         ->and(EmployeeVersion::count())->toBe($before + 1);
     expect($history->record($this->employee, ['schedule_end' => '16:00'], today(), 'manual', $this->actor))->toBeNull()
         ->and(EmployeeVersion::count())->toBe($before + 1);
+});
+
+test('history omits empty to empty fields and versions without visible changes', function (): void {
+    $empty = EmployeeVersion::factory()->create([
+        'employee_id' => $this->employee->id,
+        'effective_from' => '2025-03-01',
+        'changes' => ['email' => '', 'rest_days' => [], 'department' => null],
+        'previous' => ['email' => null, 'rest_days' => [], 'department' => ''],
+    ]);
+    $mixed = EmployeeVersion::factory()->create([
+        'employee_id' => $this->employee->id,
+        'effective_from' => '2025-04-01',
+        'changes' => ['email' => '', 'department' => 'Operations'],
+        'previous' => ['email' => null, 'department' => 'Sales'],
+    ]);
+
+    expect(EmployeeHistory::visibleFields($empty))->toBe([])
+        ->and(EmployeeHistory::visibleFields($mixed))->toBe(['department' => 'Operations']);
+
+    $this->actingAs($this->actor)->get(route('employees.show', $this->employee))->assertOk()
+        ->assertDontSee('2025-03-01')->assertSee('2025-04-01')
+        ->assertSee('Operations');
+    Livewire::test(EmployeeAttendance::class, ['employeeId' => $this->employee->id])
+        ->call('show', 'changes')->assertDontSee('2025-03-01')->assertSee('2025-04-01');
 });
 
 test('a future version cannot store another company manager or branch', function (): void {

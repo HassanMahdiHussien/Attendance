@@ -20,9 +20,9 @@
                 </div>
                 <h3 class="mt-4 font-semibold">{{ __('messages.office_ui.policy_sections.security') }}</h3>
                 <p>{{ __('messages.office_ui.policy_fields.security_min_presence_minutes') }}: <bdi dir="ltr">{{ $current->security_min_presence_minutes }}</bdi></p>
-                <h3 class="mt-4 font-semibold">{{ __('messages.office_ui.policy_sections.inference') }}</h3>
+                <h3 class="mt-6 font-semibold">{{ __('messages.office_ui.policy_sections.inference') }}</h3>
                 <p>{{ __('messages.office_ui.policy_fields.inference_tolerance_minutes') }}: <bdi dir="ltr">{{ $current->inference_tolerance_minutes }}</bdi></p>
-                <h3 class="mt-4 font-semibold">{{ __('messages.overtime_ui.policy') }}</h3>
+                <h3 class="mt-6 font-semibold">{{ __('messages.overtime_ui.policy') }}</h3>
                 <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     @foreach (['overtime_min_minutes', 'overtime_step_minutes', 'rest_day_half_minutes', 'rest_day_full_minutes'] as $field)
                         <p>{{ __('messages.office_ui.policy_fields.'.$field) }}: <bdi dir="ltr">{{ $current->{$field} }}</bdi></p>
@@ -47,7 +47,7 @@
                     <label class="flex items-center gap-2"><input type="checkbox" wire:model="exitsCountTowardBalance">{{ __('messages.office_ui.policy_fields.exits_count_toward_balance') }}</label>
                 </div>
                 <fieldset><legend>{{ __('messages.office_ui.policy_fields.office_rest_days') }}</legend><div class="flex flex-wrap gap-3">@foreach (range(1, 7) as $weekday)<label><input type="checkbox" wire:model="officeRestDays" value="{{ $weekday }}"> {{ __('messages.office_ui.weekdays.'.$weekday) }}</label>@endforeach</div></fieldset>
-                <h3 class="font-semibold">{{ __('messages.office_ui.policy_sections.shift') }}</h3>
+                <h3 class="pt-4 font-semibold">{{ __('messages.office_ui.policy_sections.shift') }}</h3>
                 <fieldset><legend>{{ __('messages.office_ui.policy_fields.shift_starts') }}</legend><div class="flex flex-wrap gap-3">@foreach (['00:00', '08:00', '16:00'] as $start)<label><input type="checkbox" wire:model="shiftStarts" value="{{ $start }}"> <bdi dir="ltr">{{ $start }}</bdi></label>@endforeach</div></fieldset>
                 <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     @foreach (['shiftMinutes' => 'shift_minutes', 'shiftBreakMinutes' => 'shift_break_minutes', 'shiftMinPresenceMinutes' => 'shift_min_presence_minutes'] as $property => $field)
@@ -55,11 +55,11 @@
                     @endforeach
                 </div>
                 <fieldset><legend>{{ __('messages.office_ui.policy_fields.shift_rest_days') }}</legend><div class="flex flex-wrap gap-3">@foreach (range(1, 7) as $weekday)<label><input type="checkbox" wire:model="shiftRestDays" value="{{ $weekday }}"> {{ __('messages.office_ui.weekdays.'.$weekday) }}</label>@endforeach</div></fieldset>
-                <h3 class="font-semibold">{{ __('messages.office_ui.policy_sections.security') }}</h3>
+                <h3 class="pt-4 font-semibold">{{ __('messages.office_ui.policy_sections.security') }}</h3>
                 <label>{{ __('messages.office_ui.policy_fields.security_min_presence_minutes') }} <input type="number" wire:model="securityMinPresenceMinutes" min="1" class="block w-full rounded-xl border border-gray-200 p-2" dir="ltr"></label>
-                <h3 class="font-semibold">{{ __('messages.office_ui.policy_sections.inference') }}</h3>
+                <h3 class="pt-4 font-semibold">{{ __('messages.office_ui.policy_sections.inference') }}</h3>
                 <label>{{ __('messages.office_ui.policy_fields.inference_tolerance_minutes') }} <input type="number" wire:model="inferenceToleranceMinutes" min="1" class="block w-full rounded-xl border border-gray-200 p-2" dir="ltr"></label>
-                <h3 class="font-semibold">{{ __('messages.overtime_ui.policy') }}</h3>
+                <h3 class="pt-4 font-semibold">{{ __('messages.overtime_ui.policy') }}</h3>
                 <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     @foreach (['overtimeMinMinutes' => 'overtime_min_minutes', 'overtimeStepMinutes' => 'overtime_step_minutes', 'restDayHalfMinutes' => 'rest_day_half_minutes', 'restDayFullMinutes' => 'rest_day_full_minutes'] as $property => $field)
                         <label>{{ __('messages.office_ui.policy_fields.'.$field) }} <input type="number" wire:model="{{ $property }}" min="0" class="block w-full rounded-xl border border-gray-200 p-2" dir="ltr"></label>
