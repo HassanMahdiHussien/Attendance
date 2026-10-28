@@ -1,6 +1,6 @@
 # Feature Specification: One-step upload and an action-first dashboard
 
-**Branch**: `513-upload-and-dashboard` | **Created**: 2026-10-27 | **Status**: Draft for the product owner. Decisions marked **[A]** need confirmation before implementation.
+**Branch**: `513-upload-and-dashboard` | **Created**: 2026-10-27 | **Status**: Approved 2026-10-28 (answers below).
 
 **Input**: Product owner, 2026-10-26: "this system does not connect to attendance devices directly, so it gets data from uploading the leave report and the attendance report (like the examples we shared), so uploading must be easy and you can see it directly." Design audit 2026-10-27 (Impeccable detector + review): the dashboard and employee page give 48 / 28 equal tiles with no priority; actions look like plain links; export sits above the results.
 
@@ -32,7 +32,7 @@
 
 ### Dashboard and employee page
 
-- **FR-008 Needs action first**: the HR dashboard opens with a "Needs your action" row of at most 6 cards for the chosen filters: uncovered absences, missing punches, open follow-up cases waiting for HR, open data issues (by type), leave waiting for approval, unreconciled minutes. Each card links to the filtered list. Zero cards collapse into one quiet "nothing waiting" line.
+- **FR-008 Needs action first**: the HR dashboard opens with a "Needs your action" row of 6 cards for the chosen filters: uncovered absences, missing punches, follow-up cases waiting for HR, leave waiting for approval, unreconciled minutes, and Data to fix (actionable issue types only; see answers). Each card links to the filtered list. Zero cards collapse into one quiet "nothing waiting" line.
 - **FR-009 Grouped figures**: the remaining tiles are grouped under Attendance, Leave and reconciliation, Overtime and rest days, Data quality; tiles with zero are de-emphasised (not removed, so filters stay explainable). Same figures and services as today (CLAUDE.md agreement rule: dashboard, profile, reports and chat agree).
 - **FR-010 Filters and export**: filters in a compact bar with the primary Apply button; export moves into a secondary "Export" button/menu next to the results instead of a card above them.
 - **FR-011 Employee page**: same grouping and needs-action row scoped to the employee; the daily record becomes a table (date, status, first in / last out, late, early, short, overtime, reconciled, link to day detail); phone width keeps the card layout already used by `.ui-table`.
@@ -47,9 +47,11 @@
 
 Direct device integration; new calculation rules; removing the old upload pages; holiday announcement upload; email/SMTP notifications.
 
-## Questions for the product owner
+## Product-owner answers (2026-10-28)
 
-1. Should the **old upload pages** stay in the menus after this (advanced use) or be removed?
-2. **Several files at once**: OK to process in the fixed order employees → balance → leave → attendance?
-3. **Needs-action cards**: are the six in FR-008 the right ones for daily HR work, or would you add or drop any (for example overtime waiting, security rest days)?
-4. **Unknown employee codes** in an attendance file: block the one-click import above some count (e.g. 50), or always import and list them as data issues as today?
+Accepted the orchestrator's recommendations:
+
+1. **Old upload pages**: removed from the menus, still reachable through an "Advanced upload" link on the Upload page; delete them later if unused.
+2. **Several files at once**: fixed order employee list → leave balance → leave report → attendance.
+3. **Needs-action cards**: uncovered absences, missing punches, cases waiting for HR, leave waiting for approval, unreconciled minutes, and **"Data to fix"**, which counts only issues HR can act on (unknown employee codes, new devices, unmapped leave types, security work patterns to review), not informational issues such as compensation leave above entitlement.
+4. **Unknown employee codes**: never block; import, show the count in the file's summary sentence and list them under "Data to fix". Exception: when more than half of an attendance file's codes are unknown, ask "Is this the right file?" before importing.
