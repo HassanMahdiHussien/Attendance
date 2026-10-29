@@ -1,5 +1,6 @@
 <div class="flex w-full items-center justify-center">
-    <form wire:submit="authenticate" class="w-full max-w-md">
+    {{-- Chrome autofill can fill the fields without firing input events, so copy the visible values before submitting. --}}
+    <form wire:submit="authenticate" x-data x-on:submit.capture="$wire.email = $el.querySelector('#email').value; $wire.password = $el.querySelector('#password').value" class="w-full max-w-md">
         <x-ui.card class="space-y-5 p-6 sm:p-8">
             <header>
                 <h1><x-ui.brand size="lg" :name="false" /><span class="sr-only">{{ __('Attendance') }}</span></h1>
