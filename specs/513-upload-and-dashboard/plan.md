@@ -1,6 +1,15 @@
 # Plan: 513 one-step upload and action-first dashboard
 
-Implementation goes through Codex in four steps, each gated (full suite, browser tests, Pint) and committed separately. Real sample files are used only for local checks in WSL, never committed and never uploaded to the demo site.
+Implementation goes through Codex in five steps (0 to 4), each gated (full suite, browser tests, Pint) and committed separately. Real sample files are used only for local checks in WSL, never committed and never uploaded to the demo site.
+
+## Step 0: Upload fixes (FR-015 to FR-017)
+
+Done first, as its own commit, because the Upload page relies on branch matching and readable CSV files.
+
+- Branch alternative names: migration adding the names (a JSON column on `branches` or a small `branch_aliases` table with `company_id` and a unique normalised name; pick the table if uniqueness across branches is easier to enforce in MySQL). One `BranchMatcher` service (normalise: trim, lower case, أ/إ/آ → ا, ة → ه, ى → ي) used by the employee importers (`EmployeeImport`, `MappedEmployeeImport`), the leave importer and the device/branch lookup in the transaction importer, replacing their separate name lookups. Branch form gets an alternative names field. Unmatched values: grouped choice in the preview (link or create with jurisdiction). Foundation change: entries in FOUNDATION-CHANGES.md (branches and the employee import are shared with Displanary).
+- `SpreadsheetReader::csv` and `CsvReader`: add tab as a delimiter candidate; detect a header that is mostly `?` and return the Save As message (en/ar).
+- Template route returns `.xlsx` through openspout (already a dependency); the CSV stays as a secondary link.
+- Tests listed under FR-014 for these three; fixtures use fake names and the English branch spellings found in the HC file (`Hilla`, `Erbil`, `Karbala`, `Baghdad`, `South`, `Suleimaniyah`).
 
 ## Step 1: Upload page (FR-001 to FR-004, FR-013)
 

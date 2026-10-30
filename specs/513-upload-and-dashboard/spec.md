@@ -30,6 +30,14 @@
 - **FR-006 Results card** when a file finishes: what changed, computed from the batch and processing-run records (no new calculations): punches added / duplicates skipped; days calculated; new absences, missing punches, lateness and early-departure minutes in the covered period; leave requests new / changed / cancelled; new data issues; follow-up cases opened. Each line links to the matching filtered screen (daily attendance for the covered dates and branches, data issues for this batch, leave requests for this batch, affected employees).
 - **FR-007 Recent uploads**: the last 10 uploads (all kinds) with status and a link to their results card, on the Upload page and on the dashboard.
 
+### Upload fixes found on the demo (2026-10-31)
+
+Found when the product owner uploaded the HC file and a filled employee template to the demo site: every row failed. Real files must still never go to the demo; these fixes make the same files work locally and in production.
+
+- **FR-015 Branch alternative names**: a branch can carry extra names (e.g. `Erbil`, `أربيل`, a report's site code) besides its display name. Every import that reads a branch (employee list/HC, leave report, attendance devices) matches the display name or any alternative name, ignoring case, surrounding spaces and Arabic letter variants (أ/إ/آ → ا, ة → ه, ى → ي). Names are unique per company across all branches; a clash is rejected when saving. HR edits them on the branch form. An unmatched branch value in a file is listed once in the file's summary (not once per row) with two choices: **Link to an existing branch** (adds the value as an alternative name) or **Create branch** (HR picks the jurisdiction; nothing is created without that choice). Rows with that value wait on the choice; the other rows still import.
+- **FR-016 Readable CSV files**: CSV files separated by tab (Excel "Text (Tab delimited)") are read as well as `,` and `;`. When the header row has lost its letters (mostly `?`, as when Excel saves Arabic in a non-Unicode format), the file is rejected with one clear message: the Arabic letters were lost when the file was saved; in Excel use Save As → "CSV UTF-8 (Comma delimited)", or upload the .xlsx file directly.
+- **FR-017 Excel template**: the employee template downloads as `.xlsx` (Arabic headers, a second header language note, one example row with fake data, date column formatted as a date) instead of CSV, so Excel cannot damage the encoding. The CSV template stays available as a secondary link.
+
 ### Dashboard and employee page
 
 - **FR-008 Needs action first**: the HR dashboard opens with a "Needs your action" row of 6 cards for the chosen filters: uncovered absences, missing punches, follow-up cases waiting for HR, leave waiting for approval, unreconciled minutes, and Data to fix (actionable issue types only; see answers). Each card links to the filtered list. Zero cards collapse into one quiet "nothing waiting" line.
@@ -41,7 +49,7 @@
 ### General
 
 - **FR-013** English and Arabic, RTL, phone width (390 px) without horizontal scroll; amber only for the one primary action per screen (DESIGN.md).
-- **FR-014 Tests**: classification of the four sample layouts (anonymised fixtures only, never the real files); one-click import produces the same batches as the current multi-step flow; a file needing a decision cannot be imported without it; coverage defaults equal the existing suggestions; results card counts equal the batch/processing records; dashboard needs-action figures equal the existing tiles for the same filters; tenant isolation for the new page, polling endpoint and results links; browser test for drop → import → results in en/ar at desktop and phone.
+- **FR-014 Tests**: classification of the four sample layouts (anonymised fixtures only, never the real files); one-click import produces the same batches as the current multi-step flow; a file needing a decision cannot be imported without it; coverage defaults equal the existing suggestions; results card counts equal the batch/processing records; dashboard needs-action figures equal the existing tiles for the same filters; tenant isolation for the new page, polling endpoint and results links; browser test for drop → import → results in en/ar at desktop and phone; branch matching by alternative name and by Arabic letter variants in each importer, unique names per company, an unmatched branch never blocks the other rows, Create branch needs a jurisdiction; tab-separated CSV imports; a `?`-damaged header gives the Save As message; the .xlsx template opens and re-imports unchanged.
 
 ## Out of scope
 
