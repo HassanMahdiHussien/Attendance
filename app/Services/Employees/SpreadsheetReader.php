@@ -26,13 +26,16 @@ class SpreadsheetReader
         }
 
         $records = $extension === 'xlsx' ? $this->xlsx($path) : $this->csv($path);
-        if (count($records) < 2) {
+        if ($records === []) {
             throw ValidationException::withMessages(['sourceFile' => __('messages.import.no_employees')]);
         }
         if (count($records) > 5001) {
             throw ValidationException::withMessages(['sourceFile' => __('messages.import.row_limit')]);
         }
         $headers = array_map(fn (mixed $value): string => trim((string) $value), array_shift($records));
+        if ($extension !== 'xlsx') {
+            CsvFormat::assertReadableHeader($headers);
+        }
         $rows = [];
         foreach ($records as $number => $cells) {
             $rows[] = ['number' => $number + 2, 'cells' => $cells, 'columns_valid' => count($cells) === count($headers)];
@@ -119,7 +122,7 @@ class SpreadsheetReader
             throw ValidationException::withMessages(['sourceFile' => __('messages.import.encoding_unreadable')]);
         }
         $first = strtok($text, "\r\n") ?: '';
-        $delimiter = count(str_getcsv($first, ';', '"', '')) > count(str_getcsv($first, ',', '"', '')) ? ';' : ',';
+        $delimiter = CsvFormat::delimiter($first);
         $stream = fopen('php://temp', 'w+');
         fwrite($stream, $text);
         rewind($stream);

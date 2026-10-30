@@ -4,7 +4,8 @@
             <h2 class="font-bold">{{ __('messages.employee_import_ui.upload') }}</h2>
             <a class="ui-link" href="{{ \App\Filament\Admin\Pages\Leave\UploadLeaveBalance::getUrl(panel: 'admin', tenant: \Filament\Facades\Filament::getTenant()) }}">{{ __('messages.leave_balance_ui.upload') }}</a>
             <p>{{ __('messages.employee_import_ui.instructions') }}</p>
-            <a class="underline text-primary-700" href="{{ route('employees.import.template', ['company' => \Filament\Facades\Filament::getTenant()->id]) }}">{{ __('Download CSV template') }}</a>
+            <a class="underline text-primary-700" href="{{ route('employees.import.template', ['company' => \Filament\Facades\Filament::getTenant()->id]) }}">{{ __('Download Excel template') }}</a>
+            <a class="underline text-primary-700" href="{{ route('employees.import.template.csv', ['company' => \Filament\Facades\Filament::getTenant()->id]) }}">{{ __('Download CSV template') }}</a>
             <form wire:submit="prepareMapping" class="space-y-3">
                 <input type="file" name="sourceFile" wire:model="sourceFile" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" class="block w-full rounded-xl border border-gray-200 bg-white p-2">
                 @error('sourceFile') <p class="text-red-600">{{ $message }}</p> @enderror
@@ -57,6 +58,7 @@
             <section class="space-y-2 rounded-xl border border-green-500 p-4">
                 @if (isset($summary['counts']))
                     <p>{{ __('messages.employee_import_ui.completed', $summary['counts']) }}</p>
+                    @if (($summary['skipped'] ?? 0) > 0)<p>{{ __('messages.employee_import_ui.skipped', ['count' => $summary['skipped']]) }}</p>@endif
                     <a class="underline" href="{{ route('employees.import.file', ['company' => \Filament\Facades\Filament::getTenant()->id, 'batch' => $summary['batch_id']]) }}">{{ __('messages.employee_import_ui.download_original') }}</a>
                 @else
                     <p>{{ __('Import completed: :added added, :updated updated.', $summary) }}</p>
@@ -88,6 +90,33 @@
             <section class="space-y-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                 <h2 class="font-bold">{{ __('messages.employee_import_ui.preview') }}</h2>
                 <p>{{ __('messages.employee_import_ui.counts', ['new' => $this->mappedPreview()->added(), 'changed' => $this->mappedPreview()->changed(), 'unchanged' => $this->mappedPreview()->unchanged(), 'missing' => count($this->mappedPreview()->missing), 'errors' => $this->mappedPreview()->errors()]) }}</p>
+                @if ($this->mappedPreview()->held() > 0)
+                    <p>{{ __('messages.employee_import_ui.held_count', ['count' => $this->mappedPreview()->held()]) }}</p>
+                    @foreach ($this->mappedPreview()->unmatchedBranches() as $index => $item)
+                        <div class="space-y-2 border-t border-gray-200 pt-3" wire:key="unmatched-{{ $index }}">
+                            <p>{{ __('messages.employee_import_ui.unmatched_branch', ['branch' => $item['name'], 'count' => $item['count']]) }}</p>
+                            @if (auth()->user()->can('create', \App\Models\Branch::class))
+                                <div class="flex flex-wrap gap-2">
+                                    <select wire:model="branchChoices.{{ $index }}" class="rounded-lg border border-gray-200 bg-white p-2">
+                                        <option value="">{{ __('messages.employee_import_ui.choose_branch') }}</option>
+                                        @foreach ($this->availableBranches() as $branch)
+                                            <option value="{{ $branch->id }}">{{ $branch->name }}</option>
+                                        @endforeach
+                                    </select>
+                                    <x-filament::button color="gray" wire:click="linkUnmatched({{ $index }})">{{ __('messages.employee_import_ui.link_branch') }}</x-filament::button>
+                                    <select wire:model="jurisdictionChoices.{{ $index }}" class="rounded-lg border border-gray-200 bg-white p-2">
+                                        <option value="">{{ __('messages.employee_import_ui.choose_jurisdiction') }}</option>
+                                        <option value="federal_iraq">{{ __('Federal Iraq') }}</option>
+                                        <option value="kurdistan_region">{{ __('Kurdistan Region') }}</option>
+                                    </select>
+                                    <x-filament::button color="gray" wire:click="createUnmatched({{ $index }})">{{ __('messages.employee_import_ui.create_branch') }}</x-filament::button>
+                                </div>
+                                @error('branchChoices.'.$index) <p class="text-red-600">{{ $message }}</p> @enderror
+                                @error('jurisdictionChoices.'.$index) <p class="text-red-600">{{ $message }}</p> @enderror
+                            @endif
+                        </div>
+                    @endforeach
+                @endif
                 @if ($this->mappedPreview()->alreadyImported)
                     <p class="text-amber-700">{{ __('messages.employee_import_ui.already_imported', $this->mappedPreview()->alreadyImported) }}</p>
                 @endif

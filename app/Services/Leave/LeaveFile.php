@@ -2,6 +2,7 @@
 
 namespace App\Services\Leave;
 
+use App\Services\Employees\CsvFormat;
 use App\Services\Employees\SpreadsheetReader;
 use Carbon\CarbonImmutable;
 use DateInterval;
@@ -267,8 +268,11 @@ class LeaveFile
 
         $stream = fopen($path, 'rb');
         try {
-            $first = fgets($stream) ?: '';
-            $delimiter = count(str_getcsv($first, ';', '"', '')) > count(str_getcsv($first, ',', '"', '')) ? ';' : ',';
+            $samples = [];
+            for ($sample = 0; $sample < 3 && ($line = fgets($stream)) !== false; $sample++) {
+                $samples[] = $line;
+            }
+            $delimiter = CsvFormat::delimiterFromLines($samples);
             rewind($stream);
             $number = 0;
             while (($cells = fgetcsv($stream, 0, $delimiter, '"', '')) !== false) {
@@ -285,6 +289,9 @@ class LeaveFile
                     }
                 }
                 unset($cell);
+                if ($number === 1) {
+                    CsvFormat::assertReadableHeader($cells);
+                }
                 if ($cells !== [null]) {
                     yield ['number' => $number, 'cells' => $cells];
                 }

@@ -102,7 +102,7 @@ test('all invalid rows and duplicate numbers appear and nothing is saved', funct
     $import = app(EmployeeImport::class);
     $preview = $import->preview($this->company, $file);
     expect($preview->errors())->toBe(2)
-        ->and($preview->rows[0]['errors'])->toContain('رقم مكرر في الملف', 'الفرع غير معروف')
+        ->and($preview->rows[0]['errors'])->toContain('رقم مكرر في الملف')
         ->and($preview->rows[1]['errors'])->toContain('رقم مكرر في الملف', 'تاريخ التعيين غير صالح');
     $result = $import->commit($this->company, $file, $this->admin, $preview->hash);
     expect($result['committed'])->toBeFalse()
@@ -215,7 +215,9 @@ test('import page and template are restricted to the selected company', function
     $url = EmployeeResource::getUrl('import', panel: 'admin', tenant: $this->company);
     Livewire::test(ImportEmployees::class)->assertOk();
     $this->get($url)->assertOk();
-    $template = $this->get(route('employees.import.template', ['company' => $this->company->id]))->assertOk();
+    $this->get(route('employees.import.template', ['company' => $this->company->id]))->assertOk()
+        ->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    $template = $this->get(route('employees.import.template.csv', ['company' => $this->company->id]))->assertOk();
     expect($template->getContent())->toStartWith("\xEF\xBB\xBFالاسم,رقم الموظف")
         ->and(substr_count($template->getContent(), "\n"))->toBe(1);
     $file = employeeCsv(employeeHeaders()."أول,,قسم,منصب,2024-01-15,بغداد,,\n");
@@ -253,10 +255,11 @@ test('preview and confirm recheck the actor and tenant after the page mounted', 
     expect(Employee::withoutGlobalScopes()->where('name', 'أول')->count())->toBe(0);
 });
 
-test('a changed branch makes confirm fail and leaves the row error visible', function (): void {
+test('a changed branch holds the row when confirming and imports no employee', function (): void {
     $file = employeeCsv(employeeHeaders()."أول,,قسم,منصب,2024-01-15,بغداد,,\n");
     $page = Livewire::test(ImportEmployees::class)->set('sourceFile', $file)->call('previewImport');
     $this->branch->delete();
-    $page->call('confirmImport')->assertSee('الفرع غير معروف');
-    expect(Employee::query()->count())->toBe(0);
+    $page->call('confirmImport')->assertSee('0');
+    expect(Employee::query()->count())->toBe(0)
+        ->and(EmployeeImportBatch::query()->count())->toBe(1);
 });

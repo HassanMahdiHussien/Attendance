@@ -19,6 +19,7 @@ use App\Models\EmployeeImportBatch;
 use App\Models\Leave\BalanceBatch;
 use App\Models\Leave\ImportBatch as LeaveImportBatch;
 use App\Services\AuditLogger;
+use App\Services\Employees\EmployeeTemplate;
 use Filament\Facades\Filament;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -50,11 +51,19 @@ Route::middleware('auth')->group(function (): void {
         Filament::setTenant($company);
         Gate::authorize('importEmployees', $company);
 
+        return response()->download(app(EmployeeTemplate::class)->xlsx(), 'employees-template.xlsx',
+            ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'])->deleteFileAfterSend(true);
+    })->name('employees.import.template');
+    Route::get('/admin/{company}/employees/import/template.csv', function (Company $company) {
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+        Filament::setTenant($company);
+        Gate::authorize('importEmployees', $company);
+
         return response("\xEF\xBB\xBFالاسم,رقم الموظف,القسم,المنصب,تاريخ التعيين,الفرع,البريد,الجنس\r\n", 200, [
             'Content-Type' => 'text/csv; charset=UTF-8',
             'Content-Disposition' => 'attachment; filename="employees-template.csv"',
         ]);
-    })->name('employees.import.template');
+    })->name('employees.import.template.csv');
     Route::get('/admin/{company}/employee-imports/{batch}/file', function (Company $company, int $batch) {
         Filament::setCurrentPanel(Filament::getPanel('admin'));
         Filament::setTenant($company);

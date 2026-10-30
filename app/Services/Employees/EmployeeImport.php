@@ -3,12 +3,12 @@
 namespace App\Services\Employees;
 
 use App\Enums\SequenceKey;
-use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\EmployeeImportBatch;
 use App\Models\User;
 use App\Services\AuditLogger;
+use App\Services\Branches\BranchMatcher;
 use App\Services\SequenceService;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\QueryException;
@@ -49,7 +49,7 @@ class EmployeeImport
     {
         Gate::authorize('importEmployees', $company);
         $csv = $this->reader->read($file);
-        $branches = Branch::withoutGlobalScopes()->where('company_id', $company->id)->get()->groupBy(fn (Branch $branch): string => $this->normalise($branch->name));
+        $branches = app(BranchMatcher::class)->forCompany($company, withoutScopes: true);
         $employees = Employee::withoutGlobalScopes()->where('company_id', $company->id)
             ->when($lock, fn ($query) => $query->lockForUpdate())->get()->keyBy(fn (Employee $employee): string => $this->normalise($employee->employee_code));
         $rows = [];
@@ -75,10 +75,10 @@ class EmployeeImport
                     $errors[] = __('messages.employee_import.field_too_long', ['field' => $field]);
                 }
             }
-            $branchMatches = $branches->get($this->normalise($input['branch'] ?? ''), collect());
+            $branchMatches = $branches->matches($input['branch'] ?? '');
             if (($input['branch'] ?? '') !== '') {
                 if ($branchMatches->count() === 0) {
-                    $errors[] = __('messages.employee_import.branch_unknown');
+                    $warnings[] = __('messages.employee_import.branch_held');
                 } elseif ($branchMatches->count() > 1) {
                     $errors[] = __('messages.employee_import.branch_ambiguous');
                 }
@@ -149,7 +149,7 @@ class EmployeeImport
                 }
             }
             $rows[] = [
-                'number' => $raw['number'], 'status' => $errors ? 'error' : ($existing ? ($existing->is_active ? 'update' : 'update-inactive') : 'new'),
+                'number' => $raw['number'], 'status' => $errors ? 'error' : ($branchMatches->isEmpty() ? 'held' : ($existing ? ($existing->is_active ? 'update' : 'update-inactive') : 'new')),
                 'errors' => $errors, 'warnings' => $warnings, 'values' => $values, 'diff' => $diff,
                 'employee_id' => $existing?->id, 'branch' => $input['branch'] ?? '',
             ];
@@ -190,15 +190,17 @@ class EmployeeImport
                     throw ValidationException::withMessages(['sourceFile' => __('messages.employee_import.storage_failed')]);
                 }
                 $sheet = app(SpreadsheetReader::class)->read($file);
+                $importedRows = array_values(array_filter($preview->rows, fn (array $row): bool => $row['status'] !== 'held'));
                 $batch = EmployeeImportBatch::create([
                     'company_id' => $company->id, 'uploaded_by' => $actor->id, 'mode' => 'partial',
                     'effective_date' => today()->toDateString(), 'file_path' => $storedPath,
                     'file_name' => basename(str_replace('\\', '/', $file->getClientOriginalName())), 'file_sha256' => $preview->hash,
                     'mapping' => app(ColumnMapping::class)->suggest($sheet['headers']),
-                    'counts' => ['new' => $preview->added(), 'changed' => count(array_filter($preview->rows, fn (array $row): bool => $row['diff'] !== [])),
-                        'unchanged' => count(array_filter($preview->rows, fn (array $row): bool => $row['diff'] === [] && $row['employee_id'] !== null)), 'missing' => 0],
-                    'summary' => ['codes' => array_values(array_filter(array_column(array_column($preview->rows, 'values'), 'employee_code'))),
-                        'changed_fields' => array_values(array_unique(Arr::flatten(array_column($preview->rows, 'diff'))))],
+                    'counts' => ['new' => $preview->added(), 'changed' => count(array_filter($importedRows, fn (array $row): bool => $row['diff'] !== [])),
+                        'unchanged' => count(array_filter($importedRows, fn (array $row): bool => $row['diff'] === [] && $row['employee_id'] !== null)), 'missing' => 0,
+                        'skipped' => $preview->held()],
+                    'summary' => ['codes' => array_values(array_filter(array_column(array_column($importedRows, 'values'), 'employee_code'))),
+                        'changed_fields' => array_values(array_unique(Arr::flatten(array_column($importedRows, 'diff'))))],
                 ]);
                 $used = Employee::withoutGlobalScopes()->where('company_id', $company->id)->pluck('employee_code')
                     ->mapWithKeys(fn (string $code): array => [$this->normalise($code) => true])->all();
@@ -210,6 +212,9 @@ class EmployeeImport
                 $changed = [];
                 $touchedEmployeeIds = [];
                 foreach ($preview->rows as $row) {
+                    if ($row['status'] === 'held') {
+                        continue;
+                    }
                     if ($row['employee_id'] === null) {
                         continue;
                     }
@@ -221,6 +226,9 @@ class EmployeeImport
                     }
                 }
                 foreach ($preview->rows as $row) {
+                    if ($row['status'] === 'held') {
+                        continue;
+                    }
                     if ($row['employee_id'] !== null) {
                         continue;
                     }

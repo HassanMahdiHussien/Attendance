@@ -9,6 +9,7 @@ use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -35,6 +36,7 @@ class BranchResource extends Resource
     {
         return $schema->components([
             TextInput::make('name')->label(__('Branch name'))->required(),
+            TagsInput::make('alternative_names')->label(__('Alternative names')),
             TextInput::make('address')->label(__('Address')),
             Select::make('jurisdiction')->label(__('Jurisdiction'))->options([
                 Jurisdiction::FederalIraq->value => __('Federal Iraq'),
@@ -47,6 +49,7 @@ class BranchResource extends Resource
     {
         return $table->columns([
             TextColumn::make('name')->label(__('Branch')),
+            TextColumn::make('aliases.name')->label(__('Alternative names'))->listWithLineBreaks(),
             TextColumn::make('jurisdiction')->label(__('Jurisdiction'))
                 ->formatStateUsing(fn ($state): string => match ($state instanceof \BackedEnum ? $state->value : $state) {
                     'federal_iraq' => __('Federal Iraq'), 'kurdistan_region' => __('Kurdistan Region'),

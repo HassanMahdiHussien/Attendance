@@ -40,11 +40,12 @@ class CsvReader
         }
 
         $candidates = [];
-        foreach ([',', ';'] as $delimiter) {
+        foreach ([',', ';', "\t"] as $delimiter) {
             $records = $this->records($text, $delimiter);
             if ($records === []) {
                 continue;
             }
+            CsvFormat::assertReadableHeader($records[0]);
             [$map, $notices, $errors] = $this->mapHeaders($records[0]);
             if ($errors === []) {
                 $candidates[] = compact('records', 'map', 'notices');

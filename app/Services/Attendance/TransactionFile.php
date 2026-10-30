@@ -2,6 +2,7 @@
 
 namespace App\Services\Attendance;
 
+use App\Services\Employees\CsvFormat;
 use App\Services\Employees\SpreadsheetReader;
 use Carbon\CarbonImmutable;
 use DateInterval;
@@ -211,13 +212,13 @@ class TransactionFile
 
         $stream = fopen($path, 'rb');
         try {
-            $commas = 0;
-            $semicolons = 0;
+            $counts = [',' => 0, ';' => 0, "\t" => 0];
             for ($line = 0; $line < 3 && ($sample = fgets($stream)) !== false; $line++) {
-                $commas = max($commas, count(str_getcsv($sample, ',', '"', '')));
-                $semicolons = max($semicolons, count(str_getcsv($sample, ';', '"', '')));
+                foreach (array_keys($counts) as $candidate) {
+                    $counts[$candidate] = max($counts[$candidate], count(str_getcsv($sample, $candidate, '"', '')));
+                }
             }
-            $delimiter = $semicolons > $commas ? ';' : ',';
+            $delimiter = array_search(max($counts), $counts, true);
             rewind($stream);
             $number = 0;
             while (($cells = fgetcsv($stream, 0, $delimiter, '"', '')) !== false) {
@@ -234,6 +235,9 @@ class TransactionFile
                     }
                 }
                 unset($cell);
+                if ($number <= 10) {
+                    CsvFormat::assertReadableHeader($cells);
+                }
                 if ($cells !== [null]) {
                     yield ['number' => $number, 'cells' => $cells];
                 }

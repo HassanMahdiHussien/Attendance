@@ -2,6 +2,8 @@
 
 namespace App\Services\Employees;
 
+use App\Services\Branches\BranchMatcher;
+
 class ImportPreview
 {
     public function __construct(
@@ -37,7 +39,27 @@ class ImportPreview
 
     public function updated(): int
     {
-        return count($this->rows) - $this->added() - $this->errors();
+        return count($this->rows) - $this->added() - $this->errors() - $this->held();
+    }
+
+    public function held(): int
+    {
+        return count(array_filter($this->rows, fn (array $row): bool => $row['status'] === 'held'));
+    }
+
+    public function unmatchedBranches(): array
+    {
+        $values = [];
+        foreach ($this->rows as $row) {
+            if ($row['status'] !== 'held') {
+                continue;
+            }
+            $key = BranchMatcher::normalise($row['branch']);
+            $values[$key] ??= ['name' => $row['branch'], 'count' => 0];
+            $values[$key]['count']++;
+        }
+
+        return array_values($values);
     }
 
     public function unchanged(): int

@@ -13,6 +13,7 @@ use App\Models\Branch;
 use App\Models\Company;
 use App\Models\User;
 use App\Services\AuditLogger;
+use App\Services\Branches\BranchMatcher;
 use App\Support\Tenancy\TenantContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
@@ -27,9 +28,7 @@ class DeviceRegistry
     {
         abort_unless(app(TenantContext::class)->companyId() === $company->id, 403);
         $prefix = explode('_', $name, 2)[0];
-        $matches = Branch::query()->where('company_id', $company->id)
-            ->whereRaw('LOWER(name) = ?', [mb_strtolower($prefix)])->limit(2)->get();
-        $branch = $matches->count() === 1 ? $matches->first() : null;
+        $branch = app(BranchMatcher::class)->forCompany($company)->match($prefix);
         $role = match (mb_strtolower($state)) {
             'check in' => 'check_in', 'check out' => 'check_out', '255' => 'restaurant', default => null,
         };
