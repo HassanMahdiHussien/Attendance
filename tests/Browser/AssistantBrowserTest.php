@@ -25,7 +25,7 @@ function assistantBrowserFixture(TestCase $test, string $locale): array
     completeCompanySetup($company);
     $actor = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::HrStaff,
         'locale' => $locale]);
-    $employee = Employee::factory()->create(['company_id' => $company->id, 'employee_code' => '00073412',
+    $employee = Employee::factory()->create(['company_id' => $company->id, 'employee_code' => '00073412', 'hire_date' => '2026-01-01',
         'schedule_start' => '08:00:00', 'schedule_end' => '17:00:00']);
     app(EmployeeHistory::class)->record($employee, ['schedule_start' => '08:00', 'schedule_end' => '17:00'],
         '2026-01-01', 'initial', $actor);

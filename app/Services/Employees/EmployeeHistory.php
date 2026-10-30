@@ -18,6 +18,15 @@ use Illuminate\Validation\ValidationException;
 
 class EmployeeHistory
 {
+    public static function visibleFields(EmployeeVersion $version): array
+    {
+        return array_filter($version->changes ?? [], function ($after, string $field) use ($version): bool {
+            $before = $version->previous[$field] ?? null;
+
+            return ! in_array($before, [null, '', []], true) || ! in_array($after, [null, '', []], true);
+        }, ARRAY_FILTER_USE_BOTH);
+    }
+
     public const FIELDS = [
         'name', 'name_en', 'department', 'department_en', 'position', 'position_en',
         'hire_date', 'branch_id', 'email', 'gender', 'work_pattern', 'rest_days',

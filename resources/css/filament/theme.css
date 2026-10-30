@@ -9,6 +9,8 @@
 @source '../../views/components/ui/card.blade.php';
 @source '../../views/components/ui/badge.blade.php';
 @source '../../views/livewire/global-search.blade.php';
+@source '../../views/filament/admin/pages/attendance/notifications.blade.php';
+@source '../../views/filament/admin/pages/attendance/issues.blade.php';
 
 /* Departures world, matching the workspace (resources/css/app.css): midnight top bar, light working ground,
    signal amber only for the primary action and the current item. */
@@ -38,6 +40,8 @@
 .fi-body { min-height: 100vh; }
 .fi-layout { padding-bottom: 5rem; }
 .fi-body .ui-control { min-height: 2.5rem; border: 1px solid var(--color-line); border-radius: .5rem; background: #fff; color: var(--color-ink); }
+.fi-body .ui-control::placeholder { color: #6B7280; opacity: 1; }
+input::placeholder, textarea::placeholder, .fi-input::placeholder, .fi-select-input-placeholder { color: #6B7280; opacity: 1; }
 @media (min-width: 1280px) { .fi-layout { padding-bottom: 0; } }
 /* Admin pages reuse the workspace <x-ui.card> and <x-ui.badge>; their styles live in app.css, which panels do not load. */
 .ui-card { min-width: 0; background: #fff; border: 1px solid var(--color-line); border-radius: .75rem; box-shadow: 0 1px 2px rgb(14 26 43 / .05); }
@@ -47,6 +51,16 @@
 .ui-badge-green { background: var(--color-green-light); color: var(--color-green); }
 .ui-badge-indigo { background: var(--color-primary-light); color: var(--color-primary); }
 .ui-badge-gray { background: #f3f4f6; color: #374151; }
+.ui-button { display: inline-flex; min-height: 2.5rem; align-items: center; justify-content: center; gap: .5rem; border-radius: .5rem; padding: .625rem 1rem; font-size: .875rem; font-weight: 600; line-height: 1.25; text-decoration: none !important; transition: background-color 150ms; }
+.ui-button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.ui-button:disabled { cursor: not-allowed; opacity: .5; }
+.ui-button-small { min-height: 2.25rem; padding: .375rem .75rem; font-size: .75rem; }
+.ui-button-primary { background: var(--color-signal); color: var(--color-night); box-shadow: 0 1px 2px rgb(14 26 43 / .12); }
+.ui-button-primary:hover { background: var(--color-signal-dark); }
+.ui-button-secondary { border: 1px solid var(--color-line); background: #fff; color: var(--color-ink); }
+.ui-button-secondary:hover { background: #f9fafb; }
+.ui-button-ghost { background: transparent; color: var(--color-ink); }
+.ui-button-ghost:hover { background: #f3f4f6; }
 
 :root {
     --dp-night: #0E1A2B;

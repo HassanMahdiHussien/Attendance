@@ -12,7 +12,7 @@
         <form wire:submit="apply" class="mt-3 flex flex-wrap items-end gap-3">
             <label class="text-sm">{{ __('messages.reporting_ui.from') }} <input type="date" wire:model="from" class="ui-control block rounded-xl border border-gray-200 px-3 py-2" /></label>
             <label class="text-sm">{{ __('messages.reporting_ui.to') }} <input type="date" wire:model="to" class="ui-control block rounded-xl border border-gray-200 px-3 py-2" /></label>
-            <button type="submit" class="ui-link">{{ __('messages.reporting_ui.apply') }}</button>
+            <button type="submit" class="ui-button ui-button-primary">{{ __('messages.reporting_ui.apply') }}</button>
         </form>
         @error('period') <p class="text-red-700">{{ $message }}</p> @enderror
     </x-ui.card>
@@ -31,7 +31,7 @@
                     <option value="en">{{ __('messages.export_ui.english') }}</option><option value="ar">{{ __('messages.export_ui.arabic') }}</option>
                 </select>
             </label>
-            <button type="submit" class="ui-link">{{ __('messages.export_ui.create') }}</button>
+            <button type="submit" class="ui-button ui-button-secondary">{{ __('messages.export_ui.create') }}</button>
             <a class="ui-link" href="{{ \App\Filament\Admin\Pages\Attendance\AttendanceExportsPage::getUrl(panel: 'admin', tenant: $employee->company) }}">{{ __('messages.export_ui.exports') }}</a>
         </form>
         @if ($exportQueued) <p class="mt-2 text-sm text-green-800">{{ __('messages.export_ui.queued_notice') }}</p> @endif
@@ -122,11 +122,11 @@
                 </div>
             @empty <p>{{ __('messages.reporting_ui.none') }}</p> @endforelse
         @elseif ($tab === 'changes')
-            @forelse ($changes as $change)
+            @forelse ($changes as $entry)
                 <div class="border-b border-gray-100 py-3 text-sm">
-                    <p><bdi dir="ltr">{{ $change->effective_from->toDateString() }}</bdi> · {{ $change->actor?->name ?? __('messages.employee_history.system') }}</p>
-                    @foreach ($change->changes as $field => $after)
-                        <p>{{ __('messages.employee_history.fields.'.$field) }}: <bdi dir="auto">{{ is_array($change->previous[$field] ?? null) ? implode(', ', $change->previous[$field]) : ($change->previous[$field] ?? __('messages.employee_history.empty')) }}</bdi> → <bdi dir="auto">{{ is_array($after) ? implode(', ', $after) : ($after ?? __('messages.employee_history.empty')) }}</bdi></p>
+                    <p><bdi dir="ltr">{{ $entry['version']->effective_from->toDateString() }}</bdi> · {{ $entry['version']->actor?->name ?? __('messages.employee_history.system') }}</p>
+                    @foreach ($entry['fields'] as $field => $after)
+                        <p>{{ __('messages.employee_history.fields.'.$field) }}: <bdi dir="auto">{{ is_array($entry['version']->previous[$field] ?? null) ? implode(', ', $entry['version']->previous[$field]) : ($entry['version']->previous[$field] ?? __('messages.employee_history.empty')) }}</bdi> → <bdi dir="auto">{{ is_array($after) ? implode(', ', $after) : ($after ?? __('messages.employee_history.empty')) }}</bdi></p>
                     @endforeach
                 </div>
             @empty <p class="mt-3 text-sm text-gray-500">{{ __('messages.reporting_ui.none') }}</p> @endforelse
