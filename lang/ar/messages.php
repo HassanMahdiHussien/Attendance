@@ -1,6 +1,17 @@
 <?php
 
 return [
+    'employee_template' => [
+        'headers' => ['الاسم', 'رقم الموظف', 'القسم', 'المنصب', 'تاريخ التعيين', 'الفرع', 'البريد', 'الجنس'],
+        'arabic_header' => 'العنوان العربي', 'english_name' => 'الاسم الإنجليزي', 'example' => 'مثال',
+        'required' => 'مطلوب', 'yes' => 'نعم', 'no' => 'لا',
+        'fields' => ['Name', 'Employee number', 'Department', 'Position', 'Hire date', 'Branch', 'Email', 'Gender'],
+        'examples' => ['موظف تجريبي', 'EMP-0001', 'العمليات', 'منسق', '2026-01-01', 'Erbil', 'example@example.test', 'male'],
+    ],
+    'branch_names' => [
+        'duplicate' => 'اسم الفرع أو الاسم البديل يخص فرعاً آخر في هذه الشركة.',
+        'jurisdiction_required' => 'اختر الاختصاص القضائي قبل إنشاء الفرع.',
+    ],
     'ui' => ['months' => [1 => 'كانون الثاني', 'شباط', 'آذار', 'نيسان', 'أيار', 'حزيران',
         'تموز', 'آب', 'أيلول', 'تشرين الأول', 'تشرين الثاني', 'كانون الأول']],
     'attendance' => [
@@ -60,6 +71,7 @@ return [
         'reason_required' => 'سبب الاستبعاد مطلوب.',
     ],
     'import' => [
+        'damaged_arabic_header' => 'فقد هذا الملف حروفه العربية عند حفظه. في Excel اختر حفظ باسم ← "CSV UTF-8 (محدد بفواصل)"، أو ارفع ملف .xlsx بدلاً منه.',
         'file_empty_or_too_large' => 'الملف فارغ أو يتجاوز 2 ميغابايت.',
         'encoding_unreadable' => 'تعذر قراءة ترميز الملف.',
         'headers_or_separator_invalid' => 'ترويسات الملف ناقصة أو مكررة، أو تعذر تحديد الفاصل.',
@@ -67,6 +79,13 @@ return [
         'no_employees' => 'الملف لا يحتوي على موظفين.',
     ],
     'employee_import_ui' => [
+        'held_count' => ':count صفوف تنتظر تحديد الفرع. يمكن استيراد الصفوف الأخرى.',
+        'unmatched_branch' => 'الفرع غير المعروف :branch يظهر في :count صفوف. ستُتخطى هذه الصفوف حتى ربط الفرع أو إنشائه.',
+        'choose_branch' => 'اختر فرعاً',
+        'link_branch' => 'ربط بفرع موجود',
+        'choose_jurisdiction' => 'اختر الاختصاص القضائي',
+        'create_branch' => 'إنشاء فرع',
+        'skipped' => 'تُخطِّي :count صفوف لأن فروعها غير معروفة.',
         'title' => 'استيراد الموظفين',
         'upload' => 'ملف الموظفين',
         'instructions' => 'ارفع ملف CSV أو XLSX. حدد ما إذا كان قائمة كاملة للموظفين النشطين أو تحديثاً جزئياً، ثم راجع ربط الأعمدة والمعاينة قبل التأكيد.',
@@ -82,7 +101,7 @@ return [
         'completed' => 'اكتمل الاستيراد: :new جديد، :changed متغير، :unchanged بلا تغيير، :missing لمراجعة المغادرة.',
         'download_original' => 'تنزيل الملف الأصلي',
         'previous' => 'عمليات الاستيراد السابقة',
-        'status' => ['new' => 'جديد', 'update' => 'متغير', 'unchanged' => 'بلا تغيير', 'error' => 'خطأ'],
+        'status' => ['new' => 'جديد', 'update' => 'متغير', 'unchanged' => 'بلا تغيير', 'error' => 'خطأ', 'held' => 'تم التخطي: فرع غير معروف'],
         'fields' => [
             'employee_code' => 'رمز الموظف', 'name' => 'الاسم', 'name_en' => 'الاسم الإنجليزي',
             'department' => 'القسم', 'position' => 'المنصب', 'hire_date' => 'تاريخ التعيين',
@@ -95,6 +114,7 @@ return [
         ],
     ],
     'employee_import' => [
+        'branch_held' => 'سيُتخطى هذا الصف حتى ربط فرعه أو إنشائه.',
         'unsupported_file' => 'ارفع ملف CSV أو XLSX.',
         'file_name_too_long' => 'اسم الملف طويل جدًا.',
         'unreadable_file' => 'تعذرت قراءة جدول البيانات.',

@@ -38,4 +38,9 @@ class Branch extends Model
     {
         return $this->hasMany(Employee::class);
     }
+
+    public function aliases(): HasMany
+    {
+        return $this->hasMany(BranchAlias::class);
+    }
 }

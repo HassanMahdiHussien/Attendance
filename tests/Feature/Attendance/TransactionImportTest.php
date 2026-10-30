@@ -19,6 +19,7 @@ use App\Services\Attendance\DeviceRegistry;
 use App\Services\Attendance\PersonClassifier;
 use App\Services\Attendance\TransactionFile;
 use App\Services\Attendance\TransactionImport;
+use App\Services\Branches\BranchNames;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -96,6 +97,20 @@ test('CSV and Excel date and time serials are read without changing source text'
     $excelRows = iterator_to_array($reader->rows($excel, $excelMapping));
     expect($excelRows[0]['values']['punch_time'])->toBe('12:00')
         ->and($excelRows[0]['raw']['punch_date'])->toBe('39151');
+});
+
+test('branch aliases suggest coverage and device branches from tab separated reports', function (): void {
+    $this->branch->update(['name' => 'أربيل']);
+    app(BranchNames::class)->save($this->branch, ['Erbil']);
+    $csv = UploadedFile::fake()->createWithContent('Transaction_20261020084331.csv',
+        "Employee ID\tFirst Name\tDepartment\tDate\tTime\tPunch State\tSerial Number\tDevice Name\tData Sources\n"
+        ."12345678\tFake Person\tOperations\t2026-10-20\t08:05\tCheck In\tSER-1\tERBIL_In_Face\tFace\n");
+    $reader = app(TransactionFile::class);
+    $mapping = $reader->suggest($reader->inspect($csv)['headers']);
+    $preview = app(TransactionImport::class)->preview($this->company, $csv, $mapping, ['branch_ids' => [$this->branch->id]]);
+    expect($preview['suggested_coverage']['branch_ids'])->toContain($this->branch->id);
+    $device = app(DeviceRegistry::class)->register($this->company, 'SER-1', 'ERBIL_In_Face', 'Check In');
+    expect($device->suggested_branch_id)->toBe($this->branch->id);
 });
 
 test('preview retains bounded error examples while counting every row', function (): void {

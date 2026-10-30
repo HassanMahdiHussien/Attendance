@@ -1,6 +1,17 @@
 <?php
 
 return [
+    'employee_template' => [
+        'headers' => ['الاسم', 'رقم الموظف', 'القسم', 'المنصب', 'تاريخ التعيين', 'الفرع', 'البريد', 'الجنس'],
+        'arabic_header' => 'Arabic header', 'english_name' => 'English name', 'example' => 'Example',
+        'required' => 'Required', 'yes' => 'Yes', 'no' => 'No',
+        'fields' => ['Name', 'Employee number', 'Department', 'Position', 'Hire date', 'Branch', 'Email', 'Gender'],
+        'examples' => ['Example Employee', 'EMP-0001', 'Operations', 'Coordinator', '2026-01-01', 'Erbil', 'example@example.test', 'male'],
+    ],
+    'branch_names' => [
+        'duplicate' => 'This branch name or alternative name belongs to another branch in this company.',
+        'jurisdiction_required' => 'Choose a jurisdiction before creating the branch.',
+    ],
     'ui' => ['months' => [1 => 'January', 'February', 'March', 'April', 'May', 'June',
         'July', 'August', 'September', 'October', 'November', 'December']],
     'attendance' => [
@@ -60,6 +71,7 @@ return [
         'reason_required' => 'A dismissal reason is required.',
     ],
     'import' => [
+        'damaged_arabic_header' => 'This file lost its Arabic letters when it was saved. In Excel choose Save As → "CSV UTF-8 (Comma delimited)", or upload the .xlsx file instead.',
         'file_empty_or_too_large' => 'The file is empty or exceeds 2 MB.',
         'encoding_unreadable' => 'The file encoding could not be read.',
         'headers_or_separator_invalid' => 'File headers are missing or duplicated, or the separator could not be determined.',
@@ -67,6 +79,13 @@ return [
         'no_employees' => 'The file contains no employees.',
     ],
     'employee_import_ui' => [
+        'held_count' => ':count rows are waiting for a branch choice. Other rows can still be imported.',
+        'unmatched_branch' => 'Unmatched branch :branch appears in :count rows. These rows will be skipped until linked or created.',
+        'choose_branch' => 'Choose a branch',
+        'link_branch' => 'Link to existing branch',
+        'choose_jurisdiction' => 'Choose jurisdiction',
+        'create_branch' => 'Create branch',
+        'skipped' => ':count rows skipped because their branch was unmatched.',
         'title' => 'Import employees',
         'upload' => 'Employee file',
         'instructions' => 'Upload a CSV or XLSX file. Choose whether it is a full active list or a partial update, then check the column mapping and preview before confirming.',
@@ -82,7 +101,7 @@ return [
         'completed' => 'Import completed: :new new, :changed changed, :unchanged unchanged, :missing sent to exit review.',
         'download_original' => 'Download original file',
         'previous' => 'Previous imports',
-        'status' => ['new' => 'New', 'update' => 'Changed', 'unchanged' => 'Unchanged', 'error' => 'Error'],
+        'status' => ['new' => 'New', 'update' => 'Changed', 'unchanged' => 'Unchanged', 'error' => 'Error', 'held' => 'Skipped: unmatched branch'],
         'fields' => [
             'employee_code' => 'Employee code', 'name' => 'Name', 'name_en' => 'English name',
             'department' => 'Department', 'position' => 'Position', 'hire_date' => 'Hire date',
@@ -95,6 +114,7 @@ return [
         ],
     ],
     'employee_import' => [
+        'branch_held' => 'This row will be skipped until its branch is linked or created.',
         'unsupported_file' => 'Upload a CSV or XLSX file.',
         'file_name_too_long' => 'The file name is too long.',
         'unreadable_file' => 'The spreadsheet could not be read.',

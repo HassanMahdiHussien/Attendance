@@ -3,12 +3,12 @@
 namespace App\Services\Employees;
 
 use App\Enums\EmployeeExitStatus;
-use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\EmployeeImportBatch;
 use App\Models\User;
 use App\Services\AuditLogger;
+use App\Services\Branches\BranchMatcher;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
@@ -39,10 +39,13 @@ class MappedEmployeeImport
             throw ValidationException::withMessages(['effectiveDate' => __('messages.employee_import.effective_date_invalid')]);
         }
         $sheet = $this->reader->read($file);
+        if ($sheet['rows'] === []) {
+            throw ValidationException::withMessages(['sourceFile' => __('messages.import.no_employees')]);
+        }
         $mapping = $this->columns->validate($mapping, $sheet['headers'], $mode);
         $prior = EmployeeImportBatch::query()->where('company_id', $company->id)->where('file_sha256', $sheet['hash'])->first();
         $employees = Employee::query()->where('company_id', $company->id)->get()->keyBy('employee_code');
-        $branches = Branch::query()->where('company_id', $company->id)->get()->groupBy(fn (Branch $branch): string => mb_strtolower(trim($branch->name)));
+        $branches = app(BranchMatcher::class)->forCompany($company);
         $rows = [];
         $seen = [];
         foreach ($sheet['rows'] as $raw) {
@@ -164,14 +167,18 @@ class MappedEmployeeImport
             if (($input['position'] ?? '') === '') {
                 $warnings[] = __('messages.employee_import.position_missing');
             }
+            $branchHeld = false;
             if (($input['branch'] ?? '') !== '') {
-                $matches = $branches->get(mb_strtolower(trim($input['branch'])), collect());
+                $matches = $branches->matches($input['branch']);
                 if ($matches->count() === 1) {
                     $values['branch_id'] = $matches->first()->id;
                 } else {
-                    $errors[] = $matches->isEmpty()
-                        ? __('messages.employee_import.branch_unknown_value', ['branch' => $input['branch']])
-                        : __('messages.employee_import.branch_ambiguous');
+                    if ($matches->isEmpty()) {
+                        $branchHeld = true;
+                        $warnings[] = __('messages.employee_import.branch_held');
+                    } else {
+                        $errors[] = __('messages.employee_import.branch_ambiguous');
+                    }
                 }
             } elseif ($mode === 'full' || $employee === null) {
                 $errors[] = __('messages.employee_import.field_required', ['field' => __('messages.employee_import.fields.branch')]);
@@ -198,13 +205,13 @@ class MappedEmployeeImport
                 'branch' => $input['branch'] ?? '', 'values' => $values,
                 'manager_code' => $input['manager_code'] ?? '',
                 'errors' => $errors, 'warnings' => $warnings, 'diff' => $diff,
-                'status' => $errors ? 'error' : ($employee === null ? 'new' : ($diff ? 'update' : 'unchanged')),
+                'status' => $errors ? 'error' : ($branchHeld ? 'held' : ($employee === null ? 'new' : ($diff ? 'update' : 'unchanged'))),
             ];
         }
-        $validCodes = array_fill_keys(array_column(array_filter($rows, fn (array $row): bool => $row['status'] !== 'error'), 'code'), true);
+        $validCodes = array_fill_keys(array_column(array_filter($rows, fn (array $row): bool => ! in_array($row['status'], ['error', 'held'], true)), 'code'), true);
         foreach ($rows as &$row) {
             $managerCode = $row['manager_code'];
-            if ($row['status'] === 'error') {
+            if (in_array($row['status'], ['error', 'held'], true)) {
                 continue;
             }
             if ($managerCode === '') {
@@ -267,14 +274,16 @@ class MappedEmployeeImport
                 if ($storedPath === false) {
                     throw ValidationException::withMessages(['sourceFile' => __('messages.employee_import.storage_failed')]);
                 }
-                $counts = ['new' => $preview->added(), 'changed' => $preview->changed(), 'unchanged' => $preview->unchanged(), 'missing' => count($preview->missing)];
+                $counts = ['new' => $preview->added(), 'changed' => $preview->changed(), 'unchanged' => $preview->unchanged(),
+                    'missing' => count($preview->missing), 'skipped' => $preview->held()];
+                $importedRows = array_values(array_filter($preview->rows, fn (array $row): bool => $row['status'] !== 'held'));
                 $batch = EmployeeImportBatch::create([
                     'company_id' => $company->id, 'uploaded_by' => $actor->id, 'mode' => $mode,
                     'effective_date' => $effectiveDate, 'file_path' => $storedPath,
                     'file_name' => basename(str_replace('\\', '/', $file->getClientOriginalName())), 'file_sha256' => $preview->hash,
                     'mapping' => $mapping, 'counts' => $counts,
-                    'summary' => ['codes' => array_column($preview->rows, 'code'),
-                        'changed_fields' => array_values(array_unique(Arr::flatten(array_map(fn (array $row): array => array_keys($row['diff']), $preview->rows)))),
+                    'summary' => ['codes' => array_column($importedRows, 'code'),
+                        'changed_fields' => array_values(array_unique(Arr::flatten(array_map(fn (array $row): array => array_keys($row['diff']), $importedRows)))),
                         'missing_codes' => array_column($preview->missing, 'code')],
                 ]);
                 $byCode = Employee::query()->where('company_id', $company->id)->get()->keyBy('employee_code');
@@ -291,6 +300,9 @@ class MappedEmployeeImport
                     $byCode->put($row['code'], $employee);
                 }
                 foreach ($preview->rows as $row) {
+                    if ($row['status'] === 'held') {
+                        continue;
+                    }
                     $employee = $byCode->get($row['code']);
                     $values = $row['status'] === 'new' ? [] : $row['values'];
                     if (isset($row['resolved_manager_code'])) {
@@ -305,6 +317,9 @@ class MappedEmployeeImport
                     }
                 }
                 foreach ($preview->rows as $row) {
+                    if ($row['status'] === 'held') {
+                        continue;
+                    }
                     $this->patternRule->apply($byCode->get($row['code']), $effectiveDate, $batch->id);
                 }
                 foreach ($preview->missing as $missing) {

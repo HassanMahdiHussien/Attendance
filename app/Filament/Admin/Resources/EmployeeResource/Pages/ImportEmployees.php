@@ -3,8 +3,10 @@
 namespace App\Filament\Admin\Resources\EmployeeResource\Pages;
 
 use App\Filament\Admin\Resources\EmployeeResource;
+use App\Models\Branch;
 use App\Models\Company;
 use App\Models\EmployeeImportBatch;
+use App\Services\Branches\BranchNames;
 use App\Services\Employees\ColumnMapping;
 use App\Services\Employees\EmployeeImport;
 use App\Services\Employees\ImportPreview;
@@ -53,6 +55,10 @@ class ImportEmployees extends Page
     public array $headers = [];
 
     public array $mapping = [];
+
+    public array $branchChoices = [];
+
+    public array $jurisdictionChoices = [];
 
     public array $samples = [];
 
@@ -130,8 +136,50 @@ class ImportEmployees extends Page
         $this->mappedPreviewKey = null;
         $this->sourceFile = null;
         $this->step = 'upload';
-        $this->summary = ['counts' => $result['counts'], 'batch_id' => $result['batch']->id];
+        $this->summary = ['counts' => $result['counts'], 'batch_id' => $result['batch']->id,
+            'skipped' => $result['preview']->held()];
         Notification::make()->title(__('Employee import completed'))->success()->send();
+    }
+
+    public function linkUnmatched(int $index, BranchNames $names): void
+    {
+        $company = $this->company();
+        Gate::authorize('importEmployees', $company);
+        $item = $this->mappedPreview()?->unmatchedBranches()[$index] ?? null;
+        abort_unless($item !== null, 404);
+        $this->validate(["branchChoices.$index" => 'required|integer']);
+        $names->link($company, $item['name'], (int) $this->branchChoices[$index]);
+        $this->rerunMappedPreview();
+    }
+
+    public function createUnmatched(int $index, BranchNames $names): void
+    {
+        $company = $this->company();
+        Gate::authorize('importEmployees', $company);
+        Gate::authorize('create', Branch::class);
+        $item = $this->mappedPreview()?->unmatchedBranches()[$index] ?? null;
+        abort_unless($item !== null, 404);
+        $this->validate(["jurisdictionChoices.$index" => 'required|in:federal_iraq,kurdistan_region']);
+        $names->create($company, $item['name'], $this->jurisdictionChoices[$index]);
+        $this->rerunMappedPreview();
+    }
+
+    private function rerunMappedPreview(): void
+    {
+        $company = $this->company();
+        $preview = app(EmployeeImport::class)->previewMapped($company, $this->sourceFile,
+            $this->mode, $this->effectiveDate, $this->mapping);
+        Cache::put($this->cacheKey(), $preview->toArray(), now()->addMinutes(30));
+        $this->branchChoices = [];
+        $this->jurisdictionChoices = [];
+    }
+
+    public function availableBranches(): Collection
+    {
+        $company = $this->company();
+        Gate::authorize('importEmployees', $company);
+
+        return Branch::query()->where('company_id', $company->id)->orderBy('name')->get();
     }
 
     public function mappedPreview(): ?ImportPreview

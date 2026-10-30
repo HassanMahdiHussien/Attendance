@@ -2,6 +2,7 @@
 
 namespace App\Services\Leave;
 
+use App\Services\Employees\CsvFormat;
 use DOMDocument;
 use DOMXPath;
 use Generator;
@@ -245,8 +246,11 @@ class LeaveBalanceFile
 
         $stream = fopen($path, 'rb');
         try {
-            $first = fgets($stream) ?: '';
-            $delimiter = count(str_getcsv($first, ';', '"', '')) > count(str_getcsv($first, ',', '"', '')) ? ';' : ',';
+            $samples = [];
+            for ($sample = 0; $sample < 3 && ($line = fgets($stream)) !== false; $sample++) {
+                $samples[] = $line;
+            }
+            $delimiter = CsvFormat::delimiterFromLines($samples);
             rewind($stream);
             $number = 0;
             while (($cells = fgetcsv($stream, 0, $delimiter, '"', '')) !== false) {
@@ -263,6 +267,9 @@ class LeaveBalanceFile
                     }
                 }
                 unset($cell);
+                if ($number <= 50) {
+                    CsvFormat::assertReadableHeader($cells);
+                }
                 if ($cells !== [null]) {
                     yield ['number' => $number, 'cells' => array_map(fn (?string $value) => Cell::fromValue($value), $cells)];
                 }

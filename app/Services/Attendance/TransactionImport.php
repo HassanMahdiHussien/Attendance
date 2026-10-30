@@ -15,6 +15,7 @@ use App\Models\Company;
 use App\Models\Employee;
 use App\Models\User;
 use App\Services\AuditLogger;
+use App\Services\Branches\BranchMatcher;
 use App\Support\Tenancy\TenantContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\UploadedFile;
@@ -31,7 +32,7 @@ class TransactionImport
         $this->authorize($company);
         $sheet = $this->file->inspect($file);
         $mapping = $this->file->validateMapping($mapping, $sheet['headers']);
-        $branches = Branch::query()->where('company_id', $company->id)->get()->groupBy(fn (Branch $branch): string => mb_strtolower($branch->name));
+        $branches = app(BranchMatcher::class)->forCompany($company);
         $employees = Employee::query()->where('company_id', $company->id)->pluck('id', 'employee_code');
         $devices = Device::query()->where('company_id', $company->id)->get()->keyBy('serial_number');
         $samples = ['errors' => [], 'duplicates' => [], 'unknown' => [], 'non_employee' => [], 'devices' => []];
@@ -102,9 +103,9 @@ class TransactionImport
                 if ($values['punch_state'] === '255') {
                     $counts['restaurant']++;
                 }
-                $prefix = mb_strtolower(explode('_', $values['device_name'], 2)[0]);
-                if ($branches->get($prefix)?->count() === 1) {
-                    $suggestedBranches[$branches->get($prefix)->first()->id] = true;
+                $prefix = explode('_', $values['device_name'], 2)[0];
+                if ($branch = $branches->match($prefix)) {
+                    $suggestedBranches[$branch->id] = true;
                 }
                 if ($employees->has($values['person_code'])) {
                     continue;

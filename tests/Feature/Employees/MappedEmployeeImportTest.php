@@ -256,14 +256,15 @@ test('numeric identifiers too large for exact float representation are rejected'
     expect(app(SpreadsheetReader::class)->value($cell, 'employee_code'))->toBe('123456789012345');
 });
 
-test('unknown branches name the bad mapped value and unmatched managers remain warnings', function (): void {
+test('unknown branches hold the row under the unmatched value and unmatched managers remain warnings', function (): void {
     $row = hcRow(12345678, 'Fake Person', '', 39151, '99999999');
     $row[23] = 'Unknown Site';
     $file = hcFile([$row]);
     $mapping = app(ColumnMapping::class)->suggest(hcHeaders());
     $preview = app(EmployeeImport::class)->previewMapped($this->company, $file, 'full', today()->toDateString(), $mapping);
-    expect($preview->errors())->toBe(1)
-        ->and(implode(' ', $preview->rows[0]['errors']))->toContain('Unknown Site');
+    expect($preview->errors())->toBe(0)
+        ->and($preview->held())->toBe(1)
+        ->and($preview->unmatchedBranches())->toBe([['name' => 'Unknown Site', 'count' => 1]]);
     $valid = hcFile([hcRow(12345678, 'Fake Person', '', 39151, '99999999')]);
     $review = app(EmployeeImport::class)->previewMapped($this->company, $valid, 'full', today()->toDateString(), $mapping);
     expect($review->errors())->toBe(0)

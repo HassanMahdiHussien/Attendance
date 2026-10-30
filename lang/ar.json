@@ -90,6 +90,8 @@
     "Companies overview": "نظرة عامة على الشركات",
     "Confirm import": "تأكيد الاستيراد",
     "Download CSV template": "تنزيل قالب CSV",
+    "Download Excel template": "تنزيل قالب Excel",
+    "Alternative names": "الأسماء البديلة",
     "Download the template and fill one row per employee. Required columns: name, department, position, hire date, and branch. Employee number, email, and gender are optional. Use 2024-01-15 or 15/01/2024 for dates.": "حمّل القالب ثم املأ صفاً لكل موظف. الأعمدة المطلوبة: الاسم، القسم، المنصب، تاريخ التعيين، الفرع. رقم الموظف والبريد والجنس اختيارية. اكتب التاريخ 2024-01-15 أو 15/01/2024.",
     "Email": "البريد",
     "Employee file": "ملف الموظفين",
