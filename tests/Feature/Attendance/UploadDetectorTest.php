@@ -13,6 +13,8 @@ use App\Support\Tenancy\TenantContext;
 use Filament\Facades\Filament;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
+use OpenSpout\Common\Entity\Row;
+use OpenSpout\Writer\XLSX\Writer;
 
 beforeEach(function (): void {
     Queue::fake();
@@ -66,4 +68,17 @@ test('a saved mapping belonging to another tenant is never applied', function ()
     });
 
     expect(app(UploadDetector::class)->detect($this->company, $file)['mapping'])->toBe($suggested);
+});
+
+test('an HC workbook with date cells is detected as an employee list', function (): void {
+    $path = tempnam(sys_get_temp_dir(), 'detect-hc-').'.xlsx';
+    $writer = new Writer;
+    $writer->openToFile($path);
+    $writer->addRow(Row::fromValues(['Pers.No.', 'Personnel Number', 'Entry', 'Personnel Area']));
+    $writer->addRow(Row::fromValues([12345679, 'Fake New', new DateTimeImmutable('2007-03-10'), 'Hilla']));
+    $writer->close();
+    $file = UploadedFile::fake()->createWithContent('HC.xlsx', file_get_contents($path));
+    unlink($path);
+
+    expect(app(UploadDetector::class)->detect($this->company, $file)['kind'])->toBe('employees');
 });

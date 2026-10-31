@@ -35,7 +35,7 @@ class LeaveFile
     {
         [$path, $name] = $this->pathAndName($file, $name);
         foreach ($this->rawRows($path, $name) as $row) {
-            $headers = array_map(fn (mixed $cell): string => trim((string) $cell), $row['cells']);
+            $headers = array_map(SpreadsheetReader::label(...), $row['cells']);
             if ($row['number'] !== 1 || count(array_intersect($headers, self::HEADERS)) < 8) {
                 throw ValidationException::withMessages(['sourceFile' => __('messages.leave_import.header_missing')]);
             }
