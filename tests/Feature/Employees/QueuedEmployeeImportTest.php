@@ -15,6 +15,7 @@ use App\Services\Employees\SpreadsheetReader;
 use App\Support\Tenancy\TenantContext;
 use Filament\Facades\Filament;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
@@ -73,6 +74,21 @@ test('job runs in a queue worker where nobody is signed in', function (): void {
     expect($run->refresh()->status)->toBe('completed')
         ->and(Employee::query()->where('employee_code', '00000001')->exists())->toBeTrue()
         ->and(Auth::user())->toBeNull();
+});
+
+test('job imports in the language the preview was made in', function (): void {
+    $this->actor->forceFill(['locale' => 'ar'])->save();
+    App::setLocale('ar');
+    $file = UploadedFile::fake()->createWithContent('employees.csv', "employee_code,name,branch,hire_date\n00000001,Fake Person,Nowhere,2024-01-15\n00000002,Fake Other,Hilla,2024-01-15\n");
+    $mapping = app(ColumnMapping::class)->suggest(app(SpreadsheetReader::class)->read($file)['headers']);
+    $preview = $this->import->previewMapped($this->company, $file, 'partial', today()->toDateString(), $mapping);
+    $run = $this->import->queueMapped($this->company, $file, $this->actor, 'partial', today()->toDateString(), $mapping, $preview->token);
+    App::setLocale('en');
+
+    (new ImportEmployeesJob($run->id))->handle($this->import);
+
+    expect($run->refresh()->status)->toBe('completed')
+        ->and(App::getLocale())->toBe('en');
 });
 
 test('changed stored file fails without writing employees', function (): void {
