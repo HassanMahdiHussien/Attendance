@@ -271,6 +271,16 @@ test('unknown branches hold the row under the unmatched value and unmatched mana
         ->and($review->rows[0]['warnings'])->not->toBeEmpty();
 });
 
+test('a full file with held rows does not send anyone to exit review', function (): void {
+    Employee::factory()->create(['branch_id' => $this->branch->id, 'employee_code' => '00000001']);
+    $row = hcRow(12345678, 'Fake Person', '', 39151, '99999999');
+    $row[23] = 'Unknown Site';
+    $mapping = app(ColumnMapping::class)->suggest(hcHeaders());
+    $preview = app(EmployeeImport::class)->previewMapped($this->company, hcFile([$row]), 'full', today()->toDateString(), $mapping);
+    expect($preview->held())->toBe(1)
+        ->and($preview->missing)->toBe([]);
+});
+
 test('a new employee counts from the hire date and later imports from their effective date', function (): void {
     $mapping = app(ColumnMapping::class)->suggest(hcHeaders());
     $import = app(EmployeeImport::class);

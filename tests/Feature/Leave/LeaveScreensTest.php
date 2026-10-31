@@ -221,7 +221,7 @@ test('day detail renders leave reconciliation explanations in English and Arabic
 
 test('leave pages and actions stay within the selected tenant', function (): void {
     $platform = User::factory()->create(['company_id' => null, 'primary_role' => UserRole::PlatformAdmin]);
-    expect(array_column(AdminNav::leaveItems($this->actor), 'label'))->toContain(__('messages.leave_ui.upload_title'));
+    expect(array_column(AdminNav::leaveItems($this->actor), 'label'))->not->toContain(__('messages.leave_ui.upload_title'));
     foreach ([UploadLeave::class, LeaveBatches::class, LeaveRequests::class, LeaveTypesPage::class, CreditLedger::class] as $page) {
         Livewire::test($page)->assertSee($page::getNavigationLabel());
         Filament::setTenant($this->other);

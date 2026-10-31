@@ -36,6 +36,12 @@ class EmployeeResource extends Resource
         return __('Employees');
     }
 
+    // The workspace already has an "Employees" item (search and profiles); this one manages the records.
+    public static function getNavigationLabel(): string
+    {
+        return __('Employee records');
+    }
+
     protected static bool $isGloballySearchable = false;
 
     public static function form(Schema $schema): Schema

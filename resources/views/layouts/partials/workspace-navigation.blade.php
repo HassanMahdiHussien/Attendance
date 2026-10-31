@@ -10,6 +10,9 @@
         $switchableTenants = \App\Support\Access\WorkspaceTenants::items(auth()->user());
         $settingsActive = collect($adminNav)->contains(fn ($item) => $item['active']);
         $home = \App\Support\Access\Landing::for(auth()->user());
+        $uploadItem = \App\Support\Access\AdminNav::uploadItems(auth()->user())[0] ?? null;
+        $uploadUrl = $uploadItem['url'] ?? null;
+        $uploadActive = $uploadItem['active'] ?? false;
         $companySubtitle = \Filament\Facades\Filament::getCurrentPanel()?->getId() === 'admin'
             ? (\Filament\Facades\Filament::getTenant()?->name ?? auth()->user()->company?->name)
             : auth()->user()->company?->name;
@@ -22,6 +25,7 @@
                 <x-ui.brand :subtitle="$companySubtitle ?? auth()->user()->name" />
             </a>
             <nav class="ms-2 hidden shrink-0 items-center xl:flex" aria-label="{{ __('Main navigation') }}">
+                @if($uploadUrl)<a href="{{ $uploadUrl }}" @if($uploadActive) aria-current="page" @endif class="relative flex h-16 items-center gap-2 whitespace-nowrap px-2.5 text-sm font-medium {{ $uploadActive ? 'text-signal' : 'text-night-soft hover:text-white' }}">{{ __('messages.upload_center.title') }}@if($uploadActive)<span class="absolute inset-x-3 bottom-0 h-[3px] rounded-t bg-signal" aria-hidden="true"></span>@endif</a>@endif
                 @foreach($nav as $item)
                     @php $active = request()->is($item['pattern']); @endphp
                     <a href="{{ $item['url'] }}" @if($active) aria-current="page" @endif class="relative flex h-16 items-center gap-2 whitespace-nowrap px-2.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-6px] focus-visible:outline-signal {{ $active ? 'text-signal' : 'text-night-soft hover:text-white' }}">
@@ -90,8 +94,9 @@
         </div>
     </header>
     <div class="xl:hidden" x-data="{ open: false, returnFocus() { this.open = false; this.$nextTick(() => this.$refs.moreTrigger.focus()) }, trap(event) { if (!this.open || event.key !== 'Tab') return; let nodes = [...this.$refs.sheet.querySelectorAll('a, button')]; let first = nodes[0], last = nodes[nodes.length - 1]; if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() } else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() } } }" @keydown.escape.window="if (open) returnFocus()" @keydown.window="trap($event)">
-        <nav class="fixed inset-x-0 bottom-0 z-40 grid {{ count($nav) >= 3 ? 'grid-cols-4' : (count($nav) === 2 ? 'grid-cols-3' : 'grid-cols-2') }} border-t border-line bg-white pb-[env(safe-area-inset-bottom)] text-center shadow-[0_-4px_16px_-8px_rgb(14_26_43/0.18)]" aria-label="{{ __('Main navigation') }}">
-            @foreach(array_slice($nav, 0, 3) as $item)
+        <nav class="fixed inset-x-0 bottom-0 z-40 grid {{ count($nav) >= 3 || $uploadUrl ? 'grid-cols-4' : (count($nav) === 2 ? 'grid-cols-3' : 'grid-cols-2') }} border-t border-line bg-white pb-[env(safe-area-inset-bottom)] text-center shadow-[0_-4px_16px_-8px_rgb(14_26_43/0.18)]" aria-label="{{ __('Main navigation') }}">
+            @if($uploadUrl)<a href="{{ $uploadUrl }}" @if($uploadActive) aria-current="page" @endif class="relative flex min-h-16 flex-col items-center justify-center gap-1 px-1 text-xs font-medium {{ $uploadActive ? 'text-night' : 'text-gray-500' }}">@if($uploadActive)<span class="absolute inset-x-6 top-0 h-[3px] rounded-b bg-signal" aria-hidden="true"></span>@endif<x-ui.icon name="folder" class="h-5 w-5" />{{ __('messages.upload_center.title') }}</a>@endif
+            @foreach(array_slice($nav, 0, $uploadUrl ? 2 : 3) as $item)
                 @php $active = request()->is($item['pattern']); @endphp
                 <a href="{{ $item['url'] }}" @if($active) aria-current="page" @endif class="relative flex min-h-16 flex-col items-center justify-center gap-1 px-1 text-xs font-medium focus-visible:outline-2 focus-visible:outline-primary {{ $active ? 'text-night' : 'text-gray-500' }}">@if($active)<span class="absolute inset-x-6 top-0 h-[3px] rounded-b bg-signal" aria-hidden="true"></span>@endif<x-ui.icon :name="$item['icon']" class="h-5 w-5" /><span class="block max-w-full truncate">{{ __($item['label']) }}</span>@if($item['count'] || $item['dot'])<span class="absolute end-4 top-2 h-2 w-2 rounded-full bg-signal"></span>@endif</a>
             @endforeach
@@ -101,7 +106,7 @@
             <div class="absolute inset-0 bg-night/50" @click="returnFocus()"></div>
             <section id="workspace-more" x-ref="sheet" role="dialog" aria-modal="true" aria-label="{{ __('More') }}" class="absolute inset-x-0 bottom-0 max-h-[80vh] overflow-y-auto rounded-t-2xl bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-2xl">
                 <div class="mb-4 flex items-center justify-between"><strong>{{ __('More') }}</strong><button type="button" @click="returnFocus()" aria-label="{{ __('Close') }}" class="grid h-10 w-10 place-items-center rounded-lg focus-visible:outline-2 focus-visible:outline-primary"><x-ui.icon name="x" /></button></div>
-                @foreach(array_slice($nav, 3) as $item)
+                @foreach(array_slice($nav, $uploadUrl ? 2 : 3) as $item)
                     <a href="{{ $item['url'] }}" @if(request()->is($item['pattern'])) aria-current="page" @endif class="flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm font-medium focus-visible:outline-2 focus-visible:outline-primary {{ request()->is($item['pattern']) ? 'bg-primary-light text-primary' : 'text-gray-700' }}"><x-ui.icon :name="$item['icon']" />{{ __($item['label']) }}</a>
                 @endforeach
                 @if($platformNav)

@@ -50,7 +50,7 @@ test('employee management actions retain their policy checks', function (): void
     $this->actingAs($admin);
 
     expect(array_column(Nav::items($admin), 'label'))->toContain('Employees');
-    expect(array_column(AdminNav::items($admin), 'label'))->toContain(__('Employees'));
+    expect(array_column(AdminNav::items($admin), 'label'))->toContain(__('Employee records'));
     $this->get('/employees')->assertOk()->assertSee(__('Add employee'))->assertSee(__('Import CSV'))
         ->assertSee(__('Edit'))->assertSee('/admin/'.$company->id.'/employees/', false);
     $this->get('/admin/'.$company->id.'/employees')->assertOk();
