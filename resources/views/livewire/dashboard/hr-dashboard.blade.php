@@ -1,5 +1,7 @@
 <div class="space-y-6">
-    <x-ui.page-header :title="__('messages.reporting_ui.dashboard')" />
+    <div class="flex flex-wrap items-center justify-between gap-3"><x-ui.page-header :title="__('messages.reporting_ui.dashboard')" />
+        @if($uploadItem = (\App\Support\Access\AdminNav::uploadItems(auth()->user())[0] ?? null))<a href="{{ $uploadItem['url'] }}" class="rounded-lg border border-line bg-white px-4 py-2 text-sm font-medium text-ink">{{ __('messages.upload_center.dashboard_button') }}</a>@endif
+    </div>
     <x-ui.card>
         <h2 class="text-lg font-bold text-ink">{{ $company->name }}</h2>
         <p class="text-sm text-gray-500"><bdi dir="ltr">{{ $from }} → {{ $to }}</bdi></p>

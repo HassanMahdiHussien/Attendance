@@ -1,4 +1,5 @@
 <x-filament-panels::page>
+    <a class="ui-link" href="{{ \App\Filament\Admin\Pages\Attendance\UploadCenter::getUrl(panel: 'admin', tenant: $this->company()) }}">{{ __('messages.upload_center.back') }}</a>
     <div class="space-y-6">
         <x-ui.card :title="__('messages.leave_balance_ui.source_file')">
             <form wire:submit="prepare" class="space-y-3">

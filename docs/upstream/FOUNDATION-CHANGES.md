@@ -205,3 +205,6 @@ These test fixes are called out separately from the foundation-file inventory ab
 | 2026-10-31 | 513 | `app/Services/Employees/{CsvReader,SpreadsheetReader,CsvFormat}.php`, attendance and leave CSV readers | Read tab-separated files and explain headers whose Arabic letters were replaced by question marks. | **Port**. |
 | 2026-10-31 | 513 | `app/Services/Employees/EmployeeTemplate.php`, `routes/web.php`, employee import view | Serve a header-only Excel template with a separate Help sheet and retain the CSV link. | **Port**. |
 | 2026-10-31 | 513 | `lang/{en,ar}/messages.php`, `lang/ar.json`, `tests/fixtures/ui-inventory.json` | Translate the upload fixes and track new preview controls. | **Port**. |
+| 2026-10-31 | 513 | `app/Support/Access/AdminNav.php`, `resources/views/layouts/partials/workspace-navigation.blade.php` | Put the combined Upload action first on desktop and phone and remove the old upload entries from menus. | **Apply with the attendance module**. |
+| 2026-10-31 | 513 | `resources/views/filament/admin/resources/employee-resource/pages/import-employees.blade.php` | Link the advanced employee importer back to Upload. | **Port**. |
+| 2026-10-31 | 513 | `lang/{en,ar}/messages.php` | Label the combined upload and its decisions in both workspace languages. | **Apply with the attendance module**. |

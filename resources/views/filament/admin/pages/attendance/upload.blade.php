@@ -1,4 +1,5 @@
 <x-filament-panels::page>
+    <a class="ui-link" href="{{ \App\Filament\Admin\Pages\Attendance\UploadCenter::getUrl(panel: 'admin', tenant: $this->company()) }}">{{ __('messages.upload_center.back') }}</a>
     <div class="space-y-6">
         <section class="space-y-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
             <h2 class="font-bold">{{ __('messages.attendance_ui.file') }}</h2>

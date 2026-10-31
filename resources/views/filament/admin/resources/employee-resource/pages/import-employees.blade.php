@@ -1,4 +1,5 @@
 <x-filament-panels::page>
+    <a class="ui-link" href="{{ \App\Filament\Admin\Pages\Attendance\UploadCenter::getUrl(panel: 'admin', tenant: \Filament\Facades\Filament::getTenant()) }}">{{ __('messages.upload_center.back') }}</a>
     <div class="space-y-6">
         <section class="space-y-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
             <h2 class="font-bold">{{ __('messages.employee_import_ui.upload') }}</h2>
@@ -92,6 +93,7 @@
                 <p>{{ __('messages.employee_import_ui.counts', ['new' => $this->mappedPreview()->added(), 'changed' => $this->mappedPreview()->changed(), 'unchanged' => $this->mappedPreview()->unchanged(), 'missing' => count($this->mappedPreview()->missing), 'errors' => $this->mappedPreview()->errors()]) }}</p>
                 @if ($this->mappedPreview()->held() > 0)
                     <p>{{ __('messages.employee_import_ui.held_count', ['count' => $this->mappedPreview()->held()]) }}</p>
+                    @if ($mode === 'full')<p>{{ __('messages.employee_import_ui.held_no_leavers') }}</p>@endif
                     @foreach ($this->mappedPreview()->unmatchedBranches() as $index => $item)
                         <div class="space-y-2 border-t border-gray-200 pt-3" wire:key="unmatched-{{ $index }}">
                             <p>{{ __('messages.employee_import_ui.unmatched_branch', ['branch' => $item['name'], 'count' => $item['count']]) }}</p>

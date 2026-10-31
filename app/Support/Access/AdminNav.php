@@ -13,13 +13,12 @@ use App\Filament\Admin\Pages\Attendance\HolidaysPage;
 use App\Filament\Admin\Pages\Attendance\NotificationsPage;
 use App\Filament\Admin\Pages\Attendance\OfficePolicyPage;
 use App\Filament\Admin\Pages\Attendance\ReviewQueue;
-use App\Filament\Admin\Pages\Attendance\UploadAttendance;
+use App\Filament\Admin\Pages\Attendance\UploadCenter;
 use App\Filament\Admin\Pages\CompanySettings;
 use App\Filament\Admin\Pages\Leave\CreditLedger;
 use App\Filament\Admin\Pages\Leave\LeaveBatches;
 use App\Filament\Admin\Pages\Leave\LeaveRequests;
 use App\Filament\Admin\Pages\Leave\LeaveTypesPage;
-use App\Filament\Admin\Pages\Leave\UploadLeave;
 use App\Filament\Admin\Resources\BranchResource;
 use App\Filament\Admin\Resources\EmployeeResource;
 use App\Filament\Admin\Resources\LocationResource;
@@ -39,7 +38,6 @@ class AdminNav
     ];
 
     private const ATTENDANCE_ENTRIES = [
-        [UploadAttendance::class, 'folder', 'heroicon-o-arrow-up-tray'],
         [AttendanceBatches::class, 'folder', 'heroicon-o-archive-box'],
         [AttendanceDevices::class, 'settings', 'heroicon-o-device-phone-mobile'],
         [AttendanceIssues::class, 'folder', 'heroicon-o-exclamation-triangle'],
@@ -54,7 +52,6 @@ class AdminNav
     ];
 
     private const LEAVE_ENTRIES = [
-        [UploadLeave::class, 'folder', 'heroicon-o-arrow-up-tray'],
         [LeaveBatches::class, 'folder', 'heroicon-o-archive-box'],
         [LeaveRequests::class, 'users', 'heroicon-o-document-text'],
         [LeaveTypesPage::class, 'settings', 'heroicon-o-tag'],
@@ -64,6 +61,11 @@ class AdminNav
     public static function items(User $user): array
     {
         return self::entries($user, self::ENTRIES);
+    }
+
+    public static function uploadItems(User $user): array
+    {
+        return self::entries($user, [[UploadCenter::class, 'folder', 'heroicon-o-arrow-up-tray']]);
     }
 
     public static function attendanceItems(User $user): array

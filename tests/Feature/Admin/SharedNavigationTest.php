@@ -38,7 +38,7 @@ test('admin panel uses the shared workspace navigation and keeps settings access
     try {
         expect($panel->hasTopbar())->toBeFalse();
         expect($panel->hasNavigation())->toBeFalse();
-        expect(array_column(AdminNav::items($user), 'label'))->toContain(__('Employees'));
+        expect(array_column(AdminNav::items($user), 'label'))->toContain(__('Employee records'));
     } finally {
         Filament::setTenant(null, isQuiet: true);
         Filament::setCurrentPanel(null);
