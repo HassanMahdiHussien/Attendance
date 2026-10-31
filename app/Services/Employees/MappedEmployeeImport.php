@@ -243,8 +243,10 @@ class MappedEmployeeImport
         unset($row);
 
         // A held row may belong to anyone, so a full file with held rows cannot prove who has left.
+        // An employee whose exit is already confirmed stays active until their last working day; they have no review to start.
         $held = in_array('held', array_column($rows, 'status'), true);
-        $missing = $mode === 'full' && ! $held ? $employees->filter(fn (Employee $employee): bool => $employee->is_active && ! isset($seen[$employee->employee_code]))
+        $missing = $mode === 'full' && ! $held ? $employees->filter(fn (Employee $employee): bool => $employee->is_active
+            && $employee->exit_status !== EmployeeExitStatus::Confirmed && ! isset($seen[$employee->employee_code]))
             ->map(fn (Employee $employee): array => ['id' => $employee->id, 'code' => $employee->employee_code, 'name' => $employee->name])->values()->all() : [];
         $priorInfo = $prior ? ['date' => $prior->effective_date->toDateString(), 'mode' => $prior->mode, 'id' => $prior->id] : null;
         $preview = new ImportPreview($rows, [], $sheet['hash'], $missing, $priorInfo);

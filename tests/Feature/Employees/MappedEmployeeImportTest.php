@@ -284,6 +284,21 @@ test('unknown branches hold the row under the unmatched value and unmatched mana
         ->and($review->rows[0]['warnings'])->not->toBeEmpty();
 });
 
+test('a full file leaves out employees whose exit is already confirmed', function (): void {
+    $leaving = Employee::factory()->create(['branch_id' => $this->branch->id, 'employee_code' => '00000001',
+        'exit_status' => EmployeeExitStatus::Confirmed, 'last_working_day' => today()->addDay(), 'is_active' => true]);
+    $file = hcFile([hcRow(12345678, 'Fake Person', '', 39151)]);
+    $mapping = app(ColumnMapping::class)->suggest(hcHeaders());
+    $import = app(EmployeeImport::class);
+    $preview = $import->previewMapped($this->company, $file, 'full', today()->toDateString(), $mapping);
+    expect($preview->missing)->toBe([]);
+
+    $result = $import->commitMapped($this->company, $file, $this->actor, 'full', today()->toDateString(), $mapping, $preview->token);
+
+    expect($result['committed'])->toBeTrue()
+        ->and($leaving->fresh()->exit_status)->toBe(EmployeeExitStatus::Confirmed);
+});
+
 test('a full file with held rows does not send anyone to exit review', function (): void {
     Employee::factory()->create(['branch_id' => $this->branch->id, 'employee_code' => '00000001']);
     $row = hcRow(12345678, 'Fake Person', '', 39151, '99999999');
