@@ -16,6 +16,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -62,11 +63,14 @@ class ImportEmployeesJob implements ShouldBeUnique, ShouldQueue
             }
             $previousActor = Auth::user();
             $previousTenant = Filament::getTenant();
+            $previousLocale = App::getLocale();
             try {
                 $actor = User::findOrFail($run->uploaded_by);
                 // A queue worker has no signed-in user, and Filament needs one before a tenant can be set.
                 Auth::setUser($actor);
                 Filament::setTenant($company);
+                // The preview token covers the translated row messages, so recheck in the language the preview was made in.
+                App::setLocale($actor->preferredLocale());
                 Gate::forUser($actor)->authorize('importEmployees', $company);
                 $path = Storage::disk('local')->path($run->file_path);
                 if (! is_file($path) || ! hash_equals($run->file_sha256, hash_file('sha256', $path))) {
@@ -99,6 +103,7 @@ class ImportEmployeesJob implements ShouldBeUnique, ShouldQueue
                 $run->refresh()->update(['status' => 'failed', 'error' => $code]);
                 report($exception);
             } finally {
+                App::setLocale($previousLocale);
                 Filament::setTenant($previousTenant);
                 if ($previousActor !== null) {
                     Auth::setUser($previousActor);
