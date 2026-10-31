@@ -3,6 +3,7 @@
 namespace App\Services\Leave;
 
 use App\Services\Employees\CsvFormat;
+use App\Services\Employees\SpreadsheetReader;
 use DOMDocument;
 use DOMXPath;
 use Generator;
@@ -27,7 +28,7 @@ class LeaveBalanceFile
     {
         [$path, $name] = $this->pathAndName($file, $name);
         foreach ($this->rawRows($path, $name) as $row) {
-            $headers = array_map(fn ($cell): string => trim((string) $cell->getValue()), $row['cells']);
+            $headers = array_map(fn ($cell): string => SpreadsheetReader::label($cell->getValue()), $row['cells']);
             $found = collect($headers)->contains(fn (string $header): bool => $this->headerKey($header) === 'totalremainingannualleavedays');
             if ($found) {
                 // The company report has up to two label rows under the header (month names, then PLAN/ACT);
@@ -43,7 +44,7 @@ class LeaveBalanceFile
                     }
                     $structuralRows[] = $candidate['number'];
                     foreach ($candidate['cells'] as $index => $cell) {
-                        $label = trim((string) $cell->getValue());
+                        $label = SpreadsheetReader::label($cell->getValue());
                         if ($label !== '') {
                             $subheaders[$index] = trim(($subheaders[$index] ?? '').' '.$label);
                         }
@@ -316,7 +317,7 @@ class LeaveBalanceFile
             if (is_int($value) || is_float($value)) {
                 return false;
             }
-            $text = $this->normalized((string) $value);
+            $text = $this->normalized(SpreadsheetReader::label($value));
             $labels = $labels || in_array($text, ['plan', 'act'], true) || ($text !== '' && $this->month($text) !== null);
         }
 

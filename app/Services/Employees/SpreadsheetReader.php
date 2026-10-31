@@ -44,6 +44,12 @@ class SpreadsheetReader
         return ['headers' => $headers, 'rows' => $rows, 'hash' => hash_file('sha256', $path)];
     }
 
+    /** Header and label text: a date or time cell is data, never a label, and cannot be cast to a string. */
+    public static function label(mixed $cell): string
+    {
+        return $cell instanceof DateTimeInterface || $cell instanceof DateInterval ? '' : trim((string) $cell);
+    }
+
     public function value(mixed $cell, string $field): string
     {
         if ($cell === null || $cell === false || $cell === true) {
