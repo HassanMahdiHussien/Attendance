@@ -15,6 +15,7 @@ use App\Services\Employees\SpreadsheetReader;
 use App\Support\Tenancy\TenantContext;
 use Filament\Facades\Filament;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
@@ -60,6 +61,18 @@ test('job links one batch and remains idempotent when handled twice', function (
         ->and($run->fresh()->employee_import_batch_id)->toBe(EmployeeImportBatch::query()->sole()->id)
         ->and(EmployeeImportBatch::query()->count())->toBe(1)
         ->and(Employee::query()->where('employee_code', '00000001')->count())->toBe(1);
+});
+
+test('job runs in a queue worker where nobody is signed in', function (): void {
+    $run = queueEmployeeFile($this->import, $this->company, $this->actor);
+    Filament::setTenant(null);
+    Auth::guard()->forgetUser();
+
+    (new ImportEmployeesJob($run->id))->handle($this->import);
+
+    expect($run->refresh()->status)->toBe('completed')
+        ->and(Employee::query()->where('employee_code', '00000001')->exists())->toBeTrue()
+        ->and(Auth::user())->toBeNull();
 });
 
 test('changed stored file fails without writing employees', function (): void {
