@@ -10,6 +10,7 @@ use App\Models\Employee;
 use App\Models\EmployeeImportBatch;
 use App\Models\EmployeeVersion;
 use App\Models\User;
+use App\Services\Branches\BranchMatcher;
 use App\Services\Employees\EmployeeImport;
 use App\Support\Search\SearchText;
 use App\Support\Tenancy\TenantContext;
@@ -262,4 +263,18 @@ test('a changed branch holds the row when confirming and imports no employee', f
     $page->call('confirmImport')->assertSee('0');
     expect(Employee::query()->count())->toBe(0)
         ->and(EmployeeImportBatch::query()->count())->toBe(1);
+});
+
+test('a CSV whose rows were held can be imported again after the branch is linked', function (): void {
+    $file = employeeCsv(employeeHeaders()."Fake Employee,EMP-31,Operations,Technician,2024-01-15,Baghdad Site,,male\r\n");
+    $import = app(EmployeeImport::class);
+    $held = $import->preview($this->company, $file);
+    $import->commit($this->company, $file, $this->admin, $held->hash);
+    expect(Employee::query()->where('employee_code', 'EMP-31')->exists())->toBeFalse();
+
+    $this->branch->aliases()->create(['company_id' => $this->company->id, 'name' => 'Baghdad Site', 'normalized_name' => BranchMatcher::normalise('Baghdad Site')]);
+    $result = $import->commit($this->company, $file, $this->admin, $import->preview($this->company, $file)->hash);
+    expect($result['committed'])->toBeTrue()
+        ->and(Employee::query()->where('employee_code', 'EMP-31')->value('branch_id'))->toBe($this->branch->id);
+    expect($import->commit($this->company, $file, $this->admin, $held->hash)['alreadyImported'] ?? false)->toBeTrue();
 });

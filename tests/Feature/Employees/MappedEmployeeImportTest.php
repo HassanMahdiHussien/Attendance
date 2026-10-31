@@ -11,6 +11,7 @@ use App\Models\EmployeeImportBatch;
 use App\Models\EmployeeImportMapping;
 use App\Models\EmployeeVersion;
 use App\Models\User;
+use App\Services\Branches\BranchMatcher;
 use App\Services\Employees\ColumnMapping;
 use App\Services\Employees\EmployeeHistory;
 use App\Services\Employees\EmployeeImport;
@@ -279,6 +280,25 @@ test('a full file with held rows does not send anyone to exit review', function 
     $preview = app(EmployeeImport::class)->previewMapped($this->company, hcFile([$row]), 'full', today()->toDateString(), $mapping);
     expect($preview->held())->toBe(1)
         ->and($preview->missing)->toBe([]);
+});
+
+test('a file whose rows were held can be imported again after the branch is linked', function (): void {
+    $row = hcRow(12345678, 'Fake Person', '', 39151);
+    $row[23] = 'Erbil Site';
+    $file = hcFile([$row]);
+    $mapping = app(ColumnMapping::class)->suggest(hcHeaders());
+    $import = app(EmployeeImport::class);
+    $held = $import->previewMapped($this->company, $file, 'full', today()->toDateString(), $mapping);
+    $import->commitMapped($this->company, $file, $this->actor, 'full', today()->toDateString(), $mapping, $held->token);
+    expect(Employee::query()->where('employee_code', '12345678')->exists())->toBeFalse();
+
+    $this->branch->aliases()->create(['company_id' => $this->company->id, 'name' => 'Erbil Site', 'normalized_name' => BranchMatcher::normalise('Erbil Site')]);
+    $again = $import->previewMapped($this->company, $file, 'full', today()->toDateString(), $mapping);
+    expect($again->alreadyImported)->toBeNull()->and($again->added())->toBe(1);
+    $result = $import->commitMapped($this->company, $file, $this->actor, 'full', today()->toDateString(), $mapping, $again->token);
+    expect($result['committed'])->toBeTrue()
+        ->and(Employee::query()->where('employee_code', '12345678')->value('branch_id'))->toBe($this->branch->id);
+    expect($import->previewMapped($this->company, $file, 'full', today()->toDateString(), $mapping)->alreadyImported)->not->toBeNull();
 });
 
 test('a new employee counts from the hire date and later imports from their effective date', function (): void {

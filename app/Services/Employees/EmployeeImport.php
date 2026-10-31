@@ -174,7 +174,7 @@ class EmployeeImport
                 if (! hash_equals($expectedHash, hash_file('sha256', $file->getRealPath()))) {
                     throw ValidationException::withMessages(['sourceFile' => __('messages.employee_import.file_changed')]);
                 }
-                $prior = EmployeeImportBatch::query()->where('company_id', $company->id)->where('file_sha256', $expectedHash)->first();
+                $prior = EmployeeImportBatch::completeImportOf($company->id, $expectedHash);
                 if ($prior !== null) {
                     return ['committed' => false, 'preview' => $this->preview($company, $file, true), 'alreadyImported' => true];
                 }
