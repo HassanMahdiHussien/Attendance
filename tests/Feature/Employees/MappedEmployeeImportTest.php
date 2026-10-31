@@ -3,12 +3,14 @@
 use App\Enums\EmployeeExitStatus;
 use App\Enums\UserRole;
 use App\Filament\Admin\Resources\EmployeeResource\Pages\ImportEmployees;
+use App\Jobs\ImportEmployeesJob;
 use App\Models\AuditLog;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\EmployeeImportBatch;
 use App\Models\EmployeeImportMapping;
+use App\Models\EmployeeImportRun;
 use App\Models\EmployeeVersion;
 use App\Models\User;
 use App\Services\Branches\BranchMatcher;
@@ -21,6 +23,7 @@ use DateTimeInterface;
 use Filament\Facades\Filament;
 use Illuminate\Http\Testing\File;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
@@ -215,15 +218,23 @@ test('a changed preview cannot commit and the original download is tenant restri
 });
 
 test('the import page shows mapping before preview and commits the reviewed upload', function (): void {
+    Queue::fake();
     $file = hcFile([hcRow(12345678, 'Fake Person', '', 39151)]);
-    Livewire::test(ImportEmployees::class)->set('sourceFile', $file)
+    $page = Livewire::test(ImportEmployees::class)->set('sourceFile', $file)
         ->call('prepareMapping')->assertSet('step', 'mapping')
         ->call('previewMappedImport')->assertSet('step', 'preview')
-        ->call('confirmMappedImport')->assertSet('step', 'upload');
+        ->call('confirmMappedImport')->assertSet('step', 'upload')->assertSee('Importing 1 employees');
+    Queue::assertPushed(ImportEmployeesJob::class);
+    expect(Employee::query()->where('employee_code', '12345678')->exists())->toBeFalse();
+    $run = EmployeeImportRun::query()->sole();
+    Livewire::test(ImportEmployees::class)->assertSet('runId', $run->id)->assertSee('Importing 1 employees');
+    (new ImportEmployeesJob($run->id))->handle(app(EmployeeImport::class));
+    $page->call('pollImport')->assertSee('Import completed');
     expect(Employee::query()->where('employee_code', '12345678')->exists())->toBeTrue();
 });
 
 test('the import page works with the database cache store used outside tests', function (): void {
+    Queue::fake();
     // The suite's array store keeps objects; the database store refuses to unserialize application classes.
     config(['cache.default' => 'database']);
     $file = hcFile([hcRow(12345679, 'Fake Person', '', 39151)]);
@@ -231,6 +242,7 @@ test('the import page works with the database cache store used outside tests', f
         ->call('prepareMapping')->assertSet('step', 'mapping')
         ->call('previewMappedImport')->assertSet('step', 'preview')->assertSee('12345679')
         ->call('confirmMappedImport')->assertSet('step', 'upload');
+    (new ImportEmployeesJob(EmployeeImportRun::query()->sole()->id))->handle(app(EmployeeImport::class));
     expect(Employee::query()->where('employee_code', '12345679')->exists())->toBeTrue();
 });
 

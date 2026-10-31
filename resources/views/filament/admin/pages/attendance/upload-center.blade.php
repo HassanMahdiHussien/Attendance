@@ -1,5 +1,5 @@
 <x-filament-panels::page>
-    <div class="space-y-5">
+    <div class="space-y-5" @if($this->hasPendingEmployeeRun()) wire:poll.3s="pollImport" @endif>
         <section class="rounded-xl border border-line bg-white p-4 shadow-sm sm:p-5">
             <h2 class="font-semibold text-ink">{{ __('messages.upload_center.choose') }}</h2>
             <input type="file" multiple wire:model.live="incomingFiles" accept=".csv,.txt,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" class="mt-3 block w-full min-w-0 rounded-lg border border-line p-2 text-sm">
@@ -11,8 +11,8 @@
             <section class="divide-y divide-line rounded-xl border border-line bg-white shadow-sm">
                 @foreach($rows as $index => $row)
                     @php
-                        $preview = $row['batch_id'] === null ? $this->preview($index) : null;
-                        $decision = $row['batch_id'] === null ? $this->needsDecision($index) : null;
+                        $preview = $row['batch_id'] === null && ($row['run_id'] ?? null) === null ? $this->preview($index) : null;
+                        $decision = $row['batch_id'] === null && ($row['run_id'] ?? null) === null ? $this->needsDecision($index) : null;
                     @endphp
                     <div wire:key="upload-row-{{ $index }}" class="min-w-0 space-y-3 p-4 sm:p-5">
                         <div class="flex flex-wrap items-start justify-between gap-3">
@@ -20,11 +20,19 @@
                                 <h3 class="font-semibold text-ink">{{ __('messages.upload_center.kinds.'.$row['kind']) }}</h3>
                                 <p class="break-all text-sm text-gray-600" dir="auto">{{ $row['name'] }}</p>
                             </div>
-                            <button type="button" wire:click="remove({{ $index }})" class="ui-link text-sm">{{ __('messages.upload_center.remove') }}</button>
+                            @if($row['kind'] !== 'employees' || !$this->hasPendingEmployeeRun())
+                                <button type="button" wire:click="remove({{ $index }})" class="ui-link text-sm">{{ __('messages.upload_center.remove') }}</button>
+                            @endif
                         </div>
                         @if($row['batch_id'] !== null)
                             <p class="font-medium text-green-700">{{ __('messages.upload_center.imported') }} · <a class="ui-link" href="{{ $this->batchUrl($index) }}">{{ __('messages.upload_center.view_batch') }} #{{ $row['batch_id'] }}</a></p>
                         @else
+                            @if($row['kind'] === 'employees' && ($row['run_id'] ?? null) && !$row['error'])
+                                <p class="text-sm font-medium text-ink">{{ __('messages.employee_import_ui.importing', ['count' => \App\Models\EmployeeImportRun::query()->where('company_id', $this->company()->id)->find($row['run_id'])?->row_count ?? 0]) }}</p>
+                                <button type="button" wire:click="pollImport" class="ui-link text-sm">{{ __('messages.employee_import_ui.refresh_status') }}</button>
+                            @elseif($row['kind'] !== 'employees' && $this->hasPendingEmployeeRun())
+                                <p class="text-sm font-medium text-ink">{{ __('messages.upload_center.waiting_for_employees') }}</p>
+                            @endif
                             @if($preview || $row['kind'] === 'unknown')<p class="text-sm leading-relaxed text-ink">{{ $this->summary($index) }}</p>@endif
                             @if($row['error']) <p class="text-sm text-red-700">{{ $row['error'] }}</p> @endif
                             @if($decision && $row['kind'] !== 'unknown') <p class="text-sm font-medium text-amber-800">{{ __('messages.upload_center.needs_decision') }}: {{ $decision }}</p> @endif
@@ -60,7 +68,7 @@
                                     </div>
                                 @endforeach
                             @endif
-                            @if($row['kind'] !== 'unknown')
+                            @if($row['kind'] !== 'unknown' && ($row['run_id'] ?? null) === null)
                                 <button type="button" wire:click="change({{ $index }})" class="ui-link inline-block text-sm">{{ __('messages.upload_center.change') }}</button>
                             @endif
                             @if($row['editing'] || $row['needs_mapping'] || ($row['kind'] === 'leave_balance' && !$preview))

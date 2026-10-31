@@ -255,24 +255,25 @@ class MappedEmployeeImport
         return $preview;
     }
 
-    public function commit(Company $company, UploadedFile $file, User $actor, string $mode, string $effectiveDate, array $mapping, string $token): array
+    public function commit(Company $company, UploadedFile $file, User $actor, string $mode, string $effectiveDate, array $mapping, string $token, ?string $existingPath = null): array
     {
         Gate::authorize('importEmployees', $company);
         abort_unless((int) auth()->id() === (int) $actor->id, 403);
         $storedPath = null;
         try {
-            return DB::transaction(function () use ($company, $file, $actor, $mode, $effectiveDate, $mapping, $token, &$storedPath): array {
+            return DB::transaction(function () use ($company, $file, $actor, $mode, $effectiveDate, $mapping, $token, $existingPath, &$storedPath): array {
                 Company::query()->whereKey($company->id)->lockForUpdate()->firstOrFail();
                 $preview = $this->preview($company, $file, $mode, $effectiveDate, $mapping);
                 if ($preview->alreadyImported !== null) {
-                    return ['committed' => false, 'preview' => $preview, 'alreadyImported' => true];
+                    return ['committed' => false, 'preview' => $preview, 'alreadyImported' => true,
+                        'batch' => EmployeeImportBatch::completeImportOf($company->id, $preview->hash)];
                 }
                 if ($preview->token === null || ! hash_equals($preview->token, $token) || $preview->errors() > 0) {
                     return ['committed' => false, 'preview' => $preview];
                 }
                 $sheet = $this->reader->read($file);
                 $mapping = $this->columns->validate($mapping, $sheet['headers'], $mode);
-                $storedPath = Storage::disk('local')->putFileAs('employee-imports/'.$company->id, $file, bin2hex(random_bytes(16)).'.'.$file->getClientOriginalExtension());
+                $storedPath = $existingPath ?? Storage::disk('local')->putFileAs('employee-imports/'.$company->id, $file, bin2hex(random_bytes(16)).'.'.$file->getClientOriginalExtension());
                 if ($storedPath === false) {
                     throw ValidationException::withMessages(['sourceFile' => __('messages.employee_import.storage_failed')]);
                 }
@@ -333,7 +334,7 @@ class MappedEmployeeImport
                 return ['committed' => true, 'preview' => $preview, 'batch' => $batch, 'counts' => $counts];
             });
         } catch (\Throwable $exception) {
-            if ($storedPath !== null) {
+            if ($storedPath !== null && $existingPath === null) {
                 Storage::disk('local')->delete($storedPath);
             }
 

@@ -209,3 +209,9 @@ These test fixes are called out separately from the foundation-file inventory ab
 | 2026-10-31 | 513 | `resources/views/filament/admin/resources/employee-resource/pages/import-employees.blade.php` | Link the advanced employee importer back to Upload. | **Port**. |
 | 2026-10-31 | 513 | `lang/{en,ar}/messages.php` | Label the combined upload and its decisions in both workspace languages. | **Apply with the attendance module**. |
 | 2026-10-31 | 513 | `app/Models/EmployeeImportBatch.php`, `app/Services/Employees/{EmployeeImport,MappedEmployeeImport}.php` | Treat a file as already imported only when its earlier import held no rows, so rows held for an unknown branch import once the branch is linked. | **Port**. |
+
+| 2026-10-31 | 513 | `app/Services/Employees/EmployeeImport.php`, `app/Services/Employees/MappedEmployeeImport.php` | Queue validated employee files and reuse the stored original in the worker's existing transactional commit. | **Port**. |
+| 2026-10-31 | 513 | `app/Models/EmployeeImportRun.php`, `database/migrations/2026_10_31_000001_create_employee_import_runs.php` | Track tenant-scoped queued employee imports and their batch, status, and safe error code. | **Port**. |
+| 2026-10-31 | 513 | `app/Filament/Admin/Resources/EmployeeResource/Pages/ImportEmployees.php`, `resources/views/filament/admin/resources/employee-resource/pages/import-employees.blade.php` | Queue confirmation and poll the run for progress and completion. | **Port**. |
+| 2026-10-31 | 513 | `lang/en/messages.php`, `lang/ar/messages.php` | Label queued employee progress, failures and the dependent-upload wait in both languages. | **Port**. |
+| 2026-10-31 | 513 | `app/Jobs/ImportEmployeesJob.php` | Commit stored employee imports in a tenant-scoped, idempotent queued job. | **Port**. |
