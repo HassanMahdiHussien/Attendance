@@ -31,7 +31,7 @@ class TransactionFile
             throw ValidationException::withMessages(['sourceFile' => __('messages.attendance_import.invalid_file')]);
         }
         foreach ($this->rawRows($path, $name) as $row) {
-            $headers = array_map(fn (mixed $cell): string => trim((string) $cell), $row['cells']);
+            $headers = array_map(SpreadsheetReader::label(...), $row['cells']);
             $matches = count(array_intersect(array_map('mb_strtolower', $headers), array_map('mb_strtolower', self::HEADERS)));
             if ($matches >= 4) {
                 return ['headers' => $headers, 'header_row' => $row['number'], 'hash' => hash_file('sha256', $path), 'export_at' => $this->exportTimeFromName($name)];

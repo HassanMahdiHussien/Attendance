@@ -209,3 +209,4 @@ These test fixes are called out separately from the foundation-file inventory ab
 | 2026-10-31 | 513 | `resources/views/filament/admin/resources/employee-resource/pages/import-employees.blade.php` | Link the advanced employee importer back to Upload. | **Port**. |
 | 2026-10-31 | 513 | `lang/{en,ar}/messages.php` | Label the combined upload and its decisions in both workspace languages. | **Apply with the attendance module**. |
 | 2026-10-31 | 513 | `app/Models/EmployeeImportBatch.php`, `app/Services/Employees/{EmployeeImport,MappedEmployeeImport}.php` | Treat a file as already imported only when its earlier import held no rows, so rows held for an unknown branch import once the branch is linked. | **Port**. |
+| 2026-10-31 | 513 | `app/Services/Employees/SpreadsheetReader.php` | Add `label()` so header scans treat date and time cells as empty labels instead of failing on a string cast. | **Port**. |
