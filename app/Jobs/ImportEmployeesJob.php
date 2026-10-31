@@ -63,14 +63,15 @@ class ImportEmployeesJob implements ShouldBeUnique, ShouldQueue
             $previousActor = Auth::user();
             $previousTenant = Filament::getTenant();
             try {
-                Filament::setTenant($company);
                 $actor = User::findOrFail($run->uploaded_by);
+                // A queue worker has no signed-in user, and Filament needs one before a tenant can be set.
+                Auth::setUser($actor);
+                Filament::setTenant($company);
                 Gate::forUser($actor)->authorize('importEmployees', $company);
                 $path = Storage::disk('local')->path($run->file_path);
                 if (! is_file($path) || ! hash_equals($run->file_sha256, hash_file('sha256', $path))) {
                     throw new RuntimeException('stored_file_changed');
                 }
-                Auth::setUser($actor);
                 $file = new UploadedFile($path, $run->file_name, null, null, true);
                 DB::transaction(function () use ($run, $company, $file, $actor, $import): void {
                     $locked = EmployeeImportRun::query()->whereKey($run->id)->lockForUpdate()->firstOrFail();
