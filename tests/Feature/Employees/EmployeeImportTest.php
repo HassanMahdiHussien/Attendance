@@ -3,11 +3,13 @@
 use App\Enums\UserRole;
 use App\Filament\Admin\Resources\EmployeeResource;
 use App\Filament\Admin\Resources\EmployeeResource\Pages\ImportEmployees;
+use App\Jobs\ImportEmployeesJob;
 use App\Models\AuditLog;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\EmployeeImportBatch;
+use App\Models\EmployeeImportRun;
 use App\Models\EmployeeVersion;
 use App\Models\User;
 use App\Services\Branches\BranchMatcher;
@@ -17,6 +19,7 @@ use App\Support\Tenancy\TenantContext;
 use Filament\Facades\Filament;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
 
@@ -257,10 +260,13 @@ test('preview and confirm recheck the actor and tenant after the page mounted', 
 });
 
 test('a changed branch holds the row when confirming and imports no employee', function (): void {
+    Queue::fake();
     $file = employeeCsv(employeeHeaders()."أول,,قسم,منصب,2024-01-15,بغداد,,\n");
     $page = Livewire::test(ImportEmployees::class)->set('sourceFile', $file)->call('previewImport');
     $this->branch->delete();
-    $page->call('confirmImport')->assertSee('0');
+    $page->call('confirmImport');
+    (new ImportEmployeesJob(EmployeeImportRun::query()->sole()->id))->handle(app(EmployeeImport::class));
+    $page->call('pollImport')->assertSee('0');
     expect(Employee::query()->count())->toBe(0)
         ->and(EmployeeImportBatch::query()->count())->toBe(1);
 });

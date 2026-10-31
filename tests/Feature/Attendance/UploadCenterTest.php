@@ -4,6 +4,7 @@ use App\Enums\UserRole;
 use App\Filament\Admin\Pages\Attendance\UploadAttendance;
 use App\Filament\Admin\Pages\Attendance\UploadCenter;
 use App\Jobs\Attendance\ImportTransactionsJob;
+use App\Jobs\ImportEmployeesJob;
 use App\Jobs\Leave\ImportLeaveBalanceJob;
 use App\Jobs\Leave\ImportLeaveJob;
 use App\Models\Attendance\ImportBatch;
@@ -11,7 +12,9 @@ use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\EmployeeImportBatch;
+use App\Models\EmployeeImportRun;
 use App\Models\User;
+use App\Services\Employees\EmployeeImport;
 use App\Services\Leave\LeaveFile;
 use App\Support\Access\AdminNav;
 use App\Support\Tenancy\TenantContext;
@@ -84,11 +87,16 @@ test('an unseen attendance column must be matched before import', function (): v
     expect(ImportBatch::count())->toBe(1);
 });
 
-test('employee data is committed before attendance is previewed for import', function (): void {
+test('employee data finishes before attendance is previewed for import', function (): void {
     $employees = UploadedFile::fake()->createWithContent('HC employees.csv',
         "employee_id,name,branch\n99999999,Fake New,Hilla\n");
     $attendance = centerAttendanceFile('99999999');
-    Livewire::test(UploadCenter::class)->set('incomingFiles', [$attendance, $employees])->call('import');
+    $page = Livewire::test(UploadCenter::class)->set('incomingFiles', [$attendance, $employees])->call('import')
+        ->assertSee('Ready after the employee list finishes importing');
+    Queue::assertPushed(ImportEmployeesJob::class);
+    expect(EmployeeImportBatch::count())->toBe(0)->and(ImportBatch::count())->toBe(0);
+    (new ImportEmployeesJob(EmployeeImportRun::query()->sole()->id))->handle(app(EmployeeImport::class));
+    $page->call('pollImport')->call('import');
     expect(EmployeeImportBatch::count())->toBe(1)->and(ImportBatch::count())->toBe(1);
 });
 
@@ -108,7 +116,13 @@ test('queued imports are pushed balance then leave then attendance', function ()
 
     $page = Livewire::test(UploadCenter::class)->set('incomingFiles', [centerAttendanceFile('99999999'), $leave, $balance, $employees])
         ->set('rows.2.settings.date', today('Asia/Baghdad')->toDateString())->call('refreshRow', 2)->call('import');
-    $page->assertSee('View batch');
+    Queue::assertPushed(ImportEmployeesJob::class);
+    Queue::assertNotPushed(ImportLeaveBalanceJob::class);
+    Queue::assertNotPushed(ImportLeaveJob::class);
+    Queue::assertNotPushed(ImportTransactionsJob::class);
+    expect(EmployeeImportBatch::count())->toBe(0)->and(ImportBatch::count())->toBe(0);
+    (new ImportEmployeesJob(EmployeeImportRun::query()->sole()->id))->handle(app(EmployeeImport::class));
+    $page->call('pollImport')->call('import')->assertSee('View batch');
     expect(EmployeeImportBatch::count())->toBe(1)->and(ImportBatch::count())->toBe(1);
     expect(collect(Queue::pushedJobs())->flatten(1)->map(fn (array $job): string => $job['job']::class)
         ->filter(fn (string $class): bool => in_array($class, [ImportLeaveBalanceJob::class, ImportLeaveJob::class, ImportTransactionsJob::class], true))->values()->all())
@@ -138,6 +152,25 @@ test('a preview from one tenant cannot be committed after switching tenants', fu
     app(TenantContext::class)->setCompany($other);
     $page->call('import');
     expect(ImportBatch::query()->withoutGlobalScopes()->count())->toBe(0);
+});
+
+test('upload center polling never uses another company employee run', function (): void {
+    $run = EmployeeImportRun::create([
+        'company_id' => $this->company->id, 'uploaded_by' => $this->actor->id,
+        'kind' => 'mapped', 'mode' => 'partial', 'effective_date' => today()->toDateString(),
+        'mapping' => [], 'token_or_hash' => str_repeat('a', 64), 'file_path' => 'employee-imports/unused.csv',
+        'file_name' => 'unused.csv', 'file_sha256' => str_repeat('a', 64), 'status' => 'queued', 'row_count' => 1,
+    ]);
+    $other = Company::factory()->create();
+    $platform = User::factory()->create(['company_id' => null, 'primary_role' => UserRole::PlatformAdmin]);
+    actingInAdminTenant($this, $platform, $other);
+    $employees = UploadedFile::fake()->createWithContent('HC employees.csv', 'employee_id,name,branch
+99999999,Fake New,Hilla
+');
+    Livewire::test(UploadCenter::class)->set('incomingFiles', [$employees])
+        ->assertSet('rows.0.kind', 'employees')->set('rows.0.run_id', $run->id)
+        ->call('pollImport')->assertSet('rows.0.batch_id', null)
+        ->assertSee(__('messages.employee_import_ui.import_failed'));
 });
 
 test('an employee import permission denial keeps that kind out of preview and import', function (): void {

@@ -6,13 +6,13 @@ use App\Filament\Admin\Resources\EmployeeResource;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\EmployeeImportBatch;
+use App\Models\EmployeeImportRun;
 use App\Services\Branches\BranchNames;
 use App\Services\Employees\ColumnMapping;
 use App\Services\Employees\EmployeeImport;
 use App\Services\Employees\ImportPreview;
 use App\Services\Employees\SpreadsheetReader;
 use Filament\Facades\Filament;
-use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Page;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -46,6 +46,9 @@ class ImportEmployees extends Page
 
     public ?array $summary = null;
 
+    #[Locked]
+    public ?int $runId = null;
+
     public string $mode = 'full';
 
     public string $effectiveDate = '';
@@ -76,6 +79,8 @@ class ImportEmployees extends Page
     {
         abort_unless(static::canAccess(), 403);
         $this->effectiveDate = today()->toDateString();
+        $this->runId = EmployeeImportRun::query()->where('company_id', $this->company()->id)
+            ->whereIn('status', ['queued', 'processing'])->latest('id')->value('id');
     }
 
     public function prepareMapping(EmployeeImport $import, ColumnMapping $columns): void
@@ -125,20 +130,13 @@ class ImportEmployees extends Page
         $preview = $this->mappedPreview();
         abort_unless($preview instanceof ImportPreview && $preview->token !== null, 403);
         $this->validate(['sourceFile' => 'required|file|max:10240']);
-        $result = $import->commitMapped($company, $this->sourceFile, auth()->user(), $this->mode, $this->effectiveDate, $this->mapping, $preview->token);
-        if (! $result['committed']) {
-            Cache::put($this->cacheKey(), $result['preview']->toArray(), now()->addMinutes(30));
-            Notification::make()->title(__('messages.employee_import_ui.review_again'))->danger()->send();
-
-            return;
-        }
+        $run = $import->queueMapped($company, $this->sourceFile, auth()->user(), $this->mode, $this->effectiveDate, $this->mapping, $preview->token);
         Cache::forget($this->cacheKey());
         $this->mappedPreviewKey = null;
         $this->sourceFile = null;
         $this->step = 'upload';
-        $this->summary = ['counts' => $result['counts'], 'batch_id' => $result['batch']->id,
-            'skipped' => $result['preview']->held()];
-        Notification::make()->title(__('Employee import completed'))->success()->send();
+        $this->runId = $run->id;
+        $this->summary = null;
     }
 
     public function linkUnmatched(int $index, BranchNames $names): void
@@ -198,6 +196,26 @@ class ImportEmployees extends Page
         return EmployeeImportBatch::query()->where('company_id', $company->id)->latest('id')->limit(10)->get();
     }
 
+    public function currentRun(): ?EmployeeImportRun
+    {
+        Gate::authorize('importEmployees', $this->company());
+
+        return $this->runId === null ? null : EmployeeImportRun::query()
+            ->where('company_id', $this->company()->id)->find($this->runId);
+    }
+
+    public function pollImport(): void
+    {
+        $run = $this->currentRun();
+        if ($run?->status !== 'completed' || $run->employee_import_batch_id === null) {
+            return;
+        }
+        $batch = $run->batch;
+        $this->summary = $run->kind === 'mapped'
+            ? ['counts' => $batch->counts, 'batch_id' => $batch->id, 'skipped' => $batch->counts['skipped'] ?? 0]
+            : $run->result_counts;
+    }
+
     private function cacheKey(): string
     {
         return 'employee-import-preview:'.$this->company()->id.':'.auth()->id().':'.$this->mappedPreviewKey;
@@ -246,20 +264,12 @@ class ImportEmployees extends Page
         if (count(array_filter($this->previewRows, fn (array $row): bool => $row['status'] === 'error')) > 0) {
             return;
         }
-        $result = $import->commit($company, $this->sourceFile, auth()->user(), $this->previewHash);
-        $this->previewRows = $result['preview']->rows;
-        $this->notices = $result['preview']->notices;
-        $this->previewHash = $result['preview']->hash;
-        if (! $result['committed']) {
-            Notification::make()->title(__('The data changed. Review the preview again.'))->danger()->send();
-
-            return;
-        }
-        $this->summary = ['added' => $result['added'], 'updated' => $result['updated']];
+        $run = $import->queue($company, $this->sourceFile, auth()->user(), $this->previewHash);
+        $this->runId = $run->id;
+        $this->summary = null;
         $this->sourceFile = null;
         $this->previewRows = null;
         $this->previewHash = null;
-        Notification::make()->title(__('Employee import completed'))->success()->send();
     }
 
     private function company(): Company

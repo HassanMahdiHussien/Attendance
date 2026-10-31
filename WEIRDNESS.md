@@ -74,5 +74,7 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 - DatabaseSeeder includes the attendance demo during ordinary seeding, while tests opt in with `attendance.seed_demo_in_tests`; the existing pilot foundation test intentionally checks its original twelve employees alone.
 - Branch matching folds Arabic hamza variants, ta marbuta, alif maqsura, tatweel and vowel marks so imported names match the same site despite spreadsheet spelling differences.
 - Employee import holds unmatched-branch rows and imports the resolved rows, so one new site label does not fail the whole file.
-- The combined Upload page commits employee lists, leave balances, leave reports, then attendance in that fixed order; each commit queues its own job right away, so the queue runs them in the same order and a failure never leaves a later batch without its job.
+- The combined Upload page queues employee lists first, then waits for that run to finish before HR imports leave balances, leave reports and attendance in that fixed order; each later commit queues its own job right away, so a failure never leaves a later batch without its job.
 - Attendance coverage is pre-filled from the preview and stated in the row summary; Change keeps the declaration explicit without making routine uploads type it again.
+
+- Later uploads on the combined Upload page wait for the employee run and require a second Import click, so their previews can use the newly imported employees and HR can review changed matches. (2026-10-31, spec 513)

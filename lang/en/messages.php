@@ -79,6 +79,9 @@ return [
         'no_employees' => 'The file contains no employees.',
     ],
     'employee_import_ui' => [
+        'importing' => 'Importing :count employees… you can leave this page.',
+        'refresh_status' => 'Refresh status',
+        'import_failed' => 'Employee import failed. Review the file and try again.',
         'held_count' => ':count rows are waiting for a branch choice. Other rows can still be imported.',
         'held_no_leavers' => 'Leavers are not checked while rows are waiting for a branch choice. Choose the branches, then upload the full file again.',
         'unmatched_branch' => 'Unmatched branch :branch appears in :count rows. These rows will be skipped until linked or created.',
@@ -840,6 +843,7 @@ return [
         'reason' => 'Reason for changing this setting', 'save_settings' => 'Save assistant setting',
     ],
     'upload_center' => [
+        'waiting_for_employees' => 'Ready after the employee list finishes importing. Press Import again when it completes.',
         'title' => 'Upload', 'choose' => 'Choose reports',
         'accepted' => 'Accepted: attendance transactions, leave report, annual leave balance, and employee list (CSV or XLSX; employee lists also accept TXT).',
         'unknown' => 'Unknown file. Choose an attendance transaction export, leave report, annual leave balance report, or employee list.',

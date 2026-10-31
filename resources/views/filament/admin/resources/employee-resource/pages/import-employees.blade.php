@@ -1,6 +1,14 @@
 <x-filament-panels::page>
     <a class="ui-link" href="{{ \App\Filament\Admin\Pages\Attendance\UploadCenter::getUrl(panel: 'admin', tenant: \Filament\Facades\Filament::getTenant()) }}">{{ __('messages.upload_center.back') }}</a>
     <div class="space-y-6">
+        @if ($this->currentRun()?->status === 'queued' || $this->currentRun()?->status === 'processing')
+            <section wire:poll.3s="pollImport" class="rounded-xl border border-line bg-white p-4">
+                {{ __('messages.employee_import_ui.importing', ['count' => $this->currentRun()->row_count]) }}
+                <button type="button" wire:click="pollImport" class="ui-link ms-2">{{ __('messages.employee_import_ui.refresh_status') }}</button>
+            </section>
+        @elseif ($this->currentRun()?->status === 'failed')
+            <section class="rounded-xl border border-red-500 p-4 text-red-700">{{ __('messages.employee_import_ui.import_failed') }}</section>
+        @endif
         <section class="space-y-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
             <h2 class="font-bold">{{ __('messages.employee_import_ui.upload') }}</h2>
             <a class="ui-link" href="{{ \App\Filament\Admin\Pages\Leave\UploadLeaveBalance::getUrl(panel: 'admin', tenant: \Filament\Facades\Filament::getTenant()) }}">{{ __('messages.leave_balance_ui.upload') }}</a>

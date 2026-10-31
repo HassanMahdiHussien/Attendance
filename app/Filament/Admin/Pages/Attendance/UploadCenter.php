@@ -8,6 +8,7 @@ use App\Filament\Admin\Resources\Attendance\AttendancePage;
 use App\Filament\Admin\Resources\EmployeeResource\Pages\ImportEmployees;
 use App\Models\Branch;
 use App\Models\Company;
+use App\Models\EmployeeImportRun;
 use App\Services\Attendance\TransactionFile;
 use App\Services\Attendance\TransactionImport;
 use App\Services\Attendance\UploadDetector;
@@ -83,7 +84,8 @@ class UploadCenter extends AttendancePage
                 'mapping' => $detected['mapping'] ?? [], 'settings' => $detected['settings'],
                 'distinct_codes' => $detected['distinct_codes'] ?? null,
                 'needs_mapping' => $detected['needs_mapping'] ?? false,
-                'editing' => false, 'confirmed' => false, 'batch_id' => null,
+                'editing' => false, 'confirmed' => false, 'batch_id' => null, 'run_id' => null,
+                'after_employee_preview' => false,
                 'error' => null, 'preview_key' => bin2hex(random_bytes(16)),
             ];
             $this->savePreview($index, $detected['preview']);
@@ -94,6 +96,12 @@ class UploadCenter extends AttendancePage
     public function remove(int $index): void
     {
         $this->company();
+        if (($this->rows[$index]['kind'] ?? null) === 'employees' && ($this->rows[$index]['run_id'] ?? null) !== null) {
+            $run = EmployeeImportRun::query()->where('company_id', $this->company()->id)->find($this->rows[$index]['run_id']);
+            if ($run !== null && in_array($run->status, ['queued', 'processing'], true)) {
+                return;
+            }
+        }
         if (isset($this->rows[$index])) {
             Cache::forget($this->cacheKey($index));
         }
@@ -249,8 +257,11 @@ class UploadCenter extends AttendancePage
     public function import(): void
     {
         $this->company();
-        $earlierImported = false;
-        // Fixed order (spec 513 answer 2): each commit queues its own job, so the queue runs them in this order too.
+        $this->pollImport();
+        $earlierImported = collect($this->rows)->contains(fn (array $row): bool => $row['kind'] === 'employees' && $row['batch_id'] !== null);
+        if ($this->hasBlockingEmployeeRun()) {
+            return;
+        }
         foreach (['employees', 'leave_balance', 'leave', 'attendance'] as $kind) {
             foreach (array_keys($this->rows) as $index) {
                 if (($this->rows[$index]['kind'] ?? null) !== $kind || $this->rows[$index]['batch_id'] !== null) {
@@ -258,10 +269,12 @@ class UploadCenter extends AttendancePage
                 }
                 try {
                     $this->authorizeRow($index);
-                    if ($earlierImported && $this->preview($index) !== null && ! $this->rows[$index]['needs_mapping'] && ! $this->rows[$index]['editing']) {
+                    if ($earlierImported && ! ($this->rows[$index]['after_employee_preview'] ?? false)
+                        && $this->preview($index) !== null && ! $this->rows[$index]['needs_mapping'] && ! $this->rows[$index]['editing']) {
                         $confirmed = $this->rows[$index]['confirmed'];
                         $this->refreshRow($index);
                         $this->rows[$index]['confirmed'] = $confirmed;
+                        $this->rows[$index]['after_employee_preview'] = true;
                     }
                     if ($this->needsDecision($index) !== null) {
                         continue;
@@ -271,17 +284,18 @@ class UploadCenter extends AttendancePage
                     $file = $this->files[$index];
                     $company = $this->company();
                     $batch = match ($kind) {
-                        'employees' => app(EmployeeImport::class)->commitMapped($company, $file, auth()->user(), $row['settings']['mode'], $row['settings']['date'], $row['mapping'], $preview['token']),
+                        'employees' => app(EmployeeImport::class)->queueMapped($company, $file, auth()->user(), $row['settings']['mode'], $row['settings']['date'], $row['mapping'], $preview['token']),
                         'leave_balance' => app(LeaveBalanceImport::class)->commit($company, $file, auth()->user(), $row['mapping'], $row['settings']['date'], (int) $row['settings']['year'], $preview['token']),
                         'leave' => app(LeaveImport::class)->commit($company, $file, auth()->user(), $row['mapping'], $row['settings'], $preview['token']),
                         'attendance' => app(TransactionImport::class)->commit($company, $file, auth()->user(), $row['mapping'], $row['settings'], $preview['token']),
                     };
-                    if ($kind === 'employees' && ! $batch['committed']) {
-                        $this->rows[$index]['error'] = __('messages.upload_center.changed');
+                    if ($kind === 'employees') {
+                        $this->rows[$index]['run_id'] = $batch->id;
+                        Cache::forget($this->cacheKey($index));
 
                         return;
                     }
-                    $this->rows[$index]['batch_id'] = $kind === 'employees' ? $batch['batch']->id : $batch->id;
+                    $this->rows[$index]['batch_id'] = $batch->id;
                     $earlierImported = true;
                     Cache::forget($this->cacheKey($index));
                 } catch (ValidationException $exception) {
@@ -296,6 +310,68 @@ class UploadCenter extends AttendancePage
                 }
             }
         }
+    }
+
+    public function pollImport(): void
+    {
+        $company = $this->company();
+        $completedNow = false;
+        foreach ($this->rows as $index => $row) {
+            if ($row['kind'] !== 'employees' || ($row['run_id'] ?? null) === null) {
+                continue;
+            }
+            $run = EmployeeImportRun::query()->where('company_id', $company->id)->find($row['run_id']);
+            if ($run === null) {
+                $this->rows[$index]['error'] = __('messages.employee_import_ui.import_failed');
+            } elseif ($run->status === 'completed') {
+                $completedNow = $completedNow || $row['batch_id'] === null;
+                $this->rows[$index]['batch_id'] = $run->employee_import_batch_id;
+                $this->rows[$index]['error'] = null;
+            } elseif ($run->status === 'failed') {
+                $this->rows[$index]['error'] = __('messages.employee_import_ui.import_failed');
+            }
+        }
+        if ($completedNow) {
+            foreach ($this->rows as $index => $row) {
+                if (in_array($row['kind'], ['employees', 'unknown'], true) || $row['batch_id'] !== null || $row['needs_mapping'] || $row['editing']) {
+                    continue;
+                }
+                try {
+                    $confirmed = $row['confirmed'];
+                    $this->refreshRow($index);
+                    $this->rows[$index]['confirmed'] = $confirmed;
+                    $this->rows[$index]['after_employee_preview'] = true;
+                } catch (ValidationException) {
+                    $this->rows[$index]['error'] = __('messages.upload_center.preview_needed');
+                }
+            }
+        }
+    }
+
+    public function hasPendingEmployeeRun(): bool
+    {
+        $this->company();
+
+        return collect($this->rows)->contains(function (array $row): bool {
+            if ($row['kind'] !== 'employees' || ($row['run_id'] ?? null) === null) {
+                return false;
+            }
+            $run = EmployeeImportRun::query()->where('company_id', $this->company()->id)->find($row['run_id']);
+
+            return $run !== null && in_array($run->status, ['queued', 'processing'], true);
+        });
+    }
+
+    private function hasBlockingEmployeeRun(): bool
+    {
+        return collect($this->rows)->contains(function (array $row): bool {
+            if ($row['kind'] !== 'employees' || ($row['run_id'] ?? null) === null || $row['batch_id'] !== null) {
+                return false;
+            }
+            $run = EmployeeImportRun::query()->where('company_id', $this->company()->id)->find($row['run_id']);
+
+            return $run === null || in_array($run->status, ['queued', 'processing', 'failed'], true);
+        });
     }
 
     // Keeps ISO dates readable inside Arabic sentences (left-to-right isolate).

@@ -3,9 +3,11 @@
 namespace App\Services\Employees;
 
 use App\Enums\SequenceKey;
+use App\Jobs\ImportEmployeesJob;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\EmployeeImportBatch;
+use App\Models\EmployeeImportRun;
 use App\Models\User;
 use App\Services\AuditLogger;
 use App\Services\Branches\BranchMatcher;
@@ -37,12 +39,68 @@ class EmployeeImport
         return app(MappedEmployeeImport::class)->preview($company, $file, $mode, $effectiveDate, $mapping);
     }
 
-    public function commitMapped(Company $company, UploadedFile $file, User $actor, string $mode, string $effectiveDate, array $mapping, string $token): array
+    public function commitMapped(Company $company, UploadedFile $file, User $actor, string $mode, string $effectiveDate, array $mapping, string $token, ?string $storedPath = null): array
     {
         Gate::authorize('importEmployees', $company);
         abort_unless((int) auth()->id() === (int) $actor->id, 403);
 
-        return app(MappedEmployeeImport::class)->commit($company, $file, $actor, $mode, $effectiveDate, $mapping, $token);
+        return app(MappedEmployeeImport::class)->commit($company, $file, $actor, $mode, $effectiveDate, $mapping, $token, $storedPath);
+    }
+
+    public function queueMapped(Company $company, UploadedFile $file, User $actor, string $mode, string $effectiveDate, array $mapping, string $token): EmployeeImportRun
+    {
+        Gate::authorize('importEmployees', $company);
+        abort_unless((int) auth()->id() === (int) $actor->id, 403);
+        $preview = $this->previewMapped($company, $file, $mode, $effectiveDate, $mapping);
+        if ($preview->token === null || ! hash_equals($preview->token, $token) || $preview->errors() > 0) {
+            throw ValidationException::withMessages(['sourceFile' => __('messages.employee_import_ui.review_again')]);
+        }
+
+        return $this->storeRun($company, $file, $actor, 'mapped', $mode, $effectiveDate, $mapping, $token, $preview->hash, count($preview->rows));
+    }
+
+    public function queue(Company $company, UploadedFile $file, User $actor, string $expectedHash): EmployeeImportRun
+    {
+        Gate::authorize('importEmployees', $company);
+        abort_unless((int) auth()->id() === (int) $actor->id, 403);
+        if (! hash_equals($expectedHash, hash_file('sha256', $file->getRealPath()))) {
+            throw ValidationException::withMessages(['sourceFile' => __('messages.employee_import.file_changed')]);
+        }
+        $preview = $this->preview($company, $file);
+        if ($preview->errors() > 0) {
+            throw ValidationException::withMessages(['sourceFile' => __('messages.employee_import_ui.review_again')]);
+        }
+
+        return $this->storeRun($company, $file, $actor, 'legacy', 'partial', today()->toDateString(), null, $expectedHash, $expectedHash, count($preview->rows));
+    }
+
+    private function storeRun(Company $company, UploadedFile $file, User $actor, string $kind, string $mode, string $effectiveDate, ?array $mapping, string $token, string $hash, int $rowCount): EmployeeImportRun
+    {
+        $extension = $kind === 'legacy' ? 'csv' : $file->getClientOriginalExtension();
+        $path = Storage::disk('local')->putFileAs('employee-imports/'.$company->id, $file, bin2hex(random_bytes(16)).'.'.$extension);
+        if ($path === false) {
+            throw ValidationException::withMessages(['sourceFile' => __('messages.employee_import.storage_failed')]);
+        }
+        $run = null;
+        try {
+            $run = EmployeeImportRun::create([
+                'company_id' => $company->id, 'uploaded_by' => $actor->id, 'kind' => $kind,
+                'mode' => $mode, 'effective_date' => $effectiveDate, 'mapping' => $mapping,
+                'token_or_hash' => $token, 'file_path' => $path,
+                'file_name' => basename(str_replace('\\', '/', $file->getClientOriginalName())),
+                'file_sha256' => $hash, 'status' => 'queued', 'row_count' => $rowCount,
+            ]);
+            ImportEmployeesJob::dispatch($run->id)->afterCommit();
+
+            return $run;
+        } catch (\Throwable $exception) {
+            if ($run === null) {
+                Storage::disk('local')->delete($path);
+            } else {
+                $run->update(['status' => 'failed', 'error' => 'dispatch_failed']);
+            }
+            throw $exception;
+        }
     }
 
     public function preview(Company $company, UploadedFile $file, bool $lock = false): ImportPreview
@@ -158,7 +216,7 @@ class EmployeeImport
         return new ImportPreview($rows, $csv['notices'], $csv['hash']);
     }
 
-    public function commit(Company $company, UploadedFile $file, User $actor, string $expectedHash): array
+    public function commit(Company $company, UploadedFile $file, User $actor, string $expectedHash, ?string $existingPath = null): array
     {
         Gate::authorize('importEmployees', $company);
         abort_unless((int) auth()->id() === (int) $actor->id, 403);
@@ -168,7 +226,7 @@ class EmployeeImport
 
         $storedPath = null;
         try {
-            return DB::transaction(function () use ($company, $file, $actor, $expectedHash, &$storedPath): array {
+            return DB::transaction(function () use ($company, $file, $actor, $expectedHash, $existingPath, &$storedPath): array {
                 Company::query()->whereKey($company->id)->lockForUpdate()->firstOrFail();
                 Gate::authorize('importEmployees', $company);
                 if (! hash_equals($expectedHash, hash_file('sha256', $file->getRealPath()))) {
@@ -176,7 +234,7 @@ class EmployeeImport
                 }
                 $prior = EmployeeImportBatch::completeImportOf($company->id, $expectedHash);
                 if ($prior !== null) {
-                    return ['committed' => false, 'preview' => $this->preview($company, $file, true), 'alreadyImported' => true];
+                    return ['committed' => false, 'preview' => $this->preview($company, $file, true), 'alreadyImported' => true, 'batch' => $prior];
                 }
                 $preview = $this->preview($company, $file, true);
                 if (! hash_equals($expectedHash, $preview->hash)) {
@@ -185,7 +243,7 @@ class EmployeeImport
                 if ($preview->errors() > 0) {
                     return ['committed' => false, 'preview' => $preview];
                 }
-                $storedPath = Storage::disk('local')->putFileAs('employee-imports/'.$company->id, $file, bin2hex(random_bytes(16)).'.csv');
+                $storedPath = $existingPath ?? Storage::disk('local')->putFileAs('employee-imports/'.$company->id, $file, bin2hex(random_bytes(16)).'.csv');
                 if ($storedPath === false) {
                     throw ValidationException::withMessages(['sourceFile' => __('messages.employee_import.storage_failed')]);
                 }
@@ -263,7 +321,7 @@ class EmployeeImport
                 return ['committed' => true, 'preview' => $preview, 'added' => $preview->added(), 'updated' => $preview->updated(), 'batch' => $batch];
             });
         } catch (QueryException $exception) {
-            if ($storedPath !== null) {
+            if ($storedPath !== null && $existingPath === null) {
                 Storage::disk('local')->delete($storedPath);
             }
             if ((int) ($exception->errorInfo[1] ?? 0) !== 1062) {
@@ -277,7 +335,7 @@ class EmployeeImport
 
             return ['committed' => false, 'preview' => $preview];
         } catch (\Throwable $exception) {
-            if ($storedPath !== null) {
+            if ($storedPath !== null && $existingPath === null) {
                 Storage::disk('local')->delete($storedPath);
             }
             throw $exception;
