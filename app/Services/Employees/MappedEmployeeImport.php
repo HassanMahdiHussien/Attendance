@@ -43,7 +43,7 @@ class MappedEmployeeImport
             throw ValidationException::withMessages(['sourceFile' => __('messages.import.no_employees')]);
         }
         $mapping = $this->columns->validate($mapping, $sheet['headers'], $mode);
-        $prior = EmployeeImportBatch::query()->where('company_id', $company->id)->where('file_sha256', $sheet['hash'])->first();
+        $prior = EmployeeImportBatch::completeImportOf($company->id, $sheet['hash']);
         $employees = Employee::query()->where('company_id', $company->id)->get()->keyBy('employee_code');
         $branches = app(BranchMatcher::class)->forCompany($company);
         $rows = [];

@@ -23,6 +23,13 @@ class EmployeeImportBatch extends Model
         return ['effective_date' => 'date', 'mapping' => 'array', 'counts' => 'array', 'summary' => 'array', 'created_at' => 'datetime'];
     }
 
+    /** The earlier import of this exact file, unless it held rows back: those rows may be imported later. */
+    public static function completeImportOf(int $companyId, string $hash): ?self
+    {
+        return self::query()->where('company_id', $companyId)->where('file_sha256', $hash)->orderBy('id')->get()
+            ->first(fn (self $batch): bool => (int) ($batch->counts['skipped'] ?? 0) === 0);
+    }
+
     public function uploader(): BelongsTo
     {
         return $this->belongsTo(User::class, 'uploaded_by');
