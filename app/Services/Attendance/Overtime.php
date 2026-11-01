@@ -12,9 +12,12 @@ use App\Services\Attendance\Reporting\ReportFilters;
 use App\Support\Tenancy\TenantContext;
 use Carbon\CarbonImmutable;
 use Generator;
+use Illuminate\Support\Collection;
 
 class Overtime
 {
+    private const DAY_COLUMNS = ['id', 'employee_id', 'work_date', 'overtime_minutes', 'overtime_basis', 'early_arrival_minutes'];
+
     public function __construct(private AttendanceSummary $summary) {}
 
     public function totals(ReportFilters $filters, ?string $asOf = null): array
@@ -46,36 +49,13 @@ class Overtime
         $this->assertCompany($filters);
         $asOf ??= today('Asia/Baghdad')->toDateString();
         $rows = [];
-        $dayIds = [];
-        foreach ($this->summary->selectedDays($filters) as $day) {
+        foreach ($this->summary->selectedDays($filters, columns: self::DAY_COLUMNS) as $day) {
             $id = (int) $day->employee_id;
             $rows[$id] ??= $this->emptyRow() + ['employee_id' => $id];
             $this->addDay($rows[$id], $day);
-            $dayIds[] = $day->id;
-            if (count($dayIds) >= 1000) {
-                $this->addEntitlements($filters, $rows, $dayIds, $asOf, true);
-                $dayIds = [];
-            }
         }
-        if ($dayIds !== []) {
-            $this->addEntitlements($filters, $rows, $dayIds, $asOf, true);
-        }
-        $currentFilters = ReportFilters::fromArray(Company::findOrFail($filters->companyId), array_replace(
-            $filters->toArray(), ['from' => '2000-01-01', 'to' => $asOf],
-        ));
-        $dayIds = [];
-        foreach ($this->summary->selectedDays($currentFilters) as $day) {
-            $id = (int) $day->employee_id;
-            $rows[$id] ??= $this->emptyRow() + ['employee_id' => $id];
-            $dayIds[] = $day->id;
-            if (count($dayIds) >= 1000) {
-                $this->addEntitlements($filters, $rows, $dayIds, $asOf, false);
-                $dayIds = [];
-            }
-        }
-        if ($dayIds !== []) {
-            $this->addEntitlements($filters, $rows, $dayIds, $asOf, false);
-        }
+        $this->addEntitlements($filters, $rows, $asOf, true);
+        $this->addEntitlements($filters, $rows, $asOf, false);
         ksort($rows, SORT_NUMERIC);
         foreach ($rows as $row) {
             yield $row;
@@ -87,7 +67,7 @@ class Overtime
         $this->assertCompany($filters);
         abort_if($filters->employeeIds !== [] && ! in_array($employeeId, $filters->employeeIds, true), 403);
         Employee::query()->where('company_id', $filters->companyId)->findOrFail($employeeId);
-        foreach ($this->summary->selectedDays($filters, [$employeeId]) as $day) {
+        foreach ($this->summary->selectedDays($filters, [$employeeId], self::DAY_COLUMNS) as $day) {
             yield [
                 'day_id' => (int) $day->id, 'work_date' => $day->work_date->toDateString(),
                 'overtime_minutes' => $day->overtime_minutes === null ? null : (int) $day->overtime_minutes,
@@ -100,7 +80,7 @@ class Overtime
     public function dayRows(ReportFilters $filters): Generator
     {
         $this->assertCompany($filters);
-        foreach ($this->summary->selectedDays($filters) as $day) {
+        foreach ($this->summary->selectedDays($filters, columns: self::DAY_COLUMNS) as $day) {
             yield [
                 'day_id' => (int) $day->id, 'employee_id' => (int) $day->employee_id,
                 'work_date' => $day->work_date->toDateString(),
@@ -115,16 +95,8 @@ class Overtime
     {
         $this->assertCompany($filters);
         $asOf ??= today('Asia/Baghdad')->toDateString();
-        $dayIds = [];
-        foreach ($this->summary->selectedDays($filters) as $day) {
-            $dayIds[] = $day->id;
-            if (count($dayIds) >= 1000) {
-                yield from $this->entitlementRows($filters, $dayIds, $asOf);
-                $dayIds = [];
-            }
-        }
-        if ($dayIds !== []) {
-            yield from $this->entitlementRows($filters, $dayIds, $asOf);
+        foreach ($this->matchingEntitlements($filters, $filters) as $entitlements) {
+            yield from $this->entitlementRows($filters, $entitlements, $asOf);
         }
     }
 
@@ -151,7 +123,7 @@ class Overtime
         abort_unless(in_array($basis, ['after_end', 'rest_day', 'holiday'], true), 404);
         $this->assertCompany($filters);
         $ids = [];
-        foreach ($this->summary->selectedDays($filters) as $day) {
+        foreach ($this->summary->selectedDays($filters, columns: self::DAY_COLUMNS) as $day) {
             if ($day->overtime_basis === $basis && (int) $day->overtime_minutes > 0) {
                 $ids[] = (int) $day->id;
             }
@@ -187,14 +159,9 @@ class Overtime
         }
     }
 
-    private function entitlementRows(ReportFilters $filters, array $dayIds, string $asOf): Generator
+    private function entitlementRows(ReportFilters $filters, Collection $entitlements, string $asOf): Generator
     {
-        $entitlements = RestDayEntitlement::query()->where('company_id', $filters->companyId)
-            ->whereIn('source_day_id', $dayIds)->whereNull('superseded_by_run_id')
-            ->orderBy('work_date')->orderBy('id')->get();
-        if ($entitlements->isEmpty()) {
-            return;
-        }
+        $entitlements = $entitlements->sortBy([['work_date', 'asc'], ['id', 'asc']]);
         $spent = EntitlementConsumption::query()->where('company_id', $filters->companyId)
             ->whereIn('entitlement_id', $entitlements->pluck('id'))
             ->whereNull('superseded_by_run_id')
@@ -218,21 +185,51 @@ class Overtime
         }
     }
 
-    private function addEntitlements(ReportFilters $filters, array &$rows, array $dayIds, string $asOf, bool $period): void
+    private function matchingEntitlements(ReportFilters $filters, ReportFilters $sourceFilters, ?string $through = null): Generator
     {
-        $entitlements = RestDayEntitlement::query()->where('company_id', $filters->companyId)
-            ->whereIn('source_day_id', $dayIds)->whereNull('superseded_by_run_id')
-            ->when(! $period, fn ($query) => $query->where('work_date', '<=', $asOf))
-            ->orderBy('id')->get();
-        if ($entitlements->isEmpty()) {
-            return;
+        $query = RestDayEntitlement::query()->where('company_id', $filters->companyId)
+            ->whereNull('superseded_by_run_id')
+            ->when($filters->employeeIds !== [], fn ($query) => $query->whereIn('employee_id', $filters->employeeIds))
+            ->when($through !== null, fn ($query) => $query->where('work_date', '<=', $through));
+        $lastId = 0;
+        while (true) {
+            $entitlements = (clone $query)->where('id', '>', $lastId)->orderBy('id')->limit(1000)->get();
+            if ($entitlements->isEmpty()) {
+                break;
+            }
+            $lastId = (int) $entitlements->last()->id;
+            $sourceIds = $entitlements->pluck('source_day_id')->all();
+            $matched = [];
+            foreach ($this->summary->selectedDays($sourceFilters, columns: ['id', 'employee_id', 'work_date'],
+                dayIds: $sourceIds) as $day) {
+                $matched[(int) $day->id] = true;
+            }
+            $selected = $entitlements->filter(fn (RestDayEntitlement $entitlement): bool => isset($matched[$entitlement->source_day_id]));
+            if ($selected->isNotEmpty()) {
+                yield $selected;
+            }
         }
+    }
+
+    private function addEntitlements(ReportFilters $filters, array &$rows, string $asOf, bool $period): void
+    {
+        $sourceFilters = $period ? $filters : ReportFilters::fromArray(Company::findOrFail($filters->companyId), array_replace(
+            $filters->toArray(), ['from' => '2000-01-01', 'to' => $asOf],
+        ));
+        foreach ($this->matchingEntitlements($filters, $sourceFilters, $period ? null : $asOf) as $entitlements) {
+            $this->mergeEntitlements($filters, $rows, $entitlements, $asOf, $period);
+        }
+    }
+
+    private function mergeEntitlements(ReportFilters $filters, array &$rows, Collection $entitlements, string $asOf, bool $period): void
+    {
         $spent = $period ? collect() : EntitlementConsumption::query()->where('company_id', $filters->companyId)
             ->whereIn('entitlement_id', $entitlements->pluck('id'))
             ->whereNull('superseded_by_run_id')
             ->selectRaw('entitlement_id, SUM(quantity) AS quantity')
             ->groupBy('entitlement_id')->get()->keyBy('entitlement_id');
         foreach ($entitlements as $entitlement) {
+            $rows[$entitlement->employee_id] ??= $this->emptyRow() + ['employee_id' => (int) $entitlement->employee_id];
             $row = &$rows[$entitlement->employee_id];
             $earned = (float) $entitlement->quantity;
             if ($period) {
