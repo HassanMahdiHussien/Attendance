@@ -8,6 +8,7 @@ use App\Models\Attendance\ProcessingRun;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Employee;
+use App\Services\Attendance\OfficeDayCalculator;
 use App\Services\Attendance\OfficePolicy;
 use App\Services\Attendance\Reporting\LastUpdate;
 use App\Services\Attendance\Reporting\ReportFilters;
@@ -57,5 +58,39 @@ test('freshness separates import and derived runs and coverage uses the required
         ]));
         expect($unassessed['coverage'][$branch->id]['expected'])->toBe(3)
             ->and($unassessed['coverage'][$branch->id]['assessable'])->toBe(1);
+    });
+});
+
+test('coverage counts every employee day while calculating identical inputs once', function (): void {
+    $company = Company::factory()->create();
+    app(TenantContext::class)->runForCompany($company, function () use ($company): void {
+        $branch = Branch::factory()->create();
+        app(OfficePolicy::class)->createDefault($company);
+        foreach (range(1, 3) as $ignored) {
+            Employee::factory()->create(['branch_id' => $branch->id, 'hire_date' => '2020-01-01', 'work_pattern' => 'office']);
+        }
+        Employee::factory()->create(['branch_id' => $branch->id, 'hire_date' => '2026-10-20', 'work_pattern' => 'office']);
+        Employee::factory()->create(['branch_id' => $branch->id, 'hire_date' => '2020-01-01', 'work_pattern' => 'office',
+            'exit_status' => 'confirmed', 'last_working_day' => '2026-10-19']);
+        Employee::factory()->create(['branch_id' => $branch->id, 'hire_date' => '2020-01-01', 'work_pattern' => 'shift']);
+        $calculator = new class extends OfficeDayCalculator
+        {
+            public int $calls = 0;
+
+            public function calculate(array $employeeValues, array $policy, array $punches, array $manualPunches,
+                array $decisions, bool $coverage, bool $outage, string $date, DateTimeInterface|string $now): array
+            {
+                $this->calls++;
+
+                return parent::calculate($employeeValues, $policy, $punches, $manualPunches, $decisions, $coverage, $outage, $date, $now);
+            }
+        };
+        app()->instance(OfficeDayCalculator::class, $calculator);
+
+        $result = app(LastUpdate::class)->for(ReportFilters::fromArray($company, ['from' => '2026-10-19', 'to' => '2026-10-21']));
+
+        // Three full employees x 3 days, the new hire from the 20th, and the leaver on the 19th only.
+        expect($result['coverage'][$branch->id]['expected'])->toBe(12)
+            ->and($calculator->calls)->toBe(9);
     });
 });
