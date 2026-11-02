@@ -26,9 +26,10 @@ class ImportTransactionsJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public int $timeout = 900;
+    // A 540k-row device export takes over 30 minutes to read on slow hardware; keep within queue retry_after.
+    public int $timeout = 7200;
 
-    public int $uniqueFor = 3600;
+    public int $uniqueFor = 7800;
 
     public function __construct(public int $batchId) {}
 
