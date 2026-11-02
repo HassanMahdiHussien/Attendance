@@ -40,8 +40,8 @@ return [
             'connection' => env('DB_QUEUE_CONNECTION'),
             'table' => env('DB_QUEUE_TABLE', 'jobs'),
             'queue' => env('DB_QUEUE', 'default'),
-            // Above the longest job timeout (legal library page rendering, 900 s) so a running job is never re-run.
-            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 960),
+            // Above the longest job timeout (attendance file analysis and import, 7200 s) so a running job is never re-run.
+            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 7260),
             'after_commit' => false,
         ],
 
