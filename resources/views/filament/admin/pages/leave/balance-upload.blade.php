@@ -53,7 +53,7 @@
                     @endforeach
                 @endforeach
                 @if ($preview['already_imported'])<p class="text-amber-700">{{ __('messages.leave_balance_ui.already_imported') }}</p>@endif
-                @if ($preview['token'])<x-filament::button wire:click="commit">{{ __('messages.leave_balance_ui.commit') }}</x-filament::button>@endif
+                @if ($preview['token'])<x-filament::button wire:click="confirmImport">{{ __('messages.leave_balance_ui.commit') }}</x-filament::button>@endif
             </x-ui.card>
         @endif
 

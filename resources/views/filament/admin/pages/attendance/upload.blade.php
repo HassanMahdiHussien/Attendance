@@ -65,7 +65,7 @@
                 <p>{{ __('messages.attendance_ui.data_issues') }}: {{ $preview['counts']['unknown_ids'] }} {{ __('messages.attendance_ui.sample_only') }}</p>
                 @foreach ($preview['samples']['unknown'] as $sample) <p><bdi dir="ltr">{{ $sample['code'] ?? '' }}</bdi></p> @endforeach
                 @foreach ($preview['samples']['errors'] as $sample) <p class="text-red-600">{{ __('messages.attendance_ui.row_error', ['row' => $sample['row'], 'codes' => implode(', ', array_map(fn (string $code): string => __('messages.attendance_ui.row_errors.'.$code), $sample['codes']))]) }}</p> @endforeach
-                @if ($preview['token']) <x-filament::button wire:click="commit">{{ __('messages.attendance_ui.commit') }}</x-filament::button> @endif
+                @if ($preview['token']) <x-filament::button wire:click="confirmImport">{{ __('messages.attendance_ui.commit') }}</x-filament::button> @endif
             </section>
         @endif
 

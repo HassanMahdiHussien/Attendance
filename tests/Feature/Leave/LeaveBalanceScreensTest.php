@@ -59,7 +59,7 @@ test('HR previews and imports a balance with skipped rows visible after processi
         ->call('prepare')->assertSet('step', 'mapping')
         ->set('balanceDate', '2026-10-20')->call('preview')->assertSet('step', 'preview')
         ->assertSee('Unknown codes')->assertSee('Duplicates')
-        ->call('commit')->assertSet('step', 'progress');
+        ->call('confirmImport')->assertSet('step', 'progress');
     $batch = BalanceBatch::query()->where('company_id', $this->company->id)->sole();
     Queue::assertPushed(ImportLeaveBalanceJob::class);
     app()->call([new ImportLeaveBalanceJob($batch->id), 'handle']);
@@ -108,7 +108,7 @@ test('inactive HR cannot open balance screens and platform admin can use an expl
 test('employee page, dashboard employee list and statement use the same imported balance', function (): void {
     $file = balanceUiCsv();
     Livewire::test(UploadLeaveBalance::class)->set('sourceFile', $file)->call('prepare')
-        ->set('balanceDate', '2026-10-20')->call('preview')->call('commit');
+        ->set('balanceDate', '2026-10-20')->call('preview')->call('confirmImport');
     $batch = BalanceBatch::query()->where('company_id', $this->company->id)->sole();
     app()->call([new ImportLeaveBalanceJob($batch->id), 'handle']);
     $balance = app(LeaveBalances::class)->current($this->employee);
@@ -132,7 +132,7 @@ test('employee page, dashboard employee list and statement use the same imported
 
 test('employee page keeps the last known balance when the latest completed upload omits the employee', function (): void {
     Livewire::test(UploadLeaveBalance::class)->set('sourceFile', balanceUiCsv())->call('prepare')
-        ->set('balanceDate', '2026-10-20')->call('preview')->call('commit');
+        ->set('balanceDate', '2026-10-20')->call('preview')->call('confirmImport');
     $first = BalanceBatch::query()->where('company_id', $this->company->id)->firstOrFail();
     app()->call([new ImportLeaveBalanceJob($first->id), 'handle']);
 
