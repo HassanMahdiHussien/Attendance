@@ -27,8 +27,14 @@
         @endif
 
         @if (in_array($step, ['coverage', 'preview'], true))
+            @php($draft = $this->draftProgress())
             <section class="space-y-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                 <h2 class="font-bold">{{ __('messages.attendance_ui.coverage') }}</h2>
+                @if ($draft && in_array($draft->status, ['pending', 'analysing'], true))
+                    <p wire:poll.3s>{{ __('messages.attendance_ui.reading_file', ['rows' => number_format($draft->rows_processed)]) }}</p>
+                @elseif ($draft?->status === 'failed')
+                    <p class="text-red-600">{{ __('messages.attendance_ui.analysis_failed') }} {{ __('messages.attendance_ui.failures.'.$draft->error_code) }}</p>
+                @endif
                 <div class="flex flex-wrap gap-4"><label>{{ __('messages.attendance_ui.from') }} <input type="datetime-local" wire:model="coverage.from" class="rounded-xl border border-gray-200 p-2" dir="ltr"></label>
                     <label>{{ __('messages.attendance_ui.to') }} <input type="datetime-local" wire:model="coverage.to" class="rounded-xl border border-gray-200 p-2" dir="ltr"></label></div>
                 @foreach ($this->branches() as $id => $name)
@@ -37,7 +43,8 @@
                     </label>
                 @endforeach
                 @error('coverage') <p class="text-red-600">{{ $message }}</p> @enderror
-                <x-filament::button wire:click="preview">{{ __('messages.attendance_ui.preview') }}</x-filament::button>
+                <x-filament::button wire:click="preview" :disabled="$draft?->status !== 'ready'">{{ __('messages.attendance_ui.preview') }}</x-filament::button>
+                <x-filament::button color="gray" wire:click="changeMapping">{{ __('messages.attendance_ui.change') }} {{ __('messages.attendance_ui.mapping') }}</x-filament::button>
             </section>
         @endif
 

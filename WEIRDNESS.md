@@ -78,3 +78,5 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 - Attendance coverage is pre-filled from the preview and stated in the row summary; Change keeps the declaration explicit without making routine uploads type it again.
 
 - Later uploads on the combined Upload page wait for the employee run and require a second Import click, so their previews can use the newly imported employees and HR can review changed matches. (2026-10-31, spec 513)
+
+- A committed attendance draft keeps its local `drafts/` file path as the batch original; pruning removes the draft row but preserves any path referenced by a batch, avoiding a second copy of the original. (2026-11-02)

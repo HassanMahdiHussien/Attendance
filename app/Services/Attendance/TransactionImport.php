@@ -9,6 +9,7 @@ use App\Models\Attendance\Device;
 use App\Models\Attendance\DeviceSetting;
 use App\Models\Attendance\ImportBatch;
 use App\Models\Attendance\ImportBatchEvent;
+use App\Models\Attendance\ImportDraft;
 use App\Models\Attendance\ImportMapping;
 use App\Models\Branch;
 use App\Models\Company;
@@ -29,8 +30,17 @@ class TransactionImport
 
     public function preview(Company $company, UploadedFile $file, array $mapping, array $coverage): array
     {
-        $this->authorize($company);
-        $sheet = $this->file->inspect($file);
+        return $this->finalise($company, $this->analyse($company, $file, $mapping), $coverage);
+    }
+
+    public function analyse(Company $company, UploadedFile|string $file, array $mapping, ?string $name = null, ?callable $progress = null): array
+    {
+        if (auth()->check()) {
+            $this->authorize($company);
+        } else {
+            abort_unless(app()->runningInConsole() && app(TenantContext::class)->companyId() === $company->id, 403);
+        }
+        $sheet = $this->file->inspect($file, $name);
         $mapping = $this->file->validateMapping($mapping, $sheet['headers']);
         $branches = app(BranchMatcher::class)->forCompany($company);
         $employees = Employee::query()->where('company_id', $company->id)->pluck('id', 'employee_code');
@@ -138,8 +148,11 @@ class TransactionImport
         $counts['new_devices'] = 0;
         $this->previewKeys->open();
         try {
-            foreach ($this->file->rows($file, $mapping) as $row) {
+            foreach ($this->file->rows($file, $mapping, $name) as $row) {
                 $counts['rows']++;
+                if ($progress !== null && $counts['rows'] % 10000 === 0) {
+                    $progress($counts['rows']);
+                }
                 if ($row['errors'] !== []) {
                     $counts['errors']++;
                     $this->sample($samples['errors'], ['row' => $row['number'], 'codes' => $row['errors']], $sampleLimit);
@@ -153,21 +166,32 @@ class TransactionImport
         } finally {
             $this->previewKeys->close();
         }
-        $coverage = $this->coverage($company, $coverage, $first, $sheet['export_at'] ?? $last);
-        $prior = ImportBatch::query()->where('company_id', $company->id)->where('file_sha256', $sheet['hash'])->first();
-        $result = [
+
+        return [
             'hash' => $sheet['hash'], 'headers' => $sheet['headers'], 'header_row' => $sheet['header_row'],
             'export_at' => $sheet['export_at'], 'suggested_coverage' => [
                 'from' => $first === null ? null : $first.' 00:00:00',
                 'to' => $sheet['export_at'] ?? $last,
                 'branch_ids' => array_keys($suggestedBranches),
             ],
-            'coverage' => $coverage, 'counts' => $counts, 'per_device' => $perDevice, 'per_day' => $perDay,
-            'samples' => $samples, 'already_imported' => $prior?->id,
+            'counts' => $counts, 'per_device' => $perDevice, 'per_day' => $perDay,
+            'samples' => $samples, 'mapping' => $mapping,
         ];
-        $result['token'] = $prior === null ? $this->token($company, $sheet['hash'], $mapping, $coverage) : null;
+    }
 
-        return $result;
+    public function finalise(Company $company, array $analysis, array $coverage): array
+    {
+        $this->authorize($company);
+        $suggested = $analysis['suggested_coverage'];
+        $validated = $this->coverage($company, $coverage, $suggested['from'] === null ? null : substr($suggested['from'], 0, 10), $suggested['to']);
+        $prior = ImportBatch::query()->where('company_id', $company->id)->where('file_sha256', $analysis['hash'])->first();
+        $mapping = $analysis['mapping'];
+        unset($analysis['mapping']);
+        $analysis['coverage'] = $validated;
+        $analysis['already_imported'] = $prior?->id;
+        $analysis['token'] = $prior === null ? $this->token($company, $analysis['hash'], $mapping, $validated) : null;
+
+        return $analysis;
     }
 
     public function commit(Company $company, UploadedFile $file, User $actor, array $mapping, array $coverage, string $token): ImportBatch
@@ -188,16 +212,51 @@ class TransactionImport
             Storage::disk('local')->delete($path);
             throw ValidationException::withMessages(['sourceFile' => __('messages.attendance_import.review_again')]);
         }
+
+        return $this->persist($company, $actor, $mapping, $preview, $path, $file->getClientOriginalName(), true);
+    }
+
+    public function commitDraft(Company $company, ImportDraft $draft, User $actor, array $coverage, string $token): ImportBatch
+    {
+        $this->authorize($company, $actor);
+        abort_unless($draft->company_id === $company->id && $draft->uploaded_by === $actor->id, 404);
+        if ($draft->status !== 'ready' || $draft->analysis === null) {
+            throw ValidationException::withMessages(['sourceFile' => __('messages.attendance_import.analysis_waiting')]);
+        }
+        if ($draft->analysis['hash'] !== $draft->file_sha256 || $draft->analysis['mapping'] !== $draft->mapping) {
+            throw ValidationException::withMessages(['sourceFile' => __('messages.attendance_import.review_again')]);
+        }
+        $preview = $this->finalise($company, $draft->analysis, $coverage);
+        if ($preview['already_imported'] !== null || $preview['token'] === null || ! hash_equals($preview['token'], $token)) {
+            throw ValidationException::withMessages(['sourceFile' => __('messages.attendance_import.review_again')]);
+        }
+        if ($preview['coverage']['branch_ids'] === []) {
+            throw ValidationException::withMessages(['coverage' => __('messages.attendance_import.coverage_invalid')]);
+        }
+
+        return $this->persist($company, $actor, $draft->mapping, $preview, $draft->file_path, $draft->file_name, false, $draft);
+    }
+
+    private function persist(Company $company, User $actor, array $mapping, array $preview, string $path, string $fileName, bool $deleteOnFailure, ?ImportDraft $draft = null): ImportBatch
+    {
         try {
-            return DB::transaction(function () use ($company, $actor, $file, $mapping, $preview, $path): ImportBatch {
+            return DB::transaction(function () use ($company, $actor, $fileName, $mapping, $preview, $path, $draft): ImportBatch {
                 Company::query()->whereKey($company->id)->lockForUpdate()->firstOrFail();
+                if ($draft !== null) {
+                    $locked = ImportDraft::query()->whereKey($draft->id)->lockForUpdate()->firstOrFail();
+                    $storedPath = Storage::disk('local')->path($locked->file_path);
+                    if ($locked->status !== 'ready' || ! is_file($storedPath)
+                        || hash_file('sha256', $storedPath) !== $locked->file_sha256) {
+                        throw ValidationException::withMessages(['sourceFile' => __('messages.attendance_import.review_again')]);
+                    }
+                }
                 if (ImportBatch::query()->where('company_id', $company->id)->where('file_sha256', $preview['hash'])->exists()) {
                     throw ValidationException::withMessages(['sourceFile' => __('messages.attendance_import.already_imported')]);
                 }
                 $coverage = $preview['coverage'];
                 $batch = ImportBatch::create([
                     'company_id' => $company->id, 'uploaded_by' => $actor->id,
-                    'file_path' => $path, 'file_name' => basename(str_replace('\\', '/', $file->getClientOriginalName())),
+                    'file_path' => $path, 'file_name' => basename(str_replace('\\', '/', $fileName)),
                     'file_sha256' => $preview['hash'], 'export_at' => $preview['export_at'],
                     'coverage_from' => $coverage['from'], 'coverage_to' => $coverage['to'],
                     'coverage_branch_ids' => $coverage['branch_ids'], 'mapping' => $mapping,
@@ -237,13 +296,16 @@ class TransactionImport
                     ['headers' => $preview['headers'], 'mapping' => $mapping, 'updated_by' => $actor->id],
                 );
                 $this->audit->log('attendance.import.committed', $batch, ['batch_id' => $batch->id, 'sha256' => $preview['hash']], $actor);
+                if ($draft !== null) {
+                    $draft->update(['status' => 'committed', 'batch_id' => $batch->id]);
+                }
                 ImportTransactionsJob::dispatch($batch->id)->afterCommit();
 
                 return $batch;
             });
         } catch (\Throwable $exception) {
             // A sync worker can fail after the batch commits; its original file must remain recoverable.
-            if (! DB::table('attendance_import_batches')->where('company_id', $company->id)->where('file_path', $path)->exists()) {
+            if ($deleteOnFailure && ! DB::table('attendance_import_batches')->where('company_id', $company->id)->where('file_path', $path)->exists()) {
                 Storage::disk('local')->delete($path);
             }
             throw $exception;

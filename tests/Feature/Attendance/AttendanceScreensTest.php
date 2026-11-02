@@ -6,12 +6,14 @@ use App\Filament\Admin\Pages\Attendance\AttendanceDevices;
 use App\Filament\Admin\Pages\Attendance\AttendanceIssues;
 use App\Filament\Admin\Pages\Attendance\AttendancePunches;
 use App\Filament\Admin\Pages\Attendance\UploadAttendance;
+use App\Jobs\Attendance\AnalyseTransactionDraftJob;
 use App\Jobs\Attendance\ImportTransactionsJob;
 use App\Jobs\Attendance\ProcessAttendanceJob;
 use App\Models\Attendance\DataIssue;
 use App\Models\Attendance\Device;
 use App\Models\Attendance\ImportBatch;
 use App\Models\Attendance\ImportBatchEvent;
+use App\Models\Attendance\ImportDraft;
 use App\Models\Attendance\Transaction;
 use App\Models\AuditLog;
 use App\Models\Branch;
@@ -45,17 +47,19 @@ afterEach(function (): void {
 });
 
 test('HR maps, confirms coverage, previews and commits a CSV upload', function (): void {
-    config(['cache.default' => 'database', 'queue.default' => 'sync']);
-    Livewire::test(UploadAttendance::class)->set('sourceFile', attendanceUiFile())
+    config(['cache.default' => 'database']);
+    Queue::fake();
+    $page = Livewire::test(UploadAttendance::class)->set('sourceFile', attendanceUiFile())
         ->call('prepare')->assertSet('step', 'mapping')
-        ->call('setCoverageStep')->assertSet('step', 'coverage')
+        ->call('setCoverageStep')->assertSet('step', 'coverage');
+    $draft = ImportDraft::query()->sole();
+    app()->call([new AnalyseTransactionDraftJob($draft->id, $draft->revision), 'handle']);
+    $page->call('$refresh')
         ->assertSet('coverage.branch_ids', [$this->branch->id])
         ->call('preview')->assertSet('step', 'preview')
         ->call('commit')->assertSet('step', 'progress');
     $batch = ImportBatch::query()->sole();
-    if (ImportBatchEvent::query()->where('batch_id', $batch->id)->latest('sequence')->value('state') === 'queued') {
-        app()->call([new ImportTransactionsJob($batch->id), 'handle']);
-    }
+    app()->call([new ImportTransactionsJob($batch->id), 'handle']);
     expect(ImportBatchEvent::query()->where('batch_id', $batch->id)->latest('sequence')->value('state'))->toBe('completed');
     Livewire::test(UploadAttendance::class)->assertSet('step', 'progress')->assertSee($batch->file_name);
     Livewire::test(AttendanceBatches::class)->assertSee($batch->file_name);
@@ -64,8 +68,12 @@ test('HR maps, confirms coverage, previews and commits a CSV upload', function (
 test('saved header mapping skips the mapping screen', function (): void {
     Queue::fake();
     $file = attendanceUiFile();
-    Livewire::test(UploadAttendance::class)->set('sourceFile', $file)->call('prepare')->call('setCoverageStep')->call('preview')->call('commit');
+    $page = Livewire::test(UploadAttendance::class)->set('sourceFile', $file)->call('prepare')->call('setCoverageStep');
+    $draft = ImportDraft::query()->sole();
+    app()->call([new AnalyseTransactionDraftJob($draft->id, $draft->revision), 'handle']);
+    $page->call('$refresh')->call('preview')->call('commit');
     Livewire::test(UploadAttendance::class)->set('sourceFile', attendanceUiFile())->call('prepare')->assertSet('step', 'coverage');
+    Queue::assertPushed(AnalyseTransactionDraftJob::class, 2);
 });
 
 test('pages hide another company and actions remain tenant scoped', function (): void {

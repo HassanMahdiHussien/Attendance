@@ -59,6 +59,20 @@ beforeEach(function (): void {
     $this->actingAs($this->actor);
 });
 
+test('analysis and finalisation reproduce the XLSX preview', function (): void {
+    $file = attendanceSheet([
+        [12345678, 'Fake Employee', 'Operations', '2026-10-20', '08:00', 'Check In', 'SER-1', 'Hilla_In_Face', 'Face'],
+        [12345678, 'Fake Employee', 'Operations', '2026-10-20', '08:00', 'Check In', 'SER-1', 'Hilla_In_Face', 'Face'],
+        ['99999999', 'Fake Unknown', 'Operations', '2026-10-20', '08:12', 'Check In', 'SER-2', 'Hilla_Out_Face', 'Face'],
+    ]);
+    $reader = app(TransactionFile::class);
+    $mapping = $reader->suggest($reader->inspect($file)['headers']);
+    $coverage = ['branch_ids' => [$this->branch->id]];
+    $import = app(TransactionImport::class);
+    expect($import->finalise($this->company, $import->analyse($this->company, $file, $mapping), $coverage))
+        ->toEqual($import->preview($this->company, $file, $mapping, $coverage));
+});
+
 test('title row, numeric code and export time produce a bounded preview without writes', function (): void {
     $file = attendanceSheet([
         [12345678, 'Fake Employee', 'Operations', '2026-10-20', '08:00', 'Check In', 'SER-1', 'Hilla_In_Face', 'Face'],
