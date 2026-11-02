@@ -3,11 +3,11 @@
     <div class="space-y-6">
         <section class="space-y-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
             <h2 class="font-bold">{{ __('messages.attendance_ui.file') }}</h2>
-            <form wire:submit="prepare" class="space-y-3">
+            <x-ui.upload-form wire:submit="prepare" class="space-y-3">
                 <input type="file" name="sourceFile" wire:model="sourceFile" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" class="block w-full rounded-xl border border-gray-200 p-2">
-                @error('sourceFile') <p class="text-red-600">{{ $message }}</p> @enderror
-                <x-filament::button type="submit" wire:loading.attr="disabled" wire:target="sourceFile">{{ __('messages.attendance_ui.continue') }}</x-filament::button>
-            </form>
+                @error('sourceFile') <p class="text-red-600" x-show="! stale">{{ $message }}</p> @enderror
+                <x-filament::button type="submit" wire:loading.attr="disabled" wire:target="sourceFile" x-bind:disabled="uploading">{{ __('messages.attendance_ui.continue') }}</x-filament::button>
+            </x-ui.upload-form>
         </section>
 
         @if ($step === 'mapping')

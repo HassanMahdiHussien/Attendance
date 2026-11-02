@@ -2,11 +2,11 @@
     <a class="ui-link" href="{{ \App\Filament\Admin\Pages\Attendance\UploadCenter::getUrl(panel: 'admin', tenant: $this->company()) }}">{{ __('messages.upload_center.back') }}</a>
     <div class="space-y-6">
         <x-ui.card :title="__('messages.leave_ui.source_file')">
-            <form wire:submit="prepare" class="space-y-3">
+            <x-ui.upload-form wire:submit="prepare" class="space-y-3">
                 <input type="file" name="sourceFile" wire:model="sourceFile" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" class="block w-full rounded-xl border border-gray-200 p-2">
-                @error('sourceFile') <p class="text-red-600">{{ $message }}</p> @enderror
-                <x-filament::button type="submit" wire:loading.attr="disabled" wire:target="sourceFile">{{ __('messages.leave_ui.continue') }}</x-filament::button>
-            </form>
+                @error('sourceFile') <p class="text-red-600" x-show="! stale">{{ $message }}</p> @enderror
+                <x-filament::button type="submit" wire:loading.attr="disabled" wire:target="sourceFile" x-bind:disabled="uploading">{{ __('messages.leave_ui.continue') }}</x-filament::button>
+            </x-ui.upload-form>
         </x-ui.card>
 
         @if ($step === 'mapping')

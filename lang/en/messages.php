@@ -900,4 +900,7 @@ return [
         ],
         'actions' => ['manager' => 'Review with HR', 'approver' => 'Review the leave form'],
     ],
+    'upload_form' => [
+        'uploading' => 'Uploading file…',
+    ],
 ];

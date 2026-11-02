@@ -15,9 +15,9 @@
             <p>{{ __('messages.employee_import_ui.instructions') }}</p>
             <a class="underline text-primary-700" href="{{ route('employees.import.template', ['company' => \Filament\Facades\Filament::getTenant()->id]) }}">{{ __('Download Excel template') }}</a>
             <a class="underline text-primary-700" href="{{ route('employees.import.template.csv', ['company' => \Filament\Facades\Filament::getTenant()->id]) }}">{{ __('Download CSV template') }}</a>
-            <form wire:submit="prepareMapping" class="space-y-3">
+            <x-ui.upload-form wire:submit="prepareMapping" class="space-y-3">
                 <input type="file" name="sourceFile" wire:model="sourceFile" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" class="block w-full rounded-xl border border-gray-200 bg-white p-2">
-                @error('sourceFile') <p class="text-red-600">{{ $message }}</p> @enderror
+                @error('sourceFile') <p class="text-red-600" x-show="! stale">{{ $message }}</p> @enderror
                 <div class="flex flex-wrap gap-4">
                     <label>{{ __('messages.employee_import_ui.mode') }}
                         <select wire:model="mode" class="rounded-xl border border-gray-200 bg-white p-2">
@@ -31,8 +31,8 @@
                 </div>
                 @error('mode') <p class="text-red-600">{{ $message }}</p> @enderror
                 @error('effectiveDate') <p class="text-red-600">{{ $message }}</p> @enderror
-                <x-filament::button type="submit" wire:loading.attr="disabled" wire:target="sourceFile">{{ __('messages.employee_import_ui.map_columns') }}</x-filament::button>
-            </form>
+                <x-filament::button type="submit" wire:loading.attr="disabled" wire:target="sourceFile" x-bind:disabled="uploading">{{ __('messages.employee_import_ui.map_columns') }}</x-filament::button>
+            </x-ui.upload-form>
         </section>
 
         @if ($step === 'mapping')
