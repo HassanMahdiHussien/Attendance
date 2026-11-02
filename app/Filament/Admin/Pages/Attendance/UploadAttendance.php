@@ -3,16 +3,20 @@
 namespace App\Filament\Admin\Pages\Attendance;
 
 use App\Filament\Admin\Resources\Attendance\AttendancePage;
+use App\Jobs\Attendance\AnalyseTransactionDraftJob;
 use App\Models\Attendance\Device;
 use App\Models\Attendance\DeviceSetting;
 use App\Models\Attendance\ImportBatch;
 use App\Models\Attendance\ImportBatchEvent;
+use App\Models\Attendance\ImportDraft;
 use App\Models\Attendance\ImportMapping;
 use App\Models\Branch;
 use App\Services\Attendance\TransactionFile;
 use App\Services\Attendance\TransactionImport;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Locked;
 use Livewire\WithFileUploads;
 
@@ -34,6 +38,11 @@ class UploadAttendance extends AttendancePage
 
     public array $coverage = ['from' => '', 'to' => '', 'branch_ids' => []];
 
+    public bool $coverageEdited = false;
+
+    #[Locked]
+    public ?int $draftId = null;
+
     #[Locked]
     public ?string $previewKey = null;
 
@@ -53,6 +62,19 @@ class UploadAttendance extends AttendancePage
     public function mount(): void
     {
         parent::mount();
+        $draft = ImportDraft::query()->where('company_id', $this->company()->id)
+            ->where('uploaded_by', auth()->id())->whereNull('batch_id')->latest('id')->first();
+        if ($draft !== null) {
+            $this->draftId = $draft->id;
+            $this->headers = $draft->headers;
+            $this->mapping = $draft->mapping ?? [];
+            $this->step = $draft->mapping === null ? 'mapping' : 'coverage';
+            if ($draft->mapping !== null && $draft->status === 'pending') {
+                AnalyseTransactionDraftJob::dispatch($draft->id, $draft->revision);
+            }
+
+            return;
+        }
         $batch = ImportBatch::query()->where('company_id', $this->company()->id)
             ->where('uploaded_by', auth()->id())->latest('id')->first();
         if ($batch !== null) {
@@ -61,7 +83,7 @@ class UploadAttendance extends AttendancePage
         }
     }
 
-    public function prepare(TransactionFile $file, TransactionImport $import): void
+    public function prepare(TransactionFile $file): void
     {
         $company = $this->company();
         $this->validate(['sourceFile' => 'required|file|extensions:csv,xlsx|max:102400']);
@@ -71,22 +93,42 @@ class UploadAttendance extends AttendancePage
         $signature = hash('sha256', json_encode($this->headers, JSON_THROW_ON_ERROR));
         $saved = ImportMapping::query()->where('company_id', $company->id)->where('header_signature', $signature)->first();
         $this->mapping = $saved?->mapping ?? $file->suggest($this->headers);
+        $path = Storage::disk('local')->putFileAs('attendance-imports/'.$company->id.'/drafts', $this->sourceFile, bin2hex(random_bytes(16)).'.'.strtolower($this->sourceFile->getClientOriginalExtension()));
+        if ($path === false) {
+            throw ValidationException::withMessages(['sourceFile' => __('messages.attendance_import.storage_failed')]);
+        }
+        try {
+            $draft = ImportDraft::create([
+                'company_id' => $company->id, 'uploaded_by' => auth()->id(), 'file_path' => $path,
+                'file_name' => basename(str_replace('\\', '/', $this->sourceFile->getClientOriginalName())),
+                'file_sha256' => $sheet['hash'], 'headers' => $sheet['headers'], 'header_row' => $sheet['header_row'],
+                'export_at' => $sheet['export_at'], 'mapping' => $saved?->mapping,
+                'status' => 'pending', 'revision' => 0, 'rows_processed' => 0,
+            ]);
+        } catch (\Throwable $exception) {
+            Storage::disk('local')->delete($path);
+            throw $exception;
+        }
+        $this->draftId = $draft->id;
+        $this->sourceFile = null;
+        $this->coverage = ['from' => '', 'to' => '', 'branch_ids' => []];
+        $this->coverageEdited = false;
         $this->clearPreview();
         $this->step = $saved === null ? 'mapping' : 'coverage';
         if ($saved !== null) {
-            $this->suggestCoverage($import);
+            AnalyseTransactionDraftJob::dispatch($draft->id, $draft->revision);
         }
     }
 
-    public function setCoverageStep(TransactionFile $file, TransactionImport $import): void
+    public function setCoverageStep(TransactionFile $file): void
     {
-        $this->company();
-        $this->validate(['sourceFile' => 'required|file|extensions:csv,xlsx|max:102400']);
-        abort_unless($file->inspect($this->sourceFile)['headers'] === $this->headers, 422);
-        $this->mapping = $file->validateMapping($this->mapping, $this->headers);
+        $draft = $this->draft();
+        abort_unless($draft !== null, 404);
+        $this->mapping = $file->validateMapping($this->mapping, $draft->headers);
+        $draft->update(['mapping' => $this->mapping, 'revision' => $draft->revision + 1, 'status' => 'pending', 'analysis' => null, 'rows_processed' => 0, 'error_code' => null]);
         $this->clearPreview();
         $this->step = 'coverage';
-        $this->suggestCoverage($import);
+        AnalyseTransactionDraftJob::dispatch($draft->id, $draft->revision);
     }
 
     public function updatedMapping(): void
@@ -94,34 +136,61 @@ class UploadAttendance extends AttendancePage
         $this->company();
         $this->clearPreview();
         $this->step = 'mapping';
+        if ($draft = $this->draft()) {
+            $draft->update(['revision' => $draft->revision + 1, 'status' => 'pending', 'analysis' => null, 'rows_processed' => 0]);
+        }
+    }
+
+    public function changeMapping(): void
+    {
+        $this->company();
+        abort_unless($this->draft() !== null, 404);
+        $this->clearPreview();
+        $this->step = 'mapping';
     }
 
     public function updatedCoverage(): void
     {
         $this->company();
+        $this->coverageEdited = true;
         $this->clearPreview();
         if ($this->step === 'preview') {
             $this->step = 'coverage';
         }
     }
 
-    public function suggestCoverage(TransactionImport $import): void
+    public function draft(): ?ImportDraft
     {
-        $this->company();
-        $preview = $import->preview($this->company(), $this->sourceFile, $this->mapping, ['branch_ids' => []]);
-        $this->coverage = $preview['suggested_coverage'];
-        foreach (['from', 'to'] as $field) {
-            if ($this->coverage[$field] !== null) {
-                $this->coverage[$field] = str_replace(' ', 'T', substr($this->coverage[$field], 0, 16));
+        return $this->draftId === null ? null : ImportDraft::query()->where('company_id', $this->company()->id)
+            ->where('uploaded_by', auth()->id())->whereNull('batch_id')->find($this->draftId);
+    }
+
+    public function draftProgress(): ?ImportDraft
+    {
+        $draft = $this->draft();
+        if ($draft?->status === 'ready' && ! $this->coverageEdited && $this->coverage['from'] === '') {
+            $suggested = $draft->analysis['suggested_coverage'];
+            $this->coverage = $suggested;
+            foreach (['from', 'to'] as $field) {
+                if ($this->coverage[$field] !== null) {
+                    $this->coverage[$field] = str_replace(' ', 'T', substr($this->coverage[$field], 0, 16));
+                }
             }
         }
+
+        return $draft;
     }
 
     public function preview(TransactionImport $import): void
     {
         $this->company();
-        $this->validate(['sourceFile' => 'required|file|extensions:csv,xlsx|max:102400']);
-        $preview = $import->preview($this->company(), $this->sourceFile, $this->mapping, $this->coverage);
+        // A "wait for analysis" error from an earlier click must not outlive the finished analysis.
+        $this->resetErrorBag('coverage');
+        $draft = $this->draft();
+        if ($draft?->status !== 'ready') {
+            throw ValidationException::withMessages(['coverage' => __('messages.attendance_import.analysis_waiting')]);
+        }
+        $preview = $import->finalise($this->company(), $draft->analysis, $this->coverage);
         $this->clearPreview();
         $this->previewKey = bin2hex(random_bytes(16));
         // The database cache store allows arrays, but not serialized application objects.
@@ -134,8 +203,9 @@ class UploadAttendance extends AttendancePage
         $this->company();
         $preview = $this->previewData();
         abort_unless($preview !== null && $preview['token'] !== null, 403);
-        $this->validate(['sourceFile' => 'required|file|extensions:csv,xlsx|max:102400']);
-        $batch = $import->commit($this->company(), $this->sourceFile, auth()->user(), $this->mapping, $this->coverage, $preview['token']);
+        $draft = $this->draft();
+        abort_unless($draft !== null, 404);
+        $batch = $import->commitDraft($this->company(), $draft, auth()->user(), $this->coverage, $preview['token']);
         $this->clearPreview();
         $this->sourceFile = null;
         $this->batchId = $batch->id;

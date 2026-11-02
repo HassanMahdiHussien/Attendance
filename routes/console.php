@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\Attendance\ImportDraftPruner;
 use App\Services\Attendance\PendingDaysScheduler;
 use App\Services\Attendance\Reporting\AttendanceExports;
 use Illuminate\Foundation\Inspiring;
@@ -18,10 +19,15 @@ Artisan::command('attendance:clean-exports', function (AttendanceExports $export
     $this->info((string) $exports->cleanup());
 })->purpose(__('messages.export_ui.cleanup_command'));
 
+Artisan::command('attendance:prune-import-drafts', function (ImportDraftPruner $pruner): void {
+    $this->info((string) $pruner->prune());
+})->purpose('Remove abandoned attendance import drafts');
+
 Schedule::command('app:heartbeat --dispatch')->everyMinute();
 Schedule::command('employees:apply-effective-changes')->dailyAt('00:15')->timezone('Asia/Baghdad')->withoutOverlapping();
 Schedule::command('attendance:assess-pending')->hourly()->timezone('Asia/Baghdad')->withoutOverlapping();
 Schedule::command('attendance:clean-exports')->dailyAt('03:00')->timezone('Asia/Baghdad')->withoutOverlapping();
+Schedule::command('attendance:prune-import-drafts')->dailyAt('03:30')->timezone('Asia/Baghdad')->withoutOverlapping();
 Schedule::command('attendance:build-notifications')->everyFifteenMinutes()->timezone('Asia/Baghdad')->withoutOverlapping();
 
 Schedule::command('backup:run')->dailyAt('01:00')->timezone('Asia/Baghdad')

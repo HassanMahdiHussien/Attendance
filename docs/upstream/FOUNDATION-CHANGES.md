@@ -226,3 +226,4 @@ These test fixes are called out separately from the foundation-file inventory ab
 | 2026-10-31 | 513 | `lang/en/messages.php`, `lang/ar/messages.php` | Label queued employee progress, failures and the dependent-upload wait in both languages. | **Port**. |
 | 2026-10-31 | 513 | `app/Jobs/ImportEmployeesJob.php` | Commit stored employee imports in a tenant-scoped, idempotent queued job. | **Port**. |
 | 2026-10-31 | 513 | `app/Services/Employees/SpreadsheetReader.php` | Add `label()` so header scans treat date and time cells as empty labels instead of failing on a string cast. | **Port**. |
+| 2026-11-02 | attendance draft analysis | `routes/console.php` | Schedule cleanup of abandoned attendance upload drafts after two days. | **Apply with the attendance module**. |
