@@ -4,6 +4,7 @@ namespace App\Filament\Platform\Resources;
 
 use App\Enums\SubscriptionStatus;
 use App\Filament\Platform\Resources\CompanyResource\Pages;
+use App\Filament\Platform\Resources\CompanyResource\RelationManagers\UsersRelationManager;
 use App\Models\Company;
 use App\Services\CompanyStatusService;
 use Filament\Actions\Action;
@@ -75,5 +76,10 @@ class CompanyResource extends Resource
             'create' => Pages\CreateCompany::route('/create'),
             'edit' => Pages\EditCompany::route('/{record}/edit'),
         ];
+    }
+
+    public static function getRelations(): array
+    {
+        return [UsersRelationManager::class];
     }
 }

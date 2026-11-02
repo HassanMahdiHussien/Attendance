@@ -117,6 +117,8 @@ class User extends Authenticatable implements FilamentUser, HasLocalePreference,
             'primary_role' => UserRole::class,
             'is_active' => 'boolean',
             'preferences' => 'array',
+            'must_change_password' => 'boolean',
+            'password_changed_at' => 'datetime',
         ];
     }
 }

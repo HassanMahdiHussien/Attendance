@@ -1,7 +1,7 @@
 {
   "resources/views/layouts/workspace.blade.php": {
     "controls": ["workspace-account-menu", "workspace-attendance", "workspace-leave", "workspace-more", "workspace-platform", "workspace-settings"],
-    "routes": ["help.index", "locale.update"]
+    "routes": ["account.password", "help.index", "locale.update"]
   },
   "resources/views/livewire/auth/login.blade.php": {
     "wire": [

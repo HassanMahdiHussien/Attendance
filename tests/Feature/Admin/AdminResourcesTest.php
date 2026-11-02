@@ -12,6 +12,7 @@ use App\Filament\Admin\Resources\LocationResource;
 use App\Filament\Admin\Resources\LocationResource\Pages\ListLocations;
 use App\Filament\Admin\Resources\UserResource;
 use App\Filament\Admin\Resources\UserResource\Pages\CreateUser;
+use App\Filament\Admin\Resources\UserResource\Pages\EditUser;
 use App\Filament\Admin\Resources\UserResource\Pages\ListUsers;
 use App\Models\Branch;
 use App\Models\Company;
@@ -115,6 +116,29 @@ test('HR user creation is company scoped', function (): void {
     ])->call('create')->assertHasNoFormErrors();
     $user = User::query()->where('email', 'second-hr@example.test')->firstOrFail();
     expect($user->company_id)->toBe($this->company->id);
+});
+
+test('HR reset modal applies a temporary password', function (): void {
+    $target = User::factory()->create(['company_id' => $this->company->id, 'primary_role' => UserRole::HrStaff]);
+    Livewire::test(ListUsers::class)
+        ->assertTableActionExists('resetPassword', record: $target)
+        ->callTableAction('resetPassword', $target, [
+            'temporary_password' => 'TemporaryPass12',
+            'temporary_password_confirmation' => 'TemporaryPass12',
+        ])->assertHasNoTableActionErrors();
+    expect($target->fresh()->must_change_password)->toBeTrue();
+});
+
+test('HR edit form password makes another user change it at next sign in', function (): void {
+    $target = User::factory()->create(['company_id' => $this->company->id, 'primary_role' => UserRole::HrStaff]);
+    Livewire::test(EditUser::class, ['record' => $target->id])->fillForm(['password' => 'TemporaryPass12'])
+        ->call('save')->assertHasNoFormErrors();
+    expect($target->fresh()->must_change_password)->toBeTrue();
+});
+
+test('admin panel account menu links to password change', function (): void {
+    $this->get(UserResource::getUrl('index', panel: 'admin', tenant: $this->company))
+        ->assertSee(route('account.password'), escape: false);
 });
 
 test('the last active HR user remains active', function (): void {

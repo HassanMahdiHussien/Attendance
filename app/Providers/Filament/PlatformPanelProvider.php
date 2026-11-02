@@ -6,11 +6,13 @@ use App\Filament\AvatarProviders\IndigoAvatarProvider;
 use App\Filament\Platform\Widgets\CompaniesOverview;
 use App\Http\Middleware\EnforceIdleTimeout;
 use App\Http\Middleware\EnsureAccountIsActive;
+use App\Http\Middleware\EnsurePasswordChanged;
 use App\Http\Middleware\SetLocale;
 use App\Http\Middleware\SetTenantContext;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Navigation\MenuItem;
 use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
@@ -31,6 +33,7 @@ class PlatformPanelProvider extends PanelProvider
         return $panel->id('platform')->path('platform')
             ->topbar(false)->navigation(false)
             ->renderHook(PanelsRenderHook::BODY_START, fn (): string => auth()->check() ? view('layouts.partials.workspace-navigation')->render() : '')
+            ->userMenuItems([MenuItem::make()->label(fn (): string => __('messages.password.title'))->url(fn (): string => route('account.password'))])
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
@@ -44,12 +47,14 @@ class PlatformPanelProvider extends PanelProvider
                 DispatchServingFilamentEvent::class,
                 SetTenantContext::class,
                 EnsureAccountIsActive::class,
+                EnsurePasswordChanged::class,
                 EnforceIdleTimeout::class,
             ])
             ->persistentMiddleware([
                 SetLocale::class,
                 SetTenantContext::class,
                 EnsureAccountIsActive::class,
+                EnsurePasswordChanged::class,
                 EnforceIdleTimeout::class,
             ])
             ->discoverResources(in: app_path('Filament/Platform/Resources'), for: 'App\\Filament\\Platform\\Resources')

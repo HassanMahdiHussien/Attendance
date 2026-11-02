@@ -87,6 +87,7 @@
                         @endif
                         <a href="{{ route('help.index') }}" class="flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-primary"><x-ui.icon name="help" class="h-4 w-4 text-gray-500" />{{ __('Help') }}</a>
                         <form method="POST" action="{{ route('locale.update') }}">@csrf<input type="hidden" name="locale" value="{{ $otherLocale }}"><button type="submit" class="flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-start text-sm hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-primary" lang="{{ $otherLocale }}"><x-ui.icon name="globe" class="h-4 w-4 text-gray-500" />{{ $otherLocaleLabel }}</button></form>
+                        <a href="{{ route('account.password') }}" class="flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-primary"><x-ui.icon name="lock" class="h-4 w-4 text-gray-500" />{{ __('messages.password.title') }}</a>
                         <form method="POST" action="/logout">@csrf<button type="submit" class="flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-start text-sm hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-primary"><x-ui.icon name="logout" class="h-4 w-4 text-gray-500" />{{ __('Log out') }}</button></form>
                     </div>
                 </div>
@@ -140,6 +141,7 @@
                 @endif
                 <a href="{{ route('help.index') }}" class="mt-2 flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm font-medium text-gray-700 hover:bg-gray-50"><x-ui.icon name="help" />{{ __('Help') }}</a>
                 <form method="POST" action="{{ route('locale.update') }}">@csrf<input type="hidden" name="locale" value="{{ $otherLocale }}"><button type="submit" class="mt-2 inline-flex min-h-10 items-center gap-2 text-sm text-gray-700" lang="{{ $otherLocale }}"><x-ui.icon name="globe" class="h-4 w-4" />{{ $otherLocaleLabel }}</button></form>
+                <a href="{{ route('account.password') }}" class="mt-2 flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm font-medium text-gray-700 hover:bg-gray-50"><x-ui.icon name="lock" />{{ __('messages.password.title') }}</a>
                 <form method="POST" action="/logout">@csrf<button type="submit" class="inline-flex min-h-10 items-center gap-2 text-sm text-gray-700"><x-ui.icon name="logout" class="h-4 w-4" />{{ __('Log out') }}</button></form>
             </section>
         </div>

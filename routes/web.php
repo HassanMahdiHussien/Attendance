@@ -4,6 +4,7 @@ use App\Http\Controllers\HelpShotController;
 use App\Http\Controllers\LocaleController;
 use App\Livewire\Attendance\Assistant;
 use App\Livewire\Attendance\DashboardEmployees;
+use App\Livewire\Auth\ChangePassword;
 use App\Livewire\Auth\Login;
 use App\Livewire\Dashboard\HrDashboard;
 use App\Livewire\Employees\EmployeeIndex;
@@ -43,6 +44,7 @@ Route::redirect('/platform/login', '/login');
 Route::post('/locale', LocaleController::class)->name('locale.update');
 
 Route::middleware('auth')->group(function (): void {
+    Route::get('/account/password', ChangePassword::class)->name('account.password');
     Route::get('/help', HelpIndex::class)->name('help.index');
     Route::get('/help/shots/{locale}/{name}', HelpShotController::class)->name('help.shot');
     Route::get('/help/{section}/{slug}', HelpArticlePage::class)->name('help.article');

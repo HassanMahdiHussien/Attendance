@@ -5,6 +5,7 @@ use App\Filament\Platform\Resources\CompanyResource;
 use App\Filament\Platform\Resources\CompanyResource\Pages\CreateCompany;
 use App\Filament\Platform\Resources\CompanyResource\Pages\EditCompany;
 use App\Filament\Platform\Resources\CompanyResource\Pages\ListCompanies;
+use App\Filament\Platform\Resources\CompanyResource\RelationManagers\UsersRelationManager;
 use App\Filament\Platform\Resources\PlatformUserResource;
 use App\Filament\Platform\Resources\PlatformUserResource\Pages\ListPlatformUsers;
 use App\Models\Company;
@@ -74,4 +75,29 @@ test('company edit keeps required languages and saves optional settings', functi
         'subscription_status' => 'active',
     ])->call('save')->assertHasNoFormErrors();
     expect($company->fresh()->enabled_languages)->toBe(['ar', 'en', 'ku']);
+});
+
+test('platform reset modal reaches platform peers and company HR users', function (): void {
+    $actor = User::factory()->create();
+    $peer = User::factory()->create();
+    $company = Company::factory()->create();
+    $hr = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::HrStaff]);
+    $this->actingAs($actor);
+    Livewire::test(ListPlatformUsers::class)->callTableAction('resetPassword', $peer, [
+        'temporary_password' => 'TemporaryPass12',
+        'temporary_password_confirmation' => 'TemporaryPass12',
+    ])->assertHasNoTableActionErrors();
+    Livewire::test(UsersRelationManager::class, ['ownerRecord' => $company, 'pageClass' => EditCompany::class])
+        ->callTableAction('resetPassword', $hr, [
+            'temporary_password' => 'AnotherTempPass12',
+            'temporary_password_confirmation' => 'AnotherTempPass12',
+        ])->assertHasNoTableActionErrors();
+    expect($peer->fresh()->must_change_password)->toBeTrue()
+        ->and($hr->fresh()->must_change_password)->toBeTrue();
+});
+
+test('platform panel account menu links to password change', function (): void {
+    $this->actingAs(User::factory()->create())
+        ->get(PlatformUserResource::getUrl('index', panel: 'platform'))
+        ->assertSee(route('account.password'), escape: false);
 });

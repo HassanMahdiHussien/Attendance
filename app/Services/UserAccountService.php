@@ -6,6 +6,11 @@ use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 
 class UserAccountService
@@ -24,6 +29,61 @@ class UserAccountService
         });
     }
 
+    public function changeOwnPassword(User $user, string $current, string $new): void
+    {
+        abort_unless(auth()->id() === $user->id, 403);
+        $key = 'password-change:'.$user->id.':'.hash('sha256', (string) request()->ip());
+        if (RateLimiter::tooManyAttempts($key, 5)) {
+            throw ValidationException::withMessages(['current_password' => __('messages.password.throttled')]);
+        }
+        if (! Hash::check($current, $user->password)) {
+            RateLimiter::hit($key, 300);
+            throw ValidationException::withMessages(['current_password' => __('messages.password.current_incorrect')]);
+        }
+        Validator::make(['new_password' => $new], ['new_password' => ['required', Password::defaults()]])->validate();
+        if (Hash::check($new, $user->password)) {
+            throw ValidationException::withMessages(['new_password' => __('messages.password.must_differ')]);
+        }
+        DB::transaction(fn () => $this->setPassword($user, $new, false, $user, true));
+        RateLimiter::clear($key);
+    }
+
+    public function resetPassword(User $target, string $temporary, User $actor): void
+    {
+        abort_if($actor->is($target), 403);
+        abort_unless($actor->can('update', $target), 403);
+        $this->authorizeTarget($actor, $target->primary_role, $target->company_id);
+        Validator::make(['temporary_password' => $temporary], ['temporary_password' => ['required', Password::defaults()]])->validate();
+        if (Hash::check($temporary, $target->password)) {
+            throw ValidationException::withMessages(['temporary_password' => __('messages.password.must_differ')]);
+        }
+        DB::transaction(fn () => $this->setPassword($target, $temporary, true, $actor, false));
+    }
+
+    private function setPassword(User $user, string $password, bool $forced, User $actor, bool $keepCurrentSession): void
+    {
+        $before = [
+            'must_change_password' => $user->must_change_password,
+            'password_changed_at' => $user->password_changed_at?->toISOString(),
+        ];
+        $user->forceFill([
+            'password' => $password,
+            'must_change_password' => $forced,
+            'password_changed_at' => $forced ? $user->password_changed_at : now(),
+            'remember_token' => Str::random(60),
+        ])->save();
+        $sessions = DB::table('sessions')->where('user_id', $user->id);
+        if ($keepCurrentSession) {
+            $sessions->where('id', '!=', session()->getId());
+        }
+        $count = $sessions->delete();
+        app(AuditLogger::class)->log($forced ? 'user.password_reset' : 'user.password_changed', $user,
+            ['before' => $before, 'after' => [
+                'must_change_password' => $user->must_change_password,
+                'password_changed_at' => $user->password_changed_at?->toISOString(),
+            ], 'sessions_purged' => $count], $actor);
+    }
+
     public function update(User $user, array $data, User $actor): User
     {
         abort_unless($actor->can('update', $user), 403);
@@ -37,9 +97,20 @@ class UserAccountService
                 || ($data['company_id'] ?? $user->company_id) !== $user->company_id) {
                 $this->guardLastHrUser($user);
             }
-            $user->fill(Arr::only($data, ['name', 'email', 'password']));
+            $user->fill(Arr::only($data, ['name', 'email']));
             $user->forceFill(Arr::only($data, ['company_id', 'employee_id', 'primary_role', 'is_active']));
             $user->save();
+            if (filled($data['password'] ?? null)) {
+                Validator::make(['password' => $data['password']], ['password' => ['required', Password::defaults()]])->validate();
+                if ($actor->is($user)) {
+                    if (Hash::check($data['password'], $user->password)) {
+                        throw ValidationException::withMessages(['password' => __('messages.password.must_differ')]);
+                    }
+                    $this->setPassword($user, $data['password'], false, $actor, true);
+                } else {
+                    $this->resetPassword($user, $data['password'], $actor);
+                }
+            }
             if ($wasActive && ! $user->is_active) {
                 $this->purgeSessions($user, $actor);
             }
