@@ -2,6 +2,17 @@
 
 Every kept foundation file edited since the spec-500 baseline is listed below. Removals are not listed because Displanary keeps that code. Apply only rows marked **Port**; **Do not apply** rows describe changes needed solely by Attendance.
 
+## Password management (2026-11-02)
+
+| File | Change | Why | Displanary |
+|---|---|---|---|
+| `database/migrations/2026_11_02_000001_add_password_management_to_users.php`, `app/Models/User.php` | Add forced-change and changed-at account state. | Track temporary resets and completed password changes. | **Port** |
+| `app/Services/UserAccountService.php`, `app/Providers/AppServiceProvider.php` | Centralize password validation, throttled own changes, authorized resets, session revocation and safe audit. | All reset paths must enforce the same rules. | **Port** |
+| `app/Http/Middleware/EnsurePasswordChanged.php`, `bootstrap/app.php`, `app/Providers/Filament/{AdminPanelProvider,PlatformPanelProvider}.php` | Require a new password across workspace and both panels and add account menu entries. | A temporary password cannot be used to access the app. | **Port** |
+| `app/Livewire/Auth/{Login,ChangePassword}.php`, `resources/views/livewire/auth/change-password.blade.php`, `routes/web.php`, `resources/views/layouts/partials/workspace-navigation.blade.php` | Route forced sign-ins to a bilingual change form and link it from desktop and phone menus. | Every signed-in user can change their own password. | **Port** |
+| `app/Filament/Actions/ResetPasswordAction.php`, `app/Filament/Admin/Resources/UserResource.php`, `app/Filament/Platform/Resources/{PlatformUserResource,CompanyResource}.php`, `app/Filament/Platform/Resources/CompanyResource/RelationManagers/UsersRelationManager.php` | Add temporary reset actions and a company users list in the platform panel. | Authorized admins can reach company and platform users for private resets. | **Port** |
+| `lang/{en,ar}/messages.php`, `resources/help/{en,ar}/getting-started/sign-in-and-language.md` | Translate password messages and document the account flow. | Both supported languages explain password changes. | **Port** |
+
 ## Assistant workspace (spec 512)
 
 | File | Change | Why | Displanary |

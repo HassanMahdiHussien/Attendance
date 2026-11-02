@@ -37,6 +37,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Validation\Rules\Password;
 use Spatie\Backup\Events\BackupHasFailed;
 use Spatie\Backup\Events\BackupManifestWasCreated;
 use Spatie\Backup\Events\BackupWasSuccessful;
@@ -59,6 +60,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Password::defaults(fn () => Password::min(10));
         Gate::policy(ImportBatch::class, AttendanceImportBatchPolicy::class);
         Gate::policy(AttendanceExport::class, AttendanceExportPolicy::class);
         Gate::policy(LeaveImportBatch::class, LeaveImportBatchPolicy::class);

@@ -50,6 +50,11 @@ class Login extends Component
         $user = Auth::user();
         $attempts->clear($this->email);
         session()->regenerate();
+        if ($user->must_change_password) {
+            $this->redirectRoute('account.password');
+
+            return;
+        }
         // Back to the page that asked for sign-in (e.g. an admin bookmark), else the role's home.
         $target = (string) session()->pull('url.intended', Landing::for($user));
         // Filament panel scripts need a full page load before its Alpine components initialize.

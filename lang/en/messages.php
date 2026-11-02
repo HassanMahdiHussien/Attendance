@@ -1,6 +1,23 @@
 <?php
 
 return [
+    'password' => [
+        'title' => 'Change password',
+        'current' => 'Current password',
+        'temporary' => 'Temporary password',
+        'new' => 'New password',
+        'confirm' => 'Confirm new password',
+        'save' => 'Save password',
+        'changed' => 'Your password was changed.',
+        'forced_explanation' => 'An administrator reset your password. Choose a new one to continue.',
+        'change_required' => 'Change your password before continuing.',
+        'current_incorrect' => 'The current password is incorrect.',
+        'must_differ' => 'Choose a password different from your current one.',
+        'throttled' => 'Too many attempts. Try again in a few minutes.',
+        'reset' => 'Reset password',
+        'generate' => 'Generate',
+        'reset_done' => 'Password reset. Give the temporary password to the user privately. They must change it at their next sign-in.',
+    ],
     'employee_template' => [
         'headers' => ['الاسم', 'رقم الموظف', 'القسم', 'المنصب', 'تاريخ التعيين', 'الفرع', 'البريد', 'الجنس'],
         'arabic_header' => 'Arabic header', 'english_name' => 'English name', 'example' => 'Example',

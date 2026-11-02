@@ -3,6 +3,7 @@
 namespace App\Filament\Platform\Resources;
 
 use App\Enums\UserRole;
+use App\Filament\Actions\ResetPasswordAction;
 use App\Filament\Platform\Resources\PlatformUserResource\Pages;
 use App\Models\User;
 use App\Services\UserAccountService;
@@ -63,6 +64,7 @@ class PlatformUserResource extends Resource
             TextColumn::make('is_active')->label(__('Status'))->formatStateUsing(fn (bool $state): string => $state ? __('Active') : __('Inactive')),
         ])->recordActions([
             EditAction::make(),
+            ResetPasswordAction::make(),
             Action::make('toggleActive')->label(fn (User $record): string => $record->is_active ? __('Deactivate') : __('Activate'))
                 ->requiresConfirmation()->action(fn (User $record) => app(UserAccountService::class)->update($record, ['is_active' => ! $record->is_active], auth()->user())),
         ]);
