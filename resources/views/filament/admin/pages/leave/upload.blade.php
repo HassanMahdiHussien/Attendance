@@ -66,7 +66,7 @@
                         </p>
                     @endforeach
                 @endforeach
-                @if ($preview['token']) <x-filament::button wire:click="commit">{{ __('messages.leave_ui.commit') }}</x-filament::button> @endif
+                @if ($preview['token']) <x-filament::button wire:click="confirmImport">{{ __('messages.leave_ui.commit') }}</x-filament::button> @endif
             </x-ui.card>
         @endif
 

@@ -105,7 +105,8 @@ class UploadLeaveBalance extends LeavePage
         $this->step = 'preview';
     }
 
-    public function commit(LeaveBalanceImport $import): void
+    // Not named commit: Livewire aliases wire:click="commit" to its own $commit action, so the method would never run.
+    public function confirmImport(LeaveBalanceImport $import): void
     {
         $company = $this->company();
         $preview = $this->previewData();

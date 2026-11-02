@@ -111,7 +111,7 @@ test('ready draft commits once with the stored original and no row scan', functi
     $spy = Mockery::mock(app(TransactionFile::class))->makePartial();
     $spy->shouldNotReceive('rows');
     app()->instance(TransactionFile::class, $spy);
-    $page->call('commit')->assertSet('step', 'progress');
+    $page->call('confirmImport')->assertSet('step', 'progress');
     $batch = ImportBatch::query()->sole();
     expect($batch->file_path)->toBe($draft->file_path)
         ->and($batch->summary['preview_counts']['rows'])->toBe(4)
@@ -132,7 +132,7 @@ test('tampered ready draft cannot commit', function (): void {
     app()->call([new AnalyseTransactionDraftJob($draft->id, $draft->revision), 'handle']);
     $page->call('$refresh')->call('preview');
     Storage::disk('local')->put($draft->file_path, 'changed');
-    $page->call('commit')->assertHasErrors(['sourceFile']);
+    $page->call('confirmImport')->assertHasErrors(['sourceFile']);
     expect(ImportBatch::query()->count())->toBe(0);
 });
 
@@ -140,14 +140,14 @@ test('a second draft of the same file cannot create a second batch', function ()
     $page = Livewire::test(UploadAttendance::class)->set('sourceFile', transactionDraftFile())->call('prepare')->call('setCoverageStep');
     $first = ImportDraft::query()->sole();
     app()->call([new AnalyseTransactionDraftJob($first->id, $first->revision), 'handle']);
-    $page->call('$refresh')->call('preview')->call('commit');
+    $page->call('$refresh')->call('preview')->call('confirmImport');
     $page = Livewire::test(UploadAttendance::class)->set('sourceFile', transactionDraftFile())->call('prepare');
     $second = ImportDraft::query()->latest('id')->first();
     app()->call([new AnalyseTransactionDraftJob($second->id, $second->revision), 'handle']);
     $page->call('$refresh')->call('preview');
     expect($page->instance()->previewData()['already_imported'])->toBe(ImportBatch::query()->sole()->id)
         ->and(ImportBatch::query()->count())->toBe(1);
-    $page->call('commit')->assertForbidden();
+    $page->call('confirmImport')->assertForbidden();
     expect(ImportBatch::query()->count())->toBe(1);
 });
 

@@ -97,7 +97,7 @@ test('HR maps, scopes, previews and commits a leave report with reloadable progr
         ->call('setScopeStep')->assertSet('step', 'scope')
         ->set('scope.scope', 'full')->call('preview')->assertSet('step', 'preview')
         ->assertSee('New requests')->assertSee('Annual Leave')->assertSee('Approved')
-        ->call('commit')->assertSet('step', 'progress');
+        ->call('confirmImport')->assertSet('step', 'progress');
     $batch = ImportBatch::query()->where('company_id', $this->company->id)->sole();
     expect($batch->scope)->toBe('full');
     Queue::assertPushed(ImportLeaveJob::class);
@@ -108,7 +108,7 @@ test('HR maps, scopes, previews and commits a leave report with reloadable progr
 
 test('saved leave mapping skips the mapping step', function (): void {
     Livewire::test(UploadLeave::class)->set('sourceFile', leaveUiCsv())->call('prepare')
-        ->call('setScopeStep')->call('preview')->call('commit');
+        ->call('setScopeStep')->call('preview')->call('confirmImport');
     Livewire::test(UploadLeave::class)->set('sourceFile', leaveUiCsv())->call('prepare')->assertSet('step', 'scope');
 });
 

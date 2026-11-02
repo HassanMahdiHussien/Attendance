@@ -57,7 +57,7 @@ test('HR maps, confirms coverage, previews and commits a CSV upload', function (
     $page->call('$refresh')
         ->assertSet('coverage.branch_ids', [$this->branch->id])
         ->call('preview')->assertSet('step', 'preview')
-        ->call('commit')->assertSet('step', 'progress');
+        ->call('confirmImport')->assertSet('step', 'progress');
     $batch = ImportBatch::query()->sole();
     app()->call([new ImportTransactionsJob($batch->id), 'handle']);
     expect(ImportBatchEvent::query()->where('batch_id', $batch->id)->latest('sequence')->value('state'))->toBe('completed');
@@ -71,7 +71,7 @@ test('saved header mapping skips the mapping screen', function (): void {
     $page = Livewire::test(UploadAttendance::class)->set('sourceFile', $file)->call('prepare')->call('setCoverageStep');
     $draft = ImportDraft::query()->sole();
     app()->call([new AnalyseTransactionDraftJob($draft->id, $draft->revision), 'handle']);
-    $page->call('$refresh')->call('preview')->call('commit');
+    $page->call('$refresh')->call('preview')->call('confirmImport');
     Livewire::test(UploadAttendance::class)->set('sourceFile', attendanceUiFile())->call('prepare')->assertSet('step', 'coverage');
     Queue::assertPushed(AnalyseTransactionDraftJob::class, 2);
 });

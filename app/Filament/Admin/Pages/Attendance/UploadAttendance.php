@@ -198,7 +198,8 @@ class UploadAttendance extends AttendancePage
         $this->step = 'preview';
     }
 
-    public function commit(TransactionImport $import): void
+    // Not named commit: Livewire aliases wire:click="commit" to its own $commit action, so the method would never run.
+    public function confirmImport(TransactionImport $import): void
     {
         $this->company();
         $preview = $this->previewData();
