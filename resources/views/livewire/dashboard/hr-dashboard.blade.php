@@ -6,13 +6,18 @@
         <h2 class="text-lg font-bold text-ink">{{ $company->name }}</h2>
         <p class="text-sm text-gray-500"><bdi dir="ltr">{{ $from }} → {{ $to }}</bdi></p>
         <div class="mt-3 flex flex-wrap gap-3 text-sm">
-            <button type="button" wire:click="period('current')" class="ui-link">{{ __('messages.reporting_ui.current_month') }}</button>
-            <button type="button" wire:click="period('previous')" class="ui-link">{{ __('messages.reporting_ui.previous_month') }}</button>
-            <button type="button" wire:click="period('last_30')" class="ui-link">{{ __('messages.reporting_ui.last_30') }}</button>
+            <x-ui.filter-button wire:click="period('current')" :selected="$from === now('Asia/Baghdad')->startOfMonth()->toDateString()">{{ __('messages.reporting_ui.current_month') }}</x-ui.filter-button>
+            <x-ui.filter-button wire:click="period('previous')" :selected="$from === now('Asia/Baghdad')->subMonthNoOverflow()->startOfMonth()->toDateString()">{{ __('messages.reporting_ui.previous_month') }}</x-ui.filter-button>
+            <x-ui.filter-button wire:click="period('last_30')" :selected="$from === now('Asia/Baghdad')->subDays(29)->toDateString()">{{ __('messages.reporting_ui.last_30') }}</x-ui.filter-button>
         </div>
-        <form wire:submit="apply" class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <label class="text-sm">{{ __('messages.reporting_ui.from') }} <input type="date" wire:model="from" class="ui-control block w-full rounded-xl border border-gray-200 px-3 py-2" /></label>
-            <label class="text-sm">{{ __('messages.reporting_ui.to') }} <input type="date" wire:model="to" class="ui-control block w-full rounded-xl border border-gray-200 px-3 py-2" /></label>
+
+        @error('period') <p class="text-red-700">{{ $message }}</p> @enderror
+    </x-ui.card>
+    <x-ui.route-rail :steps="$journey['steps']" />
+    @if ($journey['action'])<a href="{{ $journey['action']['url'] }}" class="ui-button ui-button-primary">{{ $journey['action']['label'] }}</a>@endif
+    <p class="text-sm text-gray-600">{{ __('messages.reporting_ui.freshness') }}: <bdi dir="ltr">{{ $freshness['last_data_update'] ?? '—' }}</bdi> · {{ $freshness['results_updating'] ? __('messages.reporting_ui.updating') : __('messages.clear_screens.results_ready') }}</p>
+
+    <div class="max-w-xl rounded-xl border border-line bg-white p-4">
             <div class="relative text-sm">
                 <label for="report-employee-search">{{ __('messages.reporting_ui.employee') }}</label>
                 <div class="flex gap-2">
@@ -27,6 +32,28 @@
                     </div>
                 @endif
             </div>
+    </div>
+    <h2 class="text-lg font-semibold">{{ __('messages.clear_screens.needs_action') }}</h2>
+    <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        @foreach (['absent', 'missing_punch', 'shift_unresolved', 'late', 'early', 'short_hours_alerts', 'data_issues', 'pending', 'waiting_hr'] as $key)
+            @if (isset($tiles[$key]))
+                <x-ui.tile :label="\App\Services\Attendance\Reporting\ReportTiles::label($key)" :value="\App\Services\Attendance\Reporting\ReportTiles::isMinutes($key) ? app(\App\Services\Attendance\Reporting\DurationText::class)->format($tiles[$key]) : \App\Support\Format\Ui::number($tiles[$key])" :tone="$tiles[$key] > 0 ? (in_array($key, ['absent', 'missing_punch', 'data_issues'], true) ? 'red' : (in_array($key, ['late', 'early', 'short_hours_alerts'], true) ? 'amber' : 'white')) : 'white'" :href="$this->tileUrl($key)" />
+            @endif
+        @endforeach
+    </div>
+    <details wire:ignore.self class="rounded-xl border border-line bg-white p-4"><summary class="cursor-pointer font-semibold">{{ __('messages.clear_screens.more_figures') }}</summary><div class="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        @foreach ($tiles as $key => $value)
+            @unless (in_array($key, ['absent', 'missing_punch', 'shift_unresolved', 'late', 'early', 'short_hours_alerts', 'data_issues', 'pending', 'waiting_hr'], true))
+                <x-ui.tile :label="\App\Services\Attendance\Reporting\ReportTiles::label($key)" :value="\App\Services\Attendance\Reporting\ReportTiles::isMinutes($key) ? app(\App\Services\Attendance\Reporting\DurationText::class)->format($value) : (\App\Services\Attendance\Reporting\ReportTiles::isDays($key) ? number_format($value, 1) : \App\Support\Format\Ui::number($value))" :href="$this->tileUrl($key)">
+                    @if ($key === 'holiday_worked')<span class="block text-sm text-gray-600">{{ __('messages.holiday_ui.hours') }} <bdi dir="auto">{{ app(\App\Services\Attendance\Reporting\DurationText::class)->format($totals['holiday_work_minutes']) }}</bdi></span>@endif
+                </x-ui.tile>
+            @endunless
+        @endforeach
+    </div></details>
+        <details wire:ignore.self class="mt-4" @if ($employeeId !== '' || $branchId !== '' || $department !== '' || $managerId !== '' || $workPattern !== '' || $status !== '') open @endif><summary class="cursor-pointer font-semibold text-primary">{{ __('messages.clear_screens.more_filters') }}</summary>
+        <form wire:submit="apply" class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <label class="text-sm">{{ __('messages.reporting_ui.from') }} <input type="date" wire:model="from" class="ui-control block w-full rounded-xl border border-gray-200 px-3 py-2" /></label>
+            <label class="text-sm">{{ __('messages.reporting_ui.to') }} <input type="date" wire:model="to" class="ui-control block w-full rounded-xl border border-gray-200 px-3 py-2" /></label>
             <label class="text-sm">{{ __('messages.reporting_ui.branch') }} <select wire:model="branchId" class="ui-control block w-full rounded-xl border border-gray-200 px-3 py-2"><option value="">{{ __('messages.reporting_ui.all') }}</option>@foreach ($branches as $branch)<option value="{{ $branch->id }}">{{ $branch->name }}</option>@endforeach</select></label>
             <label class="text-sm">{{ __('messages.reporting_ui.department') }} <select wire:model="department" class="ui-control block w-full rounded-xl border border-gray-200 px-3 py-2"><option value="">{{ __('messages.reporting_ui.all') }}</option>@foreach ($departments as $name)<option value="{{ $name }}">{{ $name }}</option>@endforeach</select></label>
             <div class="relative text-sm">
@@ -45,13 +72,10 @@
             </div>
             <label class="text-sm">{{ __('messages.reporting_ui.work_pattern') }} <select wire:model="workPattern" class="ui-control block w-full rounded-xl border border-gray-200 px-3 py-2"><option value="">{{ __('messages.reporting_ui.all') }}</option>@foreach (['office', 'shift', 'security'] as $pattern)<option value="{{ $pattern }}">{{ __('messages.reporting_ui.patterns.'.$pattern) }}</option>@endforeach</select></label>
             <label class="text-sm">{{ __('messages.reporting_ui.status') }} <select wire:model="status" class="ui-control block w-full rounded-xl border border-gray-200 px-3 py-2"><option value="">{{ __('messages.reporting_ui.all') }}</option>@foreach (\App\Services\Attendance\Reporting\ReportFilters::STATUSES as $choice)<option value="{{ $choice }}">{{ __('messages.office_ui.statuses.'.$choice) }}</option>@endforeach</select></label>
-            <button type="submit" class="ui-button ui-button-primary">{{ __('messages.reporting_ui.apply') }}</button>
+            <button type="submit" class="ui-button ui-button-secondary">{{ __('messages.reporting_ui.apply') }}</button>
         </form>
-        @error('period') <p class="text-red-700">{{ $message }}</p> @enderror
-    </x-ui.card>
-
-    <x-ui.card>
-        <h2 class="font-bold text-ink">{{ __('messages.export_ui.export') }}</h2>
+        </details>
+    <details wire:ignore.self class="rounded-xl border border-line bg-white p-4"><summary class="cursor-pointer font-semibold">{{ __('messages.export_ui.export') }}</summary>
         <form wire:submit="requestExport" class="mt-3 flex flex-wrap items-end gap-3">
             <label class="text-sm">{{ __('messages.export_ui.report') }}
                 <select wire:model="exportKind" class="ui-control block rounded-xl border border-gray-200 px-3 py-2">
@@ -70,19 +94,9 @@
         </form>
         @if ($exportQueued) <p class="mt-2 text-sm text-green-800">{{ __('messages.export_ui.queued_notice') }}</p> @endif
         @error('export') <p class="text-red-700">{{ $message }}</p> @enderror
-    </x-ui.card>
+    </details>
 
-    <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        @foreach ($tiles as $key => $value)
-            <a href="{{ $this->tileUrl($key) }}" class="rounded-2xl border border-gray-200 bg-white p-3 sm:p-4 hover:border-primary focus-visible:outline-2 focus-visible:outline-primary">
-                <span class="block text-sm text-gray-500">{{ \App\Services\Attendance\Reporting\ReportTiles::label($key) }}</span>
-                <strong class="mt-1 block font-mono text-xl text-ink"><bdi dir="ltr">{{ \App\Services\Attendance\Reporting\ReportTiles::isMinutes($key) ? sprintf('%d:%02d', intdiv($value, 60), $value % 60) : (\App\Services\Attendance\Reporting\ReportTiles::isDays($key) ? number_format($value, 1) : \App\Support\Format\Ui::number($value)) }}</bdi></strong>
-                @if ($key === 'holiday_worked')
-                    <span class="block text-sm text-gray-600">{{ __('messages.holiday_ui.hours') }} <bdi dir="ltr">{{ sprintf('%d:%02d', intdiv($totals['holiday_work_minutes'], 60), $totals['holiday_work_minutes'] % 60) }}</bdi></span>
-                @endif
-            </a>
-        @endforeach
-    </div>
+    <details id="data-status" wire:ignore.self class="rounded-xl border border-line bg-white p-4" @if ($freshness['results_updating']) open @endif><summary class="cursor-pointer font-semibold">{{ __('messages.clear_screens.data_status') }}</summary>
 
     @if ($totals['issues']['company_wide'] || $totals['meals']['non_employee'])
         <x-ui.card>
@@ -115,4 +129,5 @@
             <p class="mt-2 text-sm">{{ $branch->name }}: <bdi dir="ltr">{{ $freshness['coverage'][$branch->id]['assessable'] ?? 0 }} / {{ $freshness['coverage'][$branch->id]['expected'] ?? 0 }}</bdi> {{ __('messages.reporting_ui.covered_days') }}</p>
         @endforeach
     </x-ui.card>
+    </details>
 </div>

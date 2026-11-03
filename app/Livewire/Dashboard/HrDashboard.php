@@ -13,6 +13,7 @@ use App\Services\Attendance\Reporting\AttendanceExports;
 use App\Services\Attendance\Reporting\AttendanceSummary;
 use App\Services\Attendance\Reporting\EmployeeFilterSearch;
 use App\Services\Attendance\Reporting\ExportKinds;
+use App\Services\Attendance\Reporting\HrJourney;
 use App\Services\Attendance\Reporting\LastUpdate;
 use App\Services\Attendance\Reporting\ReportFilters;
 use App\Services\Attendance\Reporting\ReportTiles;
@@ -163,12 +164,21 @@ class HrDashboard extends Component
             $overtimeTotals = $overtime->totals($filters);
             $employees = $this->employeeId === '' ? $search->find(auth()->user(), $company, $this->employeeSearch) : [];
             $managers = $this->managerId === '' ? $search->find(auth()->user(), $company, $this->managerSearch) : [];
+            $freshness = $lastUpdate->for($filters);
+            $tiles = ReportTiles::fromTotals($totals) + ReportTiles::overtime($overtimeTotals)
+                + app(FollowUpCases::class)->tileTotals($filters);
+            $actions = [];
+            foreach (['absent', 'missing_punch', 'shift_unresolved', 'late', 'early', 'short_hours_alerts', 'data_issues', 'pending', 'waiting_hr'] as $key) {
+                if (($tiles[$key] ?? 0) > 0) {
+                    $actions[] = ['label' => __('messages.clear_screens.review_action', ['item' => ReportTiles::label($key)]), 'url' => $this->tileUrl($key)];
+                }
+            }
 
             return view('livewire.dashboard.hr-dashboard', [
-                'company' => $company, 'tiles' => ReportTiles::fromTotals($totals) + ReportTiles::overtime($overtimeTotals)
-                    + app(FollowUpCases::class)->tileTotals($filters),
+                'company' => $company, 'tiles' => $tiles,
                 'totals' => $totals,
-                'freshness' => $lastUpdate->for($filters), 'employees' => $employees, 'managers' => $managers,
+                'freshness' => $freshness, 'journey' => app(HrJourney::class)->for($company, $freshness + ['actions' => $actions]),
+                'employees' => $employees, 'managers' => $managers,
                 'branches' => Branch::query()->where('company_id', $company->id)->orderBy('name')->get(),
                 'departments' => Employee::query()->where('company_id', $company->id)
                     ->whereNotNull('department')->where('department', '<>', '')

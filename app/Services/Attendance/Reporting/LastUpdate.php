@@ -2,6 +2,12 @@
 
 namespace App\Services\Attendance\Reporting;
 
+use App\Jobs\Attendance\AssessDaysJob;
+use App\Jobs\Attendance\ImportTransactionsJob;
+use App\Jobs\Attendance\ProcessAttendanceJob;
+use App\Jobs\Leave\ImportLeaveBalanceJob;
+use App\Jobs\Leave\ImportLeaveJob;
+use App\Jobs\Leave\ReconcileLeaveJob;
 use App\Models\Attendance\CoverageInterval;
 use App\Models\Attendance\Day;
 use App\Models\Attendance\DayDecision;
@@ -16,6 +22,7 @@ use App\Models\Company;
 use App\Models\Employee;
 use App\Models\EmployeeImportBatch;
 use App\Models\EmployeeVersion;
+use App\Models\Leave\BalanceBatch;
 use App\Models\Leave\ImportBatch as LeaveBatch;
 use App\Models\Leave\ImportBatchEvent as LeaveBatchEvent;
 use App\Models\Leave\LeaveType;
@@ -27,6 +34,7 @@ use App\Services\Attendance\OfficeDayCalculator;
 use App\Services\Employees\EmployeeHistory;
 use App\Support\Tenancy\TenantContext;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\DB;
 
 class LastUpdate
 {
@@ -81,7 +89,8 @@ class LastUpdate
             'sources' => $sources, 'runs' => $runs,
             // The newest upload, so a finished import shows at once; results_updating covers the recalculation that follows.
             'last_data_update' => $knownTimes === [] ? null : max($knownTimes),
-            'results_updating' => ($punches !== null && ($cleanup === null || $punches > $cleanup || $assessment === null || $punches > $assessment))
+            'results_updating' => $this->queuedWork($company)
+                || ($punches !== null && ($cleanup === null || $punches > $cleanup || $assessment === null || $punches > $assessment))
                 || ($latestDeviceSetting !== null && ($cleanup === null || $latestDeviceSetting > $cleanup))
                 || ($cleanup !== null && ($assessment === null || $cleanup > $assessment))
                 || ($leave !== null && ($reconciliation === null || $leave > $reconciliation))
@@ -91,6 +100,47 @@ class LastUpdate
                 || ($newestReconciliationInput !== null && ($reconciliation === null || $newestReconciliationInput > $reconciliation)),
             'coverage' => $this->coverageQuality($company, $filters),
         ];
+    }
+
+    private function queuedWork(Company $company): bool
+    {
+        $connection = config('queue.default');
+        if (config("queue.connections.{$connection}.driver") !== 'database') {
+            return false;
+        }
+
+        $attendanceBatchIds = AttendanceBatch::query()->where('company_id', $company->id)->pluck('id')->all();
+        $leaveBatchIds = LeaveBatch::query()->where('company_id', $company->id)->pluck('id')->all();
+        $balanceBatchIds = BalanceBatch::query()->where('company_id', $company->id)->pluck('id')->all();
+        $classes = [
+            ImportTransactionsJob::class => ['batchId', $attendanceBatchIds],
+            ProcessAttendanceJob::class => ['companyId', [$company->id]],
+            AssessDaysJob::class => ['companyId', [$company->id]],
+            ReconcileLeaveJob::class => ['companyId', [$company->id]],
+            ImportLeaveJob::class => ['batchId', $leaveBatchIds],
+            ImportLeaveBalanceJob::class => ['batchId', $balanceBatchIds],
+        ];
+        $table = config("queue.connections.{$connection}.table", 'jobs');
+        $jobs = DB::table($table)->select('payload')->where(function ($query) use ($classes): void {
+            foreach (array_keys($classes) as $class) {
+                $query->orWhere('payload', 'like', '%'.class_basename($class).'%');
+            }
+        });
+        foreach ($jobs->cursor() as $job) {
+            $payload = json_decode($job->payload, true);
+            $class = $payload['displayName'] ?? null;
+            if (! isset($classes[$class])) {
+                continue;
+            }
+            [$property, $ids] = $classes[$class];
+            foreach ($ids as $id) {
+                if (str_contains($payload['data']['command'] ?? '', 's:'.strlen($property).':"'.$property.'";i:'.$id.';')) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private function coverageQuality(Company $company, ReportFilters $filters): array

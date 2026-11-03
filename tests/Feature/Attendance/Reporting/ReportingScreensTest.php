@@ -12,13 +12,18 @@ use App\Models\Attendance\ProcessingRun;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Employee;
+use App\Models\Leave\LeaveRequest;
+use App\Models\Leave\LeaveType;
 use App\Models\User;
 use App\Services\Attendance\Reporting\AttendanceSummary;
 use App\Services\Attendance\Reporting\EmployeeFilterSearch;
 use App\Services\Attendance\Reporting\ReportFilters;
+use App\Services\Leave\Reconciler;
 use App\Support\Tenancy\TenantContext;
 use Carbon\Carbon;
 use Filament\Facades\Filament;
+use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
 
 beforeEach(function (): void {
@@ -52,9 +57,11 @@ test('dashboard and employee attendance show the same current projection and pre
         ->assertSee('Attendance dashboard')->assertSee('Present days')->assertSee('Pending days')
         ->set('employeeId', (string) $employee->id)->call('apply')->assertHasNoErrors();
     Livewire::test(EmployeeAttendance::class, ['employeeId' => $employee->id])
-        ->assertSet('from', '2026-10-01')->assertSee('Current month')->assertSee('0:15')
-        ->assertSee('Pending')->call('showTile', 'present')->assertSee('2026-10-21')
-        ->assertDontSee('2026-10-22')->call('show', 'changes')->assertSee('Changes');
+        ->assertSet('from', '2026-10-01')->assertSet('dayFilter', 'review')
+        ->assertSee('Current month')->assertSee('15 min')
+        ->assertSee('Needs review (1)')->call('setDayFilter', 'all')->assertSee('All days (2)')
+        ->call('showTile', 'present')->assertSet('dayFilter', 'all')->assertSee('21 October')
+        ->assertDontSee('22 October')->call('show', 'changes')->assertSee('Changes');
     Livewire::withQueryParams(['tile' => 'present', 'from' => '2026-10-01', 'to' => '2026-10-23'])
         ->test(DashboardEmployees::class)->assertSee($employee->name)->assertSee('Matching employees');
     expect(app(AttendanceSummary::class)->drillDown($filters, 'present'))->toBe([$employee->id]);
@@ -100,7 +107,7 @@ test('drill down keeps branch and period filters and quick periods use Baghdad d
     Livewire::test(EmployeeAttendance::class, ['employeeId' => $first->id])
         ->call('period', 'previous')->assertSet('from', '2026-09-01')
         ->set('to', '2026-10-21')->set('from', '2026-10-20')->call('apply')
-        ->assertHasNoErrors()->assertSee('2026-10-21');
+        ->assertHasNoErrors()->call('setDayFilter', 'all')->assertSee('21 October');
 });
 
 test('punch viewer opens on the linked employee and day', function (): void {
@@ -148,7 +155,7 @@ test('dashboard employee and manager filters search within the selected company'
 test('employee daily lines show clock times and capitalised English labels', function (): void {
     $company = Company::factory()->create();
     app(TenantContext::class)->setCompany($company);
-    $employee = Employee::factory()->create();
+    $employee = Employee::factory()->create(['work_pattern' => 'office']);
     $hr = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::HrStaff]);
     Day::factory()->create(['employee_id' => $employee->id, 'branch_id' => $employee->branch_id,
         'work_date' => '2026-10-21', 'status' => 'present', 'first_in' => '2026-10-21 09:15:00',
@@ -156,8 +163,56 @@ test('employee daily lines show clock times and capitalised English labels', fun
     $this->actingAs($hr);
 
     Livewire::test(EmployeeAttendance::class, ['employeeId' => $employee->id])
-        ->assertSee('09:15 / 18:00')->assertDontSee('2026-10-21 09:15:00')
-        ->assertSee('Lateness: Gross')->assertDontSee('lateness: Gross');
+        ->assertSee('· Office ·')->assertSee('09:15')->assertSee('18:00')->assertDontSee('2026-10-21 09:15:00')
+        ->assertSee('Late 15 min')->assertSee('Lateness: Gross')->assertSee('15 min')->assertDontSee('lateness: Gross');
+});
+
+test('daily review excludes fully covered absence and pending while all days keeps both', function (): void {
+    // The reconciler queues a recalculation that would turn these uncovered test days back to pending.
+    Queue::fake();
+    $company = Company::factory()->create();
+    app(TenantContext::class)->setCompany($company);
+    $employee = Employee::factory()->create(['work_pattern' => 'office', 'hire_date' => '2020-01-01']);
+    $hr = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::HrStaff]);
+    $type = LeaveType::factory()->create(['name' => 'Annual Leave', 'normalized_key' => 'annual leave|', 'covers' => true, 'is_mapped' => true]);
+    foreach (['2026-10-20' => 'absent', '2026-10-21' => 'absent', '2026-10-22' => 'pending'] as $date => $status) {
+        Day::factory()->create(['employee_id' => $employee->id, 'branch_id' => $employee->branch_id,
+            'work_date' => $date, 'status' => $status]);
+    }
+    LeaveRequest::factory()->create(['employee_id' => $employee->id, 'owner_code' => $employee->employee_code,
+        'leave_type_id' => $type->id, 'status' => 'approved', 'start_date' => '2026-10-21',
+        'end_date' => '2026-10-21', 'duration_days' => '1.0']);
+    app(Reconciler::class)->run($company, [$employee->id], 'report_test');
+    $this->actingAs($hr);
+
+    Livewire::test(EmployeeAttendance::class, ['employeeId' => $employee->id])
+        ->assertSet('dayFilter', 'review')->assertSee('Needs review (1)')
+        ->assertSee('Full day absent, no leave')->assertDontSee('Absence covered by leave')
+        ->assertDontSee('This day is pending and is not a completed absence.')
+        ->call('setDayFilter', 'all')->assertSee('All days (3)')
+        ->assertSee('Absence covered by leave')->assertSee('This day is pending and is not a completed absence.');
+
+    $tile = Livewire::test(EmployeeAttendance::class, ['employeeId' => $employee->id]);
+    expect($tile->html())->toMatch('/Absent without leave.*?<bdi dir="auto">1<\/bdi>/s');
+    $tile->call('showTile', 'absent_uncovered')->assertSet('selectedTile', 'absent_uncovered')
+        ->assertSee('20 October')->assertDontSee('21 October')->assertDontSee('22 October');
+});
+
+test('late and early tile opens both kinds of days', function (): void {
+    $company = Company::factory()->create();
+    app(TenantContext::class)->setCompany($company);
+    $employee = Employee::factory()->create(['work_pattern' => 'office']);
+    $hr = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::HrStaff]);
+    Day::factory()->create(['employee_id' => $employee->id, 'branch_id' => $employee->branch_id,
+        'work_date' => '2026-10-20', 'status' => 'present', 'late_minutes' => 15]);
+    Day::factory()->create(['employee_id' => $employee->id, 'branch_id' => $employee->branch_id,
+        'work_date' => '2026-10-21', 'status' => 'present', 'early_minutes' => 30]);
+    $this->actingAs($hr);
+
+    $tile = Livewire::test(EmployeeAttendance::class, ['employeeId' => $employee->id]);
+    expect($tile->html())->toMatch('/Late and early leaving.*?<bdi dir="auto">45 min<\/bdi>/s');
+    $tile->call('showTile', 'late_early')->assertSet('selectedTile', 'late_early')
+        ->assertSee('20 October')->assertSee('21 October');
 });
 
 test('an entitlement link opens the employee overtime ledger', function (): void {
@@ -186,4 +241,10 @@ test('employee attendance dates the last update by the upload, not the older rec
     Livewire::test(EmployeeAttendance::class, ['employeeId' => $employee->id])
         ->assertSee('2026-10-23 11:00:00')->assertDontSee('2026-10-20 10:00:00')
         ->assertSee('Results are updating');
+});
+
+test('a tile keeps an Arabic duration in reading order', function (): void {
+    $html = Blade::render('<x-ui.tile label="Late" value="75 س 19 د" />');
+
+    expect($html)->toContain('<bdi dir="auto">75 س 19 د</bdi>')->not->toContain('dir="ltr"');
 });
