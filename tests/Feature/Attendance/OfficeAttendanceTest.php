@@ -326,6 +326,23 @@ test('the hourly scheduler leaves days without confirmed coverage to the coverag
     Queue::assertNothingPushed();
 });
 
+test('a branch-scoped assessment leaves other branches days untouched', function (): void {
+    $fixture = officeFixture();
+    Carbon::setTestNow('2026-10-19 12:00:00');
+    officeAssess($fixture);
+    app(TenantContext::class)->runForCompany($fixture['company'], function () use ($fixture): void {
+        $day = Day::query()->where('employee_id', $fixture['employee']->id)->whereNull('superseded_by_run_id')->sole();
+        $other = Branch::factory()->create(['company_id' => $fixture['company']->id]);
+
+        $run = app(DayAssessor::class)->run($fixture['company'], [
+            'branch_ids' => [$other->id], 'from' => '2026-10-19', 'to' => '2026-10-19',
+        ], 'coverage');
+
+        expect($run->counts['days_changed'])->toBe(0)
+            ->and($day->fresh()->superseded_by_run_id)->toBeNull();
+    });
+});
+
 test('the assessment service cannot read another company from the current tenant', function (): void {
     $first = officeFixture();
     $other = officeFixture();
