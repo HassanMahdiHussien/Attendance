@@ -203,8 +203,11 @@ class DayAssessor
                     continue;
                 }
                 $branchId = $values['branch_id'] === null ? null : (int) $values['branch_id'];
-                if ((isset($scope['branch_ids']) && ! in_array($branchId, $scope['branch_ids'], true))
-                    || ($values['hire_date'] !== null && substr((string) $values['hire_date'], 0, 10) > $date)
+                // A branch-scoped run says nothing about other branches, so their days must survive it.
+                if (isset($scope['branch_ids']) && ! in_array($branchId, $scope['branch_ids'], true)) {
+                    continue;
+                }
+                if (($values['hire_date'] !== null && substr((string) $values['hire_date'], 0, 10) > $date)
                     || ($employee->exit_status->value === 'confirmed' && $employee->last_working_day !== null
                         && $employee->last_working_day->toDateString() < $date)
                     || $policies[$date] === null) {
