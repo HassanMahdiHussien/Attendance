@@ -21,7 +21,7 @@ test('workspace and Filament panels render the same header and phone navigation'
     $workspace = $this->get('/employees')->assertOk()->getContent();
     $panel = $this->get('/admin/'.$company->id)->assertOk()->getContent();
     foreach ([$workspace, $panel] as $html) {
-        expect($html)->toContain('id="workspace-account"', 'id="workspace-more"', 'id="workspace-settings"');
+        expect($html)->toContain('id="workspace-account"', 'id="workspace-more"', 'id="workspace-setup"');
         expect(substr_count($html, '<header class="sticky top-0 z-50 bg-night text-white">'))->toBe(1);
         expect(substr_count($html, 'id="workspace-account"'))->toBe(1);
     }

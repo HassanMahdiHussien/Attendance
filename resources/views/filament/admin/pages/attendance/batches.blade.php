@@ -1,24 +1,25 @@
 <x-filament-panels::page>
+    <p class="text-sm text-gray-600">{{ __('messages.list_context.attendance_batches') }}</p>
     <section wire:poll.5s class="overflow-x-auto rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-        <table class="w-full text-start"><thead><tr>
+        <x-ui.table><thead><tr>
             @foreach (['file', 'uploader', 'time', 'coverage', 'counts_label', 'state', 'actions'] as $column)<th class="p-2">{{ __('messages.attendance_ui.'.$column) }}</th>@endforeach
         </tr></thead><tbody>
-            @foreach ($this->batches() as $batch)
+            @forelse ($this->batches() as $batch)
                 @php $event = $this->latestEvent($batch); @endphp
                 <tr class="border-t" wire:key="attendance-batch-{{ $batch->id }}">
-                    <td class="p-2">{{ $batch->file_name }}</td>
-                    <td class="p-2">{{ \App\Models\User::find($batch->uploaded_by)?->name }}</td>
-                    <td class="p-2" dir="ltr">{{ $batch->created_at->format('Y-m-d H:i') }}</td>
-                    <td class="p-2"><bdi dir="ltr">{{ $batch->coverage_from?->format('Y-m-d H:i') }} – {{ $batch->coverage_to?->format('Y-m-d H:i') }}</bdi><br>{{ implode(', ', \App\Models\Branch::query()->whereIn('id', $batch->coverage_branch_ids)->pluck('name')->all()) }}</td>
-                    <td class="p-2">@if ($event?->counts) @foreach ($event->counts as $key => $count) <span class="block">{{ __('messages.attendance_ui.count_labels.'.$key) }}: <bdi dir="ltr">{{ $count }}</bdi></span> @endforeach @else — @endif</td>
-                    <td class="p-2">{{ __('messages.attendance_ui.states.'.($event?->state ?? 'queued')) }} @if ($event?->error_code) — {{ __('messages.attendance_ui.failures.'.$event->error_code) }} @endif</td>
-                    <td class="p-2"><a class="underline" href="{{ route('attendance.import.file', ['company' => \Filament\Facades\Filament::getTenant()->id, 'attendanceBatch' => $batch->id]) }}">{{ __('messages.attendance_ui.download') }}</a>
+                    <x-ui.td :label="__('messages.attendance_ui.file')">{{ $batch->file_name }}</x-ui.td>
+                    <x-ui.td :label="__('messages.attendance_ui.uploader')">{{ \App\Models\User::find($batch->uploaded_by)?->name }}</x-ui.td>
+                    <x-ui.td :label="__('messages.attendance_ui.time')">{{ $batch->created_at->format('Y-m-d H:i') }}</x-ui.td>
+                    <x-ui.td :label="__('messages.attendance_ui.coverage')"><bdi dir="ltr">{{ $batch->coverage_from?->format('Y-m-d H:i') }} – {{ $batch->coverage_to?->format('Y-m-d H:i') }}</bdi><br>{{ implode(', ', \App\Models\Branch::query()->whereIn('id', $batch->coverage_branch_ids)->pluck('name')->all()) }}</x-ui.td>
+                    <x-ui.td :label="__('messages.attendance_ui.counts_label')">@if ($event?->counts) @foreach ($event->counts as $key => $count) <span class="block">{{ __('messages.attendance_ui.count_labels.'.$key) }}: <bdi dir="ltr">{{ $count }}</bdi></span> @endforeach @else — @endif</x-ui.td>
+                    <x-ui.td :label="__('messages.attendance_ui.state')"><x-ui.badge :tone="app(\App\Services\Attendance\Reporting\JobStatePresentation::class)->tone($event?->state)">{{ __('messages.attendance_ui.states.'.($event?->state ?? 'queued')) }}</x-ui.badge> @if ($event?->error_code) — {{ __('messages.attendance_ui.failures.'.$event->error_code) }} @endif</x-ui.td>
+                    <x-ui.td :label="__('messages.attendance_ui.actions')"><a class="underline" href="{{ route('attendance.import.file', ['company' => \Filament\Facades\Filament::getTenant()->id, 'attendanceBatch' => $batch->id]) }}">{{ __('messages.attendance_ui.download') }}</a>
                         @if (count($batch->summary['samples']['errors'] ?? []) > 0) <button class="ms-2 underline" wire:click="showErrors({{ $batch->id }})">{{ __('messages.attendance_ui.errors') }}</button> @endif
                         @if ($event?->state === 'failed') <button class="ms-2 underline" wire:click="retry({{ $batch->id }})">{{ __('messages.attendance_ui.retry') }}</button> @endif
-                    </td>
+                    </x-ui.td>
                 </tr>
-            @endforeach
-        </tbody></table>
+            @empty <tr><td colspan="7" class="p-4"><x-ui.empty :title="__('messages.list_empty')" /></td></tr> @endforelse
+        </tbody></x-ui.table>
         {{ $this->batches()->links() }}
     </section>
     @if ($selectedBatch !== null)

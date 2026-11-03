@@ -182,6 +182,24 @@ class AttendanceSummary
         }
     }
 
+    public function presentationRowsForDays(ReportFilters $filters, array $dayIds): array
+    {
+        if ($dayIds === []) {
+            return [];
+        }
+
+        $days = collect(iterator_to_array($this->selectedDays($filters, dayIds: $dayIds)));
+        $allocations = $this->allocations($filters, $days->pluck('id')->all());
+        $nothingDays = $this->nothingToReconcileDays($filters, $days->pluck('employee_id')->unique()->all());
+        $rows = [];
+        foreach ($days as $day) {
+            $rows[$day->id] = $this->project($day, $allocations->get($day->id, collect()),
+                isset($nothingDays[$day->employee_id.'|'.$day->work_date->toDateString()]));
+        }
+
+        return $rows;
+    }
+
     public function drillDown(ReportFilters $filters, string $tile): array
     {
         $this->assertCompany($filters);

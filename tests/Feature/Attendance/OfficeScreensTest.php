@@ -67,6 +67,24 @@ test('daily table filters by date branch and status and opens the day detail', f
         ->test(DayDetail::class)->assertSee('Local employee')->assertSee('Recalculation history');
 });
 
+test('a pending day stays neutral in the daily and detail presentations', function (): void {
+    $pending = Day::factory()->create([
+        'company_id' => $this->company->id, 'employee_id' => $this->employee->id,
+        'branch_id' => $this->branch->id, 'policy_id' => $this->policy->id,
+        'work_date' => '2026-10-20', 'status' => 'pending',
+        'inputs' => ['policy_version' => 1, 'work_pattern' => 'office'],
+    ]);
+
+    $page = Livewire::test(DailyAttendance::class)->set('date', '2026-10-20');
+    expect($page->instance()->dayPresentations()[$pending->id])->toMatchArray([
+        'status_key' => 'pending', 'tone' => 'gray', 'needs_review' => false,
+    ]);
+    $detail = Livewire::withQueryParams(['employee' => (string) $this->employee->id, 'date' => '2026-10-20'])->test(DayDetail::class);
+    expect($detail->instance()->dayPresentation())->toMatchArray([
+        'status_key' => 'pending', 'tone' => 'gray', 'needs_review' => false,
+    ]);
+});
+
 test('review queue adds a manual time and withdraws a confirmed absence', function (): void {
     Queue::fake([AssessDaysJob::class]);
     Livewire::test(ReviewQueue::class)->assertSee('Local employee')->assertDontSee('Foreign employee')
@@ -114,7 +132,7 @@ test('day detail shows rule inputs and recalculation changes in words, not raw d
     Livewire::withQueryParams(['employee' => (string) $this->employee->id, 'date' => '2026-10-21'])
         ->test(DayDetail::class)
         ->assertSee('Rest days: Friday, Saturday')->assertSee('Branch: Hilla')->assertSee('Work pattern: Office')
-        ->assertSee('1:05')->assertSee('09:05–17:29')->assertSee('Employed')
+        ->assertSee('1 h 5 min')->assertSee('09:05–17:29')->assertSee('Employed')
         ->assertDontSee('"branch_id"')->assertDontSee('[5,6]')->assertDontSee('"from"');
 });
 
@@ -146,9 +164,9 @@ test('overtime appears on the daily and detail pages and policy edits retain oth
     RestDayEntitlement::factory()->create(['employee_id' => $this->employee->id,
         'source_day_id' => $day->id, 'work_date' => '2026-10-20', 'quantity' => 0.5]);
     Livewire::test(DailyAttendance::class)->set('date', '2026-10-20')
-        ->assertSee('4:00')->assertSee('0:30')->assertSee('Rest day');
+        ->assertSee('4 h')->assertSee('30 min')->assertSee('Rest day');
     Livewire::withQueryParams(['employee' => (string) $this->employee->id, 'date' => '2026-10-20'])
-        ->test(DayDetail::class)->assertSee('Compensatory day earned')->assertSee('4:00');
+        ->test(DayDetail::class)->assertSee('Compensatory day earned')->assertSee('4 h');
     Queue::fake([AssessDaysJob::class]);
     Livewire::test(OfficePolicyPage::class)->assertSee('Overtime')
         ->set('effectiveFrom', '2026-10-21')->set('overtimeMinMinutes', 45)
