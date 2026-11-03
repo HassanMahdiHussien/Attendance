@@ -16,9 +16,10 @@ class AssessDaysJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public int $timeout = 900;
+    // A full-range run over 500k+ punches can outlast 15 minutes on slow hardware; keep within queue retry_after.
+    public int $timeout = 7200;
 
-    public int $uniqueFor = 3600;
+    public int $uniqueFor = 7800;
 
     public function __construct(public int $companyId, public array $scope, public string $trigger) {}
 

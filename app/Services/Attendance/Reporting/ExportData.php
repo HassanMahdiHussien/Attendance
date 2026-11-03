@@ -77,7 +77,7 @@ class ExportData
             [__('messages.export_ui.statuses'), $filters->statuses === [] ? __('messages.reporting_ui.all') : implode(', ', array_map(fn (string $value): string => __('messages.office_ui.statuses.'.$value), $filters->statuses))],
             [__('messages.export_ui.generated_at'), now('Asia/Baghdad')->format('Y-m-d H:i:s')],
             [__('messages.export_ui.generated_by'), $requestedBy],
-            [__('messages.export_ui.last_update'), $freshness['runs']['reconciliation'] ?? $freshness['runs']['assessment'] ?? $freshness['sources']['punches'] ?? __('messages.export_ui.never')],
+            [__('messages.export_ui.last_update'), $freshness['last_data_update'] ?? __('messages.export_ui.never')],
         ];
         if ($export->kind === 'employee_statement_xlsx' && count($filters->employeeIds) === 1) {
             $employee = Employee::query()->findOrFail($filters->employeeIds[0]);

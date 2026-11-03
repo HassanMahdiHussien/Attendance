@@ -49,6 +49,7 @@ test('freshness separates import and derived runs and coverage uses the required
         $result = app(LastUpdate::class)->for($filters);
         expect($result['results_updating'])->toBeTrue()
             ->and($result['sources']['punches'])->toBe('2026-10-23 11:00:00')
+            ->and($result['last_data_update'])->toBe('2026-10-23 11:00:00')
             ->and($result['runs']['cleanup'])->toBe('2026-10-23 10:00:00')
             ->and($result['coverage'][$branch->id]['expected'])->toBe(2)
             ->and($result['coverage'][$branch->id]['assessable'])->toBe(1)
@@ -92,5 +93,16 @@ test('coverage counts every employee day while calculating identical inputs once
         // Three full employees x 3 days, the new hire from the 20th, and the leaver on the 19th only.
         expect($result['coverage'][$branch->id]['expected'])->toBe(12)
             ->and($calculator->calls)->toBe(9);
+    });
+});
+
+test('last data update falls back to the newest run before any upload', function (): void {
+    $company = Company::factory()->create();
+    app(TenantContext::class)->runForCompany($company, function () use ($company): void {
+        $filters = ReportFilters::fromArray($company, ['from' => '2026-10-19', 'to' => '2026-10-20']);
+        expect(app(LastUpdate::class)->for($filters)['last_data_update'])->toBeNull();
+
+        ProcessingRun::factory()->create(['kind' => 'days', 'finished_at' => '2026-10-23 10:00:00']);
+        expect(app(LastUpdate::class)->for($filters)['last_data_update'])->toBe('2026-10-23 10:00:00');
     });
 });

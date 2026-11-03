@@ -72,9 +72,12 @@ class LastUpdate
         $latestDeviceSetting = DeviceSetting::query()->where('company_id', $company->id)->max('created_at');
         $sources = ['employees' => $employees, 'punches' => $punches, 'leave' => $leave];
         $runs = ['cleanup' => $cleanup, 'assessment' => $assessment, 'reconciliation' => $reconciliation];
+        $knownTimes = array_filter($sources) ?: array_filter($runs);
 
         return [
             'sources' => $sources, 'runs' => $runs,
+            // The newest upload, so a finished import shows at once; results_updating covers the recalculation that follows.
+            'last_data_update' => $knownTimes === [] ? null : max($knownTimes),
             'results_updating' => ($punches !== null && ($cleanup === null || $punches > $cleanup || $assessment === null || $punches > $assessment))
                 || ($latestDeviceSetting !== null && ($cleanup === null || $latestDeviceSetting > $cleanup))
                 || ($cleanup !== null && ($assessment === null || $cleanup > $assessment))
