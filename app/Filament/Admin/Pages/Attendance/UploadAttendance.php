@@ -63,8 +63,9 @@ class UploadAttendance extends AttendancePage
     {
         parent::mount();
         $draft = ImportDraft::query()->where('company_id', $this->company()->id)
-            ->where('uploaded_by', auth()->id())->whereNull('batch_id')->latest('id')->first();
-        if ($draft !== null) {
+            ->where('uploaded_by', auth()->id())->latest('id')->first();
+        // Only the newest upload can be resumed: once it is imported, older failed drafts are history.
+        if ($draft !== null && $draft->batch_id === null) {
             $this->draftId = $draft->id;
             $this->headers = $draft->headers;
             $this->mapping = $draft->mapping ?? [];

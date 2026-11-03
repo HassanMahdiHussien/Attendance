@@ -53,6 +53,9 @@ class LastUpdate
             ->where('status', 'completed')->max('finished_at');
         $assessment = AttendanceRun::query()->where('company_id', $company->id)->where('kind', 'days')
             ->where('status', 'completed')->max('finished_at');
+        // Leave matching follows only runs that changed days, so a no-change recheck leaves nothing to wait for.
+        $changedAssessment = AttendanceRun::query()->where('company_id', $company->id)->where('kind', 'days')
+            ->where('status', 'completed')->where('counts->days_changed', '>', 0)->max('finished_at');
         $reconciliation = LeaveRun::query()->where('company_id', $company->id)->where('status', 'completed')->max('finished_at');
         $assessmentInputs = array_filter([
             Policy::query()->where('company_id', $company->id)->max('created_at'),
@@ -82,7 +85,7 @@ class LastUpdate
                 || ($latestDeviceSetting !== null && ($cleanup === null || $latestDeviceSetting > $cleanup))
                 || ($cleanup !== null && ($assessment === null || $cleanup > $assessment))
                 || ($leave !== null && ($reconciliation === null || $leave > $reconciliation))
-                || ($assessment !== null && ($reconciliation === null || $assessment > $reconciliation))
+                || ($changedAssessment !== null && ($reconciliation === null || $changedAssessment > $reconciliation))
                 || ($employees !== null && ($assessment === null || $employees > $assessment))
                 || ($newestAssessmentInput !== null && ($assessment === null || $newestAssessmentInput > $assessment))
                 || ($newestReconciliationInput !== null && ($reconciliation === null || $newestReconciliationInput > $reconciliation)),
