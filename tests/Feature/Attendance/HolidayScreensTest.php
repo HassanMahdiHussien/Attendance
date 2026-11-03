@@ -75,6 +75,17 @@ test('holiday list filters status and year without showing another company', fun
     expect($holiday->currentVersion->version)->toBe(1);
 });
 
+test('holiday list shows labelled columns and an empty state', function (): void {
+    Livewire::test(HolidaysPage::class)->assertSee('No holidays found.')
+        ->assertSee('<th>Name</th>', escape: false);
+
+    holidayScreenDraft($this->company, $this->actor);
+
+    Livewire::test(HolidaysPage::class)->assertSee('Founders Day')
+        ->assertSee('data-label="Dates"', escape: false)
+        ->assertSee('data-label="Status"', escape: false);
+});
+
 test('upload accepts a file and each reading state has a manual path', function (): void {
     Storage::fake('local');
     $file = UploadedFile::fake()->createWithContent('notice.pdf', '%PDF-1.4 fake announcement');

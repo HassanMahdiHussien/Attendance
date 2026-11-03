@@ -1,7 +1,9 @@
 <x-filament-panels::page>
     <div class="space-y-5" @if($this->hasPendingEmployeeRun()) wire:poll.3s="pollImport" @endif>
+        <p class="text-sm text-gray-600">{{ __('messages.clear_screens.upload_context') }}</p>
         <section class="rounded-xl border border-line bg-white p-4 shadow-sm sm:p-5">
             <h2 class="font-semibold text-ink">{{ __('messages.upload_center.choose') }}</h2>
+            <p class="mt-1 text-sm text-gray-600">{{ __('messages.clear_screens.upload_instruction') }}</p>
             <input type="file" multiple wire:model.live="incomingFiles" accept=".csv,.txt,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" class="mt-3 block w-full min-w-0 rounded-lg border border-line p-2 text-sm">
             @error('incomingFiles.*') <p class="mt-2 text-red-700">{{ $message }}</p> @enderror
             <p class="mt-2 text-sm text-gray-600">{{ __('messages.upload_center.accepted') }}</p>
@@ -25,17 +27,19 @@
                             @endif
                         </div>
                         @if($row['batch_id'] !== null)
-                            <p class="font-medium text-green-700">{{ __('messages.upload_center.imported') }} · <a class="ui-link" href="{{ $this->batchUrl($index) }}">{{ __('messages.upload_center.view_batch') }} #{{ $row['batch_id'] }}</a></p>
+                            <p><x-ui.badge :tone="app(\App\Services\Attendance\Reporting\JobStatePresentation::class)->tone('completed')">{{ __('messages.upload_center.imported') }}</x-ui.badge> <a class="ui-link" href="{{ $this->batchUrl($index) }}">{{ __('messages.upload_center.view_batch') }} #{{ $row['batch_id'] }}</a></p>
                         @else
                             @if($row['kind'] === 'employees' && ($row['run_id'] ?? null) && !$row['error'])
-                                <p class="text-sm font-medium text-ink">{{ __('messages.employee_import_ui.importing', ['count' => \App\Models\EmployeeImportRun::query()->where('company_id', $this->company()->id)->find($row['run_id'])?->row_count ?? 0]) }}</p>
+                                <p><x-ui.badge :tone="app(\App\Services\Attendance\Reporting\JobStatePresentation::class)->tone('processing')">{{ __('messages.clear_screens.processing') }}</x-ui.badge> {{ __('messages.employee_import_ui.importing', ['count' => \App\Models\EmployeeImportRun::query()->where('company_id', $this->company()->id)->find($row['run_id'])?->row_count ?? 0]) }}</p>
                                 <button type="button" wire:click="pollImport" class="ui-link text-sm">{{ __('messages.employee_import_ui.refresh_status') }}</button>
                             @elseif($row['kind'] !== 'employees' && $this->hasPendingEmployeeRun())
                                 <p class="text-sm font-medium text-ink">{{ __('messages.upload_center.waiting_for_employees') }}</p>
                             @endif
+                            @if($row['kind'] === 'unknown' && ! $row['error'])<p><x-ui.badge tone="red">{{ __('messages.clear_screens.needs_action') }}</x-ui.badge></p>@endif
                             @if($preview || $row['kind'] === 'unknown')<p class="text-sm leading-relaxed text-ink">{{ $this->summary($index) }}</p>@endif
-                            @if($row['error']) <p class="text-sm text-red-700">{{ $row['error'] }}</p> @endif
-                            @if($decision && $row['kind'] !== 'unknown') <p class="text-sm font-medium text-amber-800">{{ __('messages.upload_center.needs_decision') }}: {{ $decision }}</p> @endif
+                            @if($row['error']) <p class="text-sm text-red-700"><x-ui.badge :tone="app(\App\Services\Attendance\Reporting\JobStatePresentation::class)->tone('failed')">{{ __('messages.clear_screens.failed') }}</x-ui.badge> {{ $row['error'] }} {{ __('messages.clear_screens.upload_retry') }}</p> @endif
+                            @if($decision && $row['kind'] !== 'unknown') <p class="text-sm font-medium text-amber-800"><x-ui.badge tone="red">{{ __('messages.upload_center.needs_decision') }}</x-ui.badge> {{ $decision }}</p> @endif
+                            @if($preview && ! $row['error'] && ! $decision && ! $this->hasPendingEmployeeRun()) <p><x-ui.badge tone="green">{{ __('messages.clear_screens.upload_ready') }}</x-ui.badge></p> @endif
                             @if($row['kind'] === 'attendance' && $preview && $this->requiresConfirmation($index))
                                 <label class="flex items-start gap-2 text-sm"><input type="checkbox" wire:model.live="rows.{{ $index }}.confirmed" class="mt-1">{{ __('messages.upload_center.confirm_file') }}</label>
                             @endif
@@ -123,6 +127,7 @@
                             @endif
                             @if($preview)
                                 @php $samples = collect($preview['samples'] ?? [])->flatten(1)->take(3); @endphp
+                                <details wire:ignore.self class="text-sm"><summary class="cursor-pointer text-primary">{{ __('messages.clear_screens.preview_samples') }}</summary>
                                 @foreach($samples as $sample)
                                     <p class="text-xs text-gray-600">
                                         @if(isset($sample['serial'])){{ __('messages.upload_center.problem_device', ['serial' => $sample['serial']]) }}
@@ -131,7 +136,8 @@
                                         @else{{ __('messages.upload_center.problem_row', ['row' => $sample['row'] ?? '—']) }}@endif
                                     </p>
                                 @endforeach
-                                <details class="text-sm"><summary class="cursor-pointer text-primary">{{ __('messages.upload_center.details') }}</summary>
+                                </details>
+                                <details wire:ignore.self class="text-sm"><summary class="cursor-pointer text-primary">{{ __('messages.upload_center.details') }}</summary>
                                     <div class="mt-2 grid gap-1 sm:grid-cols-2">
                                         @foreach($preview['counts'] ?? [] as $key => $count)
                                             <p>{{ $this->countLabel($row['kind'], $key) }}: <bdi dir="ltr">{{ $count }}</bdi></p>
@@ -150,7 +156,7 @@
             </section>
             <button type="button" wire:click="import" wire:loading.attr="disabled" class="rounded-lg bg-signal px-4 py-2 font-semibold text-night hover:bg-signal-deep disabled:opacity-50">{{ __('messages.upload_center.import') }}</button>
         @endif
-        <details class="rounded-xl border border-line bg-white p-4 text-sm">
+        <details wire:ignore.self class="rounded-xl border border-line bg-white p-4 text-sm">
             <summary class="cursor-pointer font-medium">{{ __('messages.upload_center.advanced') }}</summary>
             <div class="mt-3 flex flex-wrap gap-4">
                 @if(\App\Filament\Admin\Pages\Attendance\UploadAttendance::canAccess())<a class="ui-link" href="{{ \App\Filament\Admin\Pages\Attendance\UploadAttendance::getUrl(panel: 'admin', tenant: $this->company()) }}">{{ __('messages.upload_center.kinds.attendance') }}</a>@endif

@@ -8,6 +8,7 @@ use App\Filament\Platform\Resources\CompanyResource\Pages\ListCompanies;
 use App\Filament\Platform\Resources\CompanyResource\RelationManagers\UsersRelationManager;
 use App\Filament\Platform\Resources\PlatformUserResource;
 use App\Filament\Platform\Resources\PlatformUserResource\Pages\ListPlatformUsers;
+use App\Filament\Platform\Widgets\CompaniesOverview;
 use App\Models\Company;
 use App\Models\User;
 use App\Support\Tenancy\TenantContext;
@@ -34,6 +35,19 @@ test('platform resource matrix is available to platform admins in Livewire and a
         Livewire::test($component)->assertOk();
         $this->get($resource::getUrl('create', panel: 'platform'))->assertOk();
     }
+});
+
+test('companies overview shows labelled columns and an empty state', function (): void {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(CompaniesOverview::class)->assertSee('No companies.')
+        ->assertSee('Company');
+
+    Company::factory()->create(['name' => 'Sample company']);
+
+    Livewire::test(CompaniesOverview::class)->assertSee('Sample company')
+        ->assertSee('data-label="Account"', escape: false)
+        ->assertSee('data-label="Subscription"', escape: false);
 });
 
 test('non-platform actors cannot use platform resource URLs', function (string $role): void {

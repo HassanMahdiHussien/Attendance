@@ -1,5 +1,6 @@
 <x-filament-panels::page>
     <div class="space-y-5">
+        <p class="text-sm text-gray-600">{{ __('messages.clear_screens.office_policy_context') }}</p>
         @php $current = $this->current(); @endphp
         <x-ui.card :title="__('messages.office_ui.current_policy')">
             @if ($current)
@@ -7,7 +8,7 @@
                 <h3 class="mt-4 font-semibold">{{ __('messages.office_ui.policy_sections.office') }}</h3>
                 <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     @foreach (['office_start', 'flex_minutes', 'workday_minutes', 'min_presence_minutes', 'absence_minutes', 'close_grace_minutes'] as $field)
-                        <div><span class="text-sm text-gray-600">{{ __('messages.office_ui.policy_fields.'.$field) }}</span><strong class="block font-mono" dir="ltr">{{ $current->{$field} }}</strong></div>
+                        <div><span class="text-sm text-gray-600">{{ str_replace(' ('.__('messages.clear_screens.minutes_unit').')', '', __('messages.office_ui.policy_fields.'.$field)) }}</span><strong class="block {{ $field === 'office_start' ? 'font-mono' : '' }}"><bdi dir="{{ $field === 'office_start' ? 'ltr' : 'auto' }}">{{ $field === 'office_start' ? $current->{$field} : app(\App\Services\Attendance\Reporting\DurationText::class)->format($current->{$field}) }}</bdi></strong></div>
                     @endforeach
                     <div><span class="text-sm text-gray-600">{{ __('messages.office_ui.policy_fields.exits_count_toward_balance') }}</span><strong class="block">{{ $current->exits_count_toward_balance ? __('messages.office_ui.yes') : __('messages.office_ui.no') }}</strong></div>
                     <div><span class="text-sm text-gray-600">{{ __('messages.office_ui.policy_fields.office_rest_days') }}</span><strong class="block font-mono" dir="ltr">{{ implode(', ', $current->office_rest_days ?? []) }}</strong></div>
@@ -15,17 +16,17 @@
                 <h3 class="mt-4 font-semibold">{{ __('messages.office_ui.policy_sections.shift') }}</h3>
                 <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     @foreach (['shift_starts', 'shift_minutes', 'shift_break_minutes', 'shift_min_presence_minutes', 'shift_rest_days'] as $field)
-                        <div><span class="text-sm text-gray-600">{{ __('messages.office_ui.policy_fields.'.$field) }}</span><strong class="block font-mono" dir="ltr">{{ is_array($current->{$field}) ? implode(', ', $current->{$field}) : $current->{$field} }}</strong></div>
+                        <div><span class="text-sm text-gray-600">{{ str_replace(' ('.__('messages.clear_screens.minutes_unit').')', '', __('messages.office_ui.policy_fields.'.$field)) }}</span><strong class="block {{ is_array($current->{$field}) ? 'font-mono' : '' }}"><bdi dir="{{ is_array($current->{$field}) ? 'ltr' : 'auto' }}">{{ is_array($current->{$field}) ? implode(', ', $current->{$field}) : app(\App\Services\Attendance\Reporting\DurationText::class)->format($current->{$field}) }}</bdi></strong></div>
                     @endforeach
                 </div>
                 <h3 class="mt-4 font-semibold">{{ __('messages.office_ui.policy_sections.security') }}</h3>
-                <p>{{ __('messages.office_ui.policy_fields.security_min_presence_minutes') }}: <bdi dir="ltr">{{ $current->security_min_presence_minutes }}</bdi></p>
+                <p>{{ str_replace(' ('.__('messages.clear_screens.minutes_unit').')', '', __('messages.office_ui.policy_fields.security_min_presence_minutes')) }}: <bdi dir="auto">{{ app(\App\Services\Attendance\Reporting\DurationText::class)->format($current->security_min_presence_minutes) }}</bdi></p>
                 <h3 class="mt-6 font-semibold">{{ __('messages.office_ui.policy_sections.inference') }}</h3>
-                <p>{{ __('messages.office_ui.policy_fields.inference_tolerance_minutes') }}: <bdi dir="ltr">{{ $current->inference_tolerance_minutes }}</bdi></p>
+                <p>{{ str_replace(' ('.__('messages.clear_screens.minutes_unit').')', '', __('messages.office_ui.policy_fields.inference_tolerance_minutes')) }}: <bdi dir="auto">{{ app(\App\Services\Attendance\Reporting\DurationText::class)->format($current->inference_tolerance_minutes) }}</bdi></p>
                 <h3 class="mt-6 font-semibold">{{ __('messages.overtime_ui.policy') }}</h3>
                 <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     @foreach (['overtime_min_minutes', 'overtime_step_minutes', 'rest_day_half_minutes', 'rest_day_full_minutes'] as $field)
-                        <p>{{ __('messages.office_ui.policy_fields.'.$field) }}: <bdi dir="ltr">{{ $current->{$field} }}</bdi></p>
+                        <p>{{ str_replace(' ('.__('messages.clear_screens.minutes_unit').')', '', __('messages.office_ui.policy_fields.'.$field)) }}: <bdi dir="auto">{{ app(\App\Services\Attendance\Reporting\DurationText::class)->format($current->{$field}) }}</bdi></p>
                     @endforeach
                 </div>
                 @foreach ($current->compensatory_rest_days ?? [] as $pattern => $days)
@@ -72,11 +73,11 @@
             </form>
         </x-ui.card>
         <x-ui.card :title="__('messages.office_ui.history')" padding="none">
-            <div class="overflow-x-auto"><table class="w-full text-start"><thead><tr>@foreach (['version', 'effective_from', 'by', 'reason'] as $column)<th class="p-3">{{ __('messages.office_ui.'.$column) }}</th>@endforeach</tr></thead><tbody>
-                @foreach ($this->history() as $policy)
-                    <tr class="border-t" wire:key="office-policy-{{ $policy->id }}"><td class="p-3 font-mono" dir="ltr">{{ $policy->version }}</td><td class="p-3 font-mono" dir="ltr">{{ $policy->effective_from->toDateString() }}</td><td class="p-3">{{ $policy->creator?->name ?? __('messages.office_ui.system') }}</td><td class="p-3">{{ str_starts_with((string) $policy->reason, 'office_presence_540_from_policy:') ? __('messages.office_ui.office_presence_replacement_reason') : ($policy->reason ?? '—') }}</td></tr>
-                @endforeach
-            </tbody></table></div><div class="p-3">{{ $this->history()->links() }}</div>
+            <x-ui.table><thead><tr>@foreach (['version', 'effective_from', 'by', 'reason'] as $column)<th>{{ __('messages.office_ui.'.$column) }}</th>@endforeach</tr></thead><tbody>
+                @forelse ($this->history() as $policy)
+                    <tr class="border-t" wire:key="office-policy-{{ $policy->id }}"><x-ui.td :label="__('messages.office_ui.version')"><bdi dir="ltr">{{ $policy->version }}</bdi></x-ui.td><x-ui.td :label="__('messages.office_ui.effective_from')"><bdi dir="ltr">{{ $policy->effective_from->toDateString() }}</bdi></x-ui.td><x-ui.td :label="__('messages.office_ui.by')">{{ $policy->creator?->name ?? __('messages.office_ui.system') }}</x-ui.td><x-ui.td :label="__('messages.office_ui.reason')">{{ str_starts_with((string) $policy->reason, 'office_presence_540_from_policy:') ? __('messages.office_ui.office_presence_replacement_reason') : ($policy->reason ?? '—') }}</x-ui.td></tr>
+                @empty <tr><td colspan="4"><x-ui.empty :title="__('messages.list_empty')" /></td></tr> @endforelse
+            </tbody></x-ui.table><div class="p-3">{{ $this->history()->links() }}</div>
         </x-ui.card>
     </div>
 </x-filament-panels::page>

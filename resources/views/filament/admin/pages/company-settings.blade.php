@@ -1,5 +1,7 @@
 <x-filament-panels::page>
+    <p class="mb-4 text-sm text-gray-600">{{ __('messages.clear_screens.company_settings_context') }}</p>
     <form wire:submit="save" class="space-y-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+        <h2 class="font-semibold">{{ __('messages.clear_screens.company_details') }}</h2>
         {{ $this->form }}
         <x-filament::button type="submit">{{ __('Save settings') }}</x-filament::button>
     </form>
@@ -11,6 +13,6 @@
             <input type="text" wire:model="chatReason" maxlength="500" class="mt-1 block w-full rounded-lg border border-gray-300 p-2">
         </label>
         @error('chatReason')<p class="text-sm text-red-700">{{ $message }}</p>@enderror
-        <button type="submit" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">{{ __('messages.chat_ui.save_settings') }}</button>
+        <button type="submit" class="ui-button ui-button-secondary">{{ __('messages.chat_ui.save_settings') }}</button>
     </form>
 </x-filament-panels::page>

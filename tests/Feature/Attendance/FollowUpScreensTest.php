@@ -129,11 +129,16 @@ test('case appears on the day and employee pages and HR can close it with a reas
 
 test('notification settings and batches are tenant scoped', function (): void {
     Livewire::test(NotificationsPage::class)->assertSee('Notification settings')
+        ->assertSee(__('messages.follow_up_ui.none'))
         ->set('mode', 'auto')->set('reason', 'Approved automatic delivery')
         ->call('saveSettings')->assertHasNoErrors()
-        ->call('build')->assertHasNoErrors();
+        ->call('build')->assertHasNoErrors()
+        ->assertSee('data-label="Batches"', escape: false)
+        ->assertSee('data-label="Messages"', escape: false);
     expect(NotificationBatch::query()->where('company_id', $this->company->id)->count())->toBe(1);
-    Livewire::test(ApproverMappingsPage::class)->assertSee('Approver mappings');
+    Livewire::test(ApproverMappingsPage::class)->assertSee('Approver mappings')
+        ->assertSee('<th>Approver name in file</th>', escape: false)
+        ->assertSee(__('messages.follow_up_ui.none'));
 });
 
 test('notification draft preview, exclusion and send use the delivery service', function (): void {
@@ -189,8 +194,10 @@ test('an unmapped approver can be confirmed to a company employee', function ():
     $unmapped = app(ApproverMappings::class)->unmappedWithCounts($this->company);
     expect($unmapped)->toHaveCount(1)->and($unmapped[0]['count'])->toBe(2);
     Livewire::test(ApproverMappingsPage::class)->assertSee('Approver Name')
+        ->assertSee('data-label="Approver name in file"', escape: false)
         ->set('employeeIds.'.sha1('approver name'), $this->employee->id)
-        ->call('confirm', 'Approver Name')->assertHasNoErrors();
+        ->call('confirm', 'Approver Name')->assertHasNoErrors()
+        ->assertSee('data-label="Employee"', escape: false);
 });
 
 test('employee case panel refreshes a missing-address route and displays the reason', function (): void {

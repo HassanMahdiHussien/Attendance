@@ -1,5 +1,6 @@
 <x-filament-panels::page>
     <a class="ui-link" href="{{ \App\Filament\Admin\Pages\Attendance\UploadCenter::getUrl(panel: 'admin', tenant: $this->company()) }}">{{ __('messages.upload_center.back') }}</a>
+    <p class="text-sm text-gray-600">{{ __('messages.clear_screens.upload_context') }}</p>
     <div class="space-y-6">
         <section class="space-y-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
             <h2 class="font-bold">{{ __('messages.attendance_ui.file') }}</h2>
@@ -14,13 +15,13 @@
             <section class="space-y-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                 <h2 class="font-bold">{{ __('messages.attendance_ui.mapping') }}</h2>
                 <p>{{ __('messages.attendance_ui.mapping_help') }}</p>
-                <div class="overflow-x-auto"><table class="w-full text-start"><thead><tr><th class="p-2">{{ __('messages.attendance_ui.column') }}</th><th class="p-2">{{ __('messages.attendance_ui.header') }}</th><th class="p-2">{{ __('messages.attendance_ui.field') }}</th></tr></thead>
+                <x-ui.table><thead><tr><th>{{ __('messages.attendance_ui.column') }}</th><th>{{ __('messages.attendance_ui.header') }}</th><th>{{ __('messages.attendance_ui.field') }}</th></tr></thead>
                     <tbody>@foreach ($headers as $index => $header)
-                        <tr class="border-t" wire:key="attendance-mapping-{{ $index }}"><td class="p-2" dir="ltr">{{ $index + 1 }}</td><td class="p-2">{{ $header ?: __('messages.attendance_ui.blank_header') }}</td>
-                            <td class="p-2"><select wire:model.live="mapping.{{ $index }}" class="rounded-xl border border-gray-200 p-2"><option value="">{{ __('messages.attendance_ui.unmapped') }}</option>
+                        <tr class="border-t" wire:key="attendance-mapping-{{ $index }}"><x-ui.td :label="__('messages.attendance_ui.column')"><bdi dir="ltr">{{ $index + 1 }}</bdi></x-ui.td><x-ui.td :label="__('messages.attendance_ui.header')">{{ $header ?: __('messages.attendance_ui.blank_header') }}</x-ui.td>
+                            <x-ui.td :label="__('messages.attendance_ui.field')"><select wire:model.live="mapping.{{ $index }}" class="max-w-full rounded-xl border border-gray-200 p-2"><option value="">{{ __('messages.attendance_ui.unmapped') }}</option>
                                 @foreach (\App\Services\Attendance\TransactionFile::FIELDS as $field)<option value="{{ $field }}">{{ __('messages.attendance_ui.fields.'.$field) }}</option>@endforeach
-                            </select></td></tr>
-                    @endforeach</tbody></table></div>
+                            </select></x-ui.td></tr>
+                    @endforeach</tbody></x-ui.table>
                 @error('mapping') <p class="text-red-600">{{ $message }}</p> @enderror
                 <x-filament::button wire:click="setCoverageStep">{{ __('messages.attendance_ui.continue') }}</x-filament::button>
             </section>
@@ -31,9 +32,9 @@
             <section class="space-y-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                 <h2 class="font-bold">{{ __('messages.attendance_ui.coverage') }}</h2>
                 @if ($draft && in_array($draft->status, ['pending', 'analysing'], true))
-                    <p wire:poll.3s>{{ __('messages.attendance_ui.reading_file', ['rows' => number_format($draft->rows_processed)]) }}</p>
+                    <p wire:poll.3s><x-ui.badge :tone="app(\App\Services\Attendance\Reporting\JobStatePresentation::class)->tone('processing')">{{ __('messages.clear_screens.processing') }}</x-ui.badge> {{ __('messages.attendance_ui.reading_file', ['rows' => number_format($draft->rows_processed)]) }}</p>
                 @elseif ($draft?->status === 'failed')
-                    <p class="text-red-600">{{ __('messages.attendance_ui.analysis_failed') }} {{ __('messages.attendance_ui.failures.'.$draft->error_code) }}</p>
+                    <p class="text-red-600"><x-ui.badge :tone="app(\App\Services\Attendance\Reporting\JobStatePresentation::class)->tone('failed')">{{ __('messages.clear_screens.failed') }}</x-ui.badge> {{ __('messages.attendance_ui.analysis_failed') }} {{ __('messages.attendance_ui.failures.'.$draft->error_code) }} {{ __('messages.clear_screens.upload_retry') }}</p>
                 @endif
                 <div class="flex flex-wrap gap-4"><label>{{ __('messages.attendance_ui.from') }} <input type="datetime-local" wire:model="coverage.from" class="rounded-xl border border-gray-200 p-2" dir="ltr"></label>
                     <label>{{ __('messages.attendance_ui.to') }} <input type="datetime-local" wire:model="coverage.to" class="rounded-xl border border-gray-200 p-2" dir="ltr"></label></div>
@@ -51,8 +52,12 @@
         @if ($step === 'preview' && ($preview = $this->previewData()))
             <section class="space-y-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                 <h2 class="font-bold">{{ __('messages.attendance_ui.preview') }}</h2>
-                <p>{{ __('messages.attendance_ui.counts', $preview['counts']) }}</p>
+                @if ($preview['token'])<p><x-ui.badge :tone="$preview['samples']['errors'] === [] ? 'green' : 'amber'">{{ __('messages.clear_screens.upload_ready') }}</x-ui.badge></p>@endif
                 @if ($preview['already_imported']) <p class="text-amber-700">{{ __('messages.attendance_import.already_imported') }}</p> @endif
+                @foreach ($preview['samples']['errors'] as $sample) <p class="text-red-600">{{ __('messages.attendance_ui.row_error', ['row' => $sample['row'], 'codes' => implode(', ', array_map(fn (string $code): string => __('messages.attendance_ui.row_errors.'.$code), $sample['codes']))]) }}</p> @endforeach
+                @if ($preview['token']) <x-filament::button wire:click="confirmImport">{{ __('messages.attendance_ui.commit') }}</x-filament::button> @endif
+                <details wire:ignore.self><summary class="cursor-pointer font-semibold">{{ __('messages.upload_center.details') }}</summary>
+                <p>{{ __('messages.attendance_ui.counts', $preview['counts']) }}</p>
                 <h3 class="font-semibold">{{ __('messages.attendance_ui.devices') }}</h3>
                 @foreach ($preview['per_device'] as $serial => $count) <p><bdi dir="ltr">{{ $serial }}</bdi>: {{ $count }}</p> @endforeach
                 <h3 class="font-semibold">{{ __('messages.attendance_ui.per_day') }}</h3>
@@ -64,8 +69,7 @@
                 @foreach ($preview['samples']['non_employee'] as $sample) <p><bdi dir="ltr">{{ $sample['code'] ?? '' }}</bdi></p> @endforeach
                 <p>{{ __('messages.attendance_ui.data_issues') }}: {{ $preview['counts']['unknown_ids'] }} {{ __('messages.attendance_ui.sample_only') }}</p>
                 @foreach ($preview['samples']['unknown'] as $sample) <p><bdi dir="ltr">{{ $sample['code'] ?? '' }}</bdi></p> @endforeach
-                @foreach ($preview['samples']['errors'] as $sample) <p class="text-red-600">{{ __('messages.attendance_ui.row_error', ['row' => $sample['row'], 'codes' => implode(', ', array_map(fn (string $code): string => __('messages.attendance_ui.row_errors.'.$code), $sample['codes']))]) }}</p> @endforeach
-                @if ($preview['token']) <x-filament::button wire:click="confirmImport">{{ __('messages.attendance_ui.commit') }}</x-filament::button> @endif
+                </details>
             </section>
         @endif
 
@@ -73,9 +77,9 @@
             <section wire:poll.3s class="space-y-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                 <h2 class="font-bold">{{ __('messages.attendance_ui.progress') }} <bdi dir="ltr">#{{ $progress['batch']->id }}</bdi> · <bdi dir="ltr">{{ $progress['batch']->file_name }}</bdi></h2>
                 @foreach ($progress['events'] as $event)
-                    <p wire:key="attendance-event-{{ $event->id }}"><bdi dir="ltr">{{ $event->created_at->format('Y-m-d H:i:s') }}</bdi> — {{ __('messages.attendance_ui.states.'.$event->state) }}
+                    <p wire:key="attendance-event-{{ $event->id }}"><bdi dir="ltr">{{ $event->created_at->format('Y-m-d H:i:s') }}</bdi> <x-ui.badge :tone="app(\App\Services\Attendance\Reporting\JobStatePresentation::class)->tone($event->state)">{{ __('messages.attendance_ui.states.'.$event->state) }}</x-ui.badge>
                         @if ($event->counts) @foreach ($event->counts as $key => $count) <span>{{ __('messages.attendance_ui.count_labels.'.$key) }}: <bdi dir="ltr">{{ $count }}</bdi></span> @endforeach @endif
-                        @if ($event->error_code) {{ __('messages.attendance_ui.failures.'.$event->error_code) }} @endif
+                        @if ($event->error_code) {{ __('messages.attendance_ui.failures.'.$event->error_code) }} {{ __('messages.clear_screens.upload_retry') }} @endif
                     </p>
                 @endforeach
             </section>

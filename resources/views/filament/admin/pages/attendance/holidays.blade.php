@@ -1,5 +1,6 @@
 <x-filament-panels::page>
     <div class="space-y-5">
+        <p class="text-sm text-gray-600">{{ __('messages.clear_screens.holidays_context') }}</p>
         <div class="flex flex-wrap gap-3">
             <a class="ui-link" href="{{ \App\Filament\Admin\Pages\Attendance\UploadHoliday::getUrl(panel: 'admin', tenant: $this->company()) }}">{{ __('messages.holiday_ui.upload') }}</a>
             <a class="ui-link" href="{{ \App\Filament\Admin\Pages\Attendance\HolidayReview::getUrl(panel: 'admin', tenant: $this->company()) }}">{{ __('messages.holiday_ui.new') }}</a>
@@ -11,18 +12,18 @@
             </div>
         </x-ui.card>
         <x-ui.card padding="none">
-            <div class="overflow-x-auto"><table class="w-full text-start text-sm"><thead><tr>@foreach (['name', 'dates', 'scope', 'status', 'version', 'source'] as $column)<th class="p-3">{{ __('messages.holiday_ui.'.$column) }}</th>@endforeach</tr></thead><tbody>
+            <x-ui.table><thead><tr>@foreach (['name', 'dates', 'scope', 'status', 'version', 'source'] as $column)<th>{{ __('messages.holiday_ui.'.$column) }}</th>@endforeach</tr></thead><tbody>
                 @forelse ($this->holidays() as $holiday)
                     <tr class="border-t" wire:key="holiday-{{ $holiday->id }}">
-                        <td class="p-3"><a class="ui-link" href="{{ $this->detailUrl($holiday) }}">{{ app()->getLocale() === 'ar' ? ($holiday->currentVersion?->name_ar ?: $holiday->name) : $holiday->name }}</a></td>
-                        <td class="p-3">@foreach ($holiday->currentVersion?->ranges ?? [] as $range)<bdi dir="ltr" class="block">{{ $range['from'] }} – {{ $range['to'] }}</bdi>@endforeach</td>
-                        <td class="p-3">{{ $this->scopeLabel($holiday->currentVersion?->legal_entities ?? [], $holiday->currentVersion?->branch_ids ?? [], $holiday->currentVersion?->work_patterns ?? []) }}</td>
-                        <td class="p-3">{{ __('messages.holiday_ui.statuses.'.$holiday->status) }}</td>
-                        <td class="p-3" dir="ltr">{{ $holiday->currentVersion?->version }}</td>
-                        <td class="p-3">@if ($source = $holiday->currentVersion?->source)<bdi dir="ltr">{{ $source->file_name }}</bdi><span class="block">{{ __('messages.holiday_ui.ai_statuses.'.$source->ai_status) }}</span>@else {{ __('messages.holiday_ui.manual') }} @endif</td>
+                        <x-ui.td :label="__('messages.holiday_ui.name')"><a class="ui-link" href="{{ $this->detailUrl($holiday) }}">{{ app()->getLocale() === 'ar' ? ($holiday->currentVersion?->name_ar ?: $holiday->name) : $holiday->name }}</a></x-ui.td>
+                        <x-ui.td :label="__('messages.holiday_ui.dates')">@foreach ($holiday->currentVersion?->ranges ?? [] as $range)<bdi dir="ltr" class="block">{{ $range['from'] }} – {{ $range['to'] }}</bdi>@endforeach</x-ui.td>
+                        <x-ui.td :label="__('messages.holiday_ui.scope')">{{ $this->scopeLabel($holiday->currentVersion?->legal_entities ?? [], $holiday->currentVersion?->branch_ids ?? [], $holiday->currentVersion?->work_patterns ?? []) }}</x-ui.td>
+                        <x-ui.td :label="__('messages.holiday_ui.status')"><x-ui.badge :tone="match ($holiday->status) { 'draft' => 'indigo', 'approved' => 'green', default => 'gray' }">{{ __('messages.holiday_ui.statuses.'.$holiday->status) }}</x-ui.badge></x-ui.td>
+                        <x-ui.td :label="__('messages.holiday_ui.version')"><bdi dir="ltr">{{ $holiday->currentVersion?->version ?? '—' }}</bdi></x-ui.td>
+                        <x-ui.td :label="__('messages.holiday_ui.source')">@if ($source = $holiday->currentVersion?->source)<bdi dir="ltr">{{ $source->file_name }}</bdi><span class="block">{{ __('messages.holiday_ui.ai_statuses.'.$source->ai_status) }}</span>@else {{ __('messages.holiday_ui.manual') }} @endif</x-ui.td>
                     </tr>
-                @empty <tr><td colspan="6" class="p-5">{{ __('messages.holiday_ui.none') }}</td></tr> @endforelse
-            </tbody></table></div>
+                @empty <tr><td colspan="6" class="p-5"><x-ui.empty :title="__('messages.holiday_ui.none')" /></td></tr> @endforelse
+            </tbody></x-ui.table>
             <div class="p-3">{{ $this->holidays()->links() }}</div>
         </x-ui.card>
     </div>

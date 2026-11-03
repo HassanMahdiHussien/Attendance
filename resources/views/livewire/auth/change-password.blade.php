@@ -1,6 +1,7 @@
 <div class="mx-auto max-w-xl">
     <x-ui.card class="space-y-5 p-6 sm:p-8">
         <h1 class="text-2xl font-semibold">{{ __('messages.password.title') }}</h1>
+        <p class="text-sm text-gray-600">{{ __('messages.clear_screens.password_context') }}</p>
         @if(auth()->user()->must_change_password)
             <p class="text-sm text-gray-700">{{ __('messages.password.forced_explanation') }}</p>
         @endif

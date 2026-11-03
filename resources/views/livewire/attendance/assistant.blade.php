@@ -31,7 +31,7 @@
                 <div class="max-h-52 space-y-1 overflow-y-auto lg:max-h-[36rem]">
                     @forelse($conversations as $conversation)
                         <button type="button" wire:key="assistant-conversation-{{ $conversation->id }}" wire:click="open({{ $conversation->id }})" class="block w-full min-w-0 rounded-lg px-3 py-2 text-start text-sm {{ $conversationId === $conversation->id ? 'bg-primary-light font-semibold text-primary' : 'hover:bg-gray-50' }}">
-                            <span class="block truncate">{{ $conversation->title ?: __('messages.chat_ui.conversation') }} <bdi dir="ltr">#{{ $conversation->id }}</bdi></span>
+                            <span class="block break-words [overflow-wrap:anywhere]">{{ $conversation->title ?: __('messages.chat_ui.conversation') }} <bdi dir="ltr">#{{ $conversation->id }}</bdi></span>
                             <span class="block text-xs font-normal text-gray-500"><bdi dir="ltr">{{ $conversation->last_message_at?->format('Y-m-d H:i') ?? $conversation->created_at?->format('Y-m-d H:i') }}</bdi></span>
                         </button>
                     @empty
@@ -53,20 +53,20 @@
                                 </div>
                             @else
                                 <div wire:key="assistant-message-{{ $message->id }}" class="max-w-[95%] min-w-0 space-y-3 text-sm sm:max-w-[85%]">
-                                    <div class="rounded-2xl {{ $message->status === 'terminal' ? 'border border-amber-300 bg-amber-50' : 'border border-line bg-bg' }} p-3">
+                                    <div class="rounded-2xl {{ $message->status === 'terminal' ? 'border border-red bg-red-light' : 'border border-line bg-bg' }} p-3">
                                         @if($message->status === 'terminal')
                                             <strong class="mb-1 block">{{ $this->terminalLabel($turn->error_code) }}</strong>
                                         @endif
                                         <p class="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{{ $this->answer($message->content) }}</p>
                                     </div>
                                     @if($message->status === 'final')
-                                        <div class="rounded-xl border-s-4 border-signal bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950">{{ $message->content['verified']['footer'] ?? __('messages.chat.verified_none') }}</div>
+                                        <div class="rounded-xl border-s-4 border-primary bg-primary-light px-3 py-2 text-xs font-semibold text-primary">{{ $message->content['verified']['footer'] ?? __('messages.chat.verified_none') }}</div>
                                     @endif
                                 </div>
                             @endif
                         @endforeach
                         @if($turn->toolCalls->isNotEmpty())
-                            <details wire:key="assistant-tools-{{ $turn->id }}" class="max-w-full rounded-xl border border-line px-3 py-2 text-xs text-gray-600">
+                            <details wire:ignore.self wire:key="assistant-tools-{{ $turn->id }}" class="max-w-full rounded-xl border border-line px-3 py-2 text-xs text-gray-600">
                                 <summary class="cursor-pointer">{{ __('messages.chat_ui.tool_activity') }} ({{ $turn->toolCalls->count() }})</summary>
                                 <ul class="mt-2 space-y-1">
                                     @foreach($turn->toolCalls as $call)
@@ -79,7 +79,7 @@
                             <article wire:key="assistant-proposal-{{ $proposalId }}" class="min-w-0 rounded-2xl border border-line p-4 text-sm" aria-label="{{ __('messages.chat_ui.proposal') }}">
                                 <div class="flex flex-wrap items-center justify-between gap-2">
                                     <h3 class="font-bold">{{ __('messages.chat_ui.proposal') }} <bdi dir="ltr">#{{ $card['id'] }}</bdi></h3>
-                                    <span class="rounded-full bg-gray-100 px-2 py-1 text-xs">{{ __('messages.chat_ui.statuses.'.$card['status']) }}</span>
+                                    <x-ui.badge :tone="match ($card['status']) { 'applied' => 'green', 'refused' => 'red', 'proposed' => 'indigo', default => 'gray' }">{{ __('messages.chat_ui.statuses.'.$card['status']) }}</x-ui.badge>
                                 </div>
                                 <p class="mt-1 text-xs text-gray-500">{{ __('messages.chat_ui.effective_from') }} <bdi dir="ltr">{{ $card['effective_from'] }}</bdi></p>
                                 @foreach($card['employees'] as $entry)
