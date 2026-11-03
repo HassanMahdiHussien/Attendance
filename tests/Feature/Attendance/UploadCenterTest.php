@@ -87,6 +87,17 @@ test('an unseen attendance column must be matched before import', function (): v
     expect(ImportBatch::count())->toBe(1);
 });
 
+test('a blocking file decision stays visible above folded preview details', function (): void {
+    $file = UploadedFile::fake()->createWithContent('Transaction_20261020084331.csv',
+        "Employee ID,Given Name,Department,Date,Time,Punch State,Serial Number,Device Name,Data Sources\n"
+        ."12345678,Fake Employee,Operations,2026-10-20,08:00,Check In,SER-1,Hilla_In_Face,Face\n");
+
+    $html = Livewire::test(UploadCenter::class)->set('incomingFiles', [$file])->html();
+
+    expect($html)->toContain('Needs a decision', 'Match the columns', 'wire:click="import"')
+        ->and(strpos($html, 'Needs a decision'))->toBeLessThan(strpos($html, '<details'));
+});
+
 test('employee data finishes before attendance is previewed for import', function (): void {
     $employees = UploadedFile::fake()->createWithContent('HC employees.csv',
         "employee_id,name,branch\n99999999,Fake New,Hilla\n");

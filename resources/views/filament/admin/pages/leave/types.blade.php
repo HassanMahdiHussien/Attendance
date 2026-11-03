@@ -1,14 +1,15 @@
 <x-filament-panels::page>
+    <p class="text-sm text-gray-600">{{ __('messages.clear_screens.leave_types_context') }}</p>
     <x-ui.card :title="__('messages.leave_ui.types_title')">
-        <div class="overflow-x-auto"><table class="w-full text-start"><thead><tr>@foreach (['type', 'other_type', 'covers', 'consumes', 'mapped', 'actions'] as $column)<th class="p-2">{{ __('messages.leave_ui.'.$column) }}</th>@endforeach</tr></thead><tbody>
-            @foreach ($this->types() as $type)
-                <tr class="border-t" wire:key="leave-type-{{ $type->id }}"><td class="p-2">{{ $type->name }}</td><td class="p-2">{{ $type->other_name ?? '—' }}</td>
-                    <td class="p-2">{{ $type->covers ? __('messages.leave_ui.yes') : __('messages.leave_ui.no') }}</td>
-                    <td class="p-2">{{ __('messages.leave_ui.consumes_values.'.$type->consumes) }}</td>
-                    <td class="p-2">{{ $type->is_mapped ? __('messages.leave_ui.yes') : __('messages.leave_ui.no') }}</td>
-                    <td class="p-2"><button class="underline" wire:click="selectType({{ $type->id }})">{{ __('messages.leave_ui.edit') }}</button></td></tr>
-            @endforeach
-        </tbody></table></div>
+        <x-ui.table><thead><tr>@foreach (['type', 'other_type', 'covers', 'consumes', 'mapped', 'actions'] as $column)<th>{{ __('messages.leave_ui.'.$column) }}</th>@endforeach</tr></thead><tbody>
+            @forelse ($this->types() as $type)
+                <tr class="border-t" wire:key="leave-type-{{ $type->id }}"><x-ui.td :label="__('messages.leave_ui.type')">{{ $type->name }}</x-ui.td><x-ui.td :label="__('messages.leave_ui.other_type')">{{ $type->other_name ?? '—' }}</x-ui.td>
+                    <x-ui.td :label="__('messages.leave_ui.covers')">{{ $type->covers ? __('messages.leave_ui.yes') : __('messages.leave_ui.no') }}</x-ui.td>
+                    <x-ui.td :label="__('messages.leave_ui.consumes')">{{ __('messages.leave_ui.consumes_values.'.$type->consumes) }}</x-ui.td>
+                    <x-ui.td :label="__('messages.leave_ui.mapped')"><x-ui.badge :tone="$type->is_mapped ? 'green' : 'indigo'">{{ $type->is_mapped ? __('messages.leave_ui.yes') : __('messages.leave_ui.no') }}</x-ui.badge></x-ui.td>
+                    <x-ui.td :label="__('messages.leave_ui.actions')"><button class="ui-link" wire:click="selectType({{ $type->id }})">{{ __('messages.leave_ui.edit') }}</button></x-ui.td></tr>
+            @empty <tr><td colspan="6"><x-ui.empty :title="__('messages.list_empty')" /></td></tr> @endforelse
+        </tbody></x-ui.table>
         {{ $this->types()->links() }}
     </x-ui.card>
     @if ($selectedType !== null)

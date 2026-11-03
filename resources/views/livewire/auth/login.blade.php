@@ -4,7 +4,7 @@
         <x-ui.card class="space-y-5 p-6 sm:p-8">
             <header>
                 <h1><x-ui.brand size="lg" :name="false" /><span class="sr-only">{{ __('Attendance') }}</span></h1>
-                <p class="mt-1 text-sm text-gray-500">{{ __('Log in to your workspace') }}</p>
+                <p class="mt-3 text-sm leading-6 text-gray-600">{{ __('Log in to your workspace') }}</p>
             </header>
             <x-ui.field :label="__('Email address')" error="email" for="email">
                 <x-ui.input id="email" type="email" wire:model="email" autocomplete="username" required />

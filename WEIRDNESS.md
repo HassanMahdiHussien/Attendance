@@ -4,6 +4,8 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 
 ---
 
+- Upload preview samples and technical counts fold after the visible import decision; Livewire upload inputs and progress polling stay outside disclosures so their state continues updating. (2026-11-04)
+- Read-only policy values lose the translated “minutes” suffix when displayed as duration text; editable policy inputs keep that suffix because HR still enters raw minutes. (2026-11-04)
 - Daily and review lists project only their visible page of stored day IDs through AttendanceSummary before calling DayPresentation; day detail projects its one ID the same way. This keeps status wording consistent with the employee record without changing the list queries. (2026-11-03)
 - Exports has a Results menu entry because the journey grouping needs a direct destination; access still uses the page's existing Filament check. (2026-11-03)
 - The admin attendance and leave display helpers render a zero-minute detail as an em dash; measured totals still use DurationText directly where zero is a meaningful figure. (2026-11-03)

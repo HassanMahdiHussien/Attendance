@@ -349,3 +349,14 @@ test('a new employee counts from the hire date and later imports from their effe
     expect($history->asOf($employee->fresh(), today()->subDay())['legal_entity'])->toBe('Al Waha Company')
         ->and($history->asOf($employee->fresh(), today())['legal_entity'])->toBe('Sardkar Company');
 });
+
+test('an employee file shows its branch decision before the confirm button and before folded details', function (): void {
+    $row = hcRow(12345679, 'Fake Person', '', 39151);
+    $row[23] = 'Unknown Site';
+
+    $html = Livewire::test(ImportEmployees::class)->set('sourceFile', hcFile([$row]))
+        ->call('prepareMapping')->call('previewMappedImport')->html();
+
+    expect(strpos($html, 'linkUnmatched'))->toBeLessThan(strpos($html, 'confirmMappedImport'))
+        ->and(strpos($html, 'confirmMappedImport'))->toBeLessThan(strpos($html, '<details'));
+});

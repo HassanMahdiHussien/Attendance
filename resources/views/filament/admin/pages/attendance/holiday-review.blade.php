@@ -1,10 +1,11 @@
 <x-filament-panels::page>
+    <p class="mb-4 text-sm text-gray-600">{{ __('messages.clear_screens.holiday_review_context') }}</p>
     <div class="grid gap-5 lg:grid-cols-2">
         <x-ui.card>
             <h2 class="font-semibold">{{ __('messages.holiday_ui.source') }}</h2>
             @if ($source = $this->source())
                 <a class="ui-link" href="{{ route('attendance.holidays.original', ['company' => $this->company()->id, 'source' => $source->id]) }}"><bdi dir="ltr">{{ $source->file_name }}</bdi> · {{ __('messages.holiday_ui.download_original') }}</a>
-                <p>{{ __('messages.holiday_ui.ai_statuses.'.$source->ai_status) }}</p>
+                <p><x-ui.badge :tone="match ($source->ai_status) { 'done' => 'green', 'failed' => 'red', 'pending' => 'indigo', default => 'gray' }">{{ __('messages.holiday_ui.ai_statuses.'.$source->ai_status) }}</x-ui.badge></p>
                 @if ($source->error_code)<p class="text-amber-800">{{ __('messages.holidays.ai_errors.'.$source->error_code) }}</p>@endif
                 @if ($parts = $this->parts())
                     <div class="flex flex-wrap gap-2">@foreach ($parts as $index => $part)<button type="button" wire:click="selectPart({{ $index }})" class="rounded border p-2 {{ $index === $partIndex ? 'border-primary font-semibold' : 'border-gray-200' }}">{{ $part['name'] }} @if (isset($part['page'])) <bdi dir="ltr">{{ $part['page'] }}</bdi> @endif</button>@endforeach</div>
@@ -18,7 +19,7 @@
                     @endif
                 @endif
                 @if ($proposal = $source->proposal)
-                    <div class="mt-4 space-y-2 rounded-xl bg-amber-50 p-3">
+                    <div class="mt-4 space-y-2 rounded-xl border border-line bg-primary-light p-3">
                         <p>{{ __('messages.holiday_ui.ai_confidence') }}: {{ __('messages.holiday_ui.confidence.'.$proposal['confidence']) }}</p>
                         @foreach (['scope_quotes', 'exception_quotes', 'notes'] as $kind)
                             <h3 class="font-semibold">{{ __('messages.holiday_ui.'.$kind) }}</h3>
@@ -65,9 +66,8 @@
                 </div>
             </x-ui.card>
             @if ($this->holiday())
-                <x-ui.card>
-                    <h2 class="font-semibold">{{ __('messages.holiday_ui.history') }}</h2>
-                    <p>{{ __('messages.holiday_ui.affected_days') }}: <bdi dir="ltr">{{ $this->affectedDays() }}</bdi></p>
+                <p>{{ __('messages.holiday_ui.affected_days') }}: <bdi dir="ltr">{{ $this->affectedDays() }}</bdi></p>
+                <details wire:ignore.self><summary class="cursor-pointer font-semibold">{{ __('messages.holiday_ui.history') }}</summary><x-ui.card>
                     @foreach ($this->holiday()->versions->sortByDesc('version') as $version)
                         <div class="border-t py-3" wire:key="holiday-version-{{ $version->id }}">
                             <p><bdi dir="ltr">#{{ $version->version }} · {{ $version->created_at->format('Y-m-d H:i') }}</bdi> — {{ __('messages.holiday_ui.statuses.'.$version->status) }} · {{ $version->decider?->name }}</p>
@@ -77,7 +77,7 @@
                             @endforeach
                         </div>
                     @endforeach
-                </x-ui.card>
+                </x-ui.card></details>
             @endif
         </div>
     </div>

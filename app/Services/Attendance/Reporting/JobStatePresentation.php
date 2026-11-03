@@ -7,9 +7,9 @@ class JobStatePresentation
     public function tone(?string $state): string
     {
         return match ($state) {
-            'completed' => 'green',
+            'completed', 'sent' => 'green',
             'failed' => 'red',
-            'processing', 'running' => 'indigo',
+            'processing', 'running', 'sending', 'uncertain' => 'indigo',
             default => 'gray',
         };
     }

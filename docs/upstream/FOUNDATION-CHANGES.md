@@ -8,6 +8,8 @@ Every kept foundation file edited since the spec-500 baseline is listed below. R
 |---|---|---|---|
 | `resources/views/components/ui/{tile,filter-button,route-rail}.blade.php` | Adds reusable result tiles, navy selected filters and a compact journey rail. | Attendance and dashboard screens share the same readable states and route progress. | **Port** |
 | `resources/css/filament/theme.css` | Adds the shared table and phone-card styles and scans all `x-ui` components. | Admin pages use `x-ui.table`, and panels do not load `app.css`. | **Port** |
+| `resources/views/filament/admin/resources/employee-resource/pages/import-employees.blade.php`, `resources/views/filament/admin/widgets/setup-checklist.blade.php`, `resources/views/filament/platform/widgets/companies-overview.blade.php` | Puts upload decisions before preview detail and uses shared table and state badges in setup widgets. | Shared employee import and setup screens follow the same readable upload journey on phones. | **Port** |
+| `resources/views/livewire/auth/{login,change-password}.blade.php` | Gives sign-in and password pages clearer context and spacing. | Account forms follow the same readable page rhythm. | **Port** |
 | `lang/{en,ar}/messages.php` | Adds duration, day presentation, and journey labels. | Both interface languages need matching terms for the attendance screens. | **Do not apply** |
 | `app/Support/Access/AdminNav.php`, `resources/views/layouts/partials/workspace-navigation.blade.php` | Groups accessible admin destinations as Check, Review, Results, and Set-up while retaining the Upload entry and mobile primary links. | HR navigation follows the attendance journey on desktop and in the phone More sheet. | **Do not apply** |
 

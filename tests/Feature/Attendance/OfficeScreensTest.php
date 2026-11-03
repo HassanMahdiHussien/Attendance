@@ -153,6 +153,13 @@ test('attendance policy shows every pattern section and appends an effective ver
         ->and($latest->reason)->toBe('Approved hours update');
 });
 
+test('policy history renders labelled columns and formatted durations', function (): void {
+    Livewire::test(OfficePolicyPage::class)
+        ->assertSee('data-label="Version"', escape: false)
+        ->assertSee('data-label="Effective from"', escape: false)
+        ->assertSee('1 h');
+});
+
 test('overtime appears on the daily and detail pages and policy edits retain other values', function (): void {
     $day = Day::factory()->create([
         'employee_id' => $this->employee->id, 'branch_id' => $this->branch->id,

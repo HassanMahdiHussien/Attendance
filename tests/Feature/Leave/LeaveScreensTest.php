@@ -166,6 +166,17 @@ test('request detail records HR actions and type page maps an unmapped type', fu
     expect($type->fresh()->is_mapped)->toBeTrue();
 });
 
+test('leave types show labelled columns and an empty state', function (): void {
+    Livewire::test(LeaveTypesPage::class)->assertSee('No records match this view.')
+        ->assertSee('<th>Type</th>', escape: false);
+
+    LeaveType::factory()->create(['company_id' => $this->company->id, 'name' => 'Sample leave', 'is_mapped' => false]);
+
+    Livewire::test(LeaveTypesPage::class)->assertSee('Sample leave')
+        ->assertSee('data-label="Mapped"', escape: false)
+        ->assertSee('data-label="Actions"', escape: false);
+});
+
 test('a compensation request shows its exceeded entitlement flag', function (): void {
     $type = LeaveType::factory()->create(['covers' => true, 'is_mapped' => true,
         'consumes' => 'rest_day_entitlement']);
