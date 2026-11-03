@@ -2,6 +2,13 @@
 
 Every kept foundation file edited since the spec-500 baseline is listed below. Removals are not listed because Displanary keeps that code. Apply only rows marked **Port**; **Do not apply** rows describe changes needed solely by Attendance.
 
+## Clear attendance screens (spec 514)
+
+| File | Change | Why | Displanary |
+|---|---|---|---|
+| `resources/views/components/ui/{tile,filter-button,route-rail}.blade.php` | Adds reusable result tiles, navy selected filters and a compact journey rail. | Attendance and dashboard screens share the same readable states and route progress. | **Port** |
+| `lang/{en,ar}/messages.php` | Adds duration, day presentation, and journey labels. | Both interface languages need matching terms for the attendance screens. | **Do not apply** |
+
 ## Password management (2026-11-02)
 
 | File | Change | Why | Displanary |

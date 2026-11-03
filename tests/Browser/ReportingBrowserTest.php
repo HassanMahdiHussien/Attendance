@@ -37,6 +37,8 @@ test('HR sees overtime on the dashboard and employee record', function (): void 
 
     visitBound('/login')->fill('email', $hr->email)->fill('password', 'password')->press('Log in')
         ->assertSee('Attendance dashboard')
-        ->navigate('/dashboard')->assertSee('Overtime hours')->assertSee('0:45')->assertNoJavaScriptErrors()
-        ->navigate('/employees/'.$employee->id)->assertSee('Overtime hours')->assertNoJavaScriptErrors();
+        ->navigate('/dashboard')->click('details:has(> summary:has-text("More figures")) > summary')
+        ->assertSee('Overtime hours')->assertSee('45 min')->assertNoJavaScriptErrors()
+        ->navigate('/employees/'.$employee->id)->click('details:has(> summary:has-text("More figures")) > summary')
+        ->assertSee('Overtime hours')->assertNoJavaScriptErrors();
 });

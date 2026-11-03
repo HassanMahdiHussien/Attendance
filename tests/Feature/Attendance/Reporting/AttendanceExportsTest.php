@@ -101,8 +101,8 @@ test('summary, dashboard, employee tile, Excel totals and PDF data agree for the
         'employee_ids' => [$employee->id]]);
     $totals = app(AttendanceSummary::class)->totals($filters);
     Livewire::test(HrDashboard::class)->set('employeeId', (string) $employee->id)->call('apply')
-        ->assertSee('0:15')->assertSee('Present days');
-    Livewire::test(EmployeeAttendance::class, ['employeeId' => $employee->id])->assertSee('0:15');
+        ->assertSee('15 min')->assertSee('Present days');
+    Livewire::test(EmployeeAttendance::class, ['employeeId' => $employee->id])->assertSee('15 min');
 
     $exports = app(AttendanceExports::class);
     $excel = $exports->request($company, $fixture['hr'], 'employee_statement_xlsx', $filters->toArray(), 'en');
@@ -158,14 +158,14 @@ test('overtime totals agree across tiles, drill down, Excel and statement', func
         ->and(app(Overtime::class)->drillDownEmployeeIds($filters, 'entitled_employees', '2026-10-23'))
         ->toBe([$fixture['employee']->id]);
     Livewire::test(HrDashboard::class)->set('from', '2026-10-16')->set('to', '2026-10-23')
-        ->call('apply')->assertSee('Overtime hours')->assertSee('4:00')
+        ->call('apply')->assertSee('Overtime hours')->assertSee('4 h')
         ->assertSee('Available compensatory days')->assertSee('0.5');
     Livewire::withQueryParams(['tile' => 'overtime_minutes', 'from' => '2026-10-16', 'to' => '2026-10-23'])
         ->test(DashboardEmployees::class)->assertSee($fixture['employee']->name)->assertSee('4:00');
     Livewire::test(EmployeeAttendance::class, ['employeeId' => $fixture['employee']->id])
         ->set('from', '2026-10-16')->set('to', '2026-10-23')->call('apply')
         ->call('showTile', 'overtime_minutes')->assertSet('tab', 'overtime')
-        ->assertSee('2026-10-16')->assertSee('4:00');
+        ->assertSee('2026-10-16')->assertSee('4 h');
 
     foreach (['overtime', 'compensatory_days', 'employee_statement_xlsx'] as $kind) {
         $input = $filters->toArray();

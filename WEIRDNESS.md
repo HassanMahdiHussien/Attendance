@@ -4,6 +4,12 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 
 ---
 
+- The dashboard's queued-work signal inspects only database queue payloads whose job class and serialized company or company-owned batch id match; another tenant's work never changes this company's result state. (2026-11-03)
+- The Review journey action reuses the first positive Needs action tile's existing drill-down URL, so it carries the dashboard filters and access rules. (2026-11-03)
+- Only a pending device holds the journey at Check; unresolved person and mapping issues remain in the data-issues tile so older issues cannot hide Results or Review. (2026-11-03)
+- The employee's uncovered-absence and combined late/early tiles use view-only row selectors; shared report tile keys and export totals keep their original meaning. (2026-11-03)
+- The display label “Covered by leave” follows spec 514 for fully reconciled absence or short time even when stored credit supplied some coverage; the expanded row still separates leave and credit. (2026-11-03)
+
 - **The interface defaults to English and remembers each user's Arabic choice.** Operational mail to the service operator stays English.
 
 - **Shared-schema multi-tenancy (`company_id` column) instead of a separate database per company.** Deliberate simplification for the expected scale (<10 companies in year one). Revisit only if the client count grows past ~15-20, or if a large client contractually requires full data isolation.

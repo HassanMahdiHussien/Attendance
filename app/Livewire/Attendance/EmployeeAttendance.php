@@ -16,6 +16,7 @@ use App\Services\Attendance\HolidayLabels;
 use App\Services\Attendance\Overtime;
 use App\Services\Attendance\Reporting\AttendanceExports;
 use App\Services\Attendance\Reporting\AttendanceSummary;
+use App\Services\Attendance\Reporting\DayPresentation;
 use App\Services\Attendance\Reporting\LastUpdate;
 use App\Services\Attendance\Reporting\ReportFilters;
 use App\Services\Attendance\Reporting\ReportTiles;
@@ -37,6 +38,8 @@ class EmployeeAttendance extends Component
     public string $to = '';
 
     public string $tab = 'days';
+
+    public string $dayFilter = 'review';
 
     public string $selectedTile = '';
 
@@ -73,13 +76,22 @@ class EmployeeAttendance extends Component
         abort_unless(in_array($tab, ['days', 'leave', 'credits', 'overtime', 'changes', 'issues'], true), 404);
         $this->tab = $tab;
         $this->selectedTile = '';
+        $this->dayFilter = 'review';
+    }
+
+    public function setDayFilter(string $filter): void
+    {
+        $this->employee();
+        abort_unless(in_array($filter, ['review', 'all'], true), 404);
+        $this->dayFilter = $filter;
     }
 
     public function showTile(string $tile): void
     {
         $this->employee();
-        abort_unless(ReportTiles::allowed($tile), 404);
+        abort_unless(ReportTiles::allowed($tile) || in_array($tile, ['absent_uncovered', 'late_early'], true), 404);
         $this->selectedTile = $tile;
+        $this->dayFilter = 'all';
         $this->tab = match (true) {
             in_array($tile, ['overtime_minutes', 'entitled_employees', 'entitlements_available_now', 'entitlements_overdue_now'], true) => 'overtime',
             str_starts_with($tile, 'leave:') || str_starts_with($tile, 'leave_status:') => 'leave',
@@ -124,6 +136,16 @@ class EmployeeAttendance extends Component
             $consumptions = collect($overtime->consumptionsFor($filters, $entitlements->pluck('id')->all()));
             $days = $this->tab === 'days' ? array_values(array_filter(iterator_to_array($summary->perDay($filters, $employee->id)),
                 fn (array $day): bool => $this->matchesDay($day))) : [];
+            $presenter = app(DayPresentation::class);
+            foreach ($days as &$day) {
+                $day['presentation'] = $presenter->from($day);
+            }
+            unset($day);
+            $reviewCount = count(array_filter($days, fn (array $day): bool => $day['presentation']['needs_review']));
+            $allDayCount = count($days);
+            if ($this->dayFilter === 'review') {
+                $days = array_values(array_filter($days, fn (array $day): bool => $day['presentation']['needs_review']));
+            }
             $detail = $this->tab === 'days' ? $reconciliation->for($employee, $filters->from, $filters->to) : [];
             $holidayIds = [];
             foreach ($days as $day) {
@@ -187,7 +209,8 @@ class EmployeeAttendance extends Component
                     'active_employees', 'office_employees_assessed', 'without_work_pattern',
                 ])),
                 'freshness' => $lastUpdate->for($filters),
-                'days' => $days, 'detail' => $detail, 'holidayNames' => $holidayNames, 'requests' => $requests,
+                'days' => $days, 'reviewCount' => $reviewCount, 'allDayCount' => $allDayCount,
+                'detail' => $detail, 'holidayNames' => $holidayNames, 'requests' => $requests,
                 'overtime' => $overtimeTotals, 'overtimeDays' => $overtimeDays,
                 'entitlements' => $entitlements, 'consumptions' => $consumptions,
                 'requestVersions' => $requestVersions, 'credits' => $credits,
@@ -200,7 +223,7 @@ class EmployeeAttendance extends Component
 
     private function employee(): Employee
     {
-        $employee = Employee::withoutGlobalScopes()->with('company')->findOrFail($this->employeeId);
+        $employee = Employee::withoutGlobalScopes()->with(['company', 'branch'])->findOrFail($this->employeeId);
         abort_unless(app(EmployeeProfilePolicy::class)->view(auth()->user(), $employee), 404);
 
         return $employee;
@@ -214,6 +237,12 @@ class EmployeeAttendance extends Component
         }
         if (in_array($tile, ['present', 'absent', 'missing_punch', 'shift_unresolved', 'pending'], true)) {
             return $day['status'] === $tile;
+        }
+        if ($tile === 'absent_uncovered') {
+            return $day['status'] === 'absent' && $day['minutes']['absence']['remaining'] > 0;
+        }
+        if ($tile === 'late_early') {
+            return $day['minutes']['late']['gross'] > 0 || $day['minutes']['early']['gross'] > 0;
         }
         if ($tile === 'assessed_working_days') {
             return in_array($day['status'], ['present', 'absent', 'missing_punch'], true);

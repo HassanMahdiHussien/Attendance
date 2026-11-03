@@ -212,7 +212,7 @@ test('daily and employee records link their holiday names', function (): void {
         'status' => 'holiday_worked', 'holiday_ids' => [$holiday->id], 'presence_minutes' => 480]);
     Livewire::test(DailyAttendance::class)->set('date', '2026-10-19')->assertSee('Founders Day');
     Livewire::test(EmployeeAttendance::class, ['employeeId' => $this->employee->id])
-        ->set('from', '2026-10-19')->set('to', '2026-10-19')->assertSee('Founders Day');
+        ->set('from', '2026-10-19')->set('to', '2026-10-19')->call('setDayFilter', 'all')->assertSee('Founders Day');
     $filters = ReportFilters::fromArray($this->company, ['from' => '2026-10-19', 'to' => '2026-10-19']);
     $summary = app(AttendanceSummary::class);
     expect($summary->totals($filters)['days']['holiday_worked'])->toBe(1)

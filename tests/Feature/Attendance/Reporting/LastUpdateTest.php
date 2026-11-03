@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\Attendance\AssessDaysJob;
 use App\Models\Attendance\CoverageInterval;
 use App\Models\Attendance\Day;
 use App\Models\Attendance\ImportBatch;
@@ -15,6 +16,8 @@ use App\Services\Attendance\Reporting\LastUpdate;
 use App\Services\Attendance\Reporting\ReportFilters;
 use App\Support\Tenancy\TenantContext;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Queue;
 
 beforeEach(function (): void {
     Carbon::setTestNow('2026-10-23 12:00:00');
@@ -125,4 +128,25 @@ test('a recalculation that changed no days does not wait for leave matching', fu
         ProcessingRun::factory()->create(['kind' => 'days', 'finished_at' => '2026-10-23 12:00:00', 'counts' => ['days_changed' => 1]]);
         expect(app(LastUpdate::class)->for($filters)['results_updating'])->toBeTrue();
     });
+});
+
+test('database queue work only marks its own company as updating', function (): void {
+    $oldConnection = config('queue.default');
+    config()->set('queue.default', 'database');
+    try {
+        $company = Company::factory()->create(['id' => 41]);
+        $other = Company::factory()->create(['id' => 410]);
+        app(TenantContext::class)->runForCompany($company, function () use ($company, $other): void {
+            $filters = ReportFilters::fromArray($company, ['from' => '2026-10-19', 'to' => '2026-10-20']);
+            expect(app(LastUpdate::class)->for($filters)['results_updating'])->toBeFalse();
+            Queue::connection('database')->push(new AssessDaysJob($other->id, ['from' => '2026-10-19', 'to' => '2026-10-20'], 'test'));
+            $payload = DB::table('jobs')->orderByDesc('id')->value('payload');
+            expect(json_decode($payload, true)['data']['command'])->toContain('s:9:"companyId";i:410;');
+            expect(app(LastUpdate::class)->for($filters)['results_updating'])->toBeFalse();
+            Queue::connection('database')->push(new AssessDaysJob($company->id, ['from' => '2026-10-19', 'to' => '2026-10-20'], 'test'));
+            expect(app(LastUpdate::class)->for($filters)['results_updating'])->toBeTrue();
+        });
+    } finally {
+        config()->set('queue.default', $oldConnection);
+    }
 });
