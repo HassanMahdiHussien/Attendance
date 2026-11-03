@@ -58,7 +58,7 @@
     <x-ui.card>
         <div class="flex flex-wrap gap-4 border-b border-gray-200 pb-3">
             @foreach (['days', 'leave', 'credits', 'overtime', 'changes', 'issues'] as $section)
-                <button type="button" wire:click="show('{{ $section }}')" class="{{ $tab === $section ? 'font-bold text-ink' : 'ui-link' }}">{{ __('messages.reporting_ui.tabs.'.$section) }}</button>
+                <x-ui.filter-button wire:click="show('{{ $section }}')" :selected="$tab === $section">{{ __('messages.reporting_ui.tabs.'.$section) }}</x-ui.filter-button>
             @endforeach
         </div>
         @if ($tab === 'days')
@@ -119,47 +119,57 @@
                 </tbody>
             </x-ui.table>
         @elseif ($tab === 'leave')
+            <x-ui.table><thead><tr><th scope="col">{{ __('messages.leave_ui.form_number') }}</th><th scope="col">{{ __('messages.leave_ui.type') }}</th><th scope="col">{{ __('messages.leave_ui.status') }}</th><th scope="col">{{ __('messages.leave_ui.dates') }}</th></tr></thead><tbody>
             @forelse ($requests as $request)
-                <div class="border-b border-gray-100 py-3 text-sm">
-                    <p><bdi dir="ltr">{{ $request->external_id }}</bdi> · {{ $request->leaveType?->name }} · {{ __('messages.leave_ui.statuses.'.$request->status) }} · <bdi dir="ltr">{{ $request->start_date?->toDateString() }} → {{ $request->end_date?->toDateString() }}</bdi></p>
-                    @foreach ($requestVersions->get($request->id, collect()) as $version)
-                        <p class="mt-1 text-gray-500"><bdi dir="ltr">{{ $version->snapshot_at?->format('Y-m-d H:i:s') }}</bdi> · {{ __('messages.leave_ui.statuses.'.($version->values['status'] ?? $request->status)) }}</p>
-                    @endforeach
-                </div>
-            @empty <p class="mt-3 text-sm text-gray-500">{{ __('messages.reporting_ui.none') }}</p> @endforelse
+                <tr>
+                    <x-ui.td :label="__('messages.leave_ui.form_number')"><bdi dir="ltr">{{ $request->external_id }}</bdi></x-ui.td>
+                    <x-ui.td :label="__('messages.leave_ui.type')">{{ $request->leaveType?->name ?? '—' }}</x-ui.td>
+                    <x-ui.td :label="__('messages.leave_ui.status')"><x-ui.badge :tone="match ($request->status) { 'approved' => 'green', 'rejected' => 'red', 'pending' => 'indigo', default => 'gray' }">{{ __('messages.leave_ui.statuses.'.$request->status) }}</x-ui.badge>@foreach ($requestVersions->get($request->id, collect()) as $version)<span class="block text-xs"><bdi dir="ltr">{{ $version->snapshot_at?->format('Y-m-d H:i:s') }}</bdi> · {{ __('messages.leave_ui.statuses.'.($version->values['status'] ?? $request->status)) }}</span>@endforeach</x-ui.td>
+                    <x-ui.td :label="__('messages.leave_ui.dates')">{{ $request->start_date?->locale(app()->getLocale())->translatedFormat('j F Y') }} → {{ $request->end_date?->locale(app()->getLocale())->translatedFormat('j F Y') }}</x-ui.td>
+                </tr>
+            @empty <tr><td colspan="4" class="p-4"><x-ui.empty :title="__('messages.reporting_ui.none')" /></td></tr> @endforelse
+            </tbody></x-ui.table>
         @elseif ($tab === 'credits')
+            <x-ui.table><thead><tr><th scope="col">{{ __('messages.leave_ui.form_number') }}</th><th scope="col">{{ __('messages.reporting_ui.created') }}</th><th scope="col">{{ __('messages.reporting_ui.used') }}</th><th scope="col">{{ __('messages.reporting_ui.available') }}</th></tr></thead><tbody>
             @forelse ($credits as $credit)
-                <p class="border-b border-gray-100 py-3 text-sm"><bdi dir="ltr">{{ $credit->sourceDay?->request?->external_id }} · {{ $credit->sourceDay?->work_date?->toDateString() }}</bdi> · {{ __('messages.reporting_ui.created') }} <bdi dir="auto">{{ app(\App\Services\Attendance\Reporting\DurationText::class)->format($credit->minutes) }}</bdi> · {{ __('messages.reporting_ui.used') }} <bdi dir="auto">{{ app(\App\Services\Attendance\Reporting\DurationText::class)->format($used->get($credit->id, collect())->sum('minutes')) }}</bdi> · {{ __('messages.reporting_ui.available') }} <bdi dir="auto">{{ app(\App\Services\Attendance\Reporting\DurationText::class)->format($credit->expires_on && $credit->expires_on->toDateString() < $to ? 0 : max(0, $credit->minutes - $used->get($credit->id, collect())->sum('minutes'))) }}</bdi></p>
-            @empty <p class="mt-3 text-sm text-gray-500">{{ __('messages.reporting_ui.none') }}</p> @endforelse
+                <tr>
+                    <x-ui.td :label="__('messages.leave_ui.form_number')"><bdi dir="ltr">{{ $credit->sourceDay?->request?->external_id }}</bdi><span class="block text-xs">{{ $credit->sourceDay?->work_date?->locale(app()->getLocale())->translatedFormat('l j F Y') }}</span></x-ui.td>
+                    <x-ui.td :label="__('messages.reporting_ui.created')"><bdi dir="auto">{{ app(\App\Services\Attendance\Reporting\DurationText::class)->format($credit->minutes) }}</bdi></x-ui.td>
+                    <x-ui.td :label="__('messages.reporting_ui.used')"><bdi dir="auto">{{ app(\App\Services\Attendance\Reporting\DurationText::class)->format($used->get($credit->id, collect())->sum('minutes')) }}</bdi></x-ui.td>
+                    <x-ui.td :label="__('messages.reporting_ui.available')"><bdi dir="auto">{{ app(\App\Services\Attendance\Reporting\DurationText::class)->format($credit->expires_on && $credit->expires_on->toDateString() < $to ? 0 : max(0, $credit->minutes - $used->get($credit->id, collect())->sum('minutes'))) }}</bdi></x-ui.td>
+                </tr>
+            @empty <tr><td colspan="4" class="p-4"><x-ui.empty :title="__('messages.reporting_ui.none')" /></td></tr> @endforelse
+            </tbody></x-ui.table>
         @elseif ($tab === 'overtime')
             <h3 class="mt-3 font-bold">{{ __('messages.overtime_ui.section') }}</h3>
             @foreach ($overtime['overtime_by_basis'] as $basis => $minutes)
                 <p>{{ __('messages.overtime_ui.basis.'.$basis) }}: <bdi dir="auto">{{ app(\App\Services\Attendance\Reporting\DurationText::class)->format($minutes) }}</bdi></p>
             @endforeach
             <p>{{ __('messages.overtime_ui.earned') }} <bdi dir="ltr">{{ number_format($overtime['entitlements_earned'], 1) }}</bdi> · {{ __('messages.overtime_ui.used') }} <bdi dir="ltr">{{ number_format($overtime['entitlements_used'], 1) }}</bdi> · {{ __('messages.overtime_ui.available') }} <bdi dir="ltr">{{ number_format($overtime['entitlements_available_now'], 1) }}</bdi> · {{ __('messages.overtime_ui.overdue') }} <bdi dir="ltr">{{ number_format($overtime['entitlements_overdue_now'], 1) }}</bdi></p>
+            <x-ui.table><thead><tr><th scope="col">{{ __('messages.office_ui.date') }}</th><th scope="col">{{ __('messages.overtime_ui.entitlement') }}</th><th scope="col">{{ __('messages.overtime_ui.earned') }}</th><th scope="col">{{ __('messages.overtime_ui.used') }}</th><th scope="col">{{ __('messages.overtime_ui.available') }}</th></tr></thead><tbody>
             @forelse ($entitlements as $entitlement)
-                <div class="border-b border-gray-100 py-3 text-sm">
-                    <a class="ui-link" href="{{ $dayUrl.'?'.http_build_query(['employee' => $employee->id, 'date' => $entitlement['work_date']]) }}"><bdi dir="ltr">{{ $entitlement['work_date'] }}</bdi></a> · {{ __('messages.overtime_ui.entitlement_basis.'.$entitlement['basis']) }}@if ($entitlement['holiday']) · {{ __('messages.overtime_ui.holiday') }}@endif
-                    <p>{{ __('messages.overtime_ui.earned') }} <bdi dir="ltr">{{ number_format($entitlement['earned'], 1) }}</bdi> · {{ __('messages.overtime_ui.used') }} <bdi dir="ltr">{{ number_format($entitlement['used'], 1) }}</bdi> · {{ __('messages.overtime_ui.available') }} <bdi dir="ltr">{{ number_format($entitlement['available'], 1) }}</bdi></p>
-                    @if ($entitlement['overdue'] > 0)<p class="text-amber-800">{{ __('messages.overtime_ui.overdue_since') }} <bdi dir="ltr">{{ $entitlement['alert_on'] }}</bdi></p>@endif
-                    @foreach ($consumptions->where('entitlement_id', $entitlement['id']) as $consumption)
-                        <p>{{ __('messages.overtime_ui.consumed_by') }} <a class="ui-link" href="{{ \App\Filament\Admin\Pages\Leave\LeaveRequestDetail::getUrl(panel: 'admin', tenant: $employee->company).'?'.http_build_query(['request' => $consumption['request_id']]) }}"><bdi dir="ltr">{{ $consumption['external_id'] }}</bdi></a> · <bdi dir="ltr">{{ number_format($consumption['quantity'], 1) }}</bdi></p>
-                    @endforeach
-                </div>
-            @empty <p>{{ __('messages.reporting_ui.none') }}</p> @endforelse
+                <tr>
+                    <x-ui.td :label="__('messages.office_ui.date')"><a class="ui-link" href="{{ $dayUrl.'?'.http_build_query(['employee' => $employee->id, 'date' => $entitlement['work_date']]) }}">{{ \Carbon\CarbonImmutable::parse($entitlement['work_date'])->locale(app()->getLocale())->translatedFormat('l j F Y') }}</a></x-ui.td>
+                    <x-ui.td :label="__('messages.overtime_ui.entitlement')">{{ __('messages.overtime_ui.entitlement_basis.'.$entitlement['basis']) }}@if ($entitlement['holiday']) · {{ __('messages.overtime_ui.holiday') }}@endif @if ($entitlement['overdue'] > 0)<p class="text-amber-800">{{ __('messages.overtime_ui.overdue_since') }} <bdi dir="ltr">{{ $entitlement['alert_on'] }}</bdi></p>@endif</x-ui.td>
+                    <x-ui.td :label="__('messages.overtime_ui.earned')">{{ number_format($entitlement['earned'], 1) }}</x-ui.td>
+                    <x-ui.td :label="__('messages.overtime_ui.used')">{{ number_format($entitlement['used'], 1) }}</x-ui.td>
+                    <x-ui.td :label="__('messages.overtime_ui.available')">{{ number_format($entitlement['available'], 1) }}@foreach ($consumptions->where('entitlement_id', $entitlement['id']) as $consumption)<p>{{ __('messages.overtime_ui.consumed_by') }} <a class="ui-link" href="{{ \App\Filament\Admin\Pages\Leave\LeaveRequestDetail::getUrl(panel: 'admin', tenant: $employee->company).'?'.http_build_query(['request' => $consumption['request_id']]) }}"><bdi dir="ltr">{{ $consumption['external_id'] }}</bdi></a> · {{ number_format($consumption['quantity'], 1) }}</p>@endforeach</x-ui.td>
+                </tr>
+            @empty <tr><td colspan="5" class="p-4"><x-ui.empty :title="__('messages.reporting_ui.none')" /></td></tr> @endforelse
+            </tbody></x-ui.table>
         @elseif ($tab === 'changes')
+            <x-ui.table><thead><tr><th scope="col">{{ __('messages.office_ui.date') }}</th><th scope="col">{{ __('messages.employee_history.title') }}</th></tr></thead><tbody>
             @forelse ($changes as $entry)
-                <div class="border-b border-gray-100 py-3 text-sm">
-                    <p><bdi dir="ltr">{{ $entry['version']->effective_from->toDateString() }}</bdi> · {{ $entry['version']->actor?->name ?? __('messages.employee_history.system') }}</p>
-                    @foreach ($entry['fields'] as $field => $after)
-                        <p>{{ __('messages.employee_history.fields.'.$field) }}: <bdi dir="auto">{{ is_array($entry['version']->previous[$field] ?? null) ? implode(', ', $entry['version']->previous[$field]) : ($entry['version']->previous[$field] ?? __('messages.employee_history.empty')) }}</bdi> → <bdi dir="auto">{{ is_array($after) ? implode(', ', $after) : ($after ?? __('messages.employee_history.empty')) }}</bdi></p>
-                    @endforeach
-                </div>
-            @empty <p class="mt-3 text-sm text-gray-500">{{ __('messages.reporting_ui.none') }}</p> @endforelse
+                <tr><x-ui.td :label="__('messages.office_ui.date')"><bdi dir="ltr">{{ $entry['version']->effective_from->toDateString() }}</bdi><span class="block text-xs">{{ $entry['version']->actor?->name ?? __('messages.employee_history.system') }}</span></x-ui.td>
+                    <x-ui.td :label="__('messages.employee_history.title')">@foreach ($entry['fields'] as $field => $after)<p>{{ __('messages.employee_history.fields.'.$field) }}: <bdi dir="auto">{{ is_array($entry['version']->previous[$field] ?? null) ? implode(', ', $entry['version']->previous[$field]) : ($entry['version']->previous[$field] ?? __('messages.employee_history.empty')) }}</bdi> → <bdi dir="auto">{{ is_array($after) ? implode(', ', $after) : ($after ?? __('messages.employee_history.empty')) }}</bdi></p>@endforeach</x-ui.td></tr>
+            @empty <tr><td colspan="2" class="p-4"><x-ui.empty :title="__('messages.reporting_ui.none')" /></td></tr> @endforelse
+            </tbody></x-ui.table>
         @elseif ($tab === 'issues')
+            <x-ui.table><thead><tr><th scope="col">{{ __('messages.follow_up_ui.issue') }}</th><th scope="col">{{ __('messages.office_ui.date') }}</th></tr></thead><tbody>
             @forelse ($issues as $issue)
-                <p class="border-b border-gray-100 py-3 text-sm">{{ __('messages.attendance_ui.issue_types.'.$issue->type) }} · <bdi dir="ltr">{{ $issue->date_from?->toDateString() }}</bdi></p>
-            @empty <p class="mt-3 text-sm text-gray-500">{{ __('messages.reporting_ui.none') }}</p> @endforelse
+                <tr><x-ui.td :label="__('messages.follow_up_ui.issue')"><x-ui.badge tone="red">{{ __('messages.attendance_ui.issue_types.'.$issue->type) }}</x-ui.badge></x-ui.td><x-ui.td :label="__('messages.office_ui.date')">{{ $issue->date_from?->locale(app()->getLocale())->translatedFormat('l j F Y') ?? '—' }}</x-ui.td></tr>
+            @empty <tr><td colspan="2" class="p-4"><x-ui.empty :title="__('messages.reporting_ui.none')" /></td></tr> @endforelse
+            </tbody></x-ui.table>
         @endif
     </x-ui.card>
 </div>

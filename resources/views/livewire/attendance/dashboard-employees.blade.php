@@ -4,19 +4,17 @@
         <p>{{ \App\Services\Attendance\Reporting\ReportTiles::label($tile) }} · <bdi dir="ltr">{{ $from }} → {{ $to }}</bdi></p>
         <p class="text-sm text-gray-500">{{ __('messages.reporting_ui.matching_employees') }}: <bdi dir="ltr">{{ $employees->count() }}</bdi></p>
     </x-ui.card>
-    @forelse ($employees as $employee)
-        <x-ui.card>
-            <a class="ui-link" href="{{ route('employees.show', $employee) }}">{{ $employee->name }}</a>
-            <span class="ms-2 text-sm text-gray-500"><bdi dir="ltr">{{ $employee->employee_code }}</bdi> · {{ $employee->branch?->name }} · {{ $employee->department }}</span>
-            @if (isset($overtimeRows[$employee->id]))
-                <p class="mt-2 text-sm">{{ \App\Services\Attendance\Reporting\ReportTiles::label($tile) }}:
-                    <bdi dir="ltr">{{ $tile === 'overtime_minutes' ? sprintf('%d:%02d', intdiv($overtimeRows[$employee->id][$tile], 60), $overtimeRows[$employee->id][$tile] % 60) : ($tile === 'entitled_employees' ? 1 : number_format($overtimeRows[$employee->id][$tile], 1)) }}</bdi></p>
-            @endif
-            @if ($balance = $balances->get($employee->id))
-                <p class="mt-2 text-sm">{{ __('messages.leave_balance_ui.annual_balance') }}: <bdi dir="ltr">{{ number_format((float) $balance->remaining_days, 2) }}</bdi> {{ __('messages.leave_balance_ui.days') }} · <bdi dir="ltr">{{ $balance->balance_date->toDateString() }}</bdi></p>
-            @endif
-        </x-ui.card>
-    @empty
-        <x-ui.card><p>{{ __('messages.reporting_ui.none') }}</p></x-ui.card>
-    @endforelse
+    <x-ui.table>
+        <thead><tr><th scope="col">{{ __('messages.reporting_ui.employee') }}</th><th scope="col">{{ __('messages.office_ui.branch') }}</th><th scope="col">{{ \App\Services\Attendance\Reporting\ReportTiles::label($tile) }}</th><th scope="col">{{ __('messages.leave_balance_ui.annual_balance') }}</th></tr></thead>
+        <tbody>
+        @forelse ($employees as $employee)
+            <tr>
+                <x-ui.td :label="__('messages.reporting_ui.employee')"><a class="ui-link" href="{{ route('employees.show', $employee) }}">{{ $employee->name }}</a><span class="block text-xs"><bdi dir="ltr">{{ $employee->employee_code }}</bdi> · {{ $employee->department }}</span></x-ui.td>
+                <x-ui.td :label="__('messages.office_ui.branch')">{{ $employee->branch?->name ?? '—' }}</x-ui.td>
+                <x-ui.td :label="\App\Services\Attendance\Reporting\ReportTiles::label($tile)">@if(isset($overtimeRows[$employee->id]))@if($tile === 'overtime_minutes')<bdi dir="auto">{{ app(\App\Services\Attendance\Reporting\DurationText::class)->format($overtimeRows[$employee->id][$tile]) }}</bdi>@else {{ $tile === 'entitled_employees' ? 1 : number_format($overtimeRows[$employee->id][$tile], 1) }} @endif @else — @endif</x-ui.td>
+                <x-ui.td :label="__('messages.leave_balance_ui.annual_balance')">@if($balance = $balances->get($employee->id)){{ number_format((float) $balance->remaining_days, 2) }} {{ __('messages.leave_balance_ui.days') }} · <bdi dir="ltr">{{ $balance->balance_date->toDateString() }}</bdi>@else — @endif</x-ui.td>
+            </tr>
+        @empty <tr><td colspan="4" class="p-4">{{ __('messages.reporting_ui.none') }}</td></tr> @endforelse
+        </tbody>
+    </x-ui.table>
 </div>

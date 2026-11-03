@@ -29,17 +29,17 @@
                 @endforeach
             </div>
             <h3 class="mt-4 font-semibold">{{ __('messages.leave_balance_ui.history') }}</h3>
-            <div class="overflow-x-auto"><table class="w-full text-start"><thead><tr>
+            <div class="overflow-x-auto"><x-ui.table><thead><tr>
                 @foreach (['balance_date', 'remaining_days', 'change', 'upload_record'] as $column)<th class="p-2">{{ __('messages.leave_balance_ui.'.$column) }}</th>@endforeach
             </tr></thead><tbody>
-                @foreach ($annualBalanceHistory as $entry)
-                    <tr class="border-t"><td class="p-2" dir="ltr">{{ $entry['balance']->balance_date->toDateString() }}</td>
-                        <td class="p-2" dir="ltr">{{ number_format((float) $entry['balance']->remaining_days, 2) }}</td>
-                        <td class="p-2" dir="ltr">{{ $entry['change_days'] === null ? '—' : number_format((float) $entry['change_days'], 2) }}</td>
-                        <td class="p-2"><a class="ui-link" href="{{ route('leave.balance.file', ['company' => $employee->company_id, 'balanceBatch' => $entry['balance']->batch_id]) }}">{{ __('messages.leave_balance_ui.download') }}</a></td>
+                @forelse ($annualBalanceHistory as $entry)
+                    <tr class="border-t"><x-ui.td :label="__('messages.leave_balance_ui.balance_date')">{{ $entry['balance']->balance_date->toDateString() }}</x-ui.td>
+                        <x-ui.td :label="__('messages.leave_balance_ui.remaining_days')">{{ number_format((float) $entry['balance']->remaining_days, 2) }}</x-ui.td>
+                        <x-ui.td :label="__('messages.leave_balance_ui.change')">{{ $entry['change_days'] === null ? '—' : number_format((float) $entry['change_days'], 2) }}</x-ui.td>
+                        <x-ui.td :label="__('messages.leave_balance_ui.upload_record')"><a class="ui-link" href="{{ route('leave.balance.file', ['company' => $employee->company_id, 'balanceBatch' => $entry['balance']->batch_id]) }}">{{ __('messages.leave_balance_ui.download') }}</a></x-ui.td>
                     </tr>
-                @endforeach
-            </tbody></table></div>
+                @empty <tr><td colspan="4" class="p-4"><x-ui.empty :title="__('messages.list_empty')" /></td></tr> @endforelse
+            </tbody></x-ui.table></div>
         </x-ui.card>
     @endif
     <section aria-label="{{ __('messages.attendance.title') }}">
@@ -49,20 +49,17 @@
     <section aria-label="{{ __('messages.employee_history.title') }}">
         <x-ui.card>
             <h2 class="text-lg font-bold text-ink">{{ __('messages.employee_history.title') }}</h2>
+            <x-ui.table class="mt-3"><thead><tr><th scope="col">{{ __('messages.office_ui.date') }}</th><th scope="col">{{ __('messages.office_ui.by') }}</th><th scope="col">{{ __('messages.employee_history.title') }}</th></tr></thead><tbody>
             @forelse ($changes as $entry)
-                <div class="mt-3 border-t border-gray-200 pt-3">
-                    <p class="text-sm text-gray-500"><bdi dir="ltr">{{ $entry['version']->effective_from->toDateString() }}</bdi> · {{ $entry['version']->actor?->name ?? __('messages.employee_history.system') }} · {{ __('messages.employee_history.sources.'.$entry['version']->source) }}</p>
-                    @foreach ($entry['fields'] as $field => $after)
-                        <p class="mt-1 text-sm">{{ __('messages.employee_history.fields.'.$field) }}:
-                            <bdi dir="{{ in_array($field, ['email', 'schedule_start', 'schedule_end', 'fallback_notification_email']) ? 'ltr' : 'auto' }}">{{ is_array($entry['version']->previous[$field] ?? null) ? implode(', ', $entry['version']->previous[$field]) : (($entry['version']->previous[$field] ?? null) === null ? __('messages.employee_history.empty') : $entry['version']->previous[$field]) }}</bdi>
-                            →
-                            <bdi dir="{{ in_array($field, ['email', 'schedule_start', 'schedule_end', 'fallback_notification_email']) ? 'ltr' : 'auto' }}">{{ is_array($after) ? implode(', ', $after) : ($after === null ? __('messages.employee_history.empty') : $after) }}</bdi>
-                        </p>
-                    @endforeach
-                </div>
-            @empty
-                <p class="mt-2 text-sm text-gray-500">{{ __('messages.employee_history.none') }}</p>
-            @endforelse
+                <tr>
+                    <x-ui.td :label="__('messages.office_ui.date')"><bdi dir="ltr">{{ $entry['version']->effective_from->toDateString() }}</bdi></x-ui.td>
+                    <x-ui.td :label="__('messages.office_ui.by')">{{ $entry['version']->actor?->name ?? __('messages.employee_history.system') }} · {{ __('messages.employee_history.sources.'.$entry['version']->source) }}</x-ui.td>
+                    <x-ui.td :label="__('messages.employee_history.title')">@foreach ($entry['fields'] as $field => $after)
+                        <p>{{ __('messages.employee_history.fields.'.$field) }}: <bdi dir="{{ in_array($field, ['email', 'schedule_start', 'schedule_end', 'fallback_notification_email']) ? 'ltr' : 'auto' }}">{{ is_array($entry['version']->previous[$field] ?? null) ? implode(', ', $entry['version']->previous[$field]) : (($entry['version']->previous[$field] ?? null) === null ? __('messages.employee_history.empty') : $entry['version']->previous[$field]) }}</bdi> → <bdi dir="{{ in_array($field, ['email', 'schedule_start', 'schedule_end', 'fallback_notification_email']) ? 'ltr' : 'auto' }}">{{ is_array($after) ? implode(', ', $after) : ($after === null ? __('messages.employee_history.empty') : $after) }}</bdi></p>
+                    @endforeach</x-ui.td>
+                </tr>
+            @empty <tr><td colspan="3" class="p-4"><x-ui.empty :title="__('messages.employee_history.none')" /></td></tr> @endforelse
+            </tbody></x-ui.table>
         </x-ui.card>
     </section>
 </div>

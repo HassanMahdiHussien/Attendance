@@ -6,6 +6,9 @@ use App\Filament\Admin\Pages\Attendance\Concerns\ReviewsDays;
 use App\Filament\Admin\Resources\Attendance\AttendancePage;
 use App\Models\Attendance\Day;
 use App\Models\Branch;
+use App\Services\Attendance\Reporting\AttendanceSummary;
+use App\Services\Attendance\Reporting\DayPresentation;
+use App\Services\Attendance\Reporting\ReportFilters;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class ReviewQueue extends AttendancePage
@@ -90,5 +93,29 @@ class ReviewQueue extends AttendancePage
     {
         return DayDetail::getUrl(panel: 'admin', tenant: $this->company())
             .'?'.http_build_query(['employee' => $day->employee_id, 'date' => $day->work_date->toDateString()]);
+    }
+
+    public function dayPresentations(): array
+    {
+        if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $this->from) || ! preg_match('/^\d{4}-\d{2}-\d{2}$/', $this->to) || $this->from > $this->to) {
+            return [];
+        }
+
+        $dayIds = array_map(fn (Day $day): int => $day->id, $this->days()->items());
+        if ($dayIds === []) {
+            return [];
+        }
+
+        $filters = ReportFilters::fromArray($this->company(), [
+            'from' => $this->from, 'to' => $this->to,
+            'branch_ids' => $this->branchId === '' ? [] : [$this->branchId],
+        ]);
+        $display = app(DayPresentation::class);
+        $presentations = [];
+        foreach (app(AttendanceSummary::class)->presentationRowsForDays($filters, $dayIds) as $id => $row) {
+            $presentations[$id] = $display->from($row);
+        }
+
+        return $presentations;
     }
 }

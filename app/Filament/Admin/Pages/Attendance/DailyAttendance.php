@@ -7,6 +7,8 @@ use App\Models\Attendance\Day;
 use App\Models\Branch;
 use App\Services\Attendance\HolidayLabels;
 use App\Services\Attendance\Overtime;
+use App\Services\Attendance\Reporting\AttendanceSummary;
+use App\Services\Attendance\Reporting\DayPresentation;
 use App\Services\Attendance\Reporting\ReportFilters;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -58,6 +60,31 @@ class DailyAttendance extends AttendancePage
         }
 
         return app(HolidayLabels::class)->forIds($this->company()->id, $ids);
+    }
+
+    public function dayPresentations(): array
+    {
+        if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $this->date)) {
+            return [];
+        }
+
+        $dayIds = array_map(fn (Day $day): int => $day->id, $this->days()->items());
+        if ($dayIds === []) {
+            return [];
+        }
+
+        $filters = ReportFilters::fromArray($this->company(), [
+            'from' => $this->date, 'to' => $this->date,
+            'branch_ids' => $this->branchId === '' ? [] : [$this->branchId],
+            'statuses' => $this->status === '' ? [] : [$this->status],
+        ]);
+        $presentations = [];
+        $display = app(DayPresentation::class);
+        foreach (app(AttendanceSummary::class)->presentationRowsForDays($filters, $dayIds) as $id => $row) {
+            $presentations[$id] = $display->from($row);
+        }
+
+        return $presentations;
     }
 
     public function overtimeRows(): array

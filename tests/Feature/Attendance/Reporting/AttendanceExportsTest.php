@@ -161,7 +161,7 @@ test('overtime totals agree across tiles, drill down, Excel and statement', func
         ->call('apply')->assertSee('Overtime hours')->assertSee('4 h')
         ->assertSee('Available compensatory days')->assertSee('0.5');
     Livewire::withQueryParams(['tile' => 'overtime_minutes', 'from' => '2026-10-16', 'to' => '2026-10-23'])
-        ->test(DashboardEmployees::class)->assertSee($fixture['employee']->name)->assertSee('4:00');
+        ->test(DashboardEmployees::class)->assertSee($fixture['employee']->name)->assertSee('4 h');
     Livewire::test(EmployeeAttendance::class, ['employeeId' => $fixture['employee']->id])
         ->set('from', '2026-10-16')->set('to', '2026-10-23')->call('apply')
         ->call('showTile', 'overtime_minutes')->assertSet('tab', 'overtime')

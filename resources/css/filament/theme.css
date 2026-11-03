@@ -4,10 +4,7 @@
 @source '../../../app/Filament/**/*';
 @source '../../views/filament/**/*';
 @source '../../views/layouts/partials/workspace-navigation.blade.php';
-@source '../../views/components/ui/brand.blade.php';
-@source '../../views/components/ui/icon.blade.php';
-@source '../../views/components/ui/card.blade.php';
-@source '../../views/components/ui/badge.blade.php';
+@source '../../views/components/ui/*.blade.php';
 @source '../../views/livewire/global-search.blade.php';
 @source '../../views/filament/admin/pages/attendance/notifications.blade.php';
 @source '../../views/filament/admin/pages/attendance/issues.blade.php';
@@ -63,6 +60,22 @@ input::placeholder, textarea::placeholder, .fi-input::placeholder, .fi-select-in
 .ui-button-secondary:hover { background: #f9fafb; }
 .ui-button-ghost { background: transparent; color: var(--color-ink); }
 .ui-button-ghost:hover { background: #f3f4f6; }
+.ui-table-wrap { min-width: 0; width: 100%; max-width: 100%; overflow: hidden; background: #fff; border: 1px solid var(--color-line); border-radius: .75rem; }
+.ui-table { width: 100%; font-size: .875rem; table-layout: fixed; font-variant-numeric: tabular-nums; }
+.ui-table thead { background: #F7F8FA; color: #6B7280; font-size: .75rem; letter-spacing: .05em; text-transform: uppercase; }
+.ui-table th { padding: .75rem 1rem; text-align: start; font-weight: 600; }
+.ui-table tbody tr { border-top: 1px solid var(--color-line); }
+.ui-table tbody tr:hover { background: #F7F8FA; }
+.ui-td { padding: .75rem 1rem; vertical-align: middle; overflow-wrap: anywhere; }
+.ui-td::before { display: none; }
+@media (max-width: 767px) {
+    .ui-table thead { display: none; }
+    .ui-table, .ui-table tbody { display: block; }
+    .ui-table-wrap { border: 0; background: transparent; }
+    .ui-table tbody tr { display: block; margin-bottom: .75rem; border: 1px solid var(--color-line); border-radius: .75rem; background: #fff; overflow: hidden; }
+    .ui-td { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; padding: .55rem 1rem; text-align: end; }
+    .ui-td::before { display: block; flex-shrink: 0; content: attr(data-label); color: #6B7280; text-align: start; }
+}
 
 :root {
     --dp-night: #0E1A2B;

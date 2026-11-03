@@ -13,6 +13,8 @@ use App\Models\Employee;
 use App\Services\Attendance\FollowUp\FollowUpCases;
 use App\Services\Attendance\HolidayLabels;
 use App\Services\Attendance\Overtime;
+use App\Services\Attendance\Reporting\AttendanceSummary;
+use App\Services\Attendance\Reporting\DayPresentation;
 use App\Services\Attendance\Reporting\ReportFilters;
 use App\Services\Leave\DayReconciliation;
 use Carbon\CarbonImmutable;
@@ -67,6 +69,15 @@ class DayDetail extends AttendancePage
         return Day::query()->with(['branch', 'policy'])->where('company_id', $this->company()->id)
             ->where('employee_id', $this->employeeId)->whereDate('work_date', $this->date)
             ->whereNull('superseded_by_run_id')->firstOrFail();
+    }
+
+    public function dayPresentation(): ?array
+    {
+        $day = $this->day();
+        $filters = ReportFilters::fromArray($this->company(), ['from' => $this->date, 'to' => $this->date]);
+        $row = app(AttendanceSummary::class)->presentationRowsForDays($filters, [$day->id])[$day->id] ?? null;
+
+        return $row === null ? null : app(DayPresentation::class)->from($row);
     }
 
     public function followUpCase(): ?FollowUpCase

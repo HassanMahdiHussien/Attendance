@@ -4,6 +4,7 @@ namespace App\Filament\Admin\Resources\Leave;
 
 use App\Enums\UserRole;
 use App\Models\Company;
+use App\Services\Attendance\Reporting\DurationText;
 use Filament\Facades\Filament;
 use Filament\Pages\Page;
 
@@ -38,7 +39,7 @@ abstract class LeavePage extends Page
 
     public function minutes(?int $value): string
     {
-        return $value === null ? '—' : sprintf('%d:%02d', intdiv($value, 60), $value % 60);
+        return $value === null || $value === 0 ? '—' : app(DurationText::class)->format($value);
     }
 
     public function errorLabel(string $code): string

@@ -10,18 +10,18 @@
         <x-ui.select id="employee-company" wire:model.live="companyId"><option value="">{{ __('Choose a company') }}</option>@foreach($companyChoices as $id => $name)<option value="{{ $id }}">{{ $name }}</option>@endforeach</x-ui.select>
     @endif
     <x-ui.input wire:model.live.debounce.300ms="search" type="search" :placeholder="__('Name, employee number, or department')" :aria-label="__('Search employees')" />
-    <div class="space-y-2">
+    <x-ui.table>
+        <thead><tr><th scope="col">{{ __('Employees') }}</th><th scope="col">{{ __('messages.office_ui.branch') }}</th><th scope="col">{{ __('Department') }}</th><th scope="col">{{ __('Edit') }}</th></tr></thead>
+        <tbody>
         @forelse($employees as $employee)
-            <x-ui.card padding="none">
-                <a href="{{ route('employees.show', $employee) }}" class="block rounded-2xl p-4 hover:bg-primary-light focus-visible:outline-2 focus-visible:outline-primary">
-                    <strong class="text-ink">{{ $employee->name }}</strong>
-                    <span class="ms-3 text-sm text-gray-500"><bdi>{{ \App\Support\Format\Ui::number($employee->employee_code) }}</bdi> · {{ $employee->department }} · {{ $employee->branch_name }}</span>
-                </a>
-                @if(isset($editUrls[$employee->id]))<a href="{{ $editUrls[$employee->id] }}" class="ui-link mx-4 mb-3 inline-block text-sm">{{ __('Edit') }}</a>@endif
-            </x-ui.card>
-        @empty
-            <x-ui.card><x-ui.empty :title="__('No matching employees.')" /></x-ui.card>
-        @endforelse
-    </div>
+            <tr>
+                <x-ui.td :label="__('Employees')"><a href="{{ route('employees.show', $employee) }}" class="ui-link font-semibold">{{ $employee->name }}</a><span class="block text-xs"><bdi dir="ltr">{{ \App\Support\Format\Ui::number($employee->employee_code) }}</bdi></span></x-ui.td>
+                <x-ui.td :label="__('messages.office_ui.branch')">{{ $employee->branch_name ?? '—' }}</x-ui.td>
+                <x-ui.td :label="__('Department')">{{ $employee->department ?? '—' }}</x-ui.td>
+                <x-ui.td :label="__('Edit')">@if(isset($editUrls[$employee->id]))<a href="{{ $editUrls[$employee->id] }}" class="ui-link">{{ __('Edit') }}</a>@else — @endif</x-ui.td>
+            </tr>
+        @empty <tr><td colspan="4" class="p-4"><x-ui.empty :title="__('No matching employees.')" /></td></tr> @endforelse
+        </tbody>
+    </x-ui.table>
     <div>{{ $employees->links() }}</div>
 </div>

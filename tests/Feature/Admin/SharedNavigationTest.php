@@ -44,3 +44,27 @@ test('admin panel uses the shared workspace navigation and keeps settings access
         Filament::setCurrentPanel(null);
     }
 });
+
+test('HR journey groups retain every accessible admin destination', function (): void {
+    $company = Company::factory()->create();
+    $user = User::factory()->create(['primary_role' => UserRole::HrStaff, 'company_id' => $company->id]);
+    $this->actingAs($user);
+    app(TenantContext::class)->setCompany($company);
+
+    $groups = AdminNav::journeyGroups($user);
+    expect(array_keys($groups))->toBe(['check', 'review', 'results', 'setup']);
+    expect(array_column($groups['check'], 'label'))->toContain(__('messages.attendance_ui.devices_title'));
+    expect(array_column($groups['review'], 'label'))->toContain(__('messages.office_ui.daily_title'));
+    expect(array_column($groups['results'], 'label'))->toContain(__('messages.export_ui.exports'));
+    expect(array_column($groups['setup'], 'label'))->toContain(__('Employee records'));
+    expect(array_column($groups['setup'], 'url'))->toContain(AdminNav::items($user)[0]['url']);
+});
+
+test('an inactive HR user gets no journey destinations', function (): void {
+    $company = Company::factory()->create();
+    $user = User::factory()->create(['primary_role' => UserRole::HrStaff, 'company_id' => $company->id, 'is_active' => false]);
+    $this->actingAs($user);
+    app(TenantContext::class)->setCompany($company);
+
+    expect(AdminNav::journeyGroups($user))->toBe([]);
+});

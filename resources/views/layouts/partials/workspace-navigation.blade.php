@@ -1,14 +1,9 @@
     @php
         $nav = \App\Support\Access\Nav::items(auth()->user());
-        $adminNav = \App\Support\Access\AdminNav::items(auth()->user());
-        $attendanceNav = \App\Support\Access\AdminNav::attendanceItems(auth()->user());
-        $attendanceActive = collect($attendanceNav)->contains(fn ($item) => $item['active']);
-        $leaveNav = \App\Support\Access\AdminNav::leaveItems(auth()->user());
-        $leaveActive = collect($leaveNav)->contains(fn ($item) => $item['active']);
+        $journeyGroups = \App\Support\Access\AdminNav::journeyGroups(auth()->user());
         $platformNav = \App\Support\Access\PlatformNav::items(auth()->user());
         $platformActive = collect($platformNav)->contains(fn ($item) => $item['active']);
         $switchableTenants = \App\Support\Access\WorkspaceTenants::items(auth()->user());
-        $settingsActive = collect($adminNav)->contains(fn ($item) => $item['active']);
         $home = \App\Support\Access\Landing::for(auth()->user());
         $uploadItem = \App\Support\Access\AdminNav::uploadItems(auth()->user())[0] ?? null;
         $uploadUrl = $uploadItem['url'] ?? null;
@@ -43,35 +38,15 @@
                         </div>
                     </div>
                 @endif
-                @if($attendanceNav)
-                    <div class="relative" x-data="{ attendanceOpen: false }" @keydown.escape.window="attendanceOpen = false" @click.outside="attendanceOpen = false">
-                        <button type="button" @click="attendanceOpen = !attendanceOpen" :aria-expanded="attendanceOpen.toString()" aria-controls="workspace-attendance" class="relative flex h-16 items-center gap-1.5 whitespace-nowrap px-2.5 text-sm font-medium {{ $attendanceActive ? 'text-signal' : 'text-night-soft hover:text-white' }}">{{ __('Attendance') }}<x-ui.icon name="chevron" class="h-4 w-4 rotate-90" /></button>
-                        <div id="workspace-attendance" x-show="attendanceOpen" x-cloak class="absolute top-full mt-1 w-64 rounded-xl border border-line bg-white p-1.5 text-ink shadow-[0_12px_32px_-8px_rgb(14_26_43/0.28)] start-0">
-                            @foreach($attendanceNav as $item)<a href="{{ $item['url'] }}" @if($item['active']) aria-current="page" @endif class="flex min-h-10 items-center gap-3 rounded-lg px-3 text-sm {{ $item['active'] ? 'bg-primary-light font-semibold text-primary' : 'hover:bg-gray-50' }}">{{ $item['label'] }}</a>@endforeach
+                @foreach($journeyGroups as $group => $items)
+                    @php $groupActive = collect($items)->contains(fn ($item) => $item['active']); @endphp
+                    <div class="relative" x-data="{ groupOpen: false }" @keydown.escape.window="groupOpen = false" @click.outside="groupOpen = false">
+                        <button type="button" @click="groupOpen = !groupOpen" :aria-expanded="groupOpen.toString()" aria-controls="workspace-{{ $group }}" class="relative flex h-16 items-center gap-1.5 whitespace-nowrap px-2.5 text-sm font-medium {{ $groupActive ? 'text-signal' : 'text-night-soft hover:text-white' }}">{{ __('messages.journey_nav.'.$group) }}<x-ui.icon name="chevron" class="h-4 w-4 rotate-90" /></button>
+                        <div id="workspace-{{ $group }}" x-show="groupOpen" x-cloak class="absolute top-full mt-1 w-64 rounded-xl border border-line bg-white p-1.5 text-ink shadow-[0_12px_32px_-8px_rgb(14_26_43/0.28)] start-0">
+                            @foreach($items as $item)<a href="{{ $item['url'] }}" @if($item['active']) aria-current="page" @endif class="flex min-h-10 items-center gap-3 rounded-lg px-3 text-sm {{ $item['active'] ? 'bg-primary-light font-semibold text-primary' : 'hover:bg-gray-50' }}">{{ $item['label'] }}</a>@endforeach
                         </div>
                     </div>
-                @endif
-                @if($leaveNav)
-                    <div class="relative" x-data="{ leaveOpen: false }" @keydown.escape.window="leaveOpen = false" @click.outside="leaveOpen = false">
-                        <button type="button" @click="leaveOpen = !leaveOpen" :aria-expanded="leaveOpen.toString()" aria-controls="workspace-leave" class="relative flex h-16 items-center gap-1.5 whitespace-nowrap px-2.5 text-sm font-medium {{ $leaveActive ? 'text-signal' : 'text-night-soft hover:text-white' }}">{{ __('messages.leave_ui.navigation') }}<x-ui.icon name="chevron" class="h-4 w-4 rotate-90" /></button>
-                        <div id="workspace-leave" x-show="leaveOpen" x-cloak class="absolute top-full mt-1 w-64 rounded-xl border border-line bg-white p-1.5 text-ink shadow-[0_12px_32px_-8px_rgb(14_26_43/0.28)] start-0">
-                            @foreach($leaveNav as $item)<a href="{{ $item['url'] }}" @if($item['active']) aria-current="page" @endif class="flex min-h-10 items-center gap-3 rounded-lg px-3 text-sm {{ $item['active'] ? 'bg-primary-light font-semibold text-primary' : 'hover:bg-gray-50' }}">{{ $item['label'] }}</a>@endforeach
-                        </div>
-                    </div>
-                @endif
-                @if($adminNav)
-                    <div class="relative" x-data="{ settingsOpen: false }" @keydown.escape.window="settingsOpen = false" @click.outside="settingsOpen = false">
-                        <button type="button" @click="settingsOpen = !settingsOpen" :aria-expanded="settingsOpen.toString()" aria-controls="workspace-settings" class="relative flex h-16 items-center gap-1.5 whitespace-nowrap px-2.5 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-[-6px] focus-visible:outline-signal {{ $settingsActive ? 'text-signal' : 'text-night-soft hover:text-white' }}">
-                            {{ __('Settings') }}<x-ui.icon name="chevron" class="h-4 w-4 rotate-90" />
-                            @if($settingsActive)<span class="absolute inset-x-3 bottom-0 h-[3px] rounded-t bg-signal" aria-hidden="true"></span>@endif
-                        </button>
-                        <div id="workspace-settings" x-show="settingsOpen" x-cloak x-transition.opacity.duration.150ms class="absolute top-full mt-1 w-64 rounded-xl border border-line bg-white p-1.5 text-ink shadow-[0_12px_32px_-8px_rgb(14_26_43/0.28)] start-0">
-                            @foreach($adminNav as $item)
-                                <a href="{{ $item['url'] }}" @if($item['active']) aria-current="page" @endif class="flex min-h-10 items-center gap-3 rounded-lg px-3 text-sm focus-visible:outline-2 focus-visible:outline-primary {{ $item['active'] ? 'bg-primary-light font-semibold text-primary' : 'hover:bg-gray-50' }}"><x-ui.icon :name="$item['icon']" class="h-4 w-4 text-gray-500" />{{ $item['label'] }}</a>
-                            @endforeach
-                        </div>
-                    </div>
-                @endif
+                @endforeach
             </nav>
             <div class="ms-auto flex min-w-0 items-center gap-3">
                 @if(app(\App\Services\Search\GlobalSearch::class)->allowed(auth()->user()))<livewire:global-search />@endif
@@ -115,24 +90,11 @@
                         @foreach($platformNav as $item)<a href="{{ $item['url'] }}" @if($item['active']) aria-current="page" @endif class="flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm font-medium {{ $item['active'] ? 'bg-primary-light text-primary' : 'text-gray-700' }}">{{ $item['label'] }}</a>@endforeach
                     </div>
                 @endif
-                @if($attendanceNav)
-                    <div class="mt-3 border-t border-line pt-3"><strong class="block px-3 py-2 text-sm">{{ __('Attendance') }}</strong>
-                        @foreach($attendanceNav as $item)<a href="{{ $item['url'] }}" @if($item['active']) aria-current="page" @endif class="flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm font-medium {{ $item['active'] ? 'bg-primary-light text-primary' : 'text-gray-700' }}">{{ $item['label'] }}</a>@endforeach
+                @foreach($journeyGroups as $group => $items)
+                    <div class="mt-3 border-t border-line pt-3"><strong class="block px-3 py-2 text-sm">{{ __('messages.journey_nav.'.$group) }}</strong>
+                        @foreach($items as $item)<a href="{{ $item['url'] }}" @if($item['active']) aria-current="page" @endif class="flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm font-medium {{ $item['active'] ? 'bg-primary-light text-primary' : 'text-gray-700' }}">{{ $item['label'] }}</a>@endforeach
                     </div>
-                @endif
-                @if($leaveNav)
-                    <div class="mt-3 border-t border-line pt-3"><strong class="block px-3 py-2 text-sm">{{ __('messages.leave_ui.navigation') }}</strong>
-                        @foreach($leaveNav as $item)<a href="{{ $item['url'] }}" @if($item['active']) aria-current="page" @endif class="flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm font-medium {{ $item['active'] ? 'bg-primary-light text-primary' : 'text-gray-700' }}">{{ $item['label'] }}</a>@endforeach
-                    </div>
-                @endif
-                @if($adminNav)
-                    <div class="mt-3 border-t border-line pt-3">
-                        <strong class="block px-3 py-2 text-sm">{{ __('Settings') }}</strong>
-                        @foreach($adminNav as $item)
-                            <a href="{{ $item['url'] }}" @if($item['active']) aria-current="page" @endif class="flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm font-medium focus-visible:outline-2 focus-visible:outline-primary {{ $item['active'] ? 'bg-primary-light text-primary' : 'text-gray-700' }}"><x-ui.icon :name="$item['icon']" />{{ $item['label'] }}</a>
-                        @endforeach
-                    </div>
-                @endif
+                @endforeach
                 <div class="mt-4 border-t border-line pt-3 text-sm font-semibold">{{ auth()->user()->name }}</div>
                 @if($switchableTenants)
                     <div class="mt-3 border-t border-line pt-3"><strong class="block px-3 py-2 text-sm">{{ __('Switch company') }}</strong>

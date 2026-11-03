@@ -5,6 +5,7 @@ namespace App\Support\Access;
 use App\Filament\Admin\Pages\Attendance\ApproverMappingsPage;
 use App\Filament\Admin\Pages\Attendance\AttendanceBatches;
 use App\Filament\Admin\Pages\Attendance\AttendanceDevices;
+use App\Filament\Admin\Pages\Attendance\AttendanceExportsPage;
 use App\Filament\Admin\Pages\Attendance\AttendanceIssues;
 use App\Filament\Admin\Pages\Attendance\AttendancePunches;
 use App\Filament\Admin\Pages\Attendance\DailyAttendance;
@@ -41,6 +42,7 @@ class AdminNav
         [AttendanceBatches::class, 'folder', 'heroicon-o-archive-box'],
         [AttendanceDevices::class, 'settings', 'heroicon-o-device-phone-mobile'],
         [AttendanceIssues::class, 'folder', 'heroicon-o-exclamation-triangle'],
+        [AttendanceExportsPage::class, 'folder', 'heroicon-o-arrow-down-tray'],
         [FollowUpCasesPage::class, 'folder', 'heroicon-o-clipboard-document-list'],
         [NotificationsPage::class, 'settings', 'heroicon-o-envelope'],
         [ApproverMappingsPage::class, 'settings', 'heroicon-o-user-plus'],
@@ -76,6 +78,27 @@ class AdminNav
     public static function leaveItems(User $user): array
     {
         return self::entries($user, self::LEAVE_ENTRIES);
+    }
+
+    public static function journeyGroups(User $user): array
+    {
+        $all = [...self::ATTENDANCE_ENTRIES, ...self::LEAVE_ENTRIES, ...self::ENTRIES];
+        $groups = [
+            'check' => [AttendanceBatches::class, AttendanceDevices::class, AttendanceIssues::class],
+            'review' => [DailyAttendance::class, ReviewQueue::class, AttendancePunches::class, FollowUpCasesPage::class, LeaveRequests::class, CreditLedger::class],
+            'results' => [AttendanceExportsPage::class],
+            'setup' => [EmployeeResource::class, CompanySettings::class, BranchResource::class, LocationResource::class, UserResource::class, OfficePolicyPage::class, HolidaysPage::class, NotificationsPage::class, ApproverMappingsPage::class, LeaveTypesPage::class, LeaveBatches::class],
+        ];
+        $result = [];
+        foreach ($groups as $name => $classes) {
+            $entries = array_values(array_filter($all, fn (array $entry): bool => in_array($entry[0], $classes, true)));
+            $items = self::entries($user, $entries);
+            if ($items !== []) {
+                $result[$name] = $items;
+            }
+        }
+
+        return $result;
     }
 
     private static function entries(User $user, array $entries): array

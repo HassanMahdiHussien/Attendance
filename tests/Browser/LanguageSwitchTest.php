@@ -33,8 +33,8 @@ test('the shared header switches languages on the same admin page', function ():
     $page = visitBound('/login')->assertNoJavaScriptErrors()
         ->fill('email', $admin->email)->fill('password', 'password')->press('Log in')
         ->assertPathIs('/home')->assertNoJavaScriptErrors();
-    $page->click('button[aria-controls="workspace-settings"]')
-        ->click('#workspace-settings a[href$="/branches"]')
+    $page->click('button[aria-controls="workspace-setup"]')
+        ->click('#workspace-setup a[href$="/branches"]')
         ->assertPathIs($path)->assertSee('New Branch')->assertNoJavaScriptErrors()
         ->click('button[aria-controls="workspace-account-menu"]')->click('#workspace-account-menu button[lang="ar"]')
         ->assertPathIs($path)

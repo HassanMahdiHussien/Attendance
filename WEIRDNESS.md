@@ -4,6 +4,10 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 
 ---
 
+- Daily and review lists project only their visible page of stored day IDs through AttendanceSummary before calling DayPresentation; day detail projects its one ID the same way. This keeps status wording consistent with the employee record without changing the list queries. (2026-11-03)
+- Exports has a Results menu entry because the journey grouping needs a direct destination; access still uses the page's existing Filament check. (2026-11-03)
+- The admin attendance and leave display helpers render a zero-minute detail as an em dash; measured totals still use DurationText directly where zero is a meaningful figure. (2026-11-03)
+
 - The dashboard's queued-work signal inspects only database queue payloads whose job class and serialized company or company-owned batch id match; another tenant's work never changes this company's result state. (2026-11-03)
 - The Review journey action reuses the first positive Needs action tile's existing drill-down URL, so it carries the dashboard filters and access rules. (2026-11-03)
 - Only a pending device holds the journey at Check; unresolved person and mapping issues remain in the data-issues tile so older issues cannot hide Results or Review. (2026-11-03)

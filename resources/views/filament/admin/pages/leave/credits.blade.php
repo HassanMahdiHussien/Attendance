@@ -1,4 +1,5 @@
 <x-filament-panels::page>
+    <p class="text-sm text-gray-600">{{ __('messages.list_context.credits') }}</p>
     <div class="space-y-5">
         <x-ui.card :title="__('messages.leave_ui.credits_title')">
             <div class="relative text-sm">
@@ -17,27 +18,35 @@
         </x-ui.card>
         @if ($this->employee())
             <x-ui.card :title="__('messages.leave_ui.credit_balance')">
-                @forelse ($this->credits() as $credit)
-                    <p class="border-b py-2" wire:key="leave-credit-{{ $credit->id }}"><bdi dir="ltr">{{ $credit->sourceDay->request->external_id }} · {{ $credit->sourceDay->work_date->toDateString() }}</bdi>
-                        · {{ __('messages.leave_ui.minutes') }} <bdi dir="ltr">{{ $this->minutes($credit->minutes) }}</bdi>
-                        · {{ __('messages.leave_ui.used') }} <bdi dir="ltr">{{ $this->minutes($this->creditUsed($credit->id)) }}</bdi>
-                        · {{ __('messages.leave_ui.available') }} <bdi dir="ltr">{{ $this->minutes($credit->minutes - $this->creditUsed($credit->id)) }}</bdi>
-                        · {{ __('messages.leave_ui.expires_on') }} <bdi dir="ltr">{{ $credit->expires_on?->toDateString() ?? '—' }}</bdi></p>
-                @empty <p>—</p> @endforelse
+                <x-ui.table>
+                    <thead><tr>@foreach (['form_number', 'minutes', 'used', 'available', 'expires_on'] as $column)<th scope="col">{{ __('messages.leave_ui.'.$column) }}</th>@endforeach</tr></thead>
+                    <tbody>
+                    @forelse ($this->credits() as $credit)
+                        <tr wire:key="leave-credit-{{ $credit->id }}">
+                            <x-ui.td :label="__('messages.leave_ui.form_number')"><bdi dir="ltr">{{ $credit->sourceDay->request->external_id }}</bdi><span class="block text-xs">{{ $credit->sourceDay->work_date->locale(app()->getLocale())->translatedFormat('l j F Y') }}</span></x-ui.td>
+                            <x-ui.td :label="__('messages.leave_ui.minutes')"><bdi dir="auto">{{ $this->minutes($credit->minutes) }}</bdi></x-ui.td>
+                            <x-ui.td :label="__('messages.leave_ui.used')"><bdi dir="auto">{{ $this->minutes($this->creditUsed($credit->id)) }}</bdi></x-ui.td>
+                            <x-ui.td :label="__('messages.leave_ui.available')"><bdi dir="auto">{{ $this->minutes($credit->minutes - $this->creditUsed($credit->id)) }}</bdi></x-ui.td>
+                            <x-ui.td :label="__('messages.leave_ui.expires_on')">{{ $credit->expires_on?->locale(app()->getLocale())->translatedFormat('l j F Y') ?? '—' }}</x-ui.td>
+                        </tr>
+                    @empty <tr><td colspan="5" class="p-4"><x-ui.empty :title="__('messages.list_empty')" /></td></tr> @endforelse
+                    </tbody>
+                </x-ui.table>
             </x-ui.card>
             <x-ui.card :title="__('messages.leave_ui.deductions')">
                 <label>{{ __('messages.leave_ui.reason') }} <input type="text" wire:model="reason" class="rounded-xl border border-gray-200 p-2"></label>
                 @error('reason') <p class="text-red-600">{{ $message }}</p> @enderror
+                <x-ui.table><thead><tr><th scope="col">{{ __('messages.leave_ui.deductions') }}</th><th scope="col">{{ __('messages.office_ui.date') }}</th><th scope="col">{{ __('messages.leave_ui.actions') }}</th></tr></thead><tbody>
                 @forelse ($this->deductions() as $deduction)
-                    <p class="border-b py-2" wire:key="leave-deduction-{{ $deduction->id }}">{{ app(\App\Services\Leave\LeaveExplanation::class)->render($deduction->explanation) }}
-                        <button class="ms-3 underline" wire:click="reverseDeduction({{ $deduction->id }})">{{ __('messages.leave_ui.reverse_deduction') }}</button></p>
-                @empty <p>—</p> @endforelse
+                    <tr wire:key="leave-deduction-{{ $deduction->id }}"><x-ui.td :label="__('messages.leave_ui.deductions')">{{ app(\App\Services\Leave\LeaveExplanation::class)->render($deduction->explanation) }}</x-ui.td><x-ui.td :label="__('messages.office_ui.date')">{{ $deduction->targetDay?->work_date?->locale(app()->getLocale())->translatedFormat('l j F Y') ?? '—' }}</x-ui.td><x-ui.td :label="__('messages.leave_ui.actions')"><button class="ui-link" wire:click="reverseDeduction({{ $deduction->id }})">{{ __('messages.leave_ui.reverse_deduction') }}</button></x-ui.td></tr>
+                @empty @if($this->reversals() === [])<tr><td colspan="3" class="p-4"><x-ui.empty :title="__('messages.list_empty')" /></td></tr>@endif @endforelse
                 @foreach ($this->reversals() as $decision)
-                    <p class="border-b py-2" wire:key="leave-reversal-{{ $decision->id }}">{{ __('messages.leave_ui.decision_kinds.'.$decision->decision) }} · <bdi dir="ltr">{{ $decision->work_date?->toDateString() }}</bdi> · {{ $decision->reason }}
-                        @if ($decision->decision === 'reverse_deduction' && ! $this->isWithdrawn($decision))<button class="ms-3 underline" wire:click="withdraw({{ $decision->id }})">{{ __('messages.leave_ui.withdraw') }}</button>@endif</p>
+                    <tr wire:key="leave-reversal-{{ $decision->id }}"><x-ui.td :label="__('messages.leave_ui.deductions')">{{ __('messages.leave_ui.decision_kinds.'.$decision->decision) }} · {{ $decision->reason }}</x-ui.td><x-ui.td :label="__('messages.office_ui.date')">{{ $decision->work_date?->locale(app()->getLocale())->translatedFormat('l j F Y') ?? '—' }}</x-ui.td><x-ui.td :label="__('messages.leave_ui.actions')">@if ($decision->decision === 'reverse_deduction' && ! $this->isWithdrawn($decision))<button class="ui-link" wire:click="withdraw({{ $decision->id }})">{{ __('messages.leave_ui.withdraw') }}</button>@else — @endif</x-ui.td></tr>
                 @endforeach
+                </tbody></x-ui.table>
             </x-ui.card>
         @endif
+        <details wire:ignore.self class="rounded-xl border border-line bg-white p-4"><summary class="cursor-pointer font-semibold">{{ __('messages.leave_ui.credit_settings') }}</summary>
         <x-ui.card :title="__('messages.leave_ui.credit_settings')">
             <form wire:submit="saveExpiry" class="flex flex-wrap items-end gap-3"><label>{{ __('messages.leave_ui.expiry_days') }} <input type="number" min="0" max="65535" wire:model="expiryDays" dir="ltr" class="rounded-xl border border-gray-200 p-2"></label>
                 <span>{{ __('messages.leave_ui.blank_never') }}</span>
@@ -56,6 +65,6 @@
             </form>
             @error('leaveCalendarRestDays') <p class="text-red-600">{{ $message }}</p> @enderror
             @error('calendarReason') <p class="text-red-600">{{ $message }}</p> @enderror
-        </x-ui.card>
+        </x-ui.card></details>
     </div>
 </x-filament-panels::page>
