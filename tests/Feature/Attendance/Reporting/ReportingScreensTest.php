@@ -6,6 +6,9 @@ use App\Livewire\Attendance\DashboardEmployees;
 use App\Livewire\Attendance\EmployeeAttendance;
 use App\Livewire\Dashboard\HrDashboard;
 use App\Models\Attendance\Day;
+use App\Models\Attendance\ImportBatch;
+use App\Models\Attendance\ImportBatchEvent;
+use App\Models\Attendance\ProcessingRun;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Employee;
@@ -167,4 +170,20 @@ test('an entitlement link opens the employee overtime ledger', function (): void
     Livewire::withQueryParams(['attendance_tab' => 'overtime'])
         ->test(EmployeeAttendance::class, ['employeeId' => $employee->id])
         ->assertSet('tab', 'overtime')->assertSee('Overtime and compensatory days');
+});
+
+test('employee attendance dates the last update by the upload, not the older recalculation', function (): void {
+    $company = Company::factory()->create();
+    app(TenantContext::class)->setCompany($company);
+    $employee = Employee::factory()->create();
+    $hr = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::HrStaff]);
+    $batch = ImportBatch::factory()->create();
+    ImportBatchEvent::create(['company_id' => $company->id, 'batch_id' => $batch->id,
+        'sequence' => 1, 'state' => 'completed', 'created_at' => '2026-10-23 11:00:00']);
+    ProcessingRun::factory()->create(['kind' => 'days', 'finished_at' => '2026-10-20 10:00:00']);
+    $this->actingAs($hr);
+
+    Livewire::test(EmployeeAttendance::class, ['employeeId' => $employee->id])
+        ->assertSee('2026-10-23 11:00:00')->assertDontSee('2026-10-20 10:00:00')
+        ->assertSee('Results are updating');
 });

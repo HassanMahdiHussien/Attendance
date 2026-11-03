@@ -315,6 +315,17 @@ test('the hourly scheduler queues days only after their close grace', function (
     Queue::assertPushed(AssessDaysJob::class);
 });
 
+test('the hourly scheduler leaves days without confirmed coverage to the coverage trigger', function (): void {
+    $fixture = officeFixture(false);
+    Carbon::setTestNow('2026-10-19 12:00:00');
+    expect(officeAssess($fixture)->status)->toBe('pending');
+    Carbon::setTestNow('2026-10-20 12:00:00');
+    Queue::fake([AssessDaysJob::class]);
+
+    expect(app(PendingDaysScheduler::class)->dispatch())->toBe(0);
+    Queue::assertNothingPushed();
+});
+
 test('the assessment service cannot read another company from the current tenant', function (): void {
     $first = officeFixture();
     $other = officeFixture();

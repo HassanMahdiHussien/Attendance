@@ -2,7 +2,7 @@
     <x-ui.card>
         <h2 class="text-lg font-bold text-ink">{{ __('messages.attendance.title') }}</h2>
         <p class="text-sm text-gray-500"><bdi dir="ltr">{{ $from }} → {{ $to }}</bdi></p>
-        <p class="text-sm text-gray-500">{{ __('messages.reporting_ui.freshness') }}: <bdi dir="ltr">{{ $freshness['runs']['reconciliation'] ?? $freshness['runs']['assessment'] ?? '—' }}</bdi></p>
+        <p class="text-sm text-gray-500">{{ __('messages.reporting_ui.freshness') }}: <bdi dir="ltr">{{ $freshness['last_data_update'] ?? '—' }}</bdi></p>
         @if ($freshness['results_updating']) <p class="text-sm text-amber-800">{{ __('messages.reporting_ui.updating') }}</p> @endif
         <div class="mt-4 flex flex-wrap gap-2">
             <button type="button" wire:click="period('current')" class="ui-link">{{ __('messages.reporting_ui.current_month') }}</button>

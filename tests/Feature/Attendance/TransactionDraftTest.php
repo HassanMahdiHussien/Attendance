@@ -173,6 +173,21 @@ test('pruning a committed draft preserves the batch original', function (): void
     Storage::disk('local')->assertExists($batch->file_path);
 });
 
+test('an imported upload hides the older failed draft on the page', function (): void {
+    Livewire::test(UploadAttendance::class)->set('sourceFile', transactionDraftFile())->call('prepare');
+    $failed = ImportDraft::query()->sole();
+    $failed->update(['status' => 'failed', 'error_code' => 'processing_failed']);
+    Livewire::test(UploadAttendance::class)->assertSet('draftId', $failed->id);
+
+    $batch = ImportBatch::factory()->create(['company_id' => $this->company->id, 'uploaded_by' => $this->actor->id]);
+    ImportDraft::create(['company_id' => $this->company->id, 'uploaded_by' => $this->actor->id, 'batch_id' => $batch->id,
+        'file_path' => $failed->file_path, 'file_name' => $failed->file_name, 'file_sha256' => $failed->file_sha256,
+        'headers' => $failed->headers, 'header_row' => $failed->header_row, 'status' => 'committed']);
+
+    Livewire::test(UploadAttendance::class)->assertSet('draftId', null)
+        ->assertSet('batchId', $batch->id)->assertSet('step', 'progress');
+});
+
 test('another company draft cannot be resumed on the page', function (): void {
     $other = Company::factory()->create();
     app(TenantContext::class)->runForCompany($other, function () use ($other): void {
