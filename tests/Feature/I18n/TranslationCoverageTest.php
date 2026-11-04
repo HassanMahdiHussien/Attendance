@@ -256,9 +256,9 @@ test('attendance screen labels for dynamic states and fields exist in both langu
         ...array_map(fn (string $state): string => 'states.'.$state, ['queued', 'processing', 'completed', 'failed']),
         ...array_map(fn (string $state): string => 'device_states.'.$state, ['pending', 'approved', 'retired']),
         ...array_map(fn (string $state): string => 'punch_states.'.$state, ['used', 'repeat', 'unused_device', 'non_employee']),
-        ...array_map(fn (string $role): string => 'roles.'.$role, ['check_in', 'check_out', 'restaurant', 'retired']),
+        ...array_map(fn (string $role): string => 'roles.'.$role, ['check_in', 'check_out', 'check_in_out', 'restaurant', 'retired']),
         ...array_map(fn (string $state): string => 'issue_states.'.$state, ['open', 'resolved', 'dismissed']),
-        ...array_map(fn (string $reason): string => 'reasons.'.$reason, ['repeated_check_in', 'repeated_check_out', 'device_not_approved', 'device_retired', 'person_not_employee']),
+        ...array_map(fn (string $reason): string => 'reasons.'.$reason, ['repeated_check_in', 'repeated_check_out', 'unclear_direction', 'device_not_approved', 'device_retired', 'person_not_employee']),
         ...array_map(fn (string $failure): string => 'failures.'.$failure, ['invalid_file', 'stored_file_unavailable', 'processing_failed']),
         ...array_map(fn (string $count): string => 'count_labels.'.$count, ['rows', 'new', 'existing', 'overlap', 'duplicate_in_file', 'errors', 'restaurant', 'through_row', 'unknown_ids', 'non_employee_ids', 'new_devices']),
         ...array_map(fn (string $field): string => 'row_errors.'.$field.'_too_long', TransactionFile::FIELDS),
@@ -268,6 +268,17 @@ test('attendance screen labels for dynamic states and fields exist in both langu
     foreach ($labels as $label) {
         expect(data_get($english, 'attendance_ui.'.$label))->not->toBeNull()
             ->and(data_get($arabic, 'attendance_ui.'.$label))->not->toBeNull();
+    }
+});
+
+test('combined-device and waiting-day wording exists in both languages', function (): void {
+    $english = File::getRequire(lang_path('en/messages.php'));
+    $arabic = File::getRequire(lang_path('ar/messages.php'));
+    foreach (['attendance_ui.roles.check_in_out', 'attendance_ui.reasons.unclear_direction',
+        'attendance_ui.new_devices_action', 'attendance_ui.recalculating_days',
+        'day_presentation.no_device_for_employee', 'day_presentation.branch_data_ended'] as $key) {
+        expect(data_get($english, $key))->not->toBeNull()
+            ->and(data_get($arabic, $key))->not->toBeNull();
     }
 });
 

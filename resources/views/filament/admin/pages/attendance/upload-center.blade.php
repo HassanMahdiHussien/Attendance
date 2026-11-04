@@ -44,7 +44,7 @@
                                 <label class="flex items-start gap-2 text-sm"><input type="checkbox" wire:model.live="rows.{{ $index }}.confirmed" class="mt-1">{{ __('messages.upload_center.confirm_file') }}</label>
                             @endif
                             @if($row['kind'] === 'attendance' && $preview && ($preview['counts']['new_devices'] ?? 0) > 0)
-                                <a class="ui-link me-4 inline-block text-sm" href="{{ \App\Filament\Admin\Pages\Attendance\AttendanceDevices::getUrl(panel: 'admin', tenant: $this->company()) }}">{{ __('messages.upload_center.review_devices') }}</a>
+                                <a class="attendance-device-alert attendance-device-action" href="{{ \App\Filament\Admin\Pages\Attendance\AttendanceDevices::getUrl(panel: 'admin', tenant: $this->company()) }}">{{ __('messages.attendance_ui.new_devices_action', ['count' => $preview['counts']['new_devices']]) }}</a>
                             @endif
                             @if($preview && $row['kind'] === 'employees')
                                 @foreach(\App\Services\Employees\ImportPreview::fromArray($preview)->unmatchedBranches() as $unmatched => $item)

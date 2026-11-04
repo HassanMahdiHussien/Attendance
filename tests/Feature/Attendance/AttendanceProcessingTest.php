@@ -2,7 +2,9 @@
 
 use App\Enums\UserRole;
 use App\Jobs\Attendance\ProcessAttendanceJob;
+use App\Models\Attendance\CoverageInterval;
 use App\Models\Attendance\DataIssue;
+use App\Models\Attendance\Day;
 use App\Models\Attendance\Device;
 use App\Models\Attendance\DeviceSetting;
 use App\Models\Attendance\ImportBatch;
@@ -16,7 +18,9 @@ use App\Models\Company;
 use App\Models\Employee;
 use App\Models\User;
 use App\Services\Attendance\AttendanceProcessor;
+use App\Services\Attendance\DayAssessor;
 use App\Services\Attendance\DeviceRegistry;
+use App\Services\Attendance\OfficePolicy;
 use App\Services\Attendance\PersonClassifier;
 use App\Services\Employees\EmployeeHistory;
 use App\Support\Tenancy\TenantContext;
@@ -54,13 +58,31 @@ function processCodes(array $codes = ['12345678'], string $from = '2026-10-20 00
     app(AttendanceProcessor::class)->run(app('attendance.testing.company'), $codes, $from, $to, 'manual');
 }
 
+function assessProcessingOfficeDay(): Day
+{
+    $company = app('attendance.testing.company');
+    $branch = app('attendance.testing.branch');
+    $employee = Employee::query()->where('employee_code', '12345678')->firstOrFail();
+    CoverageInterval::factory()->create(['company_id' => $company->id,
+        'batch_id' => app('attendance.testing.batch')->id, 'branch_id' => $branch->id,
+        'coverage_from' => '2026-10-20 00:00:00', 'coverage_to' => '2026-10-21 00:00:00',
+        'is_confirmed' => true]);
+    app(OfficePolicy::class)->createDefault($company);
+    app(DayAssessor::class)->run($company, ['employee_ids' => [$employee->id],
+        'from' => '2026-10-20', 'to' => '2026-10-20'], 'test');
+
+    return Day::query()->where('employee_id', $employee->id)->whereDate('work_date', '2026-10-20')
+        ->whereNull('superseded_by_run_id')->firstOrFail();
+}
+
 beforeEach(function (): void {
     Queue::fake();
     $this->company = Company::factory()->create();
     app(TenantContext::class)->setCompany($this->company);
     $this->branch = Branch::factory()->create(['name' => 'Hilla']);
     $this->actor = User::factory()->create(['company_id' => $this->company->id, 'primary_role' => UserRole::HrStaff]);
-    $this->employee = Employee::factory()->create(['branch_id' => $this->branch->id, 'employee_code' => '12345678']);
+    $this->employee = Employee::factory()->create(['branch_id' => $this->branch->id, 'employee_code' => '12345678',
+        'work_pattern' => 'office', 'hire_date' => '2020-01-01']);
     $this->batch = ImportBatch::factory()->create();
     app()->instance('attendance.testing.company', $this->company);
     app()->instance('attendance.testing.batch', $this->batch);
@@ -114,6 +136,65 @@ test('restaurant punches produce one meal with repetitions and never attendance 
         ->and(Meal::query()->where('person_code', 'G-1')->value('department_label'))->toBe('Guest');
 });
 
+test('a combined device gives office presence and out time from four punch groups', function (): void {
+    $device = processingDevice('BOTH-1', 'check_in_out');
+    foreach (['08:29', '08:30', '08:32', '08:34', '12:50', '13:55', '13:56', '17:53'] as $time) {
+        processingTransaction('12345678', '2026-10-20 '.$time.':00', '255', $device);
+    }
+    processCodes();
+    $day = assessProcessingOfficeDay();
+    expect($day->status)->toBe('present')->and($day->first_in->format('H:i'))->toBe('08:29')
+        ->and($day->last_out->format('H:i'))->toBe('17:53')
+        ->and($day->presence_minutes)->toBe(499)->and($day->exit_minutes)->toBe(65)
+        ->and($day->short_minutes)->toBe(0)
+        ->and(Meal::query()->count())->toBe(0)
+        ->and(Punch::query()->whereNull('superseded_by_run_id')->where('status', 'used')->count())->toBe(4);
+});
+
+test('one combined-device group leaves a missing direction', function (): void {
+    $device = processingDevice('BOTH-1', 'check_in_out');
+    processingTransaction('12345678', '2026-10-20 08:30:00', '255', $device);
+    processCodes();
+    $morning = assessProcessingOfficeDay();
+    expect($morning->status)->toBe('missing_punch')->and($morning->first_in)->not->toBeNull()
+        ->and($morning->last_out)->toBeNull();
+
+});
+
+test('one afternoon group on a combined device reads missing in', function (): void {
+    $device = processingDevice('BOTH-1', 'check_in_out');
+    processingTransaction('12345678', '2026-10-20 17:00:00', '255', $device);
+    processCodes();
+    $day = assessProcessingOfficeDay();
+    expect($day->status)->toBe('missing_punch')->and($day->first_in)->toBeNull()
+        ->and($day->last_out->format('H:i'))->toBe('17:00');
+});
+
+test('odd combined-device groups leave middle direction unclear', function (): void {
+    $device = processingDevice('BOTH-1', 'check_in_out');
+    foreach (['08:29', '12:50', '17:53'] as $time) {
+        processingTransaction('12345678', '2026-10-20 '.$time.':00', '255', $device);
+    }
+    processCodes();
+    $middle = Punch::query()->whereNull('superseded_by_run_id')->whereTime('punched_at', '12:50:00')->firstOrFail();
+    expect($middle->status)->toBe('repeat')->and($middle->reason_code)->toBe('unclear_direction')
+        ->and($middle->role)->toBeNull();
+    $day = assessProcessingOfficeDay();
+    expect($day->first_in->format('H:i'))->toBe('08:29')->and($day->last_out->format('H:i'))->toBe('17:53');
+});
+
+test('combined-device merge accepts fourteen minutes but separates sixteen', function (): void {
+    $device = processingDevice('BOTH-1', 'check_in_out');
+    foreach (['08:00', '08:14', '08:30', '17:00'] as $time) {
+        processingTransaction('12345678', '2026-10-20 '.$time.':00', '255', $device);
+    }
+    processCodes();
+    $punches = Punch::query()->whereNull('superseded_by_run_id')->orderBy('punched_at')->get();
+    expect($punches[0]->status)->toBe('used')->and($punches[1]->status)->toBe('repeat')
+        ->and($punches[2]->status)->toBe('repeat')->and($punches[2]->reason_code)->toBe('unclear_direction')
+        ->and($punches[3]->role)->toBe('check_out');
+});
+
 test('pending punches are unused until approval and only declared branch coverage is confirmed', function (): void {
     $pending = processingDevice('PENDING-1', 'check_in', 'pending');
     $transaction = processingTransaction('12345678', '2026-10-20 08:00:00', 'Check In', $pending);
@@ -144,6 +225,19 @@ test('pending punches are unused until approval and only declared branch coverag
         ->and(Punch::query()->where('transaction_id', $transaction->id)->count())->toBe(2)
         ->and(DB::table('attendance_coverage_intervals')->where('branch_id', $this->branch->id)->value('is_confirmed'))->toBeTruthy()
         ->and(DB::table('attendance_coverage_intervals')->where('branch_id', $otherBranch->id)->value('is_confirmed'))->toBeFalsy();
+});
+
+test('state 255 on a pending device stays excluded until HR chooses a role', function (): void {
+    $pending = processingDevice('PENDING-255', 'check_in_out', 'pending');
+    processingTransaction('12345678', '2026-10-20 08:30:00', '255', $pending);
+    processCodes();
+    expect(Punch::query()->count())->toBe(0)->and(Meal::query()->count())->toBe(0);
+
+    app(DeviceRegistry::class)->approve($pending, 'check_in_out', $this->branch->id, $this->actor, '2026-10-20');
+    $job = Queue::pushed(ProcessAttendanceJob::class)->last();
+    app()->call([$job, 'handle']);
+    expect(Punch::query()->whereNull('superseded_by_run_id')->value('role'))->toBe('check_in')
+        ->and(Meal::query()->count())->toBe(0);
 });
 
 test('device role changes rebuild neighbouring groups and restaurant days', function (): void {

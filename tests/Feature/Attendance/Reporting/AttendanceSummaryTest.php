@@ -67,6 +67,7 @@ test('real assessment and reconciliation give one absent category with separate 
             'coverage_from' => '2026-10-19 00:00:00', 'coverage_to' => '2026-10-20 23:59:59',
             'is_confirmed' => true,
         ]);
+        attendanceAbsenceEvidence($fixture['company'], $fixture['branch'], $fixture['employee'], $batch);
         app(DayAssessor::class)->run($fixture['company'], [
             'employee_ids' => [$fixture['employee']->id], 'from' => '2026-10-19', 'to' => '2026-10-19',
         ], 'report_test');
@@ -263,6 +264,7 @@ test('a back-dated branch change is reported under each days historical branch',
             CoverageInterval::factory()->create(['batch_id' => $batch->id, 'branch_id' => $branch->id,
                 'coverage_from' => '2026-10-19 00:00:00', 'coverage_to' => '2026-10-20 23:59:59',
                 'is_confirmed' => true]);
+            attendanceAbsenceEvidence($fixture['company'], $branch, $fixture['employee'], $batch);
         }
         app(DayAssessor::class)->run($fixture['company'], [
             'employee_ids' => [$fixture['employee']->id], 'from' => '2026-10-19', 'to' => '2026-10-20',

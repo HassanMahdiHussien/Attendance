@@ -42,11 +42,11 @@ afterEach(function (): void {
     app(TenantContext::class)->clear();
 });
 
-function shiftFixture(string $pattern = 'shift'): array
+function shiftFixture(string $pattern = 'shift', bool $evidence = true): array
 {
     $company = Company::factory()->create();
 
-    return app(TenantContext::class)->runForCompany($company, function () use ($company, $pattern): array {
+    return app(TenantContext::class)->runForCompany($company, function () use ($company, $pattern, $evidence): array {
         $branch = Branch::factory()->create(['company_id' => $company->id]);
         $employee = Employee::factory()->create([
             'company_id' => $company->id, 'branch_id' => $branch->id, 'hire_date' => '2020-01-01',
@@ -60,6 +60,9 @@ function shiftFixture(string $pattern = 'shift'): array
             'is_confirmed' => true,
         ]);
         app(OfficePolicy::class)->createDefault($company);
+        if ($evidence) {
+            attendanceAbsenceEvidence($company, $branch, $employee, $batch);
+        }
 
         return compact('company', 'branch', 'employee', 'hr', 'batch');
     });
@@ -215,6 +218,19 @@ test('approval after the start of a night window cannot create an earlier outage
     app(TenantContext::class)->runForCompany($fixture['company'], function (): void {
         expect(DataIssue::query()->where('subject_key', 'like', '%:2026-10-19')->exists())->toBeFalse();
     });
+});
+
+test('shift days wait without device evidence or after branch device data ends', function (): void {
+    $fixture = shiftFixture(evidence: false);
+    $day = shiftAssess($fixture);
+    expect($day->status)->toBe('pending')->and($day->inputs['reason'])->toBe('no_device_for_employee');
+
+    attendanceAbsenceEvidence($fixture['company'], $fixture['branch'], $fixture['employee'], $fixture['batch'], '2026-10-18');
+    $day = shiftAssess($fixture);
+    expect($day->status)->toBe('pending')->and($day->inputs['reason'])->toBe('branch_data_ended');
+
+    attendanceAbsenceEvidence($fixture['company'], $fixture['branch'], $fixture['employee'], $fixture['batch']);
+    expect(shiftAssess($fixture)->status)->toBe('absent');
 });
 
 test('another company cannot assess or choose a shift', function (): void {

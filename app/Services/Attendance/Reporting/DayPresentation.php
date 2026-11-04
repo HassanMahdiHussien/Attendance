@@ -65,7 +65,12 @@ class DayPresentation
             $needsReview = true;
             $problems[] = __('messages.day_presentation.'.$status);
         } elseif ($status === 'pending') {
-            $problems[] = __('messages.reporting_ui.pending_note');
+            $reason = $perDayRow['inputs']['reason'] ?? null;
+            $problems[] = match ($reason) {
+                'no_device_for_employee' => __('messages.day_presentation.no_device_for_employee'),
+                'branch_data_ended' => __('messages.day_presentation.branch_data_ended'),
+                default => __('messages.reporting_ui.pending_note'),
+            };
         } elseif (in_array($status, ['rest_day_worked', 'holiday_worked'], true)) {
             $tone = 'green';
         }

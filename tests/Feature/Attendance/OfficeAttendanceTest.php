@@ -21,6 +21,7 @@ use App\Models\User;
 use App\Services\Attendance\DataIssues;
 use App\Services\Attendance\DayAssessor;
 use App\Services\Attendance\DayReview;
+use App\Services\Attendance\DeviceRegistry;
 use App\Services\Attendance\OfficePolicy;
 use App\Services\Attendance\PendingDaysScheduler;
 use App\Services\Employees\EmployeeHistory;
@@ -40,12 +41,12 @@ afterEach(function (): void {
     app(TenantContext::class)->clear();
 });
 
-function officeFixture(bool $covered = true): array
+function officeFixture(bool $covered = true, bool $evidence = true): array
 {
     $company = Company::factory()->create(['created_at' => '2020-01-01 00:00:00']);
     $context = app(TenantContext::class);
 
-    return $context->runForCompany($company, function () use ($company, $covered): array {
+    return $context->runForCompany($company, function () use ($company, $covered, $evidence): array {
         $branch = Branch::factory()->create(['company_id' => $company->id]);
         $employee = Employee::factory()->create([
             'company_id' => $company->id, 'branch_id' => $branch->id,
@@ -59,6 +60,9 @@ function officeFixture(bool $covered = true): array
             'coverage_from' => '2026-10-19 00:00:00', 'coverage_to' => '2026-10-20 23:59:59',
             'is_confirmed' => $covered,
         ]);
+        if ($evidence) {
+            attendanceAbsenceEvidence($company, $branch, $employee, $batch);
+        }
 
         return compact('company', 'branch', 'employee', 'hr', 'batch');
     });
@@ -122,6 +126,36 @@ test('ongoing and uncovered days stay pending while covered no-punch days become
     expect(officeAssess($fixture)->status)->toBe('pending');
     Carbon::setTestNow('2026-10-19 20:00:00');
     expect(officeAssess($fixture)->status)->toBe('absent');
+});
+
+test('no device history and branch data ending early leave office days waiting', function (): void {
+    $fixture = officeFixture(evidence: false);
+    $day = officeAssess($fixture);
+    expect($day->status)->toBe('pending')->and($day->inputs['reason'])->toBe('no_device_for_employee');
+
+    attendanceAbsenceEvidence($fixture['company'], $fixture['branch'], $fixture['employee'], $fixture['batch'], '2026-10-18');
+    $day = officeAssess($fixture);
+    expect($day->status)->toBe('pending')->and($day->inputs['reason'])->toBe('branch_data_ended');
+
+    attendanceAbsenceEvidence($fixture['company'], $fixture['branch'], $fixture['employee'], $fixture['batch']);
+    expect(officeAssess($fixture)->status)->toBe('absent');
+});
+
+test('restaurant-only history does not make an office day absent', function (): void {
+    $fixture = officeFixture(evidence: false);
+    app(TenantContext::class)->runForCompany($fixture['company'], function () use ($fixture): void {
+        $device = Device::factory()->create(['company_id' => $fixture['company']->id, 'status' => 'approved']);
+        DeviceSetting::factory()->create(['company_id' => $fixture['company']->id, 'device_id' => $device->id,
+            'branch_id' => $fixture['branch']->id, 'role' => 'restaurant', 'effective_from' => '2026-10-18']);
+        Transaction::factory()->create(['company_id' => $fixture['company']->id,
+            'first_batch_id' => $fixture['batch']->id, 'device_id' => $device->id,
+            'serial_number' => $device->serial_number, 'person_code' => $fixture['employee']->employee_code,
+            'punch_date' => '2026-10-19', 'punch_time' => '12:00',
+            'punched_at' => '2026-10-19 12:00:00', 'punch_state' => '255']);
+    });
+
+    $day = officeAssess($fixture);
+    expect($day->status)->toBe('pending')->and($day->inputs['reason'])->toBe('no_device_for_employee');
 });
 
 test('HR completes a missing punch and can reverse the correction', function (): void {
@@ -315,6 +349,70 @@ test('the hourly scheduler queues days only after their close grace', function (
     Queue::assertPushed(AssessDaysJob::class);
 });
 
+test('the hourly scheduler waits for device evidence and queues after a later upload extends branch data', function (): void {
+    $fixture = officeFixture(evidence: false);
+    Carbon::setTestNow('2026-10-19 20:00:00');
+    $day = officeAssess($fixture);
+    expect($day->status)->toBe('pending')->and($day->inputs['reason'])->toBe('no_device_for_employee');
+    Queue::fake([AssessDaysJob::class]);
+    expect(app(PendingDaysScheduler::class)->dispatch())->toBe(0);
+    Queue::assertNothingPushed();
+
+    attendanceAbsenceEvidence($fixture['company'], $fixture['branch'], $fixture['employee'], $fixture['batch'], '2026-10-18');
+    expect(app(PendingDaysScheduler::class)->dispatch())->toBe(0);
+    Queue::assertNothingPushed();
+
+    attendanceAbsenceEvidence($fixture['company'], $fixture['branch'], $fixture['employee'], $fixture['batch']);
+    expect(app(PendingDaysScheduler::class)->dispatch())->toBe(1);
+    Queue::assertPushed(AssessDaysJob::class);
+});
+
+test('the hourly scheduler still queues a pending day with a punch', function (): void {
+    $fixture = officeFixture(evidence: false);
+    officeStoredPunch($fixture, '08:00:00', 'check_in');
+    Carbon::setTestNow('2026-10-19 18:59:00');
+    expect(officeAssess($fixture)->status)->toBe('pending');
+    Carbon::setTestNow('2026-10-19 19:00:00');
+    Queue::fake([AssessDaysJob::class]);
+    expect(app(PendingDaysScheduler::class)->dispatch())->toBe(1);
+});
+
+test('approving a device queues reassessment of days that were waiting for its data', function (): void {
+    $fixture = officeFixture(evidence: false);
+    $day = officeAssess($fixture);
+    expect($day->status)->toBe('pending');
+    $this->actingAs($fixture['hr']);
+    Queue::fake([AssessDaysJob::class, ProcessAttendanceJob::class]);
+    app(TenantContext::class)->runForCompany($fixture['company'], function () use ($fixture): void {
+        $device = Device::factory()->create(['company_id' => $fixture['company']->id, 'status' => 'pending']);
+        foreach (['2026-10-18', '2026-10-20'] as $date) {
+            Transaction::factory()->create(['company_id' => $fixture['company']->id,
+                'first_batch_id' => $fixture['batch']->id, 'device_id' => $device->id,
+                'serial_number' => $device->serial_number, 'person_code' => $fixture['employee']->employee_code,
+                'punch_date' => $date, 'punch_time' => '17:00',
+                'punched_at' => $date.' 17:00:00', 'punch_state' => 'Check Out']);
+        }
+        app(DeviceRegistry::class)->approve($device, 'check_out', $fixture['branch']->id, $fixture['hr'], '2026-10-18');
+    });
+    Queue::assertPushed(AssessDaysJob::class);
+    $job = Queue::pushed(AssessDaysJob::class)->first();
+    app()->call([$job, 'handle']);
+    app(TenantContext::class)->runForCompany($fixture['company'], function () use ($fixture): void {
+        expect(Day::query()->where('employee_id', $fixture['employee']->id)
+            ->whereDate('work_date', '2026-10-19')->whereNull('superseded_by_run_id')->value('status'))->toBe('absent');
+    });
+});
+
+test('a combined device is expected when detecting a branch outage', function (): void {
+    $fixture = officeFixture();
+    app(TenantContext::class)->runForCompany($fixture['company'], function () use ($fixture): void {
+        $device = Device::factory()->create(['company_id' => $fixture['company']->id, 'status' => 'approved']);
+        DeviceSetting::factory()->create(['company_id' => $fixture['company']->id, 'device_id' => $device->id,
+            'branch_id' => $fixture['branch']->id, 'effective_from' => '2026-10-18', 'role' => 'check_in_out']);
+    });
+    expect(officeAssess($fixture)->status)->toBe('device_outage');
+});
+
 test('the hourly scheduler leaves days without confirmed coverage to the coverage trigger', function (): void {
     $fixture = officeFixture(false);
     Carbon::setTestNow('2026-10-19 12:00:00');
@@ -367,6 +465,8 @@ test('a company created after the punch dates and without a policy is still asse
             'company_id' => $company->id, 'batch_id' => $batch->id, 'branch_id' => $branch->id,
             'coverage_from' => '2026-10-19 00:00:00', 'coverage_to' => '2026-10-20 23:59:59', 'is_confirmed' => true,
         ]);
+
+        attendanceAbsenceEvidence($company, $branch, $employee, $batch);
 
         app(DayAssessor::class)->run($company, ['employee_ids' => [$employee->id], 'from' => '2026-10-19', 'to' => '2026-10-19'], 'manual');
 

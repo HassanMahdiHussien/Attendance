@@ -11,6 +11,7 @@ use App\Jobs\Attendance\ImportTransactionsJob;
 use App\Jobs\Attendance\ProcessAttendanceJob;
 use App\Models\Attendance\DataIssue;
 use App\Models\Attendance\Device;
+use App\Models\Attendance\DeviceSetting;
 use App\Models\Attendance\ImportBatch;
 use App\Models\Attendance\ImportBatchEvent;
 use App\Models\Attendance\ImportDraft;
@@ -61,6 +62,8 @@ test('HR maps, confirms coverage, previews and commits a CSV upload', function (
     $batch = ImportBatch::query()->sole();
     app()->call([new ImportTransactionsJob($batch->id), 'handle']);
     expect(ImportBatchEvent::query()->where('batch_id', $batch->id)->latest('sequence')->value('state'))->toBe('completed');
+    $page->call('$refresh')->assertSee('1 new devices found. Add them so their punches count.')
+        ->assertSee(AttendanceDevices::getUrl(panel: 'admin', tenant: $this->company));
     Livewire::test(UploadAttendance::class)->assertSet('step', 'progress')->assertSee($batch->file_name);
     Livewire::test(AttendanceBatches::class)->assertSee($batch->file_name);
 });
@@ -188,4 +191,43 @@ test('failed batches can be retried and pending devices can be approved through 
     Livewire::test(AttendanceDevices::class)->call('selectDevice', $device->id, 'approve')->call('save')->assertSee($device->serial_number);
     expect($device->fresh()->status)->toBe('approved');
     Queue::assertPushed(ProcessAttendanceJob::class);
+});
+
+test('devices show pending decisions first with grouped figures and require a chosen role', function (): void {
+    Queue::fake();
+    $batch = ImportBatch::factory()->create(['uploaded_by' => $this->actor->id]);
+    Device::factory()->create(['serial_number' => 'AAA-APPROVED', 'status' => 'approved']);
+    $pending = Device::factory()->create(['serial_number' => 'ZZZ-PENDING', 'status' => 'pending',
+        'suggested_role' => null, 'suggested_branch_id' => $this->branch->id]);
+    foreach (['PERSON-A', 'PERSON-B'] as $code) {
+        Transaction::create(['company_id' => $this->company->id, 'device_id' => $pending->id,
+            'serial_number' => $pending->serial_number, 'first_batch_id' => $batch->id,
+            'person_code' => $code, 'person_name' => 'Fake Person', 'department_label' => 'Operations',
+            'punch_date' => '2026-10-20', 'punch_time' => '08:30', 'punched_at' => '2026-10-20 08:30:00',
+            'punch_state' => '255', 'device_name' => $pending->name, 'data_source' => 'Face']);
+    }
+    $page = Livewire::test(AttendanceDevices::class);
+    expect($page->instance()->devices()->getCollection()->first()->id)->toBe($pending->id);
+    expect($page->instance()->details($pending)['punches'])->toBe(2)
+        ->and($page->instance()->details($pending)['people'])->toBe(2)
+        ->and($page->instance()->details($pending)['first'])->toBe('2026-10-20 08:30:00')
+        ->and($page->instance()->details($pending)['last'])->toBe('2026-10-20 08:30:00');
+    $page->assertSee('2')
+        ->call('selectDevice', $pending->id, 'approve')->assertSet('role', '')->assertSee('Both in and out')
+        ->call('save')->assertHasErrors(['role'])
+        ->set('role', 'check_in_out')->call('save')->assertHasNoErrors();
+    expect(DeviceSetting::query()->where('device_id', $pending->id)->value('role'))->toBe('check_in_out');
+});
+
+test('changing a device can use its first punch date', function (): void {
+    $batch = ImportBatch::factory()->create(['uploaded_by' => $this->actor->id]);
+    $device = Device::factory()->create(['status' => 'approved']);
+    DeviceSetting::factory()->create(['device_id' => $device->id, 'branch_id' => $this->branch->id,
+        'effective_from' => '2026-10-01', 'role' => 'check_in']);
+    Transaction::factory()->create(['device_id' => $device->id, 'serial_number' => $device->serial_number,
+        'first_batch_id' => $batch->id, 'punch_date' => '2026-10-10', 'punch_time' => '08:00',
+        'punched_at' => '2026-10-10 08:00:00']);
+
+    Livewire::test(AttendanceDevices::class)->call('selectDevice', $device->id, 'change')
+        ->call('useFirstPunchDate')->assertSet('effectiveFrom', '2026-10-10');
 });

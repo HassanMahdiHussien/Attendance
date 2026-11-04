@@ -5,12 +5,13 @@ namespace App\Services\Attendance;
 use App\Jobs\Attendance\AssessDaysJob;
 use App\Models\Attendance\Day;
 use App\Models\Company;
+use App\Models\Employee;
 use App\Support\Tenancy\TenantContext;
 use Carbon\CarbonImmutable;
 
 class PendingDaysScheduler
 {
-    public function __construct(private CoverageWindows $coverage) {}
+    public function __construct(private CoverageWindows $coverage, private DeviceDataAvailability $deviceData) {}
 
     public function dispatch(): int
     {
@@ -27,7 +28,9 @@ class PendingDaysScheduler
                     }
                     $this->coverage->load($company, substr((string) $from, 0, 10),
                         CarbonImmutable::parse((clone $pending)->max('work_date'))->addDays(3)->toDateString());
-                    $pending->orderBy('id')->chunkById(500, function ($days) use ($company, &$queued): void {
+                    $this->deviceData->load($company);
+                    $codes = Employee::query()->where('company_id', $company->id)->pluck('employee_code', 'id');
+                    $pending->orderBy('id')->chunkById(500, function ($days) use ($company, $codes, &$queued): void {
                         $ready = [];
                         foreach ($days as $day) {
                             if ($day->policy === null) {
@@ -37,7 +40,9 @@ class PendingDaysScheduler
                             $date = $day->work_date->toDateString();
                             $start = $date.' '.($day->shift_start ?? '00:00:00');
                             // Without coverage a day stays pending however long it waits; CoverageChanged reassesses it when that changes.
-                            if ($until > now('Asia/Baghdad') || ! $this->coverage->coversWindow((int) $day->branch_id, $start, $until->format('Y-m-d H:i:s'))) {
+                            if ($until > now('Asia/Baghdad') || ! $this->coverage->coversWindow((int) $day->branch_id, $start, $until->format('Y-m-d H:i:s'))
+                                || ($day->first_in === null && $day->last_out === null
+                                    && $this->deviceData->pendingReason((string) $codes->get($day->employee_id), (int) $day->branch_id, $date) !== null)) {
                                 continue;
                             }
                             $ready[$date][] = $day->employee_id;

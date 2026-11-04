@@ -116,7 +116,7 @@
                         @foreach ($detail[$day['work_date']]['explanations'] ?? [] as $explanation)
                             <p>{{ app(\App\Services\Leave\LeaveExplanation::class)->render($explanation) }}</p>
                         @endforeach
-                        @if ($day['status'] === 'pending') <p class="font-semibold">{{ __('messages.reporting_ui.pending_note') }}</p> @endif
+                        @if ($day['status'] === 'pending') <p class="font-semibold">{{ $day['presentation']['problems'][0] ?? __('messages.reporting_ui.pending_note') }}</p> @endif
                     </div></td></tr>
                 @empty <tr><td colspan="6" class="p-4 text-sm text-gray-500">{{ $dayFilter === 'review' ? __('messages.clear_screens.no_review') : __('messages.reporting_ui.none') }}</td></tr> @endforelse
                 </tbody>

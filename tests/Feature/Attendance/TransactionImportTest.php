@@ -157,6 +157,20 @@ test('a pending device suggests role and site from its name when the state is un
         ->and(DataIssue::query()->where('type', 'device_pending')->count())->toBe(1);
 });
 
+test('directionless office devices need a role while restaurant names still suggest one', function (): void {
+    $baghdad = Branch::factory()->create(['company_id' => $this->company->id, 'name' => 'Baghdad']);
+    $office = app(DeviceRegistry::class)->register($this->company, 'BAG-1', 'BAGHDAD HQ OFFICE', '255');
+    expect($office->suggested_role)->toBeNull()->and($office->suggested_branch_id)->toBe($baghdad->id);
+
+    $hilla = app(DeviceRegistry::class)->register($this->company, 'HIL-MEAL', 'Hilla_RESTARRANT_Face', '255');
+    $karbala = Branch::factory()->create(['company_id' => $this->company->id, 'name' => 'Karbala']);
+    $meal = app(DeviceRegistry::class)->register($this->company, 'KAR-MEAL', 'Karbala_RESTAURANT_Face', '255');
+    $plain = app(DeviceRegistry::class)->register($this->company, 'BAG-MEAL', 'Baghdad Restaurant Face', '255');
+    expect($hilla->suggested_role)->toBe('restaurant')->and($hilla->suggested_branch_id)->toBe($this->branch->id)
+        ->and($meal->suggested_role)->toBe('restaurant')->and($meal->suggested_branch_id)->toBe($karbala->id)
+        ->and($plain->suggested_role)->toBe('restaurant')->and($plain->suggested_branch_id)->toBe($baghdad->id);
+});
+
 test('data issues keep one open issue per subject and allow a later occurrence', function (): void {
     $issues = app(DataIssues::class);
     $first = $issues->open($this->company, 'unknown_person', 'person', '99999999');
