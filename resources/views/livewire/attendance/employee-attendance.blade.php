@@ -81,7 +81,7 @@
                         <x-ui.td :label="__('messages.clear_screens.status')"><x-ui.badge :tone="$day['presentation']['tone']">{{ $day['presentation']['label'] }}</x-ui.badge></x-ui.td>
                         <x-ui.td :label="__('messages.clear_screens.in')"><bdi dir="ltr" class="font-mono {{ $day['presentation']['late'] || ($day['status'] === 'missing_punch' && ! $day['first_in']) ? 'text-red-700' : '' }}">{{ $day['first_in'] ? substr($day['first_in'], 11, 5) : ($day['status'] === 'missing_punch' ? __('messages.clear_screens.none') : '—') }}</bdi></x-ui.td>
                         <x-ui.td :label="__('messages.clear_screens.out')"><bdi dir="ltr" class="font-mono {{ $day['presentation']['early'] || ($day['status'] === 'missing_punch' && ! $day['last_out']) ? 'text-red-700' : '' }}">{{ $day['last_out'] ? substr($day['last_out'], 11, 5) : ($day['status'] === 'missing_punch' ? __('messages.clear_screens.none') : '—') }}</bdi></x-ui.td>
-                        <x-ui.td :label="__('messages.clear_screens.worked')"><bdi dir="auto">{{ $day['presentation']['worked'] }}</bdi></x-ui.td>
+                        <x-ui.td :label="__('messages.clear_screens.worked')"><bdi dir="auto">{{ $day['presentation']['worked'] }}</bdi>@if ($day['presentation']['out'])<span class="block text-xs text-gray-500">{{ __('messages.office_ui.out_time') }} <bdi dir="auto">{{ $day['presentation']['out']['total'] }}</bdi>@if ($day['presentation']['out']['over_rest']) · <bdi dir="auto">{{ $day['presentation']['out']['over_rest'] }}</bdi> {{ __('messages.office_ui.over_rest') }}@endif</span>@endif</x-ui.td>
                         <x-ui.td :label="__('messages.clear_screens.what_wrong')">{{ implode(' · ', $day['presentation']['problems']) ?: '—' }}</x-ui.td>
                     </tr>
                     <tr id="detail-{{ $day['work_date'] }}" x-show="open === '{{ $day['work_date'] }}'" x-cloak wire:key="detail-{{ $day['work_date'] }}"><td colspan="6" class="p-4 text-sm"><div class="space-y-2">
@@ -94,6 +94,9 @@
                             </p>
                         @endif
                         <p>{{ __('messages.reporting_ui.in_out') }}: <bdi dir="ltr">{{ $day['first_in'] ? substr($day['first_in'], 11, 5) : '—' }} / {{ $day['last_out'] ? substr($day['last_out'], 11, 5) : '—' }}</bdi></p>
+                        @foreach ($day['presentation']['out']['periods'] ?? [] as $period)
+                            <p>{{ __('messages.office_ui.out_time') }} <bdi class="font-mono" dir="ltr">{{ $period['from'] }}</bdi> {{ __('messages.office_ui.to') }} <bdi class="font-mono" dir="ltr">{{ $period['to'] }}</bdi> (<bdi dir="auto">{{ $period['duration'] }}</bdi>)</p>
+                        @endforeach
                         @if (in_array($day['inputs']['work_pattern'] ?? null, ['shift', 'security'], true))
                             <p>{{ __('messages.office_ui.shift') }}: <bdi dir="ltr">{{ \App\Services\Attendance\ShiftDisplay::hours($day['shift_start'], $day['shift_minutes']) ?? '—' }}</bdi> · {{ __('messages.office_ui.shift_sources.'.($day['shift_source'] ?? 'unknown')) }}</p>
                         @endif

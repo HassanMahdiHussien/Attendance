@@ -291,6 +291,8 @@ return [
         'daily_title' => 'Daily attendance', 'review_title' => 'Review queue',
         'policy_title' => 'Attendance policy', 'detail_title' => 'Attendance day',
         'office_presence_replacement_reason' => 'Office short-hours threshold: 9 hours; absence: 8 hours',
+        'office_rest_replacement_reason' => 'Office rest hour: 8 hours worked in a 9-hour day',
+        'rest_allowance' => 'Rest hour', 'out_time' => 'Out', 'over_rest' => 'over rest',
         'date' => 'Date', 'branch' => 'Branch', 'status' => 'Status', 'all' => 'All',
         'employee' => 'Employee', 'first_in' => 'First in', 'last_out' => 'Last out',
         'required_leave_at' => 'Required leaving', 'elapsed' => 'Elapsed',

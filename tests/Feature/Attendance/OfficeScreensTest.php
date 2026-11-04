@@ -154,10 +154,25 @@ test('attendance policy shows every pattern section and appends an effective ver
 });
 
 test('policy history renders labelled columns and formatted durations', function (): void {
+    Policy::factory()->create(['company_id' => $this->company->id, 'effective_from' => '2026-10-21',
+        'version' => 2, 'reason' => 'office_rest_hour_480_from_policy:'.$this->policy->id]);
     Livewire::test(OfficePolicyPage::class)
         ->assertSee('data-label="Version"', escape: false)
         ->assertSee('data-label="Effective from"', escape: false)
-        ->assertSee('1 h');
+        ->assertSee('1 h')
+        ->assertSee('Rest hour')
+        ->assertSee('Office rest hour: 8 hours worked in a 9-hour day');
+});
+
+test('admin daily row shows out time and its interval', function (): void {
+    $this->day->update([
+        'status' => 'present', 'first_in' => '2026-10-21 08:29:00', 'last_out' => '2026-10-21 17:53:00',
+        'elapsed_minutes' => 564, 'presence_minutes' => 499, 'exit_minutes' => 65, 'short_minutes' => 0,
+        'exits' => [['from' => '2026-10-21 12:50:00', 'to' => '2026-10-21 13:55:00', 'minutes' => 65]],
+    ]);
+
+    Livewire::test(DailyAttendance::class)->assertSee('Out')->assertSee('1 h 5 min')
+        ->assertSee('5 min')->assertSee('12:50')->assertSee('13:55');
 });
 
 test('overtime appears on the daily and detail pages and policy edits retain other values', function (): void {

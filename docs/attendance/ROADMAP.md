@@ -34,6 +34,8 @@ The full requirements are in `docs/attendance/PRD-EN.md`. This file records what
 | Interface language | English default, Arabic second, for both modules. |
 | Sample files | Design samples only. All locations will be provided later. |
 
+**Product-owner decision, 2026-11-04 (spec 515):** Office staff have a one-hour rest that is not working time. Required recorded presence is 8 hours within the 9-hour elapsed workday; the required leaving time remains based on 9 hours. This replaces the 540-minute short-hours threshold from spec 506. Rest allowance is the nonnegative difference between workday and minimum presence. A punch out reduces recorded presence, but no break is assumed when a person stays punched in. Out time beyond the allowance is information only and does not affect status, review or balance.
+
 ## 3. What the sample files showed
 
 **Leave report** (`IRAQ_All_Leave_REPORT…xlsx`, 21,249 rows, one sheet, header in row 1):

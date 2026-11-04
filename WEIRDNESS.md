@@ -92,3 +92,4 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 - Later uploads on the combined Upload page wait for the employee run and require a second Import click, so their previews can use the newly imported employees and HR can review changed matches. (2026-10-31, spec 513)
 
 - A committed attendance draft keeps its local `drafts/` file path as the batch original; pruning removes the draft row but preserves any path referenced by a batch, avoiding a second copy of the original. (2026-11-02)
+- Office rest allowance is derived from workday minus minimum presence; no assumed break is deducted from recorded presence. (2026-11-04, spec 515)

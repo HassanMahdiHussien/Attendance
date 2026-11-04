@@ -8,6 +8,7 @@ use App\Livewire\Dashboard\HrDashboard;
 use App\Models\Attendance\Day;
 use App\Models\Attendance\ImportBatch;
 use App\Models\Attendance\ImportBatchEvent;
+use App\Models\Attendance\Policy;
 use App\Models\Attendance\ProcessingRun;
 use App\Models\Branch;
 use App\Models\Company;
@@ -65,6 +66,26 @@ test('dashboard and employee attendance show the same current projection and pre
     Livewire::withQueryParams(['tile' => 'present', 'from' => '2026-10-01', 'to' => '2026-10-23'])
         ->test(DashboardEmployees::class)->assertSee($employee->name)->assertSee('Matching employees');
     expect(app(AttendanceSummary::class)->drillDown($filters, 'present'))->toBe([$employee->id]);
+});
+
+test('employee daily record shows out time on the row and interval in details', function (): void {
+    $company = Company::factory()->create();
+    app(TenantContext::class)->setCompany($company);
+    $branch = Branch::factory()->create();
+    $employee = Employee::factory()->create(['name' => 'Mira Example', 'employee_code' => 'TEST0081',
+        'branch_id' => $branch->id, 'work_pattern' => 'office']);
+    $policy = Policy::factory()->create();
+    $hr = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::HrStaff]);
+    Day::factory()->create(['employee_id' => $employee->id, 'branch_id' => $branch->id,
+        'policy_id' => $policy->id, 'work_date' => '2026-10-21', 'status' => 'present',
+        'inputs' => ['work_pattern' => 'office'], 'first_in' => '2026-10-21 08:29:00',
+        'last_out' => '2026-10-21 17:53:00', 'elapsed_minutes' => 564, 'presence_minutes' => 499,
+        'exit_minutes' => 65, 'short_minutes' => 0,
+        'exits' => [['from' => '2026-10-21 12:50:00', 'to' => '2026-10-21 13:55:00', 'minutes' => 65]]]);
+
+    $this->actingAs($hr);
+    Livewire::test(EmployeeAttendance::class, ['employeeId' => $employee->id])->call('setDayFilter', 'all')
+        ->assertSee('Out')->assertSee('1 h 5 min')->assertSee('5 min')->assertSee('12:50')->assertSee('13:55');
 });
 
 test('dashboard and nested employee section reject foreign tenant access on later requests', function (): void {

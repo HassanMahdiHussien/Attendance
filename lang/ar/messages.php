@@ -291,6 +291,8 @@ return [
         'daily_title' => 'الحضور اليومي', 'review_title' => 'قائمة المراجعة',
         'policy_title' => 'سياسة الحضور', 'detail_title' => 'تفاصيل يوم الحضور',
         'office_presence_replacement_reason' => 'حد نقص ساعات الدوام المكتبي: ٩ ساعات؛ الغياب: ٨ ساعات',
+        'office_rest_replacement_reason' => 'استراحة الدوام المكتبي: ٨ ساعات عمل ضمن يوم من ٩ ساعات',
+        'rest_allowance' => 'ساعة الاستراحة', 'out_time' => 'خارج المكتب', 'over_rest' => 'فوق مدة الاستراحة',
         'date' => 'التاريخ', 'branch' => 'الفرع', 'status' => 'الحالة', 'all' => 'الكل',
         'employee' => 'الموظف', 'first_in' => 'أول دخول', 'last_out' => 'آخر خروج',
         'required_leave_at' => 'وقت المغادرة المطلوب', 'elapsed' => 'المدة المنقضية',
