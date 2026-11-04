@@ -25,10 +25,11 @@
                     <td>{{ __('messages.follow_up_mail.actions.'.$entry['route']['kind']) }}</td>
                 </tr>
             @endforeach
-            @if ($entry['route']['kind'] === 'approver')
+            @if (($entry['route']['kind'] ?? null) === 'approver' || ($entry['route']['items'][0]['type'] ?? null) === 'leave_entry')
                 <tr><td colspan="6">
                     {{ __('messages.follow_up_mail.form') }} <bdi dir="ltr">{{ $entry['form_number'] }}</bdi>
                     · <bdi dir="ltr">{{ $entry['request_from'] }} – {{ $entry['request_to'] }}</bdi>
+                    @if (($entry['route']['items'][0]['type'] ?? null) === 'leave_entry' && ! empty($entry['form_type'])) · {{ $entry['form_type'] }} @endif
                 </td></tr>
             @endif
         @endforeach

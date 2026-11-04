@@ -18,6 +18,7 @@ use App\Filament\Admin\Pages\Attendance\UploadCenter;
 use App\Filament\Admin\Pages\CompanySettings;
 use App\Filament\Admin\Pages\Leave\CreditLedger;
 use App\Filament\Admin\Pages\Leave\LeaveBatches;
+use App\Filament\Admin\Pages\Leave\LeaveDescriptions;
 use App\Filament\Admin\Pages\Leave\LeaveRequests;
 use App\Filament\Admin\Pages\Leave\LeaveTypesPage;
 use App\Filament\Admin\Resources\BranchResource;
@@ -56,6 +57,7 @@ class AdminNav
     private const LEAVE_ENTRIES = [
         [LeaveBatches::class, 'folder', 'heroicon-o-archive-box'],
         [LeaveRequests::class, 'users', 'heroicon-o-document-text'],
+        [LeaveDescriptions::class, 'folder', 'heroicon-o-document-magnifying-glass'],
         [LeaveTypesPage::class, 'settings', 'heroicon-o-tag'],
         [CreditLedger::class, 'users', 'heroicon-o-banknotes'],
     ];
@@ -85,7 +87,7 @@ class AdminNav
         $all = [...self::ATTENDANCE_ENTRIES, ...self::LEAVE_ENTRIES, ...self::ENTRIES];
         $groups = [
             'check' => [AttendanceBatches::class, AttendanceDevices::class, AttendanceIssues::class],
-            'review' => [DailyAttendance::class, ReviewQueue::class, AttendancePunches::class, FollowUpCasesPage::class, LeaveRequests::class, CreditLedger::class],
+            'review' => [DailyAttendance::class, ReviewQueue::class, AttendancePunches::class, FollowUpCasesPage::class, LeaveRequests::class, LeaveDescriptions::class, CreditLedger::class],
             'results' => [AttendanceExportsPage::class],
             'setup' => [EmployeeResource::class, CompanySettings::class, BranchResource::class, LocationResource::class, UserResource::class, OfficePolicyPage::class, HolidaysPage::class, NotificationsPage::class, ApproverMappingsPage::class, LeaveTypesPage::class, LeaveBatches::class],
         ];

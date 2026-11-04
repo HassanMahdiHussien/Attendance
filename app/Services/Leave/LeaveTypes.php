@@ -80,7 +80,7 @@ class LeaveTypes
         }
         $covers = in_array($key, [
             'annual leave|', 'sick leave|', 'work from home|', 'business travel request|',
-            'administrative leave|', 'paternity leave|', 'funeral leave|',
+            'paternity leave|', 'funeral leave|',
             'bereavement leave|', 'marriage leave|', 'other|unpaid leave',
         ], true) || str_contains($key, 'court');
 

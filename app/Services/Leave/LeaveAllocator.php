@@ -21,10 +21,36 @@ class LeaveAllocator
         $allocations = [];
         $credits = [];
         $flags = [];
+        $periodShortfalls = [];
         foreach ($sources as $source) {
             $available = (int) $source['minutes'];
+            $periodUsed = false;
+            if (isset($source['settled_from'], $source['settled_to'])) {
+                $periodTargets = array_filter($targets, fn (array $target): bool => $target['work_date'] >= $source['settled_from']
+                    && $target['work_date'] <= $source['settled_to'] && in_array($target['kind'], ['late', 'early', 'exit'], true));
+                foreach ($periodTargets as $target) {
+                    $key = $target['day_id'].'|'.$target['kind'];
+                    if (isset($blocked[$target['work_date'].'|'.$target['kind']])) {
+                        continue;
+                    }
+                    $used = min($available, $remaining[$key]);
+                    if ($used > 0) {
+                        $allocation = $this->allocation($source, $target, $used, 'same_day');
+                        $allocation['explanation']['code'] = 'leave_description_period';
+                        $allocation['explanation']['settled_from'] = $source['settled_from'];
+                        $allocation['explanation']['settled_to'] = $source['settled_to'];
+                        $allocations[] = $allocation;
+                        $remaining[$key] -= $used;
+                        $available -= $used;
+                        $periodUsed = true;
+                    }
+                }
+                if ($available > 0) {
+                    $periodShortfalls[$source['id']] = $available;
+                }
+            }
             $sameDay = array_filter($targets, fn (array $target): bool => $target['work_date'] === $source['work_date']);
-            if (in_array($source['work_date'], $targetlessPresentDates, true)) {
+            if (! $periodUsed && in_array($source['work_date'], $targetlessPresentDates, true)) {
                 $flags[] = ['request_day_id' => $source['id'], 'code' => 'leave_with_attendance_nothing_to_reconcile'];
             }
             foreach ($sameDay as $target) {
@@ -73,7 +99,8 @@ class LeaveAllocator
             unset($credit);
         }
 
-        return ['allocations' => $allocations, 'credits' => $credits, 'remaining' => $remaining, 'flags' => $flags];
+        return ['allocations' => $allocations, 'credits' => $credits, 'remaining' => $remaining,
+            'flags' => $flags, 'period_shortfalls' => $periodShortfalls];
     }
 
     private function allocation(array $source, array $target, int $minutes, string $kind): array

@@ -119,7 +119,7 @@ test('a completed proposal is approved once from its announcement card', functio
     {
         public function __construct(private array $proposal) {}
 
-        public function send(array $blocks, array $known, array $schema, string $system, ?callable $onAttempt = null, int $maxAttempts = 3): array
+        public function send(array $blocks, array $known, array $schema, string $system, ?callable $onAttempt = null, int $maxAttempts = 3, string $effort = 'high', int $timeout = 120): array
         {
             $result = ['stop_reason' => 'end_turn', 'text' => json_encode($this->proposal, JSON_THROW_ON_ERROR),
                 'model' => 'test-model', 'input_tokens' => 1, 'output_tokens' => 1];

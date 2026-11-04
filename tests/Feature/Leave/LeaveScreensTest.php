@@ -4,17 +4,20 @@ use App\Enums\UserRole;
 use App\Filament\Admin\Pages\Attendance\DayDetail;
 use App\Filament\Admin\Pages\Leave\CreditLedger;
 use App\Filament\Admin\Pages\Leave\LeaveBatches;
+use App\Filament\Admin\Pages\Leave\LeaveDescriptions;
 use App\Filament\Admin\Pages\Leave\LeaveRequestDetail;
 use App\Filament\Admin\Pages\Leave\LeaveRequests;
 use App\Filament\Admin\Pages\Leave\LeaveTypesPage;
 use App\Filament\Admin\Pages\Leave\UploadLeave;
 use App\Jobs\Leave\ImportLeaveJob;
+use App\Jobs\Leave\ReadLeaveDescriptionsJob;
 use App\Models\Attendance\Day;
 use App\Models\AuditLog;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\Leave\Allocation;
+use App\Models\Leave\DescriptionReading;
 use App\Models\Leave\ImportBatch;
 use App\Models\Leave\ImportBatchEvent;
 use App\Models\Leave\LeaveRequest;
@@ -36,7 +39,7 @@ use OpenSpout\Writer\XLSX\Writer;
 function leaveUiCsv(): UploadedFile
 {
     $stream = fopen('php://temp', 'w+');
-    fputcsv($stream, LeaveFile::HEADERS);
+    fputcsv($stream, array_slice(LeaveFile::HEADERS, 2));
     fputcsv($stream, ['FORM-1', '12345678', 'Fake Employee', 'Fake Approver', 'Hilla', 'Operations',
         'Approved', 'Annual Leave', '', '10/21/2026', '10/21/2026', '1', '', 'Fake Creator', '10/1/2026', 'Fake Manager', '']);
     rewind($stream);
@@ -51,7 +54,7 @@ function leaveUiXlsx(): UploadedFile
     $path = tempnam(sys_get_temp_dir(), 'leave-ui-').'.xlsx';
     $writer = new Writer;
     $writer->openToFile($path);
-    $writer->addRow(Row::fromValues(LeaveFile::HEADERS));
+    $writer->addRow(Row::fromValues(array_slice(LeaveFile::HEADERS, 2)));
     $writer->addRow(Row::fromValues(['FORM-XLSX', '12345678', 'Fake Employee', 'Fake Approver', 'Hilla', 'Operations',
         'Approved', 'Annual Leave', '', '10/21/2026', '10/21/2026', '1', '', 'Fake Creator', '10/1/2026', 'Fake Manager', '']));
     $writer->close();
@@ -233,7 +236,8 @@ test('day detail renders leave reconciliation explanations in English and Arabic
 test('leave pages and actions stay within the selected tenant', function (): void {
     $platform = User::factory()->create(['company_id' => null, 'primary_role' => UserRole::PlatformAdmin]);
     expect(array_column(AdminNav::leaveItems($this->actor), 'label'))->not->toContain(__('messages.leave_ui.upload_title'));
-    foreach ([UploadLeave::class, LeaveBatches::class, LeaveRequests::class, LeaveTypesPage::class, CreditLedger::class] as $page) {
+    foreach ([UploadLeave::class, LeaveBatches::class, LeaveRequests::class, LeaveTypesPage::class,
+        CreditLedger::class, LeaveDescriptions::class] as $page) {
         Livewire::test($page)->assertSee($page::getNavigationLabel());
         Filament::setTenant($this->other);
         Livewire::test($page)->assertForbidden();
@@ -277,4 +281,66 @@ test('failed leave batch can be retried from the batch page', function (): void 
         'sequence' => 2, 'state' => 'failed']);
     Livewire::test(LeaveBatches::class)->call('retry', $batch->id)->assertSee($batch->file_name);
     Queue::assertPushed(ImportLeaveJob::class, fn (ImportLeaveJob $job): bool => $job->batchId === $batch->id);
+});
+
+test('description review page filters and cannot decide another company reading', function (): void {
+    $request = LeaveRequest::factory()->create(['company_id' => $this->company->id,
+        'employee_id' => $this->employee->id, 'external_id' => 'FORM-READ']);
+    $reading = DescriptionReading::create(['company_id' => $this->company->id,
+        'request_id' => $request->id, 'text_hash' => hash('sha256', 'invented note'),
+        'category' => 'reason_only', 'worked_dates' => [], 'confidence' => 'high', 'status' => 'not_needed']);
+    Livewire::test(LeaveDescriptions::class)->assertSee('FORM-READ')
+        ->set('category', 'medical')->assertDontSee('FORM-READ')
+        ->set('category', 'reason_only')->assertSee('FORM-READ');
+    $otherReading = app(TenantContext::class)->runForCompany($this->other, fn () => DescriptionReading::create([
+        'company_id' => $this->other->id, 'request_id' => $this->foreign['request']->id,
+        'text_hash' => hash('sha256', 'foreign note'), 'status' => 'proposed',
+    ]));
+    Livewire::test(LeaveDescriptions::class)->call('decide', $otherReading->id, 'confirmed')->assertNotFound();
+    expect($reading->fresh()->status)->toBe('not_needed');
+});
+
+test('description review filters failures and retries all of them in one action', function (): void {
+    $request = LeaveRequest::factory()->create(['company_id' => $this->company->id,
+        'employee_id' => $this->employee->id, 'external_id' => 'FORM-FAILED']);
+    $reading = DescriptionReading::create(['company_id' => $this->company->id,
+        'request_id' => $request->id, 'text_hash' => hash('sha256', 'invented reason'),
+        'status' => 'proposed', 'error_code' => 'daily_cap']);
+    Livewire::test(LeaveDescriptions::class)->set('status', 'failed')->assertSee('FORM-FAILED')
+        ->call('retryAll')->assertHasNoErrors();
+    expect($reading->fresh()->error_code)->toBeNull();
+    Queue::assertPushed(ReadLeaveDescriptionsJob::class);
+});
+
+test('description review says plainly when the AI service refused the request', function (): void {
+    $request = LeaveRequest::factory()->create(['company_id' => $this->company->id,
+        'employee_id' => $this->employee->id, 'external_id' => 'FORM-REFUSED']);
+    DescriptionReading::create(['company_id' => $this->company->id,
+        'request_id' => $request->id, 'text_hash' => hash('sha256', 'invented reason'),
+        'status' => 'proposed', 'error_code' => 'ai_unavailable']);
+    Livewire::test(LeaveDescriptions::class)->assertSee(__('messages.leave_descriptions.ai_unavailable'))
+        ->assertDontSee('ai_unavailable');
+});
+
+test('description review confirms only high confidence filtered rows and can undo', function (): void {
+    $type = LeaveType::factory()->create(['company_id' => $this->company->id, 'name' => 'Compensation Leave']);
+    $highRequest = LeaveRequest::factory()->create(['company_id' => $this->company->id,
+        'employee_id' => $this->employee->id, 'leave_type_id' => $type->id, 'external_id' => 'HIGH-FORM', 'status' => 'approved']);
+    $lowRequest = LeaveRequest::factory()->create(['company_id' => $this->company->id,
+        'employee_id' => $this->employee->id, 'leave_type_id' => $type->id, 'external_id' => 'LOW-FORM', 'status' => 'approved']);
+    $high = DescriptionReading::create(['company_id' => $this->company->id,
+        'request_id' => $highRequest->id, 'text_hash' => hash('sha256', 'high invented note'),
+        'category' => 'compensation_for_day', 'worked_dates' => ['2026-10-09'],
+        'confidence' => 'high', 'status' => 'proposed']);
+    $low = DescriptionReading::create(['company_id' => $this->company->id,
+        'request_id' => $lowRequest->id, 'text_hash' => hash('sha256', 'low invented note'),
+        'category' => 'compensation_for_day', 'worked_dates' => ['2026-10-09'],
+        'confidence' => 'low', 'status' => 'proposed']);
+    Livewire::test(LeaveDescriptions::class)->assertSee('HIGH-FORM')->assertSee('LOW-FORM')
+        ->call('confirmAll')->assertHasNoErrors();
+    expect($high->fresh()->status)->toBe('confirmed')
+        ->and($low->fresh()->status)->toBe('proposed')
+        ->and(AuditLog::query()->where('action', 'leave.description.bulk_confirmed')->count())->toBe(1);
+    Livewire::test(LeaveDescriptions::class)->call('decide', $high->id, 'proposed')->assertHasNoErrors();
+    expect($high->fresh()->status)->toBe('proposed');
 });

@@ -19,6 +19,7 @@ use App\Services\Leave\LeaveFile;
 use App\Services\Leave\LeaveImport;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Validation\ValidationException;
 use OpenSpout\Common\Entity\Row;
@@ -30,7 +31,7 @@ function leaveSheet(array $rows, string $name = 'IRAQ All Leave REPORT-2026-10-2
     $path = tempnam(sys_get_temp_dir(), 'leave-').'.xlsx';
     $writer = new Writer;
     $writer->openToFile($path);
-    $writer->addRow(Row::fromValues(LeaveFile::HEADERS));
+    $writer->addRow(Row::fromValues(array_slice(LeaveFile::HEADERS, 2)));
     foreach ($rows as $row) {
         $writer->addRow(Row::fromValues($row));
     }
@@ -83,7 +84,7 @@ test('real report shape streams dates, statuses, types and bounded issues', func
     ]);
     $reader = app(LeaveFile::class);
     $sheet = $reader->inspect($file);
-    expect($sheet['headers'])->toBe(LeaveFile::HEADERS)
+    expect($sheet['headers'])->toBe(array_slice(LeaveFile::HEADERS, 2))
         ->and($sheet['snapshot_at'])->toBe('2026-10-22 10:00:00');
     $mapping = $reader->suggest($sheet['headers']);
     $preview = app(LeaveImport::class)->preview($this->company, $file, $mapping, ['scope' => 'full']);
@@ -199,7 +200,7 @@ test('unknown employee requests share one bounded issue and resolve after linkin
 test('CSV import keeps a leading-zero employee code and a stable upload snapshot', function (): void {
     $row = leaveRow('FORM-CSV');
     $row[1] = '00001234';
-    $csv = implode(',', LeaveFile::HEADERS)."\n".implode(',', $row)."\n";
+    $csv = implode(',', array_slice(LeaveFile::HEADERS, 2))."\n".implode(',', $row)."\n";
     $file = UploadedFile::fake()->createWithContent('leave-report.csv', $csv);
     $reader = app(LeaveFile::class);
     $first = $reader->inspect($file);
@@ -218,4 +219,85 @@ test('an HR user cannot preview a leave report for another company', function ()
 
     expect(fn () => app(LeaveImport::class)->preview($other, $file, $mapping, ['scope' => 'partial']))
         ->toThrow(HttpException::class);
+});
+
+function leaveDescriptionSheet(array $rows): UploadedFile
+{
+    $path = tempnam(sys_get_temp_dir(), 'leave-descriptions-').'.xlsx';
+    $writer = new Writer;
+    $writer->openToFile($path);
+    $writer->addRow(Row::fromValues(LeaveFile::HEADERS));
+    foreach ($rows as $row) {
+        $writer->addRow(Row::fromValues($row));
+    }
+    $writer->close();
+
+    return new UploadedFile($path, 'IRAQ All Leave REPORT-2026-11-04-10-00-00.xlsx',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', null, true);
+}
+
+test('new report fills record type, skips summaries and leaves old reports unchanged', function (): void {
+    $first = leaveRow('FORM-WFH', type: '');
+    $second = leaveRow('FORM-WFH-2', type: '');
+    $travel = leaveRow('FORM-TRAVEL', type: '');
+    $admin = leaveRow('FORM-ADMIN', type: '');
+    $file = leaveDescriptionSheet([
+        ['Work From Home', 'Working from home', ...$first],
+        ['', 'Working from home again', ...$second],
+        ['Subtotal'],
+        ['Business Travel Request', 'Site visit', ...$travel],
+        ['Total'],
+        ['Administrative Leave', 'Family reason', ...$admin],
+    ]);
+    $reader = app(LeaveFile::class);
+    $mapping = $reader->suggest($reader->inspect($file)['headers']);
+    $rows = iterator_to_array($reader->rows($file, $mapping));
+    expect($rows)->toHaveCount(4)
+        ->and($rows[1]['values']['record_type'])->toBe('Work From Home')
+        ->and($rows[1]['values']['type_name'])->toBe('Work From Home')
+        ->and($rows[1]['values']['description'])->toBe('Working from home again');
+    $batch = importLeaveSheet($file);
+    expect(ImportRow::query()->where('batch_id', $batch->id)->count())->toBe(4)
+        ->and(LeaveType::query()->where('normalized_key', 'work from home|')->firstOrFail()->covers)->toBeTrue()
+        ->and(LeaveType::query()->where('normalized_key', 'business travel request|')->firstOrFail()->covers)->toBeTrue()
+        ->and(LeaveType::query()->where('normalized_key', 'administrative leave|')->firstOrFail()->is_mapped)->toBeFalse();
+    $old = leaveSheet([leaveRow('FORM-OLD-SHAPE')], 'IRAQ All Leave REPORT-2026-11-05-10-00-00.xlsx');
+    $oldRow = iterator_to_array($reader->rows($old, $reader->suggest($reader->inspect($old)['headers'])))[0];
+    expect($oldRow['values'])->not->toHaveKey('description')->not->toHaveKey('record_type');
+    $preview = app(LeaveImport::class)->preview($this->company, $file, $mapping, ['scope' => 'partial']);
+    expect($preview['already_imported'])->toBe($batch->id);
+});
+
+test('a sort arrow on a report column does not hide the column', function (): void {
+    expect(app(LeaveFile::class)->suggest(['MyForm: Record Type  ↑', 'Leave Status ↓', 'Leave Description']))
+        ->toBe(['record_type', 'raw_status', 'description']);
+});
+
+test('backfill appends one correction version and changes only missing description and type', function (): void {
+    $row = leaveRow('FORM-BACKFILL', type: '');
+    $file = leaveDescriptionSheet([['Work From Home', 'An invented home-work note', ...$row]]);
+    $reader = app(LeaveFile::class);
+    $mapping = $reader->suggest($reader->inspect($file)['headers']);
+    $mapping = array_filter($mapping, fn (string $field): bool => ! in_array($field, ['record_type', 'description'], true));
+    $import = app(LeaveImport::class);
+    $preview = $import->preview($this->company, $file, $mapping, ['scope' => 'partial']);
+    $batch = $import->commit($this->company, $file, $this->actor, $mapping, ['scope' => 'partial'], $preview['token']);
+    app()->call([new ImportLeaveJob($batch->id), 'handle']);
+    $request = LeaveRequest::query()->where('external_id', 'FORM-BACKFILL')->firstOrFail();
+    $before = $request->currentVersion;
+    expect($before->values)->not->toHaveKey('description');
+    Artisan::call('attendance:leave-descriptions-backfill', ['--company' => $this->company->id]);
+    $request->refresh();
+    expect($request->currentVersion->values['description'])->toBe('An invented home-work note')
+        ->and($request->currentVersion->values['type_name'])->toBe('Work From Home')
+        ->and($request->leaveType->name)->toBe('Work From Home')
+        ->and(RequestVersion::query()->where('request_id', $request->id)->count())->toBe(2)
+        ->and($before->fresh()->values)->not->toHaveKey('description');
+    Artisan::call('attendance:leave-descriptions-backfill', ['--company' => $this->company->id]);
+    expect(RequestVersion::query()->where('request_id', $request->id)->count())->toBe(2);
+    $later = leaveDescriptionSheet([['Work From Home', 'An invented home-work note', ...$row], ['Subtotal']]);
+    $laterMapping = $reader->suggest($reader->inspect($later)['headers']);
+    $laterPreview = $import->preview($this->company, $later, $laterMapping, ['scope' => 'partial']);
+    expect($laterPreview['counts']['unchanged'])->toBe(1)
+        ->and($laterPreview['counts']['changed'])->toBe(0);
 });

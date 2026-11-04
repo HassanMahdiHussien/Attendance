@@ -23,6 +23,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
@@ -95,6 +96,7 @@ class ImportLeaveJob implements ShouldBeUnique, ShouldQueue
                     'requests' => ImportRow::query()->where('batch_id', $batch->id)->whereNotNull('request_id')->distinct()->count('request_id'),
                     'errors' => ImportRow::query()->where('batch_id', $batch->id)->whereRaw('JSON_LENGTH(`errors`) > 0')->count(),
                 ]);
+                ReadLeaveDescriptionsJob::dispatch($company->id)->afterCommit();
             } catch (\Throwable $exception) {
                 $code = $exception instanceof ValidationException ? 'invalid_file'
                     : ($exception instanceof RuntimeException && str_starts_with($exception->getMessage(), 'Stored leave file')
@@ -179,6 +181,14 @@ class ImportLeaveJob implements ShouldBeUnique, ShouldQueue
                             'duration_days' => $values['duration_days'], 'approver_name' => $values['approver_name'],
                             'created_on' => $values['created_on'], 'flags' => array_values(array_unique($errors)),
                         ];
+                        foreach (['record_type', 'description'] as $field) {
+                            if (array_key_exists($field, $values)) {
+                                $parsed[$field] = $values[$field];
+                            }
+                        }
+                        if (array_key_exists('record_type', $values)) {
+                            $parsed['type_name'] = $values['type_name'];
+                        }
                         $this->observe($request, $batch, $row, $parsed);
                         if ($previousOwnerCode !== $request->owner_code) {
                             $previousOwnerCodes[$previousOwnerCode] = true;
@@ -232,7 +242,7 @@ class ImportLeaveJob implements ShouldBeUnique, ShouldQueue
             || $batch->snapshot_at->greaterThan($request->latest_snapshot_at)
             || ($batch->snapshot_at->equalTo($request->latest_snapshot_at) && $batch->id > $request->latest_batch_id);
         if ($newer) {
-            $request->fill($parsed);
+            $request->fill(Arr::except($parsed, ['description', 'record_type', 'type_name']));
             $request->latest_snapshot_at = $batch->snapshot_at;
             $request->latest_batch_id = $batch->id;
             if ($version !== null) {

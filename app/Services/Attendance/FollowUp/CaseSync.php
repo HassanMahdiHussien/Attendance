@@ -40,6 +40,7 @@ class CaseSync
         abort_unless(app(TenantContext::class)->companyId() === $company->id
             && (int) $employee->company_id === (int) $company->id, 403);
         $cases = FollowUpCase::query()->where('employee_id', $employee->id)
+            ->where('case_kind', 'day')
             ->orderBy('work_date')->lockForUpdate()->get()->keyBy(fn (FollowUpCase $case): string => $case->work_date->toDateString());
         $firstDay = DB::table('attendance_days')->where('company_id', $company->id)
             ->where('employee_id', $employee->id)->whereNull('superseded_by_run_id')->min('work_date');
@@ -138,6 +139,7 @@ class CaseSync
             if ($old === null) {
                 $case = FollowUpCase::create($values + [
                     'company_id' => $company->id, 'employee_id' => $employee->id, 'work_date' => $date,
+                    'case_kind' => 'day',
                 ]);
                 $this->event($case, 'opened', null, $this->snapshot($case), $source);
             } else {

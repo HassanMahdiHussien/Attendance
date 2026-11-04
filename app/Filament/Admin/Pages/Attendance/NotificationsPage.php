@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Pages\Attendance;
 
 use App\Filament\Admin\Resources\Attendance\AttendancePage;
+use App\Models\Attendance\FollowUpCase;
 use App\Models\Attendance\NotificationBatch;
 use App\Models\Attendance\NotificationMessage;
 use App\Services\Attendance\FollowUp\NotificationBatches;
@@ -73,6 +74,12 @@ class NotificationsPage extends AttendancePage
     public function batches(): LengthAwarePaginator
     {
         return app(NotificationOverview::class)->batches($this->company());
+    }
+
+    public function leaveEntryCount(): int
+    {
+        return FollowUpCase::query()->where('company_id', $this->company()->id)
+            ->where('case_kind', 'leave_entry')->where('state', '!=', 'closed')->count();
     }
 
     public function build(NotificationBatches $batches): void

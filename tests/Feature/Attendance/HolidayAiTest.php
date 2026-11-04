@@ -56,7 +56,7 @@ function fakeHolidayClient(array $result): HolidayClient
 
         public function __construct(private array $result) {}
 
-        public function send(array $blocks, array $known, array $schema, string $system, ?callable $onAttempt = null, int $maxAttempts = 3): array
+        public function send(array $blocks, array $known, array $schema, string $system, ?callable $onAttempt = null, int $maxAttempts = 3, string $effort = 'high', int $timeout = 120): array
         {
             $this->seen = compact('blocks', 'known', 'schema', 'system');
             $stop = $this->result['stop_reason'];

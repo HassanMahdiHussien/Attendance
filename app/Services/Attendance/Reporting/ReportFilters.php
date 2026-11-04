@@ -59,7 +59,7 @@ class ReportFilters
             || array_diff($patterns, ['office', 'shift', 'security']) !== []
             || array_diff($statuses, self::STATUSES) !== []
             || ($caseState !== null && ! in_array($caseState, ['open_cases', 'open', 'waiting_manager', 'waiting_approver', 'waiting_hr', 'closed'], true))
-            || ($caseIssueType !== null && ! in_array($caseIssueType, ['absence', 'late', 'early', 'exit', 'missing_punch'], true))) {
+            || ($caseIssueType !== null && ! in_array($caseIssueType, ['absence', 'late', 'early', 'exit', 'missing_punch', 'leave_entry'], true))) {
             throw ValidationException::withMessages(['filters' => __('messages.reporting.invalid_filters')]);
         }
 

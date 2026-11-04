@@ -133,6 +133,9 @@
             @foreach ($reconciliation['pending_requests'] ?? [] as $pending)
                 <p>{{ __('messages.leave_ui.pending_request', ['request' => "\u{2066}".$pending['external_id']."\u{2069}", 'approver' => $pending['approver_name'] ?? '']) }}</p>
             @endforeach
+            @foreach ($this->describedRequests() as $request)
+                <p><bdi dir="ltr">{{ $request->external_id }}</bdi> · <span class="whitespace-pre-wrap break-words" dir="auto">{{ $request->currentVersion->values['description'] }}</span> @if ($request->descriptionReading?->category)· {{ __('messages.leave_descriptions.categories.'.$request->descriptionReading->category) }} @endif</p>
+            @endforeach
         </x-ui.card>
         @if ($case = $this->followUpCase())
             <x-ui.card :title="__('messages.follow_up_ui.cases')">

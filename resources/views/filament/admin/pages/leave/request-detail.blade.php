@@ -12,7 +12,8 @@
                 <p>{{ __('messages.leave_ui.approver') }}: {{ $request->approver_name ?? '—' }}</p>
                 <p>{{ __('messages.leave_ui.snapshot_at') }}: <bdi dir="ltr">{{ $request->latest_snapshot_at?->format('Y-m-d H:i:s') }}</bdi></p>
             </div>
-            @foreach ($request->flags ?? [] as $flag)<span class="me-2 text-amber-700">{{ $this->errorLabel($flag) }}</span>@endforeach
+            @foreach ($request->flags ?? [] as $flag)<span class="me-2 text-amber-700">@if ($flag === 'described_work_date_no_credit'){{ __('messages.leave_descriptions.no_rest_credit', ['date' => $request->descriptionReading?->worked_dates[0] ?? '—']) }}@elseif ($flag === 'described_period_shortfall'){{ __('messages.leave_descriptions.period_shortfall') }}@else{{ $this->errorLabel($flag) }}@endif</span>@endforeach
+            @if ($request->currentVersion?->values['description'] ?? null)<p class="mt-3 whitespace-pre-wrap break-words" dir="auto">{{ $request->currentVersion->values['description'] }}</p>@if ($request->descriptionReading?->category)<p class="text-sm">{{ __('messages.leave_descriptions.categories.'.$request->descriptionReading->category) }} · {{ __('messages.leave_descriptions.statuses.'.$request->descriptionReading->status) }}</p>@endif @endif
             @foreach ($this->issues() as $issue)<span class="me-2 text-amber-700">{{ __('messages.leave_ui.issue_types.'.$issue->type) }}</span>@endforeach
         </x-ui.card>
         <x-ui.card :title="__('messages.leave_ui.actions')">

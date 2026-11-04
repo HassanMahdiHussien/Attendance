@@ -35,7 +35,7 @@ test('the four report layouts and an unknown file are classified by the existing
     $attendance = UploadedFile::fake()->createWithContent('Transaction_20261020084331.csv',
         "Employee ID,First Name,Department,Date,Time,Punch State,Serial Number,Device Name,Data Sources\n12345678,Fake Employee,Operations,2026-10-20,08:00,Check In,SER-1,Hilla_In_Face,Face\n");
     $stream = fopen('php://temp', 'w+');
-    fputcsv($stream, LeaveFile::HEADERS);
+    fputcsv($stream, array_slice(LeaveFile::HEADERS, 2));
     fputcsv($stream, ['FORM-1', '12345678', 'Fake Employee', 'Fake Approver', 'Hilla', 'Operations',
         'Approved', 'Annual Leave', '', '10/21/2026', '10/21/2026', '1', '', 'Fake Creator', '10/1/2026', 'Fake Manager', '']);
     rewind($stream);

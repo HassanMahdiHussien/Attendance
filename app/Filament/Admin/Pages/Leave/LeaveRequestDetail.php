@@ -62,7 +62,7 @@ class LeaveRequestDetail extends LeavePage
 
     public function record(): LeaveRequest
     {
-        return LeaveRequest::query()->with(['employee', 'leaveType'])->where('company_id', $this->company()->id)
+        return LeaveRequest::query()->with(['employee', 'leaveType', 'currentVersion', 'descriptionReading'])->where('company_id', $this->company()->id)
             ->findOrFail($this->requestId);
     }
 

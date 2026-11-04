@@ -35,6 +35,7 @@ class NotificationBatches
     public function build(Company $company, ?User $actor = null, ?string $runKey = null): NotificationBatch
     {
         $this->authorize($company, $actor);
+        app(LeaveEntryCases::class)->syncAll($company);
         $runKey ??= 'manual:'.Str::uuid();
         $batch = DB::transaction(function () use ($company, $actor, $runKey): NotificationBatch {
             Company::query()->whereKey($company->id)->lockForUpdate()->firstOrFail();
@@ -257,6 +258,10 @@ class NotificationBatches
             'form_number' => $route['external_id'] ?? null,
             'request_from' => $request?->start_date?->toDateString(),
             'request_to' => $request?->end_date?->toDateString(),
+            'form_type' => $case->case_kind === 'leave_entry'
+                && ! collect(config('leave_description_lexicon.medical'))->contains(
+                    fn (string $word): bool => mb_stripos($request?->leaveType?->name ?? '', $word) !== false)
+                ? $request?->leaveType?->name : null,
         ];
     }
 

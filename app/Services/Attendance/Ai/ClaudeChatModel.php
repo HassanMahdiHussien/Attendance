@@ -6,6 +6,7 @@ use Anthropic\Client;
 use Anthropic\Core\Exceptions\APIConnectionException;
 use Anthropic\Core\Exceptions\APIStatusException;
 use Anthropic\RequestOptions;
+use GuzzleHttp\Client as HttpClient;
 use Psr\Http\Client\ClientInterface;
 
 class ClaudeChatModel implements ChatModel
@@ -25,8 +26,9 @@ class ClaudeChatModel implements ChatModel
         if ($key === '') {
             throw new ChatUnavailable('no_key');
         }
-        $client = new Client(apiKey: $key, requestOptions: $this->transport
-            ? RequestOptions::with(transporter: $this->transport) : null);
+        // The SDK's own timeout option is advisory: only the transport enforces one.
+        $client = new Client(apiKey: $key, requestOptions: RequestOptions::with(
+            transporter: $this->transport ?? new HttpClient(['timeout' => 120, 'connect_timeout' => 15])));
         for ($attempt = 0; $attempt < 3; $attempt++) {
             try {
                 $response = $client->beta->messages->create(

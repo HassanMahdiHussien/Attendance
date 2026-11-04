@@ -7,6 +7,7 @@ use Anthropic\Client;
 use Anthropic\Core\Exceptions\APIConnectionException;
 use Anthropic\Core\Exceptions\APIStatusException;
 use Anthropic\RequestOptions;
+use GuzzleHttp\Client as HttpClient;
 use LogicException;
 use Psr\Http\Client\ClientInterface;
 use Throwable;
@@ -17,10 +18,11 @@ class HolidayClient
 
     public function __construct(private ?ClientInterface $transport = null) {}
 
-    public function send(array $blocks, array $known, array $schema, string $system, ?callable $onAttempt = null, int $maxAttempts = 3): array
+    public function send(array $blocks, array $known, array $schema, string $system, ?callable $onAttempt = null, int $maxAttempts = 3, string $effort = 'high', int $timeout = 120): array
     {
-        $client = new Client(apiKey: (string) config('services.anthropic.key'), requestOptions: $this->transport
-            ? RequestOptions::with(transporter: $this->transport) : null);
+        // The SDK's own timeout option is advisory: only the transport enforces one, and a hung call blocks the queue.
+        $client = new Client(apiKey: (string) config('services.anthropic.key'), requestOptions: RequestOptions::with(
+            transporter: $this->transport ?? new HttpClient(['timeout' => $timeout, 'connect_timeout' => 15])));
         $messages = [['role' => 'user', 'content' => [
             ['type' => 'text', 'text' => json_encode(['known_company_values' => $known], JSON_THROW_ON_ERROR)],
             ...$blocks,
@@ -33,10 +35,10 @@ class HolidayClient
                     messages: $messages,
                     model: self::MODEL,
                     fallbacks: 'default',
-                    outputConfig: ['effort' => 'high', 'format' => ['type' => 'json_schema', 'schema' => $schema]],
+                    outputConfig: ['effort' => $effort, 'format' => ['type' => 'json_schema', 'schema' => $schema]],
                     system: $system,
                     betas: ['server-side-fallback-2026-07-01'],
-                    requestOptions: RequestOptions::with(timeout: 120, maxRetries: 0),
+                    requestOptions: RequestOptions::with(timeout: $timeout, maxRetries: 0),
                 );
             } catch (APIStatusException|APIConnectionException $exception) {
                 if ($onAttempt !== null) {

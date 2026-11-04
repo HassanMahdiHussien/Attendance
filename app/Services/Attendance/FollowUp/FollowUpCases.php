@@ -31,22 +31,39 @@ class FollowUpCases
         }
         if ($filters->branchIds !== [] || $filters->departments !== [] || $filters->managerEmployeeIds !== []
             || $filters->workPatterns !== [] || $filters->statuses !== []) {
-            $query->whereHas('day', function (Builder $day) use ($filters): void {
-                if ($filters->branchIds !== []) {
-                    $day->whereIn('branch_id', $filters->branchIds);
-                }
-                if ($filters->departments !== []) {
-                    $day->whereIn('inputs->department', $filters->departments);
-                }
-                if ($filters->managerEmployeeIds !== []) {
-                    $day->whereIn('inputs->manager_employee_id', $filters->managerEmployeeIds);
-                }
-                if ($filters->workPatterns !== []) {
-                    $day->whereIn('inputs->work_pattern', $filters->workPatterns);
-                }
-                if ($filters->statuses !== []) {
-                    $day->whereIn('status', $filters->statuses);
-                }
+            $query->where(function (Builder $cases) use ($filters): void {
+                $cases->whereHas('day', function (Builder $day) use ($filters): void {
+                    if ($filters->branchIds !== []) {
+                        $day->whereIn('branch_id', $filters->branchIds);
+                    }
+                    if ($filters->departments !== []) {
+                        $day->whereIn('inputs->department', $filters->departments);
+                    }
+                    if ($filters->managerEmployeeIds !== []) {
+                        $day->whereIn('inputs->manager_employee_id', $filters->managerEmployeeIds);
+                    }
+                    if ($filters->workPatterns !== []) {
+                        $day->whereIn('inputs->work_pattern', $filters->workPatterns);
+                    }
+                    if ($filters->statuses !== []) {
+                        $day->whereIn('status', $filters->statuses);
+                    }
+                })->orWhere(function (Builder $forms) use ($filters): void {
+                    $forms->where('case_kind', 'leave_entry')->whereHas('employee', function (Builder $employee) use ($filters): void {
+                        if ($filters->workPatterns !== [] || $filters->statuses !== []) {
+                            $employee->whereRaw('1 = 0');
+                        }
+                        if ($filters->branchIds !== []) {
+                            $employee->whereIn('branch_id', $filters->branchIds);
+                        }
+                        if ($filters->departments !== []) {
+                            $employee->whereIn('department', $filters->departments);
+                        }
+                        if ($filters->managerEmployeeIds !== []) {
+                            $employee->whereIn('manager_employee_id', $filters->managerEmployeeIds);
+                        }
+                    });
+                });
             });
         }
 
@@ -99,7 +116,7 @@ class FollowUpCases
         abort_unless(app(TenantContext::class)->companyId() === $employee->company_id, 403);
 
         return FollowUpCase::query()->where('company_id', $employee->company_id)
-            ->where('employee_id', $employee->id)->whereDate('work_date', $date)
+            ->where('employee_id', $employee->id)->whereDate('work_date', $date)->where('case_kind', 'day')
             ->with(['events', 'deliveryRoutes'])->first();
     }
 
