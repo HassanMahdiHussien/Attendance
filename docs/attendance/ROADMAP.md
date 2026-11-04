@@ -38,6 +38,8 @@ The full requirements are in `docs/attendance/PRD-EN.md`. This file records what
 
 **Product-owner decision, 2026-11-04 (spec 516):** One device may record both check in and check out. A person with no attendance-device data, or a branch past its last attendance-device date, reads as waiting rather than absent even when declared coverage extends farther.
 
+**Product-owner decision, 2026-11-04 (spec 517):** Announcements are holiday, field work, or notice. Field work is a full worked day for an explicitly approved audience, with no overtime or follow-up; holidays and rest days retain priority. HR approves once from the Upload page after choosing dates and people, with a coverage preview and visible recalculation progress. A notice has no attendance effect.
+
 ## 3. What the sample files showed
 
 **Leave report** (`IRAQ_All_Leave_REPORT…xlsx`, 21,249 rows, one sheet, header in row 1):

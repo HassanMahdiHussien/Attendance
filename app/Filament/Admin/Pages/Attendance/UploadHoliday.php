@@ -4,7 +4,6 @@ namespace App\Filament\Admin\Pages\Attendance;
 
 use App\Filament\Admin\Resources\Attendance\AttendancePage;
 use App\Models\Attendance\HolidaySource;
-use App\Services\Attendance\Holidays;
 use App\Services\Attendance\HolidaySources;
 use Livewire\Attributes\Locked;
 use Livewire\WithFileUploads;
@@ -61,14 +60,5 @@ class UploadHoliday extends AttendancePage
     {
         return $this->sourceId === null ? null : HolidaySource::query()
             ->where('company_id', $this->company()->id)->findOrFail($this->sourceId);
-    }
-
-    public function createDraft(Holidays $holidays): void
-    {
-        $source = $this->source();
-        abort_unless($source !== null, 404);
-        $holiday = $holidays->createFromSource($source, auth()->user());
-        $this->redirect(HolidayReview::getUrl(panel: 'admin', tenant: $this->company())
-            .'?'.http_build_query(['holiday' => $holiday->id]));
     }
 }

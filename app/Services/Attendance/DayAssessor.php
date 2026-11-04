@@ -39,7 +39,7 @@ class DayAssessor
         private DeviceDataAvailability $deviceData,
     ) {}
 
-    public function run(Company $company, array $scope, string $trigger): ProcessingRun
+    public function run(Company $company, array $scope, string $trigger, ?string $batchId = null): ProcessingRun
     {
         abort_unless(app(TenantContext::class)->companyId() === $company->id, 403);
         // A company created outside onboarding must not be skipped silently for lack of a policy.
@@ -64,6 +64,7 @@ class DayAssessor
             'person_codes' => [], 'scope' => $scope, 'scope_from' => $requestedFrom.' 00:00:00',
             'scope_to' => $requestedTo.' 23:59:59', 'policy_version' => 1,
             'status' => 'processing', 'started_at' => now(),
+            'reprocess_batch_id' => $batchId,
         ]);
 
         try {
@@ -243,7 +244,9 @@ class DayAssessor
                     ? $calculator->calculate($input, $policies[$date], $dailyPunches, $dailyManual, $dailyDecisions, $covered, $outage, $date, $now, $leaveMinutes)
                     : $calculator->calculate($input, $policies[$date], $dailyPunches, $dailyManual, $dailyDecisions, $covered, $outage, $date, $now);
                 $candidate = $calculate(false, false);
+                $values['employee_id'] = $employee->id;
                 $holidayIds = $this->holidays->idsFor($date, $values);
+                $fieldWorkId = $this->holidays->fieldWorkIdFor($date, $values);
                 if (in_array($candidate['status'], ['not_employed', 'pattern_missing'], true)) {
                     $holidayIds = [];
                 }
@@ -255,8 +258,42 @@ class DayAssessor
                     $candidate['short_minutes'] = 0;
                     $candidate['balance_minutes'] = 0;
                     $candidate['reviewed'] = false;
+                    $candidate['overtime_minutes'] = null;
+                    $candidate['early_arrival_minutes'] = null;
+                    $candidate['overtime_basis'] = null;
                 }
                 $candidate['holiday_ids'] = $holidayIds === [] ? null : $holidayIds;
+                $candidate['field_work_holiday_id'] = null;
+                if ($fieldWorkId !== null && $holidayIds === [] && ! in_array($candidate['status'],
+                    ['rest_day', 'rest_day_worked', 'not_employed', 'pattern_missing'], true)) {
+                    $candidate['status'] = 'field_work';
+                    $candidate['field_work_holiday_id'] = $fieldWorkId;
+                    $candidate['overtime_minutes'] = null;
+                    $candidate['early_arrival_minutes'] = null;
+                    $candidate['overtime_basis'] = null;
+                    $candidate['late_minutes'] = 0;
+                    $candidate['early_minutes'] = 0;
+                    $candidate['short_minutes'] = 0;
+                    $candidate['balance_minutes'] = 0;
+                    $candidate['reviewed'] = false;
+                }
+                if ($candidate['status'] === 'field_work') {
+                    $differences = $this->differences($old, $candidate);
+                    if ($this->entitlementChange($entitlements->get($key), null) !== null) {
+                        $differences['entitlement'] = $this->entitlementChange($entitlements->get($key), null);
+                    }
+                    if ($differences !== []) {
+                        $old?->update(['superseded_by_run_id' => $run->id]);
+                        $this->supersedeEntitlement($entitlements->get($key), $run);
+                        Day::create($candidate + ['company_id' => $company->id, 'employee_id' => $employee->id,
+                            'run_id' => $run->id, 'changes' => $differences]);
+                        $changed++;
+                        $changedEmployees[$employee->id] = true;
+                        $changedDates[$date] = true;
+                    }
+
+                    continue;
+                }
                 if (in_array($candidate['status'], ['holiday', 'holiday_worked', 'rest_day', 'rest_day_worked'], true)) {
                     [$result, $entitlement] = $this->withOvertime(
                         $candidate, $policies[$date], $values, $holidayIds, $dailyPunches, $dailyManual, $now,
@@ -312,6 +349,7 @@ class DayAssessor
                     $result['inputs']['reason'] = $pendingReason;
                 }
                 $result['holiday_ids'] = null;
+                $result['field_work_holiday_id'] = null;
                 [$result, $entitlement] = $this->withOvertime(
                     $result, $policies[$date], $values, [], $dailyPunches, $dailyManual, $now,
                 );

@@ -127,7 +127,7 @@ class GenerateAttendanceExportJob implements ShouldQueue
             if ($export->kind === 'employee_statement_xlsx') {
                 $totals = $summary->totals($filters);
                 $writer->addRow(Row::fromValues([__('messages.export_ui.assessed_days'), $totals['assessed_working_days']]));
-                $writer->addRow(Row::fromValues([__('messages.export_ui.present_days'), $totals['days']['present']]));
+                $writer->addRow(Row::fromValues([__('messages.export_ui.present_days'), $totals['days']['present'] + $totals['days']['field_work']]));
                 $writer->addRow(Row::fromValues([__('messages.export_ui.pending_days'), $totals['days']['pending']]));
                 $statement = $data->statement($export, $company, $filters);
                 $writer->addRow(Row::fromValues([__('messages.overtime_ui.section'), $statement['overtime']['overtime_minutes']]));

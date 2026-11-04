@@ -19,11 +19,11 @@ class HolidaySource extends Model
 
     protected array $companyParents = ['aiLog'];
 
-    protected array $companyUserKeys = ['uploaded_by'];
+    protected array $companyUserKeys = ['uploaded_by', 'closed_by'];
 
     protected function casts(): array
     {
-        return ['proposal' => 'array', 'parts' => 'array'];
+        return ['proposal' => 'array', 'parts' => 'array', 'closed_at' => 'datetime'];
     }
 
     public function aiLog(): BelongsTo

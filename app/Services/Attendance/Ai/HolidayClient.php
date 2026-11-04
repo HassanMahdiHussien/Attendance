@@ -2,6 +2,7 @@
 
 namespace App\Services\Attendance\Ai;
 
+use Anthropic\Beta\Messages\BetaTextBlock;
 use Anthropic\Client;
 use Anthropic\Core\Exceptions\APIConnectionException;
 use Anthropic\Core\Exceptions\APIStatusException;
@@ -57,10 +58,17 @@ class HolidayClient
                 throw $exception;
             }
 
+            $text = '';
+            foreach ($response->content as $block) {
+                if ($block instanceof BetaTextBlock && $block->type === 'text') {
+                    $text .= $block->text;
+                }
+            }
+
             $result = [
                 'model' => $response->model,
                 'stop_reason' => $response->stopReason,
-                'text' => implode('', array_map(fn ($block): string => $block->text ?? '', $response->content)),
+                'text' => $text,
                 'input_tokens' => $response->usage->inputTokens,
                 'output_tokens' => $response->usage->outputTokens,
             ];

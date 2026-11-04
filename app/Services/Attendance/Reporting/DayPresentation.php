@@ -2,6 +2,7 @@
 
 namespace App\Services\Attendance\Reporting;
 
+use App\Models\Attendance\Holiday;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Lang;
 
@@ -71,15 +72,22 @@ class DayPresentation
                 'branch_data_ended' => __('messages.day_presentation.branch_data_ended'),
                 default => __('messages.reporting_ui.pending_note'),
             };
-        } elseif (in_array($status, ['rest_day_worked', 'holiday_worked'], true)) {
+        } elseif (in_array($status, ['rest_day_worked', 'holiday_worked', 'field_work'], true)) {
             $tone = 'green';
+            if ($status === 'field_work') {
+                $name = Holiday::query()->find($perDayRow['field_work_holiday_id'] ?? null)?->name;
+                if ($name !== null) {
+                    $problems[] = __('messages.announcement.field_day_note', ['name' => $name]);
+                }
+            }
         }
 
         $date = CarbonImmutable::parse($perDayRow['work_date'])->locale(app()->getLocale());
         $noPunches = ! $perDayRow['first_in'] && ! $perDayRow['last_out'];
-        $worked = $status === 'missing_punch' ? __('messages.day_presentation.unknown')
+        $worked = $status === 'field_work' ? $this->duration->format(480)
+            : ($status === 'missing_punch' ? __('messages.day_presentation.unknown')
             : ($noPunches && in_array($status, ['absent', 'rest_day', 'holiday', 'not_employed', 'pending'], true)
-                ? '—' : $this->duration->format((int) ($observed['presence'] ?? 0)));
+                ? '—' : $this->duration->format((int) ($observed['presence'] ?? 0))));
         $labelKey = $statusKey === 'covered' || $statusKey === 'short' ? 'messages.day_presentation.'.$statusKey : 'messages.office_ui.statuses.'.$statusKey;
         $exits = $status === 'pending' ? [] : ($perDayRow['exits'] ?? []);
         $out = null;

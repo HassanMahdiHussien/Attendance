@@ -42,7 +42,7 @@ class HolidayCalendar
     {
         $ids = [];
         foreach ($this->byDate[$date] ?? [] as $id => $version) {
-            if (self::matches($version, $values)) {
+            if ($version->kind === 'holiday' && self::matches($version, $values)) {
                 $ids[] = (int) $id;
             }
         }
@@ -51,13 +51,31 @@ class HolidayCalendar
         return $ids;
     }
 
+    public function fieldWorkIdFor(string $date, array $values): ?int
+    {
+        $matched = null;
+        foreach ($this->byDate[$date] ?? [] as $holidayId => $version) {
+            if ($version->kind === 'field_work' && self::matches($version, $values)) {
+                $matched = $matched === null ? (int) $holidayId : min($matched, (int) $holidayId);
+            }
+        }
+
+        return $matched;
+    }
+
     public static function matches(HolidayVersion $version, array $values): bool
     {
         $entities = $version->legal_entities ?? [];
         $branches = $version->branch_ids ?? [];
         $patterns = $version->work_patterns ?? [];
+        $departments = $version->departments ?? [];
+        $employees = array_map('intval', $version->employee_ids ?? []);
+        $department = mb_strtolower(trim((string) ($values['department'] ?? '')));
+        $personMatches = ($departments === [] && $employees === [])
+            || in_array((int) ($values['employee_id'] ?? 0), $employees, true)
+            || in_array($department, array_map(fn (string $value): string => mb_strtolower(trim($value)), $departments), true);
 
-        return ($entities === [] || in_array(mb_strtolower(trim((string) ($values['legal_entity'] ?? ''))),
+        return $personMatches && ($entities === [] || in_array(mb_strtolower(trim((string) ($values['legal_entity'] ?? ''))),
             array_map(fn (string $entity): string => mb_strtolower(trim($entity)), $entities), true))
             && ($branches === [] || in_array((int) ($values['branch_id'] ?? 0), array_map('intval', $branches), true))
             && ($patterns === [] || in_array($values['work_pattern'] ?? null, $patterns, true));
@@ -79,6 +97,7 @@ class HolidayCalendar
             $history = $versions->get($employee->id, collect())->values();
             $values = $history->isEmpty() ? app(EmployeeHistory::class)->valuesFrom($employee)
                 : array_fill_keys(EmployeeHistory::FIELDS, null);
+            $values['employee_id'] = $employee->id;
             $index = 0;
             foreach ($dates as $date) {
                 while ($index < $history->count() && $history[$index]->effective_from->toDateString() <= $date) {

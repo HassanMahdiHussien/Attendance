@@ -8,17 +8,19 @@ use App\Models\AiGenerationLog;
 use App\Models\Attendance\Holiday;
 use App\Models\Attendance\HolidaySource;
 use App\Models\Company;
+use App\Models\Employee;
 use App\Models\User;
 use App\Services\Attendance\Ai\HolidayClient;
 use App\Services\Attendance\Ai\HolidayReader;
 use App\Services\Attendance\Ai\HolidaySourceParts;
-use App\Services\Attendance\Holidays;
 use App\Services\Attendance\HolidaySources;
 use App\Support\Tenancy\TenantContext;
 use GuzzleHttp\Psr7\Response;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
+use OpenSpout\Common\Entity\Row;
+use OpenSpout\Writer\XLSX\Writer;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -105,6 +107,107 @@ it('sends the verified beta wire shape through a fake HTTP transport', function 
         ->and($body)->not->toHaveKey('thinking');
 });
 
+it('reads text after a thinking block without accessing thinking text', function (): void {
+    $transport = new class implements ClientInterface
+    {
+        public function sendRequest(RequestInterface $request): ResponseInterface
+        {
+            return new Response(200, ['content-type' => 'application/json'], json_encode([
+                'id' => 'msg_test', 'type' => 'message', 'role' => 'assistant', 'model' => HolidayClient::MODEL,
+                'diagnostics' => null, 'stop_details' => null, 'content' => [
+                    ['type' => 'thinking', 'thinking' => 'internal reasoning', 'signature' => 'test'],
+                    ['type' => 'text', 'text' => '{"kind":"notice"}', 'citations' => null],
+                ],
+                'stop_reason' => 'end_turn', 'stop_sequence' => null,
+                'usage' => ['input_tokens' => 1, 'output_tokens' => 2,
+                    'cache_creation' => null, 'cache_creation_input_tokens' => null,
+                    'cache_read_input_tokens' => null, 'inference_geo' => null,
+                    'output_tokens_details' => null, 'server_tool_use' => null, 'service_tier' => null],
+            ], JSON_THROW_ON_ERROR));
+        }
+    };
+    $result = (new HolidayClient($transport))->send([['type' => 'text', 'text' => 'A reminder']],
+        ['branches' => []], HolidayReader::schema(), HolidayReader::SYSTEM);
+    expect($result['text'])->toBe('{"kind":"notice"}');
+});
+
+it('marks exhausted reading jobs failed and permits a stale pending retry', function (): void {
+    $source = HolidaySource::factory()->create(['company_id' => $this->company->id, 'uploaded_by' => $this->actor->id]);
+    (new ReadHolidaySourceJob($this->company->id, $source->id))->failed(new RuntimeException('transport stopped'));
+    expect($source->fresh()->ai_status)->toBe('failed')
+        ->and($source->fresh()->error_code)->toBe('read_failed');
+
+    app(HolidaySources::class)->retry($source->fresh(), $this->actor);
+    expect($source->fresh()->ai_status)->toBe('pending');
+    Queue::assertPushed(ReadHolidaySourceJob::class);
+
+    $source->update(['updated_at' => now()->subMinutes(11)]);
+    app(HolidaySources::class)->retry($source->fresh(), $this->actor);
+    expect($source->fresh()->ai_status)->toBe('pending');
+});
+
+it('accepts an older proposal while preserving an unanswered kind', function (): void {
+    $source = holidayAiUpload($this->company, $this->actor,
+        "From: hr@example.test\nSubject: Notice\nContent-Type: text/plain\n\nA work reminder.");
+    $fake = fakeHolidayClient(['stop_reason' => 'end_turn',
+        'text' => json_encode(holidayAiProposal(), JSON_THROW_ON_ERROR), 'input_tokens' => 1, 'output_tokens' => 1]);
+    app()->instance(HolidayClient::class, $fake);
+    (new ReadHolidaySourceJob($this->company->id, $source->id))->handle(app(HolidayReader::class));
+    expect($source->fresh()->proposal['kind'])->toBeNull();
+});
+
+it('validates the new announcement fields against known departments', function (): void {
+    Employee::factory()->create(['company_id' => $this->company->id, 'department' => 'Events']);
+    $source = holidayAiUpload($this->company, $this->actor,
+        file_get_contents(base_path('tests/fixtures/holidays/notice.eml')));
+    $proposal = holidayAiProposal() + [
+        'kind' => 'field_work', 'summary' => 'The events team works off site.',
+        'expected_people' => 12, 'mentions_missing_attachment' => true,
+        'departments' => [' events '], 'suggested_departments' => ['Unknown group'],
+    ];
+    app()->instance(HolidayClient::class, fakeHolidayClient(['stop_reason' => 'end_turn',
+        'text' => json_encode($proposal, JSON_THROW_ON_ERROR), 'input_tokens' => 1, 'output_tokens' => 1]));
+    (new ReadHolidaySourceJob($this->company->id, $source->id))->handle(app(HolidayReader::class));
+    expect($source->fresh()->proposal['departments'])->toBe(['Events'])
+        ->and($source->fresh()->proposal['suggested_departments'])->toBe([])
+        ->and($source->fresh()->proposal['expected_people'])->toBe(12);
+});
+
+it('extracts employee codes from an attached spreadsheet without sending rows to AI', function (): void {
+    Employee::factory()->create(['company_id' => $this->company->id,
+        'employee_code' => '00001234']);
+    $tmp = tempnam(sys_get_temp_dir(), 'people-');
+    $path = $tmp.'.xlsx';
+    unlink($tmp);
+    $writer = new Writer;
+    $writer->openToFile($path);
+    $writer->addRow(Row::fromValues(['Employee code', 'Group']));
+    $writer->addRow(Row::fromValues(['00001234', 'Market']));
+    $writer->close();
+    $bytes = file_get_contents($path);
+    unlink($path);
+    $eml = "From: hr@example.test\r\nSubject: Market day\r\nMIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary=parts\r\n\r\n"
+        ."--parts\r\nContent-Type: text/plain\r\n\r\nSee the attached list.\r\n"
+        ."--parts\r\nContent-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet; name=people.xlsx\r\n"
+        ."Content-Disposition: attachment; filename=people.xlsx\r\nContent-Transfer-Encoding: base64\r\n\r\n"
+        .chunk_split(base64_encode($bytes))."\r\n--parts--\r\n";
+    $source = holidayAiUpload($this->company, $this->actor, $eml);
+    $parsed = app(HolidaySourceParts::class)->extract($source);
+    expect($parsed['parts'][1]['kind'])->toBe('employee_list')
+        ->and($parsed['parts'][1]['codes'])->toBe(['00001234'])
+        ->and(json_encode($parsed['blocks']))->not->toContain('00001234');
+});
+
+it('reports unreadable attachments by name', function (): void {
+    $eml = "From: hr@example.test\r\nSubject: Activity\r\nMIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary=parts\r\n\r\n"
+        ."--parts\r\nContent-Type: text/plain\r\n\r\nSee attachment.\r\n"
+        ."--parts\r\nContent-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document; name=groups.docx\r\n"
+        ."Content-Disposition: attachment; filename=groups.docx\r\nContent-Transfer-Encoding: base64\r\n\r\n"
+        .base64_encode('not a real document')."\r\n--parts--\r\n";
+    $parsed = app(HolidaySourceParts::class)->extract(holidayAiUpload($this->company, $this->actor, $eml));
+    expect($parsed['parts'][1])->toMatchArray(['kind' => 'skipped', 'name' => 'groups.docx']);
+});
+
 it('parses a synthetic email body and keeps prompt injection as data', function (): void {
     $source = holidayAiUpload($this->company, $this->actor, file_get_contents(base_path('tests/fixtures/holidays/notice.eml')));
     $fake = fakeHolidayClient([
@@ -123,8 +226,6 @@ it('parses a synthetic email body and keeps prompt injection as data', function 
     expect($log->input)->not->toContain('Ignore all previous instructions')
         ->and($log->output)->toBeNull()
         ->and($log->input_tokens)->toBe(12);
-    $draft = app(Holidays::class)->createFromSource($source, $this->actor);
-    expect($draft->status)->toBe('draft');
 });
 
 it('parses an anonymised Outlook message and its inline image', function (): void {

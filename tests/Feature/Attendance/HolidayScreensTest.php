@@ -6,6 +6,7 @@ use App\Filament\Admin\Pages\Attendance\HolidayReview;
 use App\Filament\Admin\Pages\Attendance\HolidaysPage;
 use App\Filament\Admin\Pages\Attendance\UploadHoliday;
 use App\Jobs\Attendance\ReadHolidaySourceJob;
+use App\Livewire\Attendance\AnnouncementReview;
 use App\Livewire\Attendance\DashboardEmployees;
 use App\Livewire\Attendance\EmployeeAttendance;
 use App\Livewire\Dashboard\HrDashboard;
@@ -93,19 +94,19 @@ test('upload accepts a file and each reading state has a manual path', function 
         ->assertSee('Reading')->assertSee('Enter by hand');
     $source = HolidaySource::query()->where('company_id', $this->company->id)->firstOrFail();
     Queue::assertPushed(ReadHolidaySourceJob::class);
-    foreach (['done' => 'Proposal ready', 'failed' => 'Reading failed',
-        'unavailable' => 'AI reading unavailable'] as $status => $label) {
+    foreach (['done' => 'What it is', 'failed' => 'Reading stopped',
+        'unavailable' => 'Reading stopped'] as $status => $label) {
         $source->update(['ai_status' => $status, 'error_code' => match ($status) {
             'failed' => 'refused', 'unavailable' => 'no_key', default => null,
         }]);
-        $page->call('$refresh')->assertSee($label);
+        $card = Livewire::test(AnnouncementReview::class, ['sourceId' => $source->id])->assertSee($label);
         if ($status === 'failed') {
-            $page->assertSee('AI reading was refused');
+            $card->assertSee('AI reading was refused');
         }
     }
 });
 
-test('a completed proposal makes a draft and leaves it unapproved', function (): void {
+test('a completed proposal is approved once from its announcement card', function (): void {
     config()->set('services.anthropic.key', 'test-only-key');
     $proposal = [
         'name_en' => 'Foundation Day', 'name_ar' => null,
@@ -134,9 +135,11 @@ test('a completed proposal makes a draft and leaves it unapproved', function ():
     $page = Livewire::test(UploadHoliday::class)->set('sourceFile', $file)->call('uploadAnnouncement')->assertHasNoErrors();
     $source = HolidaySource::query()->where('company_id', $this->company->id)->firstOrFail();
     (new ReadHolidaySourceJob($this->company->id, $source->id))->handle(app(HolidayReader::class));
-    $page->call('$refresh')->assertSee('Proposal ready')->call('createDraft')->assertHasNoErrors();
+    Livewire::test(AnnouncementReview::class, ['sourceId' => $source->id])->assertSee('What it is');
+    Livewire::test(AnnouncementReview::class, ['sourceId' => $source->id])
+        ->set('kind', 'holiday')->set('who', 'everyone')->call('approve')->assertHasNoErrors();
     $holiday = Holiday::query()->where('company_id', $this->company->id)->firstOrFail();
-    expect($holiday->status)->toBe('draft')
+    expect($holiday->status)->toBe('approved')
         ->and($holiday->currentVersion->source_id)->toBe($source->id);
 });
 

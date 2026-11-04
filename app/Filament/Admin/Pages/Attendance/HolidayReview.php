@@ -37,6 +37,14 @@ class HolidayReview extends AttendancePage
 
     public array $workPatterns = [];
 
+    public array $departments = [];
+
+    public array $employeeIds = [];
+
+    public string $kind = 'holiday';
+
+    public bool $everyoneConfirmed = false;
+
     public string $exceptionsNote = '';
 
     public string $reason = '';
@@ -73,6 +81,9 @@ class HolidayReview extends AttendancePage
             $this->legalEntities = $version->legal_entities ?: [];
             $this->branchIds = $version->branch_ids ?: [];
             $this->workPatterns = $version->work_patterns ?: [];
+            $this->departments = $version->departments ?: [];
+            $this->employeeIds = $version->employee_ids ?: [];
+            $this->kind = $version->kind;
             $this->exceptionsNote = $version->exceptions_note ?? '';
             $this->sourceId = $version->source_id;
         } elseif ($source !== null) {
@@ -87,6 +98,9 @@ class HolidayReview extends AttendancePage
                 $this->branchIds = Branch::query()->where('company_id', $this->company()->id)
                     ->whereIn('name', $proposal['branch_names'])->pluck('id')->all();
                 $this->workPatterns = $proposal['work_patterns'];
+                $this->departments = $proposal['departments'] ?? [];
+                $this->kind = in_array($proposal['kind'] ?? null, ['holiday', 'field_work'], true)
+                    ? $proposal['kind'] : 'holiday';
                 $this->exceptionsNote = implode("\n", [...$proposal['exception_quotes'], ...$proposal['notes']]);
             }
         }
@@ -222,7 +236,10 @@ class HolidayReview extends AttendancePage
     public function affectedDays(): int
     {
         return $this->holidayId === null ? 0 : Day::query()->where('company_id', $this->company()->id)
-            ->whereNull('superseded_by_run_id')->whereJsonContains('holiday_ids', $this->holidayId)->count();
+            ->whereNull('superseded_by_run_id')->where(function ($query): void {
+                $query->whereJsonContains('holiday_ids', $this->holidayId)
+                    ->orWhere('field_work_holiday_id', $this->holidayId);
+            })->count();
     }
 
     public function displayValue(mixed $value): string
@@ -244,6 +261,8 @@ class HolidayReview extends AttendancePage
             'legalEntities' => 'array', 'legalEntities.*' => 'string',
             'branchIds' => 'array', 'branchIds.*' => 'integer',
             'workPatterns' => 'array', 'workPatterns.*' => 'in:office,shift,security',
+            'kind' => 'required|in:holiday,field_work', 'departments' => 'array',
+            'departments.*' => 'string', 'employeeIds' => 'array', 'employeeIds.*' => 'integer',
             'exceptionsNote' => 'nullable|string',
         ]);
     }
@@ -259,6 +278,9 @@ class HolidayReview extends AttendancePage
             'name_en' => $this->nameEn, 'name_ar' => $this->nameAr === '' ? null : $this->nameAr,
             'ranges' => array_values($this->ranges), 'legal_entities' => array_values($this->legalEntities),
             'branch_ids' => array_values($this->branchIds), 'work_patterns' => array_values($this->workPatterns),
+            'departments' => array_values($this->departments), 'employee_ids' => array_values($this->employeeIds),
+            'kind' => $this->kind,
+            'everyone_confirmed' => $this->everyoneConfirmed,
             'exceptions_note' => $this->exceptionsNote === '' ? null : $this->exceptionsNote,
             'source_id' => $this->sourceId,
         ];

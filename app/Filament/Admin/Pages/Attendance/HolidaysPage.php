@@ -53,9 +53,9 @@ class HolidaysPage extends AttendancePage
         return HolidayReview::getUrl(panel: 'admin', tenant: $this->company()).'?'.http_build_query(['holiday' => $holiday->id]);
     }
 
-    public function scopeLabel(array $entities, array $branches, array $patterns): string
+    public function scopeLabel(array $entities, array $branches, array $patterns, array $departments = [], array $employeeIds = []): string
     {
-        if ($entities === [] && $branches === [] && $patterns === []) {
+        if ($entities === [] && $branches === [] && $patterns === [] && $departments === [] && $employeeIds === []) {
             return __('messages.holiday_ui.whole_company');
         }
 
@@ -66,6 +66,8 @@ class HolidaysPage extends AttendancePage
             $entities === [] ? null : implode(', ', $entities),
             $branchNames === [] ? null : implode(', ', $branchNames),
             $patterns === [] ? null : implode(', ', array_map(fn (string $pattern): string => __('messages.holiday_ui.patterns.'.$pattern), $patterns)),
+            $departments === [] ? null : implode(', ', $departments),
+            $employeeIds === [] ? null : __('messages.announcement.people_count', ['count' => count($employeeIds)]),
         ]));
     }
 }

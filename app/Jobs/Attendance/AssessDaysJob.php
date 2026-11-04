@@ -5,6 +5,7 @@ namespace App\Jobs\Attendance;
 use App\Models\Company;
 use App\Services\Attendance\DayAssessor;
 use App\Support\Tenancy\TenantContext;
+use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -14,7 +15,7 @@ use Illuminate\Queue\SerializesModels;
 
 class AssessDaysJob implements ShouldBeUnique, ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     // A full-range run over 500k+ punches can outlast 15 minutes on slow hardware; keep within queue retry_after.
     public int $timeout = 7200;
@@ -40,6 +41,7 @@ class AssessDaysJob implements ShouldBeUnique, ShouldQueue
     public function handle(DayAssessor $assessor): void
     {
         $company = Company::findOrFail($this->companyId);
-        app(TenantContext::class)->runForCompany($company, fn () => $assessor->run($company, $this->scope, $this->trigger));
+        app(TenantContext::class)->runForCompany($company, fn () => $assessor->run($company, $this->scope,
+            $this->trigger, $this->batch()?->id));
     }
 }

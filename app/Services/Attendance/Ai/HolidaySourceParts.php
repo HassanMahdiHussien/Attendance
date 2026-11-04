@@ -3,13 +3,18 @@
 namespace App\Services\Attendance\Ai;
 
 use App\Models\Attendance\HolidaySource;
+use App\Models\Company;
+use App\Services\Attendance\AnnouncementPeople;
 use App\Support\Tenancy\TenantContext;
 use Exception;
 use Hfig\MAPI\MapiMessageFactory;
 use Hfig\MAPI\OLE\Pear\DocumentFactory;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use RuntimeException;
 use Symfony\Component\Process\Process;
+use Throwable;
 use Webklex\PHPIMAP\Message;
 
 class HolidaySourceParts
@@ -74,9 +79,46 @@ class HolidaySourceParts
     {
         $extension = strtolower(pathinfo($name, PATHINFO_EXTENSION));
         if ($mime === 'application/pdf' || $extension === 'pdf') {
-            $this->pdf($source, $bytes, $name);
+            $parts = count($this->parts);
+            $blocks = count($this->blocks);
+            $pages = $this->pageCount;
+            try {
+                $this->pdf($source, $bytes, $name);
+            } catch (RuntimeException) {
+                $this->parts = array_slice($this->parts, 0, $parts);
+                $this->blocks = array_slice($this->blocks, 0, $blocks);
+                $this->pageCount = $pages;
+                $this->parts[] = ['kind' => 'skipped', 'name' => basename($name), 'reason' => 'unreadable'];
+            }
         } elseif (str_starts_with($mime, 'image/') || in_array($extension, ['png', 'jpg', 'jpeg', 'gif'], true)) {
-            $this->image($source, $bytes, $name);
+            try {
+                $this->image($source, $bytes, $name);
+            } catch (RuntimeException) {
+                $this->parts[] = ['kind' => 'skipped', 'name' => basename($name), 'reason' => 'unreadable'];
+            }
+        } elseif (in_array($extension, ['xlsx', 'csv'], true)) {
+            if (strlen($bytes) > 10 * 1024 * 1024) {
+                $this->parts[] = ['kind' => 'skipped', 'name' => basename($name), 'reason' => 'limit'];
+
+                return;
+            }
+            $tmp = tempnam(sys_get_temp_dir(), 'announcement-list-');
+            file_put_contents($tmp, $bytes);
+            try {
+                $result = app(AnnouncementPeople::class)->read(Company::findOrFail($source->company_id),
+                    new UploadedFile($tmp, $name, null, null, true));
+                $this->parts[] = ['kind' => 'employee_list', 'name' => basename($name), 'codes' => $result['codes']];
+            } catch (ValidationException $exception) {
+                $limit = in_array(__('messages.import.row_limit'), collect($exception->errors())->flatten()->all(), true);
+                $this->parts[] = ['kind' => 'skipped', 'name' => basename($name),
+                    'reason' => $limit ? 'limit' : 'unreadable'];
+            } catch (Throwable) {
+                $this->parts[] = ['kind' => 'skipped', 'name' => basename($name), 'reason' => 'unreadable'];
+            } finally {
+                @unlink($tmp);
+            }
+        } else {
+            $this->parts[] = ['kind' => 'skipped', 'name' => basename($name)];
         }
     }
 

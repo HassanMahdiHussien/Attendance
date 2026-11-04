@@ -13,7 +13,7 @@ use Illuminate\Validation\ValidationException;
 class ReportFilters
 {
     public const STATUSES = [
-        'present', 'absent', 'missing_punch', 'shift_unresolved', 'pending', 'rest_day',
+        'present', 'field_work', 'absent', 'missing_punch', 'shift_unresolved', 'pending', 'rest_day',
         'rest_day_worked', 'holiday', 'holiday_worked', 'not_employed', 'pattern_missing', 'device_outage',
     ];
 

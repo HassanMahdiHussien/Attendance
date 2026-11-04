@@ -3,6 +3,7 @@
 namespace App\Services\Attendance\Reporting;
 
 use App\Models\Attendance\AttendanceExport;
+use App\Models\Attendance\Holiday;
 use App\Models\Attendance\Meal;
 use App\Models\Company;
 use App\Models\Employee;
@@ -21,7 +22,7 @@ class ExportData
     public const DAY_COLUMNS = [
         'employee_code', 'employee_name', 'date', 'status', 'first_in', 'last_out',
         'presence', 'absence', 'late', 'early', 'exit', 'gross', 'leave', 'credit', 'remaining',
-        'request_numbers', 'explanations',
+        'request_numbers', 'explanations', 'field_work_announcement',
     ];
 
     public const SUMMARY_COLUMNS = [
@@ -32,6 +33,8 @@ class ExportData
     public const MEAL_COLUMNS = ['employee_code', 'employee_name', 'department', 'date', 'meals', 'repetitions'];
 
     public const ISSUE_COLUMNS = ['employee_code', 'employee_name', 'issue_type', 'issues'];
+
+    private array $fieldWorkNames = [];
 
     public const OVERTIME_COLUMNS = ['employee_code', 'employee_name', 'date', 'overtime_basis', 'overtime_minutes', 'early_arrival_minutes'];
 
@@ -233,6 +236,9 @@ class ExportData
                     'gross' => $gross, 'leave' => $leave, 'credit' => $credit, 'remaining' => $remaining,
                     'request_numbers' => $linked->pluck('request')->filter()->unique()->implode(', '),
                     'explanations' => $linked->map(fn (array $explanation): string => $this->explanations->render($explanation))->implode(' | '),
+                    'field_work_announcement' => ($day['field_work_holiday_id'] ?? null) === null ? ''
+                        : ($this->fieldWorkNames[$day['field_work_holiday_id']] ??= Holiday::query()
+                            ->whereKey($day['field_work_holiday_id'])->value('name') ?? ''),
                     'reviewed' => $day['reviewed'],
                 ];
             }

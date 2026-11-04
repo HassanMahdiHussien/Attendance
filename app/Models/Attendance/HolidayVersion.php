@@ -27,7 +27,7 @@ class HolidayVersion extends Model
     {
         return [
             'ranges' => 'array', 'legal_entities' => 'array', 'branch_ids' => 'array',
-            'work_patterns' => 'array', 'created_at' => 'datetime',
+            'work_patterns' => 'array', 'departments' => 'array', 'employee_ids' => 'array', 'created_at' => 'datetime',
         ];
     }
 

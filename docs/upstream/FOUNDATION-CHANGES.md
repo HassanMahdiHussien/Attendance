@@ -239,3 +239,4 @@ These test fixes are called out separately from the foundation-file inventory ab
 | 2026-10-31 | 513 | `app/Services/Employees/SpreadsheetReader.php` | Add `label()` so header scans treat date and time cells as empty labels instead of failing on a string cast. | **Port**. |
 | 2026-11-02 | attendance draft analysis | `routes/console.php` | Schedule cleanup of abandoned attendance upload drafts after two days. | **Apply with the attendance module**. |
 | 2026-11-02 | attendance job limits | `config/queue.php` | Raise the database queue `retry_after` default from 960 to 7260 s so two-hour attendance analysis and import jobs are never re-run while still running. | **Apply with the attendance module**. |
+| 2026-11-04 | 517 | `lang/en/messages.php`, `lang/ar/messages.php` | Add announcement and field-work labels, questions and progress text in both languages. | **Apply with the attendance module**. |

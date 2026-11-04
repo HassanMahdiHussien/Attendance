@@ -235,7 +235,10 @@ class EmployeeAttendance extends Component
         if ($tile === '' || $tile === 'active_employees' || $tile === 'office_employees_assessed') {
             return true;
         }
-        if (in_array($tile, ['present', 'absent', 'missing_punch', 'shift_unresolved', 'pending'], true)) {
+        if ($tile === 'present') {
+            return in_array($day['status'], ['present', 'field_work'], true);
+        }
+        if (in_array($tile, ['field_work', 'absent', 'missing_punch', 'shift_unresolved', 'pending'], true)) {
             return $day['status'] === $tile;
         }
         if ($tile === 'absent_uncovered') {
@@ -245,7 +248,7 @@ class EmployeeAttendance extends Component
             return $day['minutes']['late']['gross'] > 0 || $day['minutes']['early']['gross'] > 0;
         }
         if ($tile === 'assessed_working_days') {
-            return in_array($day['status'], ['present', 'absent', 'missing_punch'], true);
+            return in_array($day['status'], ['present', 'field_work', 'absent', 'missing_punch'], true);
         }
         if ($tile === 'short_hours_alerts') {
             return $day['flags']['short_hours'];
