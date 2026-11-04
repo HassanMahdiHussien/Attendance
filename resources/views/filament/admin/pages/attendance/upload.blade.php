@@ -76,6 +76,9 @@
         @if ($step === 'progress' && ($progress = $this->progress()))
             <section wire:poll.3s class="space-y-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                 <h2 class="font-bold">{{ __('messages.attendance_ui.progress') }} <bdi dir="ltr">#{{ $progress['batch']->id }}</bdi> · <bdi dir="ltr">{{ $progress['batch']->file_name }}</bdi></h2>
+                @if (($newDevices = $this->pendingNewDevicesCount()) > 0)
+                    <a class="attendance-device-alert attendance-device-action" href="{{ \App\Filament\Admin\Pages\Attendance\AttendanceDevices::getUrl(panel: 'admin', tenant: $this->company()) }}">{{ __('messages.attendance_ui.new_devices_action', ['count' => $newDevices]) }}</a>
+                @endif
                 @foreach ($progress['events'] as $event)
                     <p wire:key="attendance-event-{{ $event->id }}"><bdi dir="ltr">{{ $event->created_at->format('Y-m-d H:i:s') }}</bdi> <x-ui.badge :tone="app(\App\Services\Attendance\Reporting\JobStatePresentation::class)->tone($event->state)">{{ __('messages.attendance_ui.states.'.$event->state) }}</x-ui.badge>
                         @if ($event->counts) @foreach ($event->counts as $key => $count) <span>{{ __('messages.attendance_ui.count_labels.'.$key) }}: <bdi dir="ltr">{{ $count }}</bdi></span> @endforeach @endif

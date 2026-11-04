@@ -24,17 +24,19 @@ The full requirements are in `docs/attendance/PRD-EN.md`. This file records what
 | Cancellation | Never appears in the report. HR can mark a request cancelled manually, which reverses its allocations (PRD §11.3). A request missing from a later full report raises an HR alert; it is not cancelled automatically. |
 | Covered-but-working types | Work From Home, Business Travel and Sick Leave mark the day as covered (not absent). |
 | Annual Leave | Covers the day; it comes from the employee's balance in the company system. |
-| No punches + no leave on a working day | Absent. |
+| No punches + no leave on a working day | Absent when declared coverage and the spec 516 person and branch device-data checks pass; otherwise waiting. |
 | Rest days (Q1) | Office: Friday and Saturday. Shift: Friday. Security: an individual rest day HR sets per employee. HR can override any employee. Office Friday work earns overtime and a rest-day entitlement; office Saturday work earns overtime only (PRD §13). A rest day with no punches is never absence. |
 | Compensation vs overtime-equivalent leave (Q2) | `Compensation Leave` consumes a rest-day entitlement (PRD §13). `Overtime Equivelant Leave` is matched against overtime hours / hour credit and never consumes a rest-day entitlement. Which hours it draws from, and in what order, is part of the credit allocation mechanism (Q8). |
 | Annual Leave balance (Q3) | Approved annual leave covers the day. The balance is not checked; the company system already enforces it. |
 | Other leave types (Q4) | Approved Administrative, Unpaid (`Other`), Paternity, Funeral, Bereavement, Marriage and Court leave cover the day. Coverage is a per-type, per-company setting (leave-type mapping). `0200` and any type not yet mapped do **not** cover anything until HR maps them; an unmapped type raises an HR data issue. |
 | Contractors and visitors | Not assessed (no absence/lateness), but their punches are stored and appear in attendance and restaurant reports. |
-| Devices | Each device is check-in only, check-out only, or restaurant. Restaurant punches are counted for meals only. |
+| Devices | Each device is check-in only, check-out only, both in and out, or restaurant. Restaurant punches are counted for meals only. See spec 516. |
 | Interface language | English default, Arabic second, for both modules. |
 | Sample files | Design samples only. All locations will be provided later. |
 
 **Product-owner decision, 2026-11-04 (spec 515):** Office staff have a one-hour rest that is not working time. Required recorded presence is 8 hours within the 9-hour elapsed workday; the required leaving time remains based on 9 hours. This replaces the 540-minute short-hours threshold from spec 506. Rest allowance is the nonnegative difference between workday and minimum presence. A punch out reduces recorded presence, but no break is assumed when a person stays punched in. Out time beyond the allowance is information only and does not affect status, review or balance.
+
+**Product-owner decision, 2026-11-04 (spec 516):** One device may record both check in and check out. A person with no attendance-device data, or a branch past its last attendance-device date, reads as waiting rather than absent even when declared coverage extends farther.
 
 ## 3. What the sample files showed
 

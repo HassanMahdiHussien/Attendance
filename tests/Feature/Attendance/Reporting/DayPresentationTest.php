@@ -71,6 +71,11 @@ test('data states, pending days and non-working days keep distinct presentation'
     }
     expect($presenter->from(presentationRow('pending')))->toMatchArray(['tone' => 'gray', 'needs_review' => false,
         'problems' => [__('messages.reporting_ui.pending_note')], 'worked' => '—']);
+    $waiting = presentationRow('pending');
+    $waiting['inputs']['reason'] = 'no_device_for_employee';
+    expect($presenter->from($waiting)['problems'])->toBe(['No device data for this person yet']);
+    $waiting['inputs']['reason'] = 'branch_data_ended';
+    expect($presenter->from($waiting)['problems'])->toBe(["This branch's devices have no data for this date"]);
     foreach (['rest_day', 'holiday', 'not_employed', 'device_outage'] as $status) {
         expect($presenter->from(presentationRow($status)))->toMatchArray(['tone' => 'gray', 'needs_review' => false]);
     }

@@ -1,8 +1,13 @@
 <?php
 
 use App\Enums\Jurisdiction;
+use App\Models\Attendance\Device;
+use App\Models\Attendance\DeviceSetting;
+use App\Models\Attendance\ImportBatch;
+use App\Models\Attendance\Transaction;
 use App\Models\Branch;
 use App\Models\Company;
+use App\Models\Employee;
 use App\Models\User;
 use App\Support\Tenancy\TenantContext;
 use Filament\Facades\Filament;
@@ -35,6 +40,21 @@ function completeCompanySetup(Company $company): array
         ?? Branch::factory()->create(['company_id' => $company->id, 'jurisdiction' => Jurisdiction::FederalIraq]);
 
     return ['branch' => $branch];
+}
+
+function attendanceAbsenceEvidence(Company $company, Branch $branch, Employee $employee, ImportBatch $batch, string $lastDate = '2026-10-21'): void
+{
+    app(TenantContext::class)->runForCompany($company, function () use ($company, $branch, $employee, $batch, $lastDate): void {
+        $device = Device::factory()->create(['company_id' => $company->id, 'status' => 'approved']);
+        DeviceSetting::factory()->create(['company_id' => $company->id, 'device_id' => $device->id,
+            'branch_id' => $branch->id, 'role' => 'check_out', 'effective_from' => '2026-10-18']);
+        foreach ([['2026-10-18', $employee->employee_code], [$lastDate, 'FAKE-OTHER']] as [$date, $code]) {
+            Transaction::factory()->create(['company_id' => $company->id, 'first_batch_id' => $batch->id,
+                'device_id' => $device->id, 'serial_number' => $device->serial_number,
+                'person_code' => $code, 'punch_date' => $date, 'punch_time' => '17:00',
+                'punched_at' => $date.' 17:00:00', 'punch_state' => 'Check Out']);
+        }
+    });
 }
 
 /**

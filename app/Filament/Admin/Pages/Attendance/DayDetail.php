@@ -170,6 +170,13 @@ class DayDetail extends AttendancePage
         if ($field === 'branch_id') {
             return (string) (Branch::query()->where('company_id', $this->company()->id)->whereKey($value)->value('name') ?? $value);
         }
+        if ($field === 'reason') {
+            return match ($value) {
+                'no_device_for_employee' => __('messages.day_presentation.no_device_for_employee'),
+                'branch_data_ended' => __('messages.day_presentation.branch_data_ended'),
+                default => (string) $value,
+            };
+        }
 
         return is_array($value) ? json_encode($value, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR) : (string) $value;
     }

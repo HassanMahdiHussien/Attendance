@@ -250,6 +250,19 @@ class UploadAttendance extends AttendancePage
         return ['batch' => $batch, 'events' => ImportBatchEvent::query()->where('batch_id', $batch->id)->orderByDesc('sequence')->limit(20)->get()];
     }
 
+    public function pendingNewDevicesCount(): int
+    {
+        if ($this->batchId === null) {
+            return 0;
+        }
+
+        return Device::query()->where('company_id', $this->company()->id)
+            ->where('status', 'pending')->whereIn('id', function ($query): void {
+                $query->from('attendance_transactions')->select('device_id')
+                    ->where('company_id', $this->company()->id)->where('first_batch_id', $this->batchId);
+            })->count();
+    }
+
     private function clearPreview(): void
     {
         if ($this->previewKey !== null) {

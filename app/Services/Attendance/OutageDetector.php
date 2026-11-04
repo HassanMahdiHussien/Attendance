@@ -59,7 +59,7 @@ class OutageDetector
         $approvedAtStart = false;
         foreach ($this->settings as $settings) {
             $setting = $settings->first(fn (DeviceSetting $candidate): bool => $candidate->effective_from->toDateString() <= $startDate);
-            if ($setting !== null && (int) $setting->branch_id === $branchId && $setting->role === 'check_in') {
+            if ($setting !== null && (int) $setting->branch_id === $branchId && in_array($setting->role, ['check_in', 'check_in_out'], true)) {
                 $approvedAtStart = true;
 
                 break;
@@ -80,7 +80,7 @@ class OutageDetector
             $deviceIds = [];
             foreach ($this->settings as $deviceId => $settings) {
                 $setting = $settings->first(fn (DeviceSetting $candidate): bool => $candidate->effective_from->toDateString() <= $localDate);
-                if ($setting === null || (int) $setting->branch_id !== $branchId || $setting->role !== 'check_in') {
+                if ($setting === null || (int) $setting->branch_id !== $branchId || ! in_array($setting->role, ['check_in', 'check_in_out'], true)) {
                     continue;
                 }
                 $hasApprovedDevice = true;

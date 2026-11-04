@@ -28,13 +28,19 @@ class DeviceRegistry
     {
         abort_unless(app(TenantContext::class)->companyId() === $company->id, 403);
         $prefix = explode('_', $name, 2)[0];
-        $branch = app(BranchMatcher::class)->forCompany($company)->match($prefix);
-        $role = match (mb_strtolower($state)) {
-            'check in' => 'check_in', 'check out' => 'check_out', '255' => 'restaurant', default => null,
+        $matcher = app(BranchMatcher::class)->forCompany($company);
+        $branch = $matcher->match($prefix);
+        if ($branch === null && ! str_contains($name, '_')) {
+            $branch = $matcher->match(explode(' ', trim($name), 2)[0]);
+        }
+        $lower = mb_strtolower($name);
+        $restaurant = str_contains($lower, '_restaurant_') || str_contains($lower, '_restarrant_')
+            || preg_match('/\brestaurant\b/u', $lower) === 1;
+        $role = $restaurant ? 'restaurant' : match (mb_strtolower($state)) {
+            'check in' => 'check_in', 'check out' => 'check_out', default => null,
         };
         if ($role === null) {
-            $lower = mb_strtolower($name);
-            $role = str_contains($lower, '_restaurant_') || str_contains($lower, '_restarrant_') ? 'restaurant'
+            $role = mb_strtolower($state) === '255' ? null
                 : (str_contains($lower, '_in_') ? 'check_in' : (str_contains($lower, '_out_') ? 'check_out' : null));
         }
         DB::table('attendance_devices')->insertOrIgnore([
@@ -97,7 +103,7 @@ class DeviceRegistry
     private function saveSetting(Device $device, string $role, int $branchId, User $actor, ?string $effectiveFrom, ?string $reason, string $expectedStatus): DeviceSetting
     {
         $this->authorize($device, $actor);
-        if (! in_array($role, ['check_in', 'check_out', 'restaurant'], true)) {
+        if (! in_array($role, ['check_in', 'check_out', 'check_in_out', 'restaurant'], true)) {
             throw ValidationException::withMessages(['role' => __('messages.attendance_import.device_role_invalid')]);
         }
         $company = Company::findOrFail($device->company_id);

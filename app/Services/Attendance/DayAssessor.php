@@ -36,6 +36,7 @@ class DayAssessor
         private ShiftPunchOwnership $ownership,
         private HolidayCalendar $holidays,
         private OvertimeCalculator $overtime,
+        private DeviceDataAvailability $deviceData,
     ) {}
 
     public function run(Company $company, array $scope, string $trigger): ProcessingRun
@@ -69,6 +70,7 @@ class DayAssessor
             $count = 0;
             $changedEmployees = [];
             $changedDates = [];
+            $this->deviceData->load($company);
             $start = CarbonImmutable::parse($from);
             $end = CarbonImmutable::parse($to);
             for ($sliceStart = $start; $sliceStart <= $end; $sliceStart = $sliceStart->addDays(31)) {
@@ -203,8 +205,11 @@ class DayAssessor
                     continue;
                 }
                 $branchId = $values['branch_id'] === null ? null : (int) $values['branch_id'];
-                if ((isset($scope['branch_ids']) && ! in_array($branchId, $scope['branch_ids'], true))
-                    || ($values['hire_date'] !== null && substr((string) $values['hire_date'], 0, 10) > $date)
+                // A branch-scoped run says nothing about other branches, so their days must survive it.
+                if (isset($scope['branch_ids']) && ! in_array($branchId, $scope['branch_ids'], true)) {
+                    continue;
+                }
+                if (($values['hire_date'] !== null && substr((string) $values['hire_date'], 0, 10) > $date)
                     || ($employee->exit_status->value === 'confirmed' && $employee->last_working_day !== null
                         && $employee->last_working_day->toDateString() < $date)
                     || $policies[$date] === null) {
@@ -285,6 +290,11 @@ class DayAssessor
                 $covered = $until !== null && ($isShift
                     ? $this->coverage->coversWindow($branchId, $windowStart, $until)
                     : $this->coverage->covers($branchId, $date, $until));
+                $pendingReason = $candidate['status'] === 'pending' && $dailyPunches === [] && $dailyManual === [] && $until !== null
+                    ? $this->deviceData->pendingReason($employee->employee_code, $branchId, $date) : null;
+                if ($pendingReason !== null) {
+                    $covered = false;
+                }
                 if (($date < $scope['from'] || $date > $scope['to']) && $old === null && ! $covered) {
                     continue;
                 }
@@ -298,6 +308,9 @@ class DayAssessor
                     $outage = $outageCache[$outageKey];
                 }
                 $result = $calculate($covered, $outage);
+                if ($pendingReason !== null && $result['status'] === 'pending') {
+                    $result['inputs']['reason'] = $pendingReason;
+                }
                 $result['holiday_ids'] = null;
                 [$result, $entitlement] = $this->withOvertime(
                     $result, $policies[$date], $values, [], $dailyPunches, $dailyManual, $now,

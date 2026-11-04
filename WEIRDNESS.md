@@ -93,3 +93,6 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 
 - A committed attendance draft keeps its local `drafts/` file path as the batch original; pruning removes the draft row but preserves any path referenced by a batch, avoiding a second copy of the original. (2026-11-02)
 - Office rest allowance is derived from workday minus minimum presence; no assumed break is deducted from recorded presence. (2026-11-04, spec 515)
+- State `255` is directionless, not a restaurant marker; a restaurant name only suggests the role, and only an approved restaurant device counts meals. (2026-11-04, spec 516)
+- A combined device gets direction from 15-minute punch groups within each person's local calendar day: one group uses noon, even groups alternate, and odd middle groups remain unclear. Midnight-crossing shifts need separate handling. (2026-11-04, spec 516)
+- Someone who has never punched on an attendance device waits instead of showing absent; this also means a person who never punches at all is never counted absent. Branch days after the last device data wait too. (2026-11-04, spec 516)

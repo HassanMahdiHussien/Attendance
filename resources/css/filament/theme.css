@@ -139,6 +139,10 @@ input::placeholder, textarea::placeholder, .fi-input::placeholder, .fi-select-in
     --hover-text: var(--dp-night) !important;
 }
 
+.attendance-device-alert { display: block; padding: .75rem; border: 1px solid #fcd34d; border-radius: .5rem; background: #fffbeb; color: #78350f; font-size: .875rem; }
+.attendance-device-action { font-weight: 600; text-decoration: none; }
+.attendance-device-action:hover, .attendance-device-action:focus-visible { text-decoration: underline; }
+
 /* Same rule as the workspace: spacing Arabic letters apart breaks how they join. */
 :lang(ar) * {
     letter-spacing: normal !important;
