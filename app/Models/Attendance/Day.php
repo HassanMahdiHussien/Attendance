@@ -55,4 +55,9 @@ class Day extends Model
     {
         return $this->belongsTo(Policy::class, 'policy_id');
     }
+
+    public function fieldWorkAnnouncement(): BelongsTo
+    {
+        return $this->belongsTo(Holiday::class, 'field_work_holiday_id');
+    }
 }

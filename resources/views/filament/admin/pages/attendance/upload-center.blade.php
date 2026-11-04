@@ -4,7 +4,7 @@
         <section class="rounded-xl border border-line bg-white p-4 shadow-sm sm:p-5">
             <h2 class="font-semibold text-ink">{{ __('messages.upload_center.choose') }}</h2>
             <p class="mt-1 text-sm text-gray-600">{{ __('messages.clear_screens.upload_instruction') }}</p>
-            <input type="file" multiple wire:model.live="incomingFiles" accept=".csv,.txt,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" class="mt-3 block w-full min-w-0 rounded-lg border border-line p-2 text-sm">
+            <input type="file" multiple wire:model.live="incomingFiles" accept=".csv,.txt,.xlsx,.pdf,.png,.jpg,.jpeg,.eml,.msg,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" class="mt-3 block w-full min-w-0 rounded-lg border border-line p-2 text-sm">
             @error('incomingFiles.*') <p class="mt-2 text-red-700">{{ $message }}</p> @enderror
             <p class="mt-2 text-sm text-gray-600">{{ __('messages.upload_center.accepted') }}</p>
         </section>
@@ -26,7 +26,9 @@
                                 <button type="button" wire:click="remove({{ $index }})" class="ui-link text-sm">{{ __('messages.upload_center.remove') }}</button>
                             @endif
                         </div>
-                        @if($row['batch_id'] !== null)
+                        @if($row['kind'] === 'announcement' && $row['source_id'])
+                            <livewire:attendance.announcement-review :source-id="$row['source_id']" :key="'announcement-'.$row['source_id'].'-'.$index" />
+                        @elseif($row['batch_id'] !== null)
                             <p><x-ui.badge :tone="app(\App\Services\Attendance\Reporting\JobStatePresentation::class)->tone('completed')">{{ __('messages.upload_center.imported') }}</x-ui.badge> <a class="ui-link" href="{{ $this->batchUrl($index) }}">{{ __('messages.upload_center.view_batch') }} #{{ $row['batch_id'] }}</a></p>
                         @else
                             @if($row['kind'] === 'employees' && ($row['run_id'] ?? null) && !$row['error'])

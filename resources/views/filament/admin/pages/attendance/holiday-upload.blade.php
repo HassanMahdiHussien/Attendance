@@ -10,14 +10,7 @@
             </x-ui.upload-form>
         </x-ui.card>
         @if ($source = $this->source())
-            <div @if ($source->ai_status === 'pending') wire:poll.3s @endif>
-            <x-ui.card>
-                <p><bdi dir="ltr">{{ $source->file_name }}</bdi> <x-ui.badge :tone="match ($source->ai_status) { 'done' => 'green', 'failed' => 'red', 'pending' => 'indigo', default => 'gray' }">{{ __('messages.holiday_ui.ai_statuses.'.$source->ai_status) }}</x-ui.badge></p>
-                @if ($source->error_code)<p class="text-amber-800">{{ __('messages.holidays.ai_errors.'.$source->error_code) }} {{ __('messages.clear_screens.holiday_manual_next') }}</p>@endif
-                @if ($source->ai_status === 'done')<x-filament::button wire:click="createDraft">{{ __('messages.holiday_ui.create_from_proposal') }}</x-filament::button>@endif
-                <a class="ui-link" href="{{ \App\Filament\Admin\Pages\Attendance\HolidayReview::getUrl(panel: 'admin', tenant: $this->company()).'?'.http_build_query(['source' => $source->id]) }}">{{ __('messages.holiday_ui.enter_by_hand') }}</a>
-            </x-ui.card>
-            </div>
+            <livewire:attendance.announcement-review :source-id="$source->id" :key="'announcement-'.$source->id" />
         @endif
     </div>
 </x-filament-panels::page>

@@ -12,6 +12,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Throwable;
 
 class ReadHolidaySourceJob implements ShouldBeUnique, ShouldQueue
 {
@@ -34,6 +35,18 @@ class ReadHolidaySourceJob implements ShouldBeUnique, ShouldQueue
         app(TenantContext::class)->runForCompany($company, function () use ($reader): void {
             $source = HolidaySource::query()->where('company_id', $this->companyId)->findOrFail($this->sourceId);
             $reader->read($source);
+        });
+    }
+
+    public function failed(?Throwable $exception): void
+    {
+        $company = Company::find($this->companyId);
+        if ($company === null) {
+            return;
+        }
+        app(TenantContext::class)->runForCompany($company, function (): void {
+            HolidaySource::query()->where('company_id', $this->companyId)->whereKey($this->sourceId)
+                ->where('ai_status', 'pending')->update(['ai_status' => 'failed', 'error_code' => 'read_failed']);
         });
     }
 }

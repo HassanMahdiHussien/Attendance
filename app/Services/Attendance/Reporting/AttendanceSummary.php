@@ -26,7 +26,7 @@ class AttendanceSummary
 
     private const SUMMARY_COLUMNS = [
         'id', 'employee_id', 'work_date', 'branch_id', 'status', 'reviewed', 'policy_id',
-        'shift_start', 'shift_source', 'shift_confidence', 'holiday_ids', 'first_in', 'last_out',
+        'shift_start', 'shift_source', 'shift_confidence', 'holiday_ids', 'field_work_holiday_id', 'first_in', 'last_out',
         'required_leave_at', 'intervals', 'exits', 'inputs', 'elapsed_minutes', 'presence_minutes',
         'late_minutes', 'early_minutes', 'exit_minutes', 'short_minutes', 'balance_minutes',
     ];
@@ -218,7 +218,11 @@ class AttendanceSummary
     {
         abort_unless(in_array($status, ReportFilters::STATUSES, true), 404);
         foreach ($this->perEmployee($filters) as $employee) {
-            foreach ($employee['day_ids'][$status] ?? [] as $id) {
+            $ids = $employee['day_ids'][$status] ?? [];
+            if ($status === 'present') {
+                $ids = array_merge($ids, $employee['day_ids']['field_work'] ?? []);
+            }
+            foreach ($ids as $id) {
                 yield $id;
             }
         }
@@ -358,6 +362,7 @@ class AttendanceSummary
             'shift_start' => $day->shift_start, 'shift_source' => $day->shift_source,
             'shift_confidence' => $day->shift_confidence, 'shift_minutes' => $day->policy?->shift_minutes,
             'holiday_ids' => $day->holiday_ids ?? [],
+            'field_work_holiday_id' => $day->field_work_holiday_id,
             'first_in' => $day->first_in?->format('Y-m-d H:i:s'),
             'last_out' => $day->last_out?->format('Y-m-d H:i:s'),
             'required_leave_at' => $day->required_leave_at?->format('Y-m-d H:i:s'),
@@ -398,7 +403,7 @@ class AttendanceSummary
         } elseif ($day['status'] === 'rest_day_worked') {
             $row['rest_day_work_minutes'] += (int) $day['observed']['presence'];
         }
-        if (in_array($day['status'], ['present', 'absent', 'missing_punch'], true)) {
+        if (in_array($day['status'], ['present', 'field_work', 'absent', 'missing_punch'], true)) {
             $row['assessed_working_days']++;
             if (($day['inputs']['work_pattern'] ?? $employeePattern) === 'office') {
                 $row['office_employees_assessed'] = 1;
@@ -698,6 +703,9 @@ class AttendanceSummary
 
     private function matchesTile(array $row, string $tile): bool
     {
+        if ($tile === 'present') {
+            return $row['days']['present'] + $row['days']['field_work'] > 0;
+        }
         if (str_starts_with($tile, 'leave_status:')) {
             return ($row['pending_leave_requests'][substr($tile, 13)] ?? 0) > 0;
         }

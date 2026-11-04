@@ -13,14 +13,18 @@
                     @if ($part = $this->part())
                         @if (in_array($part['kind'], ['image', 'page'], true))
                             <img class="max-h-[70vh] w-full object-contain" src="{{ route('attendance.holidays.part', ['company' => $this->company()->id, 'source' => $source->id, 'part' => $partIndex]) }}" alt="{{ $part['name'] }}">
-                        @else
+                        @elseif(isset($part['path']))
                             <iframe class="h-[70vh] w-full rounded border" title="{{ $part['name'] }}" src="{{ route('attendance.holidays.part', ['company' => $this->company()->id, 'source' => $source->id, 'part' => $partIndex]) }}"></iframe>
+                        @elseif($part['kind'] === 'employee_list')
+                            <p>{{ __('messages.announcement.list_read', ['count' => count($part['codes'] ?? [])]) }}</p>
+                        @else
+                            <p>{{ __('messages.announcement.skipped', ['name' => $part['name']]) }}</p>
                         @endif
                     @endif
                 @endif
                 @if ($proposal = $source->proposal)
                     <div class="mt-4 space-y-2 rounded-xl border border-line bg-primary-light p-3">
-                        <p>{{ __('messages.holiday_ui.ai_confidence') }}: {{ __('messages.holiday_ui.confidence.'.$proposal['confidence']) }}</p>
+                        @isset($proposal['confidence'])<p>{{ __('messages.holiday_ui.ai_confidence') }}: {{ __('messages.holiday_ui.confidence.'.$proposal['confidence']) }}</p>@endisset
                         @foreach (['scope_quotes', 'exception_quotes', 'notes'] as $kind)
                             <h3 class="font-semibold">{{ __('messages.holiday_ui.'.$kind) }}</h3>
                             @foreach ($proposal[$kind] ?? [] as $line)<p>{{ $line }}</p>@endforeach
@@ -35,6 +39,7 @@
                 <div class="space-y-3">
                     <label class="block">{{ __('messages.holiday_ui.name_en') }} <input wire:model="nameEn" class="w-full rounded-xl border border-gray-200 p-2" dir="ltr"></label>
                     <label class="block">{{ __('messages.holiday_ui.name_ar') }} <input wire:model="nameAr" class="w-full rounded-xl border border-gray-200 p-2" dir="rtl"></label>
+                    <label class="block">{{ __('messages.announcement.what') }} <select wire:model="kind" class="w-full rounded-xl border border-line p-2"><option value="holiday">{{ __('messages.announcement.kinds.holiday') }}</option><option value="field_work">{{ __('messages.announcement.kinds.field_work') }}</option></select></label>
                     @foreach ($ranges as $index => $range)
                         <div class="flex flex-wrap gap-2" wire:key="holiday-range-{{ $index }}">
                             <label>{{ __('messages.holiday_ui.from') }} <input type="date" wire:model="ranges.{{ $index }}.from" dir="ltr" class="rounded-xl border border-gray-200 p-2"></label>
@@ -48,7 +53,12 @@
                     <label class="block">{{ __('messages.holiday_ui.legal_entities') }} <select wire:model="legalEntities" multiple class="w-full rounded-xl border border-gray-200 p-2">@foreach ($this->entities() as $entity)<option value="{{ $entity }}">{{ $entity }}</option>@endforeach</select></label>
                     <label class="block">{{ __('messages.holiday_ui.branches') }} <select wire:model="branchIds" multiple class="w-full rounded-xl border border-gray-200 p-2">@foreach ($this->branches() as $id => $name)<option value="{{ $id }}">{{ $name }}</option>@endforeach</select></label>
                     <label class="block">{{ __('messages.holiday_ui.work_patterns') }} <select wire:model="workPatterns" multiple class="w-full rounded-xl border border-gray-200 p-2">@foreach (['office', 'shift', 'security'] as $pattern)<option value="{{ $pattern }}">{{ __('messages.holiday_ui.patterns.'.$pattern) }}</option>@endforeach</select></label>
+                    <label class="block">{{ __('messages.announcement.departments') }} <select wire:model="departments" multiple class="w-full rounded-xl border border-line p-2">@foreach(\App\Models\Employee::query()->where('company_id', $this->company()->id)->whereNotNull('department')->distinct()->pluck('department') as $department)<option value="{{ $department }}">{{ $department }}</option>@endforeach</select></label>
+                    <label class="block">{{ __('messages.announcement.employees') }} <select wire:model="employeeIds" multiple class="w-full rounded-xl border border-line p-2">@foreach(\App\Models\Employee::query()->where('company_id', $this->company()->id)->orderBy('employee_code')->get(['id', 'employee_code', 'name']) as $employee)<option value="{{ $employee->id }}">{{ $employee->employee_code }} — {{ $employee->name }}</option>@endforeach</select></label>
                     <p class="text-xs text-gray-500">{{ __('messages.holiday_ui.scope_hint') }}</p>
+                    @if($kind === 'field_work' && !$departments && !$employeeIds && !$branchIds && !$legalEntities && !$workPatterns)
+                        <label class="block"><input type="checkbox" wire:model="everyoneConfirmed"> {{ __('messages.announcement.confirm_everyone', ['count' => \App\Models\Employee::query()->where('company_id', $this->company()->id)->count()]) }}</label>
+                    @endif
                     <label class="block">{{ __('messages.holiday_ui.exceptions_note') }} <textarea wire:model="exceptionsNote" class="w-full rounded-xl border border-gray-200 p-2"></textarea></label>
                     <label class="block">{{ __('messages.holiday_ui.reason') }} <textarea wire:model="reason" class="w-full rounded-xl border border-gray-200 p-2"></textarea></label>
                     @foreach (['nameEn', 'nameAr', 'ranges', 'branchIds', 'reason', 'holiday'] as $field) @error($field) <p class="text-red-600">{{ $message }}</p> @enderror @endforeach
@@ -66,6 +76,10 @@
                 </div>
             </x-ui.card>
             @if ($this->holiday())
+                @if($batchId = $this->holiday()->reprocess_batch_id)
+                    @php($progress = app(\App\Services\Attendance\AnnouncementProgress::class)->forHoliday($this->holiday()))
+                    @if($progress)<p @if(!$progress['finished']) wire:poll.3s @endif>{{ $progress['failed'] ? __('messages.announcement.recalculation_failed') : ($progress['finished'] ? __('messages.announcement.done', ['count' => $progress['people']]) : __('messages.announcement.recalculating', ['done' => $progress['done'], 'total' => $progress['total']])) }}</p>@endif
+                @endif
                 <p>{{ __('messages.holiday_ui.affected_days') }}: <bdi dir="ltr">{{ $this->affectedDays() }}</bdi></p>
                 <details wire:ignore.self><summary class="cursor-pointer font-semibold">{{ __('messages.holiday_ui.history') }}</summary><x-ui.card>
                     @foreach ($this->holiday()->versions->sortByDesc('version') as $version)

@@ -4,9 +4,11 @@ use App\Enums\UserRole;
 use App\Jobs\Attendance\AssessDaysJob;
 use App\Jobs\Leave\ReconcileLeaveJob;
 use App\Models\Attendance\AttendanceExport;
+use App\Models\Attendance\CoverageInterval;
 use App\Models\Attendance\Day;
 use App\Models\Attendance\Holiday;
 use App\Models\Attendance\HolidayVersion;
+use App\Models\Attendance\ImportBatch;
 use App\Models\Attendance\ManualPunch;
 use App\Models\Branch;
 use App\Models\Company;
@@ -22,11 +24,14 @@ use App\Services\Attendance\OfficePolicy;
 use App\Services\Attendance\Reporting\AttendanceSummary;
 use App\Services\Attendance\Reporting\ExportData;
 use App\Services\Attendance\Reporting\ReportFilters;
+use App\Services\Attendance\Reporting\ReportTiles;
 use App\Services\Employees\EmployeeHistory;
 use App\Services\Leave\LeaveDistributor;
 use App\Services\Leave\Reconciler;
 use App\Support\Tenancy\TenantContext;
 use Carbon\Carbon;
+use Illuminate\Bus\PendingBatch;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Validation\ValidationException;
 
@@ -92,6 +97,148 @@ test('only approved holidays change days and approval is versioned', function ()
     Queue::assertPushed(ReconcileLeaveJob::class);
 });
 
+test('field work covers only selected people and gives no holiday or overtime credit', function (): void {
+    $selected = holidayEmployee($this->company, $this->branch, ['department' => 'Events']);
+    $other = holidayEmployee($this->company, $this->branch, ['department' => 'Accounts']);
+    $holiday = holidayDraft($this->company, $this->actor, [
+        'kind' => 'field_work', 'departments' => [' events '],
+    ]);
+    app(Holidays::class)->approve($holiday, [], $this->actor, 'Off-site work');
+
+    $fieldDay = holidayAssess($this->company, $selected);
+    $otherDay = holidayAssess($this->company, $other);
+    expect($fieldDay->status)->toBe('field_work')
+        ->and($fieldDay->field_work_holiday_id)->toBe($holiday->id)
+        ->and($fieldDay->holiday_ids)->toBeNull()
+        ->and($fieldDay->late_minutes)->toBe(0)
+        ->and($fieldDay->early_minutes)->toBe(0)
+        ->and($fieldDay->short_minutes)->toBe(0)
+        ->and($fieldDay->overtime_minutes)->toBeNull()
+        ->and($otherDay->status)->toBe('pending');
+
+    $totals = app(AttendanceSummary::class)->totals(ReportFilters::fromArray($this->company,
+        ['from' => '2026-10-19', 'to' => '2026-10-19']));
+    expect($totals['days']['field_work'])->toBe(1)
+        ->and($totals['assessed_working_days'])->toBe(1)
+        ->and(ReportTiles::fromTotals($totals)['present'])->toBe(1)
+        ->and(ReportTiles::fromTotals($totals)['field_work'])->toBe(1);
+
+    app(Holidays::class)->withdraw($holiday->fresh(), $this->actor, 'Event ended');
+    expect(holidayAssess($this->company, $selected)->status)->toBe('pending');
+});
+
+test('employee ids and departments are an or group intersected with branch', function (): void {
+    $first = holidayEmployee($this->company, $this->branch, ['department' => 'Events']);
+    $second = holidayEmployee($this->company, $this->branch, ['department' => 'Accounts']);
+    $otherBranch = Branch::factory()->create(['company_id' => $this->company->id]);
+    $third = holidayEmployee($this->company, $otherBranch, ['department' => 'Events']);
+    $holiday = holidayDraft($this->company, $this->actor, [
+        'kind' => 'field_work', 'departments' => ['events'], 'employee_ids' => [$second->id],
+        'branch_ids' => [$this->branch->id],
+    ]);
+    app(Holidays::class)->approve($holiday, [], $this->actor, 'Off-site work');
+
+    expect(holidayAssess($this->company, $first)->status)->toBe('field_work')
+        ->and(holidayAssess($this->company, $second)->status)->toBe('field_work')
+        ->and(holidayAssess($this->company, $third)->status)->toBe('pending');
+});
+
+test('leave still counts a field day as a working date while a holiday is skipped', function (): void {
+    $employee = holidayEmployee($this->company, $this->branch);
+    $field = holidayDraft($this->company, $this->actor, [
+        'kind' => 'field_work', 'employee_ids' => [$employee->id],
+    ]);
+    app(Holidays::class)->approve($field, [], $this->actor, 'Off-site work');
+    $holidayDates = array_keys(app(HolidayCalendar::class)->forEmployeeDates($this->company,
+        collect([$employee]), '2026-10-19', '2026-10-19')[$employee->id] ?? []);
+    $request = ['start_date' => '2026-10-19', 'end_date' => '2026-10-19', 'duration_days' => 1];
+    $policies = [['effective_from' => '2020-01-01', 'version' => 1,
+        'office_rest_days' => [5, 6], 'shift_rest_days' => [5]]];
+    $versions = [['effective_from' => '2020-01-01', 'id' => 1,
+        'changes' => ['work_pattern' => 'office']]];
+    expect($holidayDates)->toBe([])
+        ->and(app(LeaveDistributor::class)->distribute($request, $versions, $policies, holidayDates: $holidayDates)['days'][0]['work_date'])
+        ->toBe('2026-10-19');
+
+    $holiday = holidayDraft($this->company, $this->actor, ['kind' => 'holiday']);
+    app(Holidays::class)->approve($holiday, [], $this->actor, 'Company holiday');
+    $holidayDates = array_keys(app(HolidayCalendar::class)->forEmployeeDates($this->company,
+        collect([$employee]), '2026-10-19', '2026-10-19')[$employee->id] ?? []);
+    expect($holidayDates)->toBe(['2026-10-19']);
+});
+
+test('field work keeps late and single punch evidence while removing time penalties', function (): void {
+    $late = holidayEmployee($this->company, $this->branch);
+    $single = holidayEmployee($this->company, $this->branch);
+    foreach ([['09:20:00', 'check_in'], ['17:00:00', 'check_out']] as [$clock, $role]) {
+        ManualPunch::factory()->create(['employee_id' => $late->id, 'created_by' => $this->actor->id,
+            'punched_at' => '2026-10-19 '.$clock, 'role' => $role]);
+    }
+    ManualPunch::factory()->create(['employee_id' => $single->id, 'created_by' => $this->actor->id,
+        'punched_at' => '2026-10-19 09:20:00', 'role' => 'check_in']);
+    $field = holidayDraft($this->company, $this->actor,
+        ['kind' => 'field_work', 'employee_ids' => [$late->id, $single->id]]);
+    app(Holidays::class)->approve($field, [], $this->actor, 'Market day');
+
+    foreach ([$late, $single] as $employee) {
+        $day = holidayAssess($this->company, $employee);
+        expect($day->status)->toBe('field_work')
+            ->and($day->first_in)->not->toBeNull()
+            ->and($day->late_minutes)->toBe(0)
+            ->and($day->early_minutes)->toBe(0)
+            ->and($day->short_minutes)->toBe(0)
+            ->and($day->balance_minutes)->toBe(0)
+            ->and($day->overtime_minutes)->toBeNull();
+    }
+    expect(holidayAssess($this->company, $late)->last_out)->not->toBeNull()
+        ->and(holidayAssess($this->company, $single)->last_out)->toBeNull();
+});
+
+test('field work clears earlier overtime fields and withdrawal restores ordinary overtime', function (): void {
+    $employee = holidayEmployee($this->company, $this->branch);
+    CoverageInterval::factory()->create(['company_id' => $this->company->id,
+        'batch_id' => ImportBatch::factory()->create(['company_id' => $this->company->id])->id,
+        'branch_id' => $this->branch->id, 'coverage_from' => '2026-10-19 00:00:00',
+        'coverage_to' => '2026-10-20 23:59:59', 'is_confirmed' => true]);
+    foreach ([['07:30:00', 'check_in'], ['19:00:00', 'check_out']] as [$clock, $role]) {
+        ManualPunch::factory()->create(['employee_id' => $employee->id, 'created_by' => $this->actor->id,
+            'punched_at' => '2026-10-19 '.$clock, 'role' => $role]);
+    }
+    $ordinary = holidayAssess($this->company, $employee);
+    expect($ordinary->status)->toBe('present')
+        ->and($ordinary->overtime_minutes)->toBeGreaterThan(0)
+        ->and($ordinary->early_arrival_minutes)->toBeGreaterThan(0);
+
+    $field = holidayDraft($this->company, $this->actor,
+        ['kind' => 'field_work', 'employee_ids' => [$employee->id]]);
+    app(Holidays::class)->approve($field, [], $this->actor, 'Event day');
+    $covered = holidayAssess($this->company, $employee);
+    expect($covered->status)->toBe('field_work')
+        ->and($covered->overtime_minutes)->toBeNull()
+        ->and($covered->early_arrival_minutes)->toBeNull()
+        ->and($covered->overtime_basis)->toBeNull()
+        ->and($ordinary->fresh()->superseded_by_run_id)->not->toBeNull();
+
+    app(Holidays::class)->withdraw($field->fresh(), $this->actor, 'Event withdrawn');
+    $restored = holidayAssess($this->company, $employee);
+    expect($restored->status)->toBe('present')
+        ->and($restored->overtime_minutes)->toBeGreaterThan(0);
+});
+
+test('rest days and approved holidays win over field work', function (): void {
+    $rest = holidayEmployee($this->company, $this->branch, ['rest_days' => [1]]);
+    $ordinary = holidayEmployee($this->company, $this->branch);
+    $field = holidayDraft($this->company, $this->actor, ['kind' => 'field_work',
+        'employee_ids' => [$rest->id, $ordinary->id]]);
+    app(Holidays::class)->approve($field, [], $this->actor, 'Market day');
+    $holiday = holidayDraft($this->company, $this->actor, ['kind' => 'holiday',
+        'employee_ids' => [$ordinary->id]]);
+    app(Holidays::class)->approve($holiday, [], $this->actor, 'Public holiday');
+
+    expect(holidayAssess($this->company, $rest)->status)->toBe('rest_day')
+        ->and(holidayAssess($this->company, $ordinary)->status)->toBe('holiday');
+});
+
 test('holiday scope rejects a branch belonging to another company', function (): void {
     $otherCompany = Company::factory()->create();
     $otherBranch = app(TenantContext::class)->runForCompany($otherCompany,
@@ -100,6 +247,14 @@ test('holiday scope rejects a branch belonging to another company', function ():
     expect(fn () => holidayDraft($this->company, $this->actor, [
         'branch_ids' => [$otherBranch->id],
     ]))->toThrow(ValidationException::class);
+});
+
+test('announcement scope rejects employee ids from another company', function (): void {
+    $otherCompany = Company::factory()->create();
+    $other = app(TenantContext::class)->runForCompany($otherCompany,
+        fn (): Employee => Employee::factory()->create(['company_id' => $otherCompany->id]));
+    expect(fn () => holidayDraft($this->company, $this->actor,
+        ['employee_ids' => [$other->id]]))->toThrow(ValidationException::class);
 });
 
 test('rejecting a draft records a version without changing attendance', function (): void {
@@ -251,7 +406,7 @@ test('editing and withdrawing a holiday supersedes the day and queues both recal
     $holiday = holidayDraft($this->company, $this->actor);
     app(Holidays::class)->approve($holiday, [], $this->actor, 'Published');
     $first = holidayAssess($this->company, $employee);
-    Queue::fake();
+    Bus::fake();
 
     app(Holidays::class)->edit($holiday->fresh(), ['ranges' => [['from' => '2026-10-20', 'to' => '2026-10-20']]],
         $this->actor, 'Corrected date');
@@ -259,10 +414,14 @@ test('editing and withdrawing a holiday supersedes the day and queues both recal
     expect($replacement->status)->not->toBe('holiday')
         ->and($first->fresh()->superseded_by_run_id)->not->toBeNull()
         ->and($replacement->changes['holiday_ids']['before'])->toBe([$holiday->id]);
-    Queue::assertPushed(AssessDaysJob::class);
-    Queue::assertPushed(ReconcileLeaveJob::class);
+    Bus::assertBatched(fn (PendingBatch $batch): bool => $batch->allowsFailures() && $batch->jobs->flatten()->contains(
+        fn ($job): bool => $job instanceof AssessDaysJob && $job->scope['employee_ids'] === [$employee->id]
+            && $job->scope['from'] === '2026-10-18' && $job->scope['to'] === '2026-10-21')
+        && $batch->jobs->flatten()->contains(fn ($job): bool => $job instanceof ReconcileLeaveJob
+            && $job->employeeIds === [$employee->id] && $job->from === '2026-10-18' && $job->to === '2026-10-21'));
 
     app(Holidays::class)->withdraw($holiday->fresh(), $this->actor, 'Withdrawn notice');
+    Bus::assertBatchCount(2);
     expect(HolidayVersion::query()->where('holiday_id', $holiday->id)->count())->toBe(4)
         ->and(app(HolidayCalendar::class)->forEmployeeDates($this->company, collect([$employee]),
             '2026-10-20', '2026-10-20'))->toBe([]);

@@ -255,12 +255,23 @@ test('platform admin can confirm a mapping through an explicit company context',
 });
 
 test('excluded day statuses and overtime alone never open a case', function (): void {
-    foreach (['pending', 'device_outage', 'not_employed', 'rest_day', 'holiday', 'pattern_missing', 'shift_unresolved'] as $index => $status) {
+    foreach (['pending', 'device_outage', 'not_employed', 'rest_day', 'holiday', 'field_work', 'pattern_missing', 'shift_unresolved'] as $index => $status) {
         followUpDay($this->employee, '2026-10-'.sprintf('%02d', 19 + $index), $status, 30);
     }
-    followUpDay($this->employee, '2026-10-27', 'present');
+    followUpDay($this->employee, '2026-10-28', 'present');
     replayFollowUp($this->company, $this->employee);
     expect(FollowUpCase::query()->count())->toBe(0);
+});
+
+test('field work closes an existing follow-up case on reassessment', function (): void {
+    $day = followUpDay($this->employee, '2026-10-19', 'absent');
+    replayFollowUp($this->company, $this->employee);
+    expect(FollowUpCase::query()->firstOrFail()->state)->not->toBe('closed');
+
+    $day->update(['superseded_by_run_id' => $day->run_id]);
+    followUpDay($this->employee, '2026-10-19', 'field_work');
+    replayFollowUp($this->company, $this->employee);
+    expect(FollowUpCase::query()->firstOrFail()->state)->toBe('closed');
 });
 
 test('notification settings and mapping changes require the dedicated gate and company context', function (): void {

@@ -96,3 +96,6 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 - State `255` is directionless, not a restaurant marker; a restaurant name only suggests the role, and only an approved restaurant device counts meals. (2026-11-04, spec 516)
 - A combined device gets direction from 15-minute punch groups within each person's local calendar day: one group uses noon, even groups alternate, and odd middle groups remain unclear. Midnight-crossing shifts need separate handling. (2026-11-04, spec 516)
 - Someone who has never punched on an attendance device waits instead of showing absent; this also means a person who never punches at all is never counted absent. Branch days after the last device data wait too. (2026-11-04, spec 516)
+- Field work counts as a full worked day even with no punches, but preserves the actual punch-derived presence and grants no overtime or rest-day entitlement (2026-11-04, spec 517).
+- A field-work reassessment still queues the existing leave reconciliation worker so it can close old follow-up cases; field-work days themselves offer no minutes to allocate. (2026-11-04, spec 517)
+- A withdrawn or rejected announcement record does not block a later approval from the same source; an active draft or approval does. Older withdrawn records remain in history. (2026-11-04, spec 517)

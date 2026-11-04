@@ -9,6 +9,7 @@ use App\Filament\Admin\Resources\EmployeeResource\Pages\ImportEmployees;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\EmployeeImportRun;
+use App\Services\Attendance\HolidaySources;
 use App\Services\Attendance\TransactionFile;
 use App\Services\Attendance\TransactionImport;
 use App\Services\Attendance\UploadDetector;
@@ -73,8 +74,8 @@ class UploadCenter extends AttendancePage
             $kind = $detected['kind'];
             if ($kind !== 'unknown') {
                 $this->authorizeKind($kind);
-                $limit = $kind === 'employees' ? 10240 : ($kind === 'attendance' ? 102400 : 51200);
-                $extensions = $kind === 'employees' ? 'csv,txt,xlsx' : 'csv,xlsx';
+                $limit = $kind === 'announcement' ? 25600 : ($kind === 'employees' ? 10240 : ($kind === 'attendance' ? 102400 : 51200));
+                $extensions = $kind === 'announcement' ? 'pdf,png,jpg,jpeg,eml,msg' : ($kind === 'employees' ? 'csv,txt,xlsx' : 'csv,xlsx');
                 $this->validate(["files.$index" => "file|extensions:$extensions|max:$limit"]);
             }
             $this->rows[$index] = [
@@ -86,8 +87,12 @@ class UploadCenter extends AttendancePage
                 'needs_mapping' => $detected['needs_mapping'] ?? false,
                 'editing' => false, 'confirmed' => false, 'batch_id' => null, 'run_id' => null,
                 'after_employee_preview' => false,
-                'error' => null, 'preview_key' => bin2hex(random_bytes(16)),
+                'error' => null, 'preview_key' => bin2hex(random_bytes(16)), 'source_id' => null,
             ];
+            if ($kind === 'announcement') {
+                $source = app(HolidaySources::class)->upload($this->company(), $file, auth()->user());
+                $this->rows[$index]['source_id'] = $source->id;
+            }
             $this->savePreview($index, $detected['preview']);
         }
         $this->incomingFiles = [];
@@ -110,7 +115,7 @@ class UploadCenter extends AttendancePage
 
     public function change(int $index): void
     {
-        abort_if($this->authorizeRow($index)['kind'] === 'unknown', 404);
+        abort_if(in_array($this->authorizeRow($index)['kind'], ['unknown', 'announcement'], true), 404);
         $this->rows[$index]['editing'] = ! $this->rows[$index]['editing'];
     }
 
@@ -118,6 +123,10 @@ class UploadCenter extends AttendancePage
     {
         $row = $this->authorizeRow($index);
         $kind = $row['kind'];
+        if ($kind === 'announcement') {
+            return;
+        }
+
         abort_if($kind === 'unknown' || $row['batch_id'] !== null, 404);
         $file = $this->files[$index];
         $company = $this->company();
@@ -167,6 +176,10 @@ class UploadCenter extends AttendancePage
     public function needsDecision(int $index): ?string
     {
         $row = $this->authorizeRow($index);
+        if ($row['kind'] === 'announcement') {
+            return null;
+        }
+
         $preview = $this->preview($index);
         if ($row['kind'] === 'unknown') {
             return __('messages.upload_center.unknown');
@@ -221,6 +234,10 @@ class UploadCenter extends AttendancePage
     public function summary(int $index): string
     {
         $row = $this->authorizeRow($index);
+        if ($row['kind'] === 'announcement') {
+            return __('messages.upload_center.kinds.announcement');
+        }
+
         $preview = $this->preview($index);
         if ($preview === null) {
             if ($row['kind'] === 'unknown' && $row['message'] !== null) {
@@ -456,7 +473,7 @@ class UploadCenter extends AttendancePage
 
     private function allowedKinds(): array
     {
-        return array_values(array_filter(['attendance', 'leave', 'leave_balance', 'employees'],
+        return array_values(array_filter(['attendance', 'leave', 'leave_balance', 'employees', 'announcement'],
             fn (string $kind): bool => $kind === 'employees' ? ImportEmployees::canAccess() : parent::canAccess()));
     }
 

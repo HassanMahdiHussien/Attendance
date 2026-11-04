@@ -36,7 +36,7 @@
     <h2>{{ __('messages.export_ui.summary') }}</h2>
     <table><tbody>
         <tr><th>{{ __('messages.export_ui.assessed_days') }}</th><td class="mono">{{ $totals['assessed_working_days'] }}</td></tr>
-        <tr><th>{{ __('messages.export_ui.present_days') }}</th><td class="mono">{{ $totals['days']['present'] }}</td></tr>
+        <tr><th>{{ __('messages.export_ui.present_days') }}</th><td class="mono">{{ $totals['days']['present'] + $totals['days']['field_work'] }}</td></tr>
         <tr><th>{{ __('messages.export_ui.pending_days') }}</th><td class="mono">{{ $totals['days']['pending'] }}</td></tr>
         @foreach (['absence', 'late', 'early', 'exit'] as $kind)
             <tr><th>{{ ucfirst(__('messages.leave_ui.target_kinds.'.$kind)) }}</th><td class="mono">{{ $totals['minutes'][$kind]['gross'] }} / {{ $totals['minutes'][$kind]['reconciled_by_leave'] }} / {{ $totals['minutes'][$kind]['reconciled_by_credit'] }} / {{ $totals['minutes'][$kind]['remaining'] }}</td></tr>

@@ -5,6 +5,7 @@ namespace App\Jobs\Leave;
 use App\Models\Company;
 use App\Services\Leave\Reconciler;
 use App\Support\Tenancy\TenantContext;
+use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -14,7 +15,7 @@ use Illuminate\Queue\SerializesModels;
 
 class ReconcileLeaveJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $timeout = 900;
 

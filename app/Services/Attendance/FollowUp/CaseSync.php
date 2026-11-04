@@ -26,7 +26,7 @@ class CaseSync
 {
     private const EXCLUDED = [
         'pending', 'device_outage', 'not_employed', 'rest_day', 'rest_day_worked',
-        'holiday', 'holiday_worked', 'pattern_missing', 'shift_unresolved',
+        'holiday', 'holiday_worked', 'field_work', 'pattern_missing', 'shift_unresolved',
     ];
 
     public function __construct(

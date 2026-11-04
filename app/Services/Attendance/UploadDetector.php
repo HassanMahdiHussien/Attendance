@@ -20,9 +20,15 @@ class UploadDetector
     public function detect(Company $company, UploadedFile $file, array $allowed = ['attendance', 'leave', 'leave_balance', 'employees']): array
     {
         $name = $file->getClientOriginalName();
+        if (in_array(strtolower($file->getClientOriginalExtension()), ['pdf', 'png', 'jpg', 'jpeg', 'eml', 'msg'], true)) {
+            return ['kind' => 'announcement', 'mapping' => null, 'settings' => [], 'preview' => null, 'headers' => []];
+        }
         $matches = [];
         $damagedHeader = false;
         foreach ($allowed as $kind) {
+            if ($kind === 'announcement') {
+                continue;
+            }
             try {
                 $matches[$kind] = match ($kind) {
                     'attendance' => app(TransactionFile::class)->inspect($file),
