@@ -91,3 +91,34 @@ test('day dates and status labels follow the interface language', function (): v
         ->and($arabic['date'])->not->toBe('1 October')
         ->and($arabic['label'])->toBe(__('messages.office_ui.statuses.pending'));
 });
+
+test('out periods explain elapsed time without changing the day state', function (): void {
+    $row = presentationRow('present');
+    $row['first_in'] = '2026-10-01 08:29:00';
+    $row['last_out'] = '2026-10-01 17:53:00';
+    $row['observed']['presence'] = 499;
+    $row['rest_minutes'] = 60;
+    $row['exits'] = [['from' => '2026-10-01 12:50:00', 'to' => '2026-10-01 13:55:00', 'minutes' => 65]];
+    $presenter = app(DayPresentation::class);
+
+    expect($presenter->from($row))->toMatchArray([
+        'status_key' => 'present', 'needs_review' => false, 'problems' => [],
+        'out' => ['total' => '1 h 5 min', 'over_rest' => '5 min',
+            'periods' => [['from' => '12:50', 'to' => '13:55', 'duration' => '1 h 5 min']]],
+    ]);
+    $row['exits'][0]['minutes'] = 60;
+    expect($presenter->from($row)['out']['over_rest'])->toBeNull();
+    $row['exits'] = [];
+    expect($presenter->from($row)['out'])->toBeNull();
+    $row['exits'][0] = ['from' => '2026-10-01 12:50:00', 'to' => '2026-10-01 13:55:00', 'minutes' => 65];
+    $row['rest_minutes'] = null;
+    expect($presenter->from($row)['out']['over_rest'])->toBeNull();
+    $row['status'] = 'pending';
+    expect($presenter->from($row)['out'])->toBeNull();
+
+    app()->setLocale('ar');
+    $row['status'] = 'present';
+    expect($presenter->from($row)['out'])->toMatchArray(['total' => '1 س 5 د', 'over_rest' => null]);
+    $row['rest_minutes'] = 60;
+    expect($presenter->from($row)['out']['over_rest'])->toBe('5 د');
+});

@@ -28,12 +28,15 @@
                         <x-ui.td :label="__('messages.office_ui.status')"><x-ui.badge :tone="$presentation['tone'] ?? 'gray'">{{ $presentation['label'] ?? __('messages.office_ui.statuses.'.$day->status) }}</x-ui.badge></x-ui.td>
                         <x-ui.td :label="__('messages.office_ui.first_in')"><bdi dir="ltr" class="font-mono">{{ $day->first_in?->format('H:i') ?? '—' }}</bdi></x-ui.td>
                         <x-ui.td :label="__('messages.office_ui.last_out')"><bdi dir="ltr" class="font-mono">{{ $day->last_out?->format('H:i') ?? '—' }}</bdi></x-ui.td>
-                        <x-ui.td :label="__('messages.office_ui.presence')"><bdi dir="auto">{{ $presentation['worked'] ?? $this->minutes($day->presence_minutes) }}</bdi></x-ui.td>
+                        <x-ui.td :label="__('messages.office_ui.presence')"><bdi dir="auto">{{ $presentation['worked'] ?? $this->minutes($day->presence_minutes) }}</bdi>@if ($presentation['out'] ?? null)<span class="block text-xs text-gray-500">{{ __('messages.office_ui.out_time') }} <bdi dir="auto">{{ $presentation['out']['total'] }}</bdi>@if ($presentation['out']['over_rest']) · <bdi dir="auto">{{ $presentation['out']['over_rest'] }}</bdi> {{ __('messages.office_ui.over_rest') }}@endif</span>@endif</x-ui.td>
                         <x-ui.td :label="__('messages.office_ui.balance')"><bdi dir="auto">{{ $day->balance_minutes ? $this->minutes($day->balance_minutes) : '—' }}</bdi></x-ui.td>
                     </tr>
                     <tr id="office-day-detail-{{ $day->id }}" x-show="open === {{ $day->id }}" x-cloak wire:key="office-day-extra-{{ $day->id }}"><td colspan="6" class="p-4 text-sm"><div class="space-y-2">
                         <a class="ui-link" href="{{ $this->detailUrl($day) }}">{{ __('messages.reporting_ui.day_detail') }}</a>
                         <p>{{ implode(' · ', $presentation['problems'] ?? []) ?: '—' }}</p>
+                        @foreach ($presentation['out']['periods'] ?? [] as $period)
+                            <p>{{ __('messages.office_ui.out_time') }} <bdi class="font-mono" dir="ltr">{{ $period['from'] }}</bdi> {{ __('messages.office_ui.to') }} <bdi class="font-mono" dir="ltr">{{ $period['to'] }}</bdi> (<bdi dir="auto">{{ $period['duration'] }}</bdi>)</p>
+                        @endforeach
                         <p>{{ __('messages.office_ui.shift') }}: <bdi dir="ltr" class="font-mono">{{ \App\Services\Attendance\ShiftDisplay::hours($day->shift_start, $day->policy?->shift_minutes) ?? '—' }}</bdi> @if($day->shift_source){{ __('messages.office_ui.shift_sources.'.$day->shift_source) }}@endif</p>
                         <p>{{ __('messages.office_ui.elapsed') }}: <bdi dir="auto">{{ $this->minutes($day->elapsed_minutes) }}</bdi> · {{ __('messages.office_ui.presence') }}: <bdi dir="auto">{{ $this->minutes($day->presence_minutes) }}</bdi> · {{ __('messages.office_ui.late') }}: <bdi dir="auto">{{ $this->minutes($day->late_minutes) }}</bdi> · {{ __('messages.office_ui.early') }}: <bdi dir="auto">{{ $this->minutes($day->early_minutes) }}</bdi> · {{ __('messages.office_ui.short') }}: <bdi dir="auto">{{ $this->minutes($day->short_minutes) }}</bdi></p>
                         <p>{{ __('messages.office_ui.reviewed') }}: {{ $day->reviewed ? __('messages.office_ui.yes') : '—' }}</p>

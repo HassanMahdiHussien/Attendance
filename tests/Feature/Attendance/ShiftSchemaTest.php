@@ -16,7 +16,7 @@ test('shift policy defaults and nullable day fields coexist with office data', f
     $day = Day::factory()->create();
 
     expect((int) $policy->fresh()->absence_minutes)->toBe(480)
-        ->and((int) $policy->fresh()->min_presence_minutes)->toBe(540)
+        ->and((int) $policy->fresh()->min_presence_minutes)->toBe(480)
         ->and($policy->fresh()->shift_starts)->toBe(['00:00', '08:00', '16:00'])
         ->and($policy->fresh()->shift_rest_days)->toBe([5])
         ->and($day->fresh()->shift_start)->toBeNull()

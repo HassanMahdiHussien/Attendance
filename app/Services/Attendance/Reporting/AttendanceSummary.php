@@ -12,6 +12,7 @@ use App\Models\Leave\Credit;
 use App\Models\Leave\LeaveRequest;
 use App\Models\Leave\RequestDay;
 use App\Models\Leave\RequestDecision;
+use App\Services\Attendance\OfficePolicy;
 use App\Services\Employees\EmployeeHistory;
 use App\Support\Tenancy\TenantContext;
 use Generator;
@@ -361,6 +362,8 @@ class AttendanceSummary
             'last_out' => $day->last_out?->format('Y-m-d H:i:s'),
             'required_leave_at' => $day->required_leave_at?->format('Y-m-d H:i:s'),
             'intervals' => $day->intervals ?? [], 'exits' => $day->exits ?? [],
+            'rest_minutes' => ($day->inputs['work_pattern'] ?? null) === 'office' && $day->policy
+                ? OfficePolicy::restMinutes((int) $day->policy->workday_minutes, (int) $day->policy->min_presence_minutes) : null,
             'inputs' => $day->inputs ?? [], 'policy_version' => $day->policy?->version,
             'observed' => $observed,
             'short_minutes' => (int) $day->short_minutes,

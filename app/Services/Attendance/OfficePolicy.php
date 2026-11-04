@@ -21,7 +21,7 @@ class OfficePolicy
         'office_start' => '08:00:00',
         'flex_minutes' => 60,
         'workday_minutes' => 540,
-        'min_presence_minutes' => 540,
+        'min_presence_minutes' => 480,
         'absence_minutes' => 480,
         'close_grace_minutes' => 120,
         'exits_count_toward_balance' => false,
@@ -41,6 +41,11 @@ class OfficePolicy
     ];
 
     public function __construct(private AuditLogger $audit) {}
+
+    public static function restMinutes(int $workdayMinutes, int $minPresenceMinutes): int
+    {
+        return max(0, $workdayMinutes - $minPresenceMinutes);
+    }
 
     public function asOf(Company $company, CarbonInterface|string $date): ?Policy
     {

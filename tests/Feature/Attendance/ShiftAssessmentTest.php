@@ -230,13 +230,14 @@ test('another company cannot assess or choose a shift', function (): void {
     });
 });
 
-test('office presence below nine hours alerts while a full leave day settles eight hours of absence', function (): void {
+test('office presence over eight hours is not short while a full leave day settles eight hours of absence', function (): void {
     $fixture = shiftFixture('office');
     storedShiftPunch($fixture, '2026-10-19 08:00:00', 'check_in');
     storedShiftPunch($fixture, '2026-10-19 16:30:00', 'check_out');
     $present = shiftAssess($fixture);
     expect($present->status)->toBe('present')->and($present->presence_minutes)->toBe(510)
-        ->and($present->short_minutes)->toBe(30);
+        ->and($present->short_minutes)->toBe(0)
+        ->and($present->early_minutes)->toBe(30);
 
     app(TenantContext::class)->runForCompany($fixture['company'], function () use ($fixture): void {
         $absent = Day::query()->where('employee_id', $fixture['employee']->id)

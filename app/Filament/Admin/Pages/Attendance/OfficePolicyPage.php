@@ -22,7 +22,7 @@ class OfficePolicyPage extends AttendancePage
 
     public int $workdayMinutes = 540;
 
-    public int $minPresenceMinutes = 540;
+    public int $minPresenceMinutes = 480;
 
     public int $absenceMinutes = 480;
 

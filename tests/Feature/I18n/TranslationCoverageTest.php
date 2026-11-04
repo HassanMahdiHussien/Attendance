@@ -274,6 +274,10 @@ test('attendance screen labels for dynamic states and fields exist in both langu
 test('office attendance dynamic labels exist in both languages', function (): void {
     $english = File::getRequire(lang_path('en/messages.php'));
     $arabic = File::getRequire(lang_path('ar/messages.php'));
+    foreach (['office_rest_replacement_reason', 'rest_allowance', 'out_time', 'over_rest'] as $key) {
+        expect(data_get($english, 'office_ui.'.$key))->not->toBeNull()
+            ->and(data_get($arabic, 'office_ui.'.$key))->not->toBeNull();
+    }
     $labels = [
         ...array_map(fn (string $state): string => 'statuses.'.$state, [
             'pending', 'present', 'missing_punch', 'shift_unresolved', 'absent', 'rest_day', 'rest_day_worked',

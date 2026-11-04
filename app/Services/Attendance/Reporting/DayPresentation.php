@@ -76,12 +76,26 @@ class DayPresentation
             : ($noPunches && in_array($status, ['absent', 'rest_day', 'holiday', 'not_employed', 'pending'], true)
                 ? '—' : $this->duration->format((int) ($observed['presence'] ?? 0)));
         $labelKey = $statusKey === 'covered' || $statusKey === 'short' ? 'messages.day_presentation.'.$statusKey : 'messages.office_ui.statuses.'.$statusKey;
+        $exits = $status === 'pending' ? [] : ($perDayRow['exits'] ?? []);
+        $out = null;
+        if ($exits !== []) {
+            $total = array_sum(array_column($exits, 'minutes'));
+            $rest = $perDayRow['rest_minutes'] ?? null;
+            $out = [
+                'total' => $this->duration->format($total),
+                'over_rest' => $rest !== null && $total > $rest ? $this->duration->format($total - $rest) : null,
+                'periods' => array_map(fn (array $exit): array => [
+                    'from' => substr($exit['from'], 11, 5), 'to' => substr($exit['to'], 11, 5),
+                    'duration' => $this->duration->format((int) $exit['minutes']),
+                ], $exits),
+            ];
+        }
 
         return [
             'status_key' => $statusKey, 'tone' => $tone,
             'label' => Lang::has($labelKey) ? __($labelKey) : $statusKey,
             'needs_review' => $needsReview, 'late' => $late, 'early' => $early,
-            'problems' => $problems, 'worked' => $worked,
+            'problems' => $problems, 'worked' => $worked, 'out' => $out,
             'weekday' => $date->translatedFormat('l'), 'date' => $date->translatedFormat('j F'),
         ];
     }
