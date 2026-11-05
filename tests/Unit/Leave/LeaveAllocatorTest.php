@@ -117,3 +117,45 @@ test('a present day applies leave to late then early then exit minutes', functio
     expect(array_column($result['allocations'], 'target_kind'))->toBe(['late', 'early', 'exit'])
         ->and($result['remaining']['1|exit'])->toBe(60);
 });
+
+test('worked hours settle only the remainder after same-day leave and preserve older credit for another day', function (): void {
+    $targets = [leaveTarget(1, '2026-10-19', 'late', 210), leaveTarget(1, '2026-10-19', 'early', 53),
+        leaveTarget(2, '2026-10-20', 'late', 15)];
+    $targets[0]['short_minutes'] = 203;
+    $targets[1]['short_minutes'] = 203;
+    $result = (new LeaveAllocator)->allocate([
+        leaveSource('credit', '2026-10-18', 30, 'EARLIER'),
+        leaveSource('leave', '2026-10-19', 240, 'SAME-DAY'),
+    ], $targets);
+
+    expect(array_column($result['allocations'], 'minutes'))->toBe([210, 30, 15])
+        ->and($result['remaining']['1|early'])->toBe(0)
+        ->and($result['settled_by_hours']['1|early'])->toBe(23)
+        ->and($result['allocations'][2]['target_day_id'])->toBe(2)
+        ->and($result['allocations'][2]['explanation']['request'])->toBe('EARLIER');
+});
+
+test('the settlement boundary requires same-day leave and leaves blocked kinds alone', function (): void {
+    $target = leaveTarget(1, '2026-10-19', 'early', 263);
+    $target['short_minutes'] = 240;
+    $allocator = new LeaveAllocator;
+    $equal = $allocator->allocate([leaveSource('leave', '2026-10-19', 240)], [$target]);
+    expect($equal['remaining']['1|early'])->toBe(0)
+        ->and($equal['settled_by_hours']['1|early'])->toBe(23);
+    $target['short_minutes'] = 241;
+    expect($allocator->allocate([leaveSource('leave', '2026-10-19', 240)], [$target])['remaining']['1|early'])->toBe(23);
+    $target['short_minutes'] = 240;
+    expect($allocator->allocate([leaveSource('leave', '2026-10-19', 240)], [$target], ['2026-10-19|early' => true])['remaining']['1|early'])->toBe(263);
+});
+
+test('a description period allocation does not settle its target day by hours', function (): void {
+    $source = leaveSource('leave', '2026-10-20', 240);
+    $source['settled_from'] = '2026-10-19';
+    $source['settled_to'] = '2026-10-19';
+    $target = leaveTarget(1, '2026-10-19', 'early', 263);
+    $target['short_minutes'] = 203;
+    $result = (new LeaveAllocator)->allocate([$source], [$target]);
+    expect($result['allocations'][0]['explanation']['code'])->toBe('leave_description_period')
+        ->and($result['remaining']['1|early'])->toBe(23)
+        ->and($result['settled_by_hours'])->toBe([]);
+});

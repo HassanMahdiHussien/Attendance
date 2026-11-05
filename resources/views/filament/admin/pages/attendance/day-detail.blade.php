@@ -17,7 +17,7 @@
                     <div><span class="text-sm text-gray-600">{{ __('messages.office_ui.'.$field) }}</span><strong class="block font-mono" dir="ltr">{{ $day->{$field}?->format('H:i') ?? '—' }}</strong></div>
                 @endforeach
                 @foreach (['elapsed_minutes', 'presence_minutes', 'late_minutes', 'early_minutes', 'exit_minutes', 'short_minutes', 'balance_minutes'] as $field)
-                    <div><span class="text-sm text-gray-600">{{ __('messages.office_ui.minutes.'.$field) }}</span><strong class="block"><bdi dir="auto">{{ $this->minutes($day->{$field}) }}</bdi></strong></div>
+                    <div><span class="text-sm text-gray-600">{{ __('messages.office_ui.minutes.'.$field) }}</span><strong class="block"><bdi dir="auto">{{ $this->minutes($field === 'short_minutes' ? ($presentation['short_remaining'] ?? $day->short_minutes) : $day->{$field}) }}</bdi></strong></div>
                 @endforeach
                 <div><span class="text-sm text-gray-600">{{ __('messages.office_ui.reviewed') }}</span><strong class="block">{{ $day->reviewed ? __('messages.office_ui.yes') : __('messages.office_ui.no') }}</strong></div>
                 <div><span class="text-sm text-gray-600">{{ __('messages.overtime_ui.overtime') }}</span><strong class="block"><bdi dir="auto">{{ $this->minutes($overtime['overtime_minutes'] ?? null) }}</bdi></strong>@if ($overtime['overtime_basis'] ?? null)<span>{{ __('messages.overtime_ui.basis.'.$overtime['overtime_basis']) }}</span>@endif</div>
@@ -117,9 +117,9 @@
         </x-ui.card></details>
         <x-ui.card :title="__('messages.leave_ui.day_reconciliation')">
             @php $reconciliation = $this->leaveReconciliation(); @endphp
-            <x-ui.table><thead><tr><th scope="col">{{ __('messages.leave_ui.type') }}</th><th scope="col">{{ __('messages.leave_ui.reconciled') }}</th><th scope="col">{{ __('messages.leave_ui.remaining') }}</th></tr></thead><tbody>
+            <x-ui.table><thead><tr><th scope="col">{{ __('messages.leave_ui.type') }}</th><th scope="col">{{ __('messages.leave_ui.reconciled') }}</th><th scope="col">{{ __('messages.clear_screens.settled_by_hours') }}</th><th scope="col">{{ __('messages.leave_ui.remaining') }}</th></tr></thead><tbody>
             @foreach (['absence', 'late', 'early', 'exit'] as $kind)
-                <tr><x-ui.td :label="__('messages.leave_ui.type')">{{ app()->getLocale() === 'en' ? ucfirst(__('messages.leave_ui.target_kinds.'.$kind)) : __('messages.leave_ui.target_kinds.'.$kind) }}</x-ui.td><x-ui.td :label="__('messages.leave_ui.reconciled')"><bdi dir="auto">{{ $this->minutes($reconciliation['reconciled'][$kind] ?? 0) }}</bdi></x-ui.td><x-ui.td :label="__('messages.leave_ui.remaining')"><bdi dir="auto">{{ $this->minutes($reconciliation['remaining'][$kind] ?? 0) }}</bdi></x-ui.td></tr>
+                <tr><x-ui.td :label="__('messages.leave_ui.type')">{{ app()->getLocale() === 'en' ? ucfirst(__('messages.leave_ui.target_kinds.'.$kind)) : __('messages.leave_ui.target_kinds.'.$kind) }}</x-ui.td><x-ui.td :label="__('messages.leave_ui.reconciled')"><bdi dir="auto">{{ $this->minutes($reconciliation['reconciled'][$kind] ?? 0) }}</bdi></x-ui.td><x-ui.td :label="__('messages.clear_screens.settled_by_hours')"><bdi dir="auto">{{ $this->minutes($reconciliation['settled_by_hours'][$kind] ?? 0) }}</bdi></x-ui.td><x-ui.td :label="__('messages.leave_ui.remaining')"><bdi dir="auto">{{ $this->minutes($reconciliation['remaining'][$kind] ?? 0) }}</bdi></x-ui.td></tr>
             @endforeach
             </tbody></x-ui.table>
             @if (($reconciliation['absence_closed'] ?? false) && $reconciliation['closed_by_request'])

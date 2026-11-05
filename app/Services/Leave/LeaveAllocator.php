@@ -22,6 +22,7 @@ class LeaveAllocator
         $credits = [];
         $flags = [];
         $periodShortfalls = [];
+        $sameDayMinutes = [];
         foreach ($sources as $source) {
             $available = (int) $source['minutes'];
             $periodUsed = false;
@@ -61,6 +62,7 @@ class LeaveAllocator
                 $used = min($available, $remaining[$key]);
                 if ($used > 0) {
                     $allocations[] = $this->allocation($source, $target, $used, 'same_day');
+                    $sameDayMinutes[$target['day_id']] = ($sameDayMinutes[$target['day_id']] ?? 0) + $used;
                     $remaining[$key] -= $used;
                     $available -= $used;
                 }
@@ -75,6 +77,16 @@ class LeaveAllocator
                         ->modify('+'.$expiryDays.' days')->format('Y-m-d'),
                 ];
             }
+        }
+        $settledByHours = [];
+        foreach ($targets as $target) {
+            if (! isset($target['short_minutes']) || ! HoursSettlement::applies((int) $target['short_minutes'], $sameDayMinutes[$target['day_id']] ?? 0)
+                || isset($blocked[$target['work_date'].'|'.$target['kind']])) {
+                continue;
+            }
+            $key = $target['day_id'].'|'.$target['kind'];
+            $settledByHours[$key] = $remaining[$key];
+            $remaining[$key] = 0;
         }
         foreach ($targets as $target) {
             $key = $target['day_id'].'|'.$target['kind'];
@@ -100,7 +112,7 @@ class LeaveAllocator
         }
 
         return ['allocations' => $allocations, 'credits' => $credits, 'remaining' => $remaining,
-            'flags' => $flags, 'period_shortfalls' => $periodShortfalls];
+            'settled_by_hours' => $settledByHours, 'flags' => $flags, 'period_shortfalls' => $periodShortfalls];
     }
 
     private function allocation(array $source, array $target, int $minutes, string $kind): array

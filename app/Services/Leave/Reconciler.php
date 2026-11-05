@@ -261,7 +261,8 @@ class Reconciler
                         continue;
                     }
                     if ((int) $day->{$column} > 0) {
-                        $targets[] = ['day_id' => $day->id, 'work_date' => $date, 'kind' => $kind, 'minutes' => (int) $day->{$column}];
+                        $targets[] = ['day_id' => $day->id, 'work_date' => $date, 'kind' => $kind,
+                            'minutes' => (int) $day->{$column}, 'short_minutes' => (int) $day->short_minutes];
                     }
                 }
             }

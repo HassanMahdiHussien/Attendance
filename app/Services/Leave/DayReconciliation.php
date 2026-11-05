@@ -21,6 +21,17 @@ class DayReconciliation
         $allocations = Allocation::query()->where('company_id', $employee->company_id)
             ->where('employee_id', $employee->id)->whereIn('target_day_id', $days->pluck('id'))
             ->whereNull('superseded_by_run_id')->get()->groupBy('target_day_id');
+        $reversals = RequestDecision::query()->where('company_id', $employee->company_id)
+            ->where('employee_id', $employee->id)->whereBetween('work_date', [$from, $to])
+            ->whereIn('decision', ['reverse_deduction', 'withdraw'])->orderBy('id')->get();
+        $withdrawnReversals = $reversals->where('decision', 'withdraw')
+            ->map(fn (RequestDecision $decision): int => (int) ($decision->values['decision_id'] ?? 0))->all();
+        $blocked = [];
+        foreach ($reversals->where('decision', 'reverse_deduction') as $reversal) {
+            if (! in_array($reversal->id, $withdrawnReversals, true)) {
+                $blocked[$reversal->work_date->toDateString().'|'.$reversal->target_kind] = true;
+            }
+        }
         $pending = LeaveRequest::query()->where('company_id', $employee->company_id)
             ->where('employee_id', $employee->id)->where('status', 'pending')
             ->where('start_date', '<=', $to)->where('end_date', '>=', $from)->get();
@@ -38,11 +49,15 @@ class DayReconciliation
                 'early' => $day->status === 'present' ? (int) $day->early_minutes : 0,
                 'exit' => $day->status === 'present' && $day->policy?->exits_count_toward_balance ? (int) $day->exit_minutes : 0];
             $matched = array_fill_keys(LeaveAllocator::KINDS, 0);
+            $sameDayLeave = 0;
             $explanations = [];
             $closedBy = null;
             $closedAt = null;
             foreach ($allocations->get($day->id, collect()) as $allocation) {
                 $matched[$allocation->target_kind] += $allocation->minutes;
+                if ($allocation->source_request_day_id !== null && ($allocation->explanation['code'] ?? null) === 'leave_same_day') {
+                    $sameDayLeave += (int) $allocation->minutes;
+                }
                 $explanations[] = $allocation->explanation;
                 if ($allocation->target_kind === 'absence' && $allocation->source_request_day_id !== null
                     && $allocation->minutes >= $base['absence']) {
@@ -51,12 +66,19 @@ class DayReconciliation
                 }
             }
             $remaining = [];
+            $settledByHours = array_fill_keys(LeaveAllocator::KINDS, 0);
             foreach ($base as $kind => $minutes) {
                 $remaining[$kind] = max(0, $minutes - $matched[$kind]);
+                if ($day->status === 'present' && in_array($kind, ['late', 'early', 'exit'], true)
+                    && ! isset($blocked[$date.'|'.$kind])
+                    && HoursSettlement::applies((int) $day->short_minutes, $sameDayLeave)) {
+                    $settledByHours[$kind] = $remaining[$kind];
+                    $remaining[$kind] = 0;
+                }
             }
             $result[$date] = [
                 'day_id' => $day->id, 'status' => $day->status,
-                'reconciled' => $matched, 'remaining' => $remaining,
+                'reconciled' => $matched, 'settled_by_hours' => $settledByHours, 'remaining' => $remaining,
                 'absence_closed' => $day->status === 'absent' && $remaining['absence'] === 0,
                 'closed_by_request' => $closedBy,
                 'closed_at' => $closedAt,
