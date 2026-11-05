@@ -598,6 +598,9 @@ return [
         'request_reappeared' => 'ظهر طلب الإجازة مجدداً في تقرير لاحق.',
         'employee_found' => 'رُبط رقم الموظف الآن بسجل موظف.',
         'unknown_issue_grouped' => 'جُمعت طلبات الإجازة ذات رقم الموظف غير المعروف حسب الرقم.',
+        'status_refresh_company_required' => 'أدخل معرّف شركة صالحاً في --company.',
+        'status_refresh_issue_resolved' => 'أصبحت حالة الإجازة المستوردة معروفة.',
+        'status_refresh_counts' => 'الطلبات المصححة: :changed؛ المشكلات المحلولة: :resolved؛ المتخطاة لأن استيرادها لم يكتمل: :skipped.',
     ],
     'leave_reconciliation' => [
         'holiday_date' => 'لا يمكن توزيع الإجازة على يوم عطلة رسمية.',

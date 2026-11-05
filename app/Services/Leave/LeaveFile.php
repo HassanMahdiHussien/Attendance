@@ -178,7 +178,7 @@ class LeaveFile
             if ($status['unknown']) {
                 $errors[] = 'unknown_status';
             }
-            if ($duration === null && $status['status'] !== 'draft') {
+            if ($duration === null && ! in_array($status['status'], ['draft', 'cancelled'], true)) {
                 $errors[] = 'missing_duration';
             }
 

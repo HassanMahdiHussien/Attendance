@@ -598,6 +598,9 @@ return [
         'request_reappeared' => 'The request reappeared in a later leave report.',
         'employee_found' => 'The employee code is now linked to an employee.',
         'unknown_issue_grouped' => 'Unknown employee requests are grouped by owner code.',
+        'status_refresh_company_required' => 'Pass a valid --company ID.',
+        'status_refresh_issue_resolved' => 'The imported leave status is now recognized.',
+        'status_refresh_counts' => 'Requests changed: :changed; issues resolved: :resolved; skipped because their import is unfinished: :skipped.',
     ],
     'leave_reconciliation' => [
         'holiday_date' => 'Leave cannot be distributed to a holiday.',

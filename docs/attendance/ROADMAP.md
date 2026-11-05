@@ -21,7 +21,7 @@ The full requirements are in `docs/attendance/PRD-EN.md`. This file records what
 | Status `Leave Entry` | A saved but unsubmitted form. Covers nothing. From 2026-11-04 (spec 518), a form starting within the last 30 days or later creates a manager follow-up through the existing review-first notification route; HR sees it. A later submitted, approved, rejected or cancelled form closes the item. Employees receive nothing. |
 | Statuses `Manager Approval`, `HR Approval`, `Department Manager Approval` | Pending. Remind the current approver (`Form Approver` column), never the employee. |
 | Rejection | A request is rejected whenever `Leave Form Rejected` has a date, whatever the status column says. |
-| Cancellation | Never appears in the report. HR can mark a request cancelled manually, which reverses its allocations (PRD §11.3). A request missing from a later full report raises an HR alert; it is not cancelled automatically. |
+| Cancellation | Since the 2026-11-04 report, `Cancelled` can appear and counts as cancelled (owner decision 2026-11-05). HR can also mark a request cancelled manually, which reverses its allocations (PRD §11.3). A request missing from a later full report raises an HR alert; it is not cancelled automatically. |
 | Covered-but-working types | Work From Home, Business Travel and Sick Leave mark the day as covered (not absent). |
 | Annual Leave | Covers the day; it comes from the employee's balance in the company system. |
 | No punches + no leave on a working day | Absent when declared coverage and the spec 516 person and branch device-data checks pass; otherwise waiting. |

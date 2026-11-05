@@ -30,7 +30,7 @@ class LeaveImport
         $counts = ['rows' => 0, 'descriptions' => 0, 'errors' => 0, 'duplicates' => 0, 'unknown_employees' => 0,
             'unmapped_types' => 0, 'invalid_dates' => 0, 'new' => 0, 'changed' => 0, 'unchanged' => 0];
         $samples = ['errors' => [], 'duplicates' => [], 'unknown' => []];
-        $statusCounts = array_fill_keys(['approved', 'pending', 'draft', 'rejected'], 0);
+        $statusCounts = array_fill_keys(['approved', 'pending', 'draft', 'rejected', 'cancelled'], 0);
         $typeCounts = [];
         $unmappedTypeCounts = [];
         $otherTypeCount = 0;
