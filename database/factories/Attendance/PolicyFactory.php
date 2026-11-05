@@ -21,6 +21,7 @@ class PolicyFactory extends Factory
             'workday_minutes' => 540,
             'min_presence_minutes' => 480,
             'close_grace_minutes' => 120,
+            'minor_gap_tolerance_minutes' => 5,
             'exits_count_toward_balance' => false,
             'office_rest_days' => [5, 6],
             'version' => 100000 + random_int(1, 1000000),

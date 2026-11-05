@@ -28,6 +28,8 @@ class OfficePolicyPage extends AttendancePage
 
     public int $closeGraceMinutes = 120;
 
+    public int $minorGapToleranceMinutes = 5;
+
     public bool $exitsCountTowardBalance = false;
 
     public array $officeRestDays = [5, 6];
@@ -81,6 +83,7 @@ class OfficePolicyPage extends AttendancePage
             $this->minPresenceMinutes = $policy->min_presence_minutes;
             $this->absenceMinutes = $policy->absence_minutes;
             $this->closeGraceMinutes = $policy->close_grace_minutes;
+            $this->minorGapToleranceMinutes = $policy->minor_gap_tolerance_minutes;
             $this->exitsCountTowardBalance = $policy->exits_count_toward_balance;
             $this->officeRestDays = $policy->office_rest_days;
             $this->shiftStarts = $policy->shift_starts;
@@ -117,6 +120,7 @@ class OfficePolicyPage extends AttendancePage
             'flexMinutes' => 'required|integer|min:0|max:1440', 'workdayMinutes' => 'required|integer|min:1|max:1440',
             'minPresenceMinutes' => 'required|integer|min:1|max:1440', 'closeGraceMinutes' => 'required|integer|min:0|max:1440',
             'absenceMinutes' => 'required|integer|min:1|max:1440',
+            'minorGapToleranceMinutes' => 'required|integer|min:0|max:60',
             'exitsCountTowardBalance' => 'boolean', 'officeRestDays' => 'array',
             'officeRestDays.*' => 'integer|between:1,7', 'reason' => 'required|string|max:500',
             'shiftStarts' => 'required|array|min:1', 'shiftStarts.*' => 'required|date_format:H:i',
@@ -155,6 +159,7 @@ class OfficePolicyPage extends AttendancePage
             'office_start' => $this->officeStart.':00', 'flex_minutes' => $this->flexMinutes,
             'workday_minutes' => $this->workdayMinutes, 'min_presence_minutes' => $this->minPresenceMinutes,
             'absence_minutes' => $this->absenceMinutes, 'close_grace_minutes' => $this->closeGraceMinutes,
+            'minor_gap_tolerance_minutes' => $this->minorGapToleranceMinutes,
             'exits_count_toward_balance' => $this->exitsCountTowardBalance, 'office_rest_days' => $restDays,
             'shift_starts' => $starts, 'shift_minutes' => $this->shiftMinutes,
             'shift_break_minutes' => $this->shiftBreakMinutes,

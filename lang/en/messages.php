@@ -324,6 +324,7 @@ return [
         ],
     ],
     'office_ui' => [
+        'minor_gap_tolerance_help' => 'Applies to office, shift and security days when the required hours were worked.',
         'daily_title' => 'Daily attendance', 'review_title' => 'Review queue',
         'policy_title' => 'Attendance policy', 'detail_title' => 'Attendance day',
         'office_presence_replacement_reason' => 'Office short-hours threshold: 9 hours; absence: 8 hours',
@@ -372,6 +373,7 @@ return [
             'balance_minutes' => 'Balance to reconcile',
         ],
         'policy_fields' => [
+            'minor_gap_tolerance_minutes' => 'Minor gap tolerance (minutes)',
             'office_start' => 'Office start', 'flex_minutes' => 'Flex window (minutes)',
             'workday_minutes' => 'Workday (minutes)', 'min_presence_minutes' => 'Minimum presence (minutes)',
             'close_grace_minutes' => 'Close grace (minutes)',
@@ -742,6 +744,7 @@ return [
     ],
     'duration_text' => ['hours' => ':hours h', 'minutes' => ':minutes min', 'hours_minutes' => ':hours h :minutes min'],
     'day_presentation' => [
+        'within_tolerance' => 'Within the allowed :limit minutes',
         'covered' => 'Covered by leave', 'short' => 'Short', 'unknown' => 'Unknown',
         'absence_full' => 'Full day absent, no leave',
         'absence_partial' => ':covered covered by leave · :remaining not covered',

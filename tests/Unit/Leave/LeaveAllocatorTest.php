@@ -159,3 +159,86 @@ test('a description period allocation does not settle its target day by hours', 
         ->and($result['remaining']['1|early'])->toBe(23)
         ->and($result['settled_by_hours'])->toBe([]);
 });
+
+test('minor gap tolerance applies to the combined uncovered kinds without spending credit', function (): void {
+    $allocator = new LeaveAllocator;
+    $targets = [leaveTarget(1, '2026-10-19', 'late', 2), leaveTarget(1, '2026-10-19', 'early', 3),
+        leaveTarget(2, '2026-10-20', 'early', 20)];
+    foreach ($targets as &$target) {
+        $target['short_minutes'] = $target['day_id'] === 1 ? 0 : 20;
+        $target['tolerance_minutes'] = 5;
+    }
+    unset($target);
+    $result = $allocator->allocate([leaveSource('credit', '2026-10-18', 10)], $targets);
+
+    expect($result['remaining']['1|late'])->toBe(0)
+        ->and($result['remaining']['1|early'])->toBe(0)
+        ->and($result['settled_by_hours']['1|late'])->toBe(2)
+        ->and($result['settled_by_hours']['1|early'])->toBe(3)
+        ->and($result['allocations'])->toHaveCount(1)
+        ->and($result['allocations'][0]['target_day_id'])->toBe(2)
+        ->and($result['allocations'][0]['minutes'])->toBe(10);
+});
+
+test('minor gap tolerance is all or nothing and excludes blocked kinds', function (): void {
+    $allocator = new LeaveAllocator;
+    $targets = [leaveTarget(1, '2026-10-19', 'late', 3), leaveTarget(1, '2026-10-19', 'early', 3)];
+    foreach ($targets as &$target) {
+        $target['short_minutes'] = 0;
+        $target['tolerance_minutes'] = 5;
+    }
+    unset($target);
+    $six = $allocator->allocate([], $targets);
+    $blocked = $allocator->allocate([], $targets, ['2026-10-19|late' => true]);
+    $targets[0]['minutes'] = 2;
+    $five = $allocator->allocate([], $targets);
+    $targets[0]['short_minutes'] = 1;
+    $targets[1]['short_minutes'] = 1;
+    $short = $allocator->allocate([], $targets);
+    $targets[0]['short_minutes'] = 0;
+    $targets[1]['short_minutes'] = 0;
+    $targets[0]['tolerance_minutes'] = 0;
+    $targets[1]['tolerance_minutes'] = 0;
+    $off = $allocator->allocate([], $targets);
+
+    expect($six['remaining']['1|late'])->toBe(3)
+        ->and($six['remaining']['1|early'])->toBe(3)
+        ->and($blocked['remaining']['1|late'])->toBe(3)
+        ->and($blocked['settled_by_hours']['1|early'])->toBe(3)
+        ->and($five['settled_by_hours']['1|late'])->toBe(2)
+        ->and($five['settled_by_hours']['1|early'])->toBe(3)
+        ->and($short['remaining']['1|late'])->toBe(2)
+        ->and($short['remaining']['1|early'])->toBe(3)
+        ->and($off['remaining']['1|late'])->toBe(2)
+        ->and($off['remaining']['1|early'])->toBe(3);
+});
+
+test('worked-hours settlement takes precedence when same-day leave leaves four minutes', function (): void {
+    $targets = [leaveTarget(1, '2026-10-19', 'late', 240), leaveTarget(1, '2026-10-19', 'early', 4)];
+    foreach ($targets as &$target) {
+        $target['short_minutes'] = 0;
+        $target['tolerance_minutes'] = 5;
+    }
+    unset($target);
+    $result = (new LeaveAllocator)->allocate([leaveSource('leave', '2026-10-19', 240)], $targets);
+
+    expect($result['allocations'])->toHaveCount(1)
+        ->and($result['allocations'][0]['minutes'])->toBe(240)
+        ->and($result['settled_by_hours']['1|early'])->toBe(4)
+        ->and($result['remaining']['1|early'])->toBe(0);
+});
+
+test('a description-period allocation cannot make a six-minute day tolerant', function (): void {
+    $source = leaveSource('leave', '2026-10-20', 4);
+    $source['settled_from'] = '2026-10-19';
+    $source['settled_to'] = '2026-10-19';
+    $target = leaveTarget(1, '2026-10-19', 'early', 6);
+    $target['short_minutes'] = 0;
+    $target['tolerance_minutes'] = 5;
+
+    $result = (new LeaveAllocator)->allocate([$source], [$target]);
+
+    expect($result['allocations'][0]['explanation']['code'])->toBe('leave_description_period')
+        ->and($result['remaining']['1|early'])->toBe(2)
+        ->and($result['settled_by_hours'])->toBe([]);
+});

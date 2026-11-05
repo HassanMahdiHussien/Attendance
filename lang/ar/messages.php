@@ -324,6 +324,7 @@ return [
         ],
     ],
     'office_ui' => [
+        'minor_gap_tolerance_help' => 'تُطبّق على أيام العمل المكتبي والورديات والأمن عند إكمال ساعات العمل المطلوبة.',
         'daily_title' => 'الحضور اليومي', 'review_title' => 'قائمة المراجعة',
         'policy_title' => 'سياسة الحضور', 'detail_title' => 'تفاصيل يوم الحضور',
         'office_presence_replacement_reason' => 'حد نقص ساعات الدوام المكتبي: ٩ ساعات؛ الغياب: ٨ ساعات',
@@ -372,6 +373,7 @@ return [
             'balance_minutes' => 'الرصيد المطلوب تسويته',
         ],
         'policy_fields' => [
+            'minor_gap_tolerance_minutes' => 'سماحية الفروقات البسيطة (دقائق)',
             'office_start' => 'بداية الدوام', 'flex_minutes' => 'مرونة الوصول (دقائق)',
             'workday_minutes' => 'مدة الدوام (دقائق)', 'min_presence_minutes' => 'الحد الأدنى للحضور (دقائق)',
             'close_grace_minutes' => 'مهلة الإغلاق (دقائق)',
@@ -742,6 +744,7 @@ return [
     ],
     'duration_text' => ['hours' => ':hours س', 'minutes' => ':minutes د', 'hours_minutes' => ':hours س :minutes د'],
     'day_presentation' => [
+        'within_tolerance' => 'ضمن السماحية المسموحة البالغة :limit دقائق',
         'covered' => 'مغطّى بإجازة', 'short' => 'نقص في الدوام', 'unknown' => 'غير معروف',
         'absence_full' => 'غياب يوم كامل بلا إجازة',
         'absence_partial' => ':covered مغطاة بإجازة · :remaining غير مغطاة',

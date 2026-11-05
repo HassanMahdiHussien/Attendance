@@ -8,4 +8,9 @@ class HoursSettlement
     {
         return $sameDayLeaveMinutes > 0 && $shortMinutes <= $sameDayLeaveMinutes;
     }
+
+    public static function withinTolerance(int $shortMinutes, int $uncoveredMinutes, int $limit): bool
+    {
+        return $shortMinutes === 0 && $limit > 0 && $uncoveredMinutes > 0 && $uncoveredMinutes <= $limit;
+    }
 }

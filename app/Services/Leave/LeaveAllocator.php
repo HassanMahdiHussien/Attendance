@@ -23,6 +23,7 @@ class LeaveAllocator
         $flags = [];
         $periodShortfalls = [];
         $sameDayMinutes = [];
+        $sameDayByTarget = [];
         foreach ($sources as $source) {
             $available = (int) $source['minutes'];
             $periodUsed = false;
@@ -63,6 +64,7 @@ class LeaveAllocator
                 if ($used > 0) {
                     $allocations[] = $this->allocation($source, $target, $used, 'same_day');
                     $sameDayMinutes[$target['day_id']] = ($sameDayMinutes[$target['day_id']] ?? 0) + $used;
+                    $sameDayByTarget[$key] = ($sameDayByTarget[$key] ?? 0) + $used;
                     $remaining[$key] -= $used;
                     $available -= $used;
                 }
@@ -82,6 +84,29 @@ class LeaveAllocator
         foreach ($targets as $target) {
             if (! isset($target['short_minutes']) || ! HoursSettlement::applies((int) $target['short_minutes'], $sameDayMinutes[$target['day_id']] ?? 0)
                 || isset($blocked[$target['work_date'].'|'.$target['kind']])) {
+                continue;
+            }
+            $key = $target['day_id'].'|'.$target['kind'];
+            $settledByHours[$key] = $remaining[$key];
+            $remaining[$key] = 0;
+        }
+        $uncoveredByDay = [];
+        foreach ($targets as $target) {
+            if (! isset($target['tolerance_minutes']) || ! in_array($target['kind'], ['late', 'early', 'exit'], true)
+                || isset($blocked[$target['work_date'].'|'.$target['kind']])) {
+                continue;
+            }
+            $key = $target['day_id'].'|'.$target['kind'];
+            $uncoveredByDay[$target['day_id']] = ($uncoveredByDay[$target['day_id']] ?? 0)
+                + max(0, (int) $target['minutes'] - ($sameDayByTarget[$key] ?? 0));
+        }
+        foreach ($targets as $target) {
+            if (! isset($target['short_minutes'], $target['tolerance_minutes'])
+                || ! in_array($target['kind'], ['late', 'early', 'exit'], true)
+                || isset($blocked[$target['work_date'].'|'.$target['kind']])
+                || HoursSettlement::applies((int) $target['short_minutes'], $sameDayMinutes[$target['day_id']] ?? 0)
+                || ! HoursSettlement::withinTolerance((int) $target['short_minutes'], $uncoveredByDay[$target['day_id']] ?? 0,
+                    (int) $target['tolerance_minutes'])) {
                 continue;
             }
             $key = $target['day_id'].'|'.$target['kind'];

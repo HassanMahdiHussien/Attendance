@@ -300,7 +300,7 @@ test('office attendance dynamic labels exist in both languages', function (): vo
         ]),
         ...array_map(fn (string $field): string => 'policy_fields.'.$field, [
             'office_start', 'flex_minutes', 'workday_minutes', 'min_presence_minutes',
-            'absence_minutes', 'close_grace_minutes', 'exits_count_toward_balance', 'office_rest_days',
+            'absence_minutes', 'close_grace_minutes', 'minor_gap_tolerance_minutes', 'exits_count_toward_balance', 'office_rest_days',
             'shift_starts', 'shift_minutes', 'shift_break_minutes', 'shift_min_presence_minutes',
             'shift_rest_days', 'security_min_presence_minutes', 'inference_tolerance_minutes',
             'overtime_min_minutes', 'overtime_step_minutes', 'rest_day_half_minutes', 'rest_day_full_minutes',

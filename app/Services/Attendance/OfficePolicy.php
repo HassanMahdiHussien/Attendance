@@ -24,6 +24,7 @@ class OfficePolicy
         'min_presence_minutes' => 480,
         'absence_minutes' => 480,
         'close_grace_minutes' => 120,
+        'minor_gap_tolerance_minutes' => 5,
         'exits_count_toward_balance' => false,
         'office_rest_days' => [5, 6],
         'shift_starts' => ['00:00', '08:00', '16:00'],
@@ -161,7 +162,9 @@ class OfficePolicy
             || ! is_numeric($values['flex_minutes']) || (int) $values['flex_minutes'] < 0
             || (int) $values['flex_minutes'] > (int) $values['workday_minutes']
             || ! is_numeric($values['close_grace_minutes']) || (int) $values['close_grace_minutes'] < 0
-            || (int) $values['close_grace_minutes'] > 1440) {
+            || (int) $values['close_grace_minutes'] > 1440
+            || filter_var($values['minor_gap_tolerance_minutes'], FILTER_VALIDATE_INT) === false
+            || (int) $values['minor_gap_tolerance_minutes'] < 0 || (int) $values['minor_gap_tolerance_minutes'] > 60) {
             throw ValidationException::withMessages(['policy' => __('messages.office_policy.invalid')]);
         }
     }

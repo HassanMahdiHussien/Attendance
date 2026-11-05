@@ -7,7 +7,7 @@
                 <p>{{ __('messages.office_ui.version') }} <bdi dir="ltr">{{ $current->version }}</bdi> · {{ __('messages.office_ui.effective_from') }} <bdi dir="ltr">{{ $current->effective_from->toDateString() }}</bdi></p>
                 <h3 class="mt-4 font-semibold">{{ __('messages.office_ui.policy_sections.office') }}</h3>
                 <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    @foreach (['office_start', 'flex_minutes', 'workday_minutes', 'min_presence_minutes', 'absence_minutes', 'close_grace_minutes'] as $field)
+                    @foreach (['office_start', 'flex_minutes', 'workday_minutes', 'min_presence_minutes', 'absence_minutes', 'close_grace_minutes', 'minor_gap_tolerance_minutes'] as $field)
                         <div><span class="text-sm text-gray-600">{{ str_replace(' ('.__('messages.clear_screens.minutes_unit').')', '', __('messages.office_ui.policy_fields.'.$field)) }}</span><strong class="block {{ $field === 'office_start' ? 'font-mono' : '' }}"><bdi dir="{{ $field === 'office_start' ? 'ltr' : 'auto' }}">{{ $field === 'office_start' ? $current->{$field} : app(\App\Services\Attendance\Reporting\DurationText::class)->format($current->{$field}) }}</bdi></strong></div>
                     @endforeach
                     <div><span class="text-sm text-gray-600">{{ __('messages.office_ui.rest_allowance') }}</span><strong class="block"><bdi dir="auto">{{ app(\App\Services\Attendance\Reporting\DurationText::class)->format(\App\Services\Attendance\OfficePolicy::restMinutes((int) $current->workday_minutes, (int) $current->min_presence_minutes)) }}</bdi></strong></div>
@@ -46,6 +46,7 @@
                     <label>{{ __('messages.office_ui.policy_fields.min_presence_minutes') }} <input type="number" wire:model="minPresenceMinutes" min="1" class="block w-full rounded-xl border border-gray-200 p-2" dir="ltr"></label>
                     <label>{{ __('messages.office_ui.policy_fields.absence_minutes') }} <input type="number" wire:model="absenceMinutes" min="1" class="block w-full rounded-xl border border-gray-200 p-2" dir="ltr"></label>
                     <label>{{ __('messages.office_ui.policy_fields.close_grace_minutes') }} <input type="number" wire:model="closeGraceMinutes" min="0" class="block w-full rounded-xl border border-gray-200 p-2" dir="ltr"></label>
+                    <label>{{ __('messages.office_ui.policy_fields.minor_gap_tolerance_minutes') }} <input type="number" wire:model="minorGapToleranceMinutes" min="0" max="60" class="block w-full rounded-xl border border-gray-200 p-2" dir="ltr"><span class="block text-sm text-gray-600">{{ __('messages.office_ui.minor_gap_tolerance_help') }}</span></label>
                     <label class="flex items-center gap-2"><input type="checkbox" wire:model="exitsCountTowardBalance">{{ __('messages.office_ui.policy_fields.exits_count_toward_balance') }}</label>
                 </div>
                 <fieldset><legend>{{ __('messages.office_ui.policy_fields.office_rest_days') }}</legend><div class="flex flex-wrap gap-3">@foreach (range(1, 7) as $weekday)<label><input type="checkbox" wire:model="officeRestDays" value="{{ $weekday }}"> {{ __('messages.office_ui.weekdays.'.$weekday) }}</label>@endforeach</div></fieldset>
@@ -69,7 +70,7 @@
                 </div>
                 <p class="text-sm text-gray-600">{{ __('messages.overtime_ui.eligible_rest_days') }}: {{ __('messages.overtime_ui.office_friday') }} · {{ __('messages.overtime_ui.shift_friday') }} · {{ __('messages.overtime_ui.security_individual') }}</p>
                 <label class="block">{{ __('messages.office_ui.reason') }} <input type="text" wire:model="reason" class="block w-full rounded-xl border border-gray-200 p-2"></label>
-                @foreach (['effectiveFrom', 'officeStart', 'flexMinutes', 'workdayMinutes', 'minPresenceMinutes', 'absenceMinutes', 'closeGraceMinutes', 'officeRestDays', 'shiftStarts', 'shiftMinutes', 'shiftBreakMinutes', 'shiftMinPresenceMinutes', 'shiftRestDays', 'securityMinPresenceMinutes', 'inferenceToleranceMinutes', 'overtimeMinMinutes', 'overtimeStepMinutes', 'restDayHalfMinutes', 'restDayFullMinutes', 'reason'] as $field) @error($field) <p class="text-red-600">{{ $message }}</p> @enderror @endforeach
+                @foreach (['effectiveFrom', 'officeStart', 'flexMinutes', 'workdayMinutes', 'minPresenceMinutes', 'absenceMinutes', 'closeGraceMinutes', 'minorGapToleranceMinutes', 'officeRestDays', 'shiftStarts', 'shiftMinutes', 'shiftBreakMinutes', 'shiftMinPresenceMinutes', 'shiftRestDays', 'securityMinPresenceMinutes', 'inferenceToleranceMinutes', 'overtimeMinMinutes', 'overtimeStepMinutes', 'restDayHalfMinutes', 'restDayFullMinutes', 'reason'] as $field) @error($field) <p class="text-red-600">{{ $message }}</p> @enderror @endforeach
                 <x-filament::button type="submit">{{ __('messages.office_ui.add_version') }}</x-filament::button>
             </form>
         </x-ui.card>

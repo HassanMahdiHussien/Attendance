@@ -15,8 +15,9 @@ class DayPresentation
         $status = $perDayRow['status'];
         $minutes = $perDayRow['minutes'];
         $observed = $perDayRow['observed'];
-        $late = ($minutes['late']['gross'] ?? 0) > 0;
-        $early = ($minutes['early']['gross'] ?? 0) > 0;
+        $withinTolerance = (bool) ($perDayRow['flags']['within_tolerance'] ?? false);
+        $late = ! $withinTolerance && ($minutes['late']['gross'] ?? 0) > 0;
+        $early = ! $withinTolerance && ($minutes['early']['gross'] ?? 0) > 0;
         $problems = [];
         $tone = 'gray';
         $needsReview = false;
@@ -37,10 +38,20 @@ class DayPresentation
                 $problems[] = __('messages.day_presentation.absence_covered');
             }
         } elseif ($status === 'present') {
-            foreach (['late', 'early', 'exit'] as $kind) {
-                if (($minutes[$kind]['gross'] ?? 0) > 0) {
-                    $problems[] = __('messages.day_presentation.'.$kind, ['duration' => $this->duration->format($minutes[$kind]['gross'])]);
-                    $needsReview = $needsReview || $minutes[$kind]['remaining'] > 0;
+            if ($withinTolerance) {
+                $problems[] = __('messages.day_presentation.within_tolerance', ['limit' => $perDayRow['minor_gap_tolerance'] ?? 0]);
+                foreach (['late', 'early', 'exit'] as $kind) {
+                    if (($minutes[$kind]['remaining'] ?? 0) > 0) {
+                        $problems[] = __('messages.day_presentation.'.$kind, ['duration' => $this->duration->format($minutes[$kind]['gross'])]);
+                        $needsReview = true;
+                    }
+                }
+            } else {
+                foreach (['late', 'early', 'exit'] as $kind) {
+                    if (($minutes[$kind]['gross'] ?? 0) > 0) {
+                        $problems[] = __('messages.day_presentation.'.$kind, ['duration' => $this->duration->format($minutes[$kind]['gross'])]);
+                        $needsReview = $needsReview || $minutes[$kind]['remaining'] > 0;
+                    }
                 }
             }
             $shortRemaining = $perDayRow['short_remaining'] ?? ($observed['short'] ?? 0);
@@ -49,11 +60,12 @@ class DayPresentation
                 $needsReview = true;
             }
             $leave = array_sum(array_map(fn (string $kind): int => (int) ($minutes[$kind]['reconciled_by_leave'] ?? 0), ['late', 'early', 'exit']));
+            $credit = array_sum(array_map(fn (string $kind): int => (int) ($minutes[$kind]['reconciled_by_credit'] ?? 0), ['late', 'early', 'exit']));
             if ($leave > 0) {
                 $problems[] = __('messages.day_presentation.'.($needsReview ? 'leave_applied' : 'covered_by_leave'),
                     ['duration' => $this->duration->format($leave)]);
             }
-            if ($problems === []) {
+            if ($problems === [] || ($withinTolerance && ! $needsReview && $leave === 0 && $credit === 0)) {
                 $tone = 'green';
             } elseif ($needsReview) {
                 $statusKey = 'short';

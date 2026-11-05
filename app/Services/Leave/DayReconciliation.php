@@ -50,6 +50,7 @@ class DayReconciliation
                 'exit' => $day->status === 'present' && $day->policy?->exits_count_toward_balance ? (int) $day->exit_minutes : 0];
             $matched = array_fill_keys(LeaveAllocator::KINDS, 0);
             $sameDayLeave = 0;
+            $sameDayByKind = array_fill_keys(LeaveAllocator::KINDS, 0);
             $explanations = [];
             $closedBy = null;
             $closedAt = null;
@@ -57,6 +58,7 @@ class DayReconciliation
                 $matched[$allocation->target_kind] += $allocation->minutes;
                 if ($allocation->source_request_day_id !== null && ($allocation->explanation['code'] ?? null) === 'leave_same_day') {
                     $sameDayLeave += (int) $allocation->minutes;
+                    $sameDayByKind[$allocation->target_kind] += (int) $allocation->minutes;
                 }
                 $explanations[] = $allocation->explanation;
                 if ($allocation->target_kind === 'absence' && $allocation->source_request_day_id !== null
@@ -67,11 +69,23 @@ class DayReconciliation
             }
             $remaining = [];
             $settledByHours = array_fill_keys(LeaveAllocator::KINDS, 0);
+            $uncoveredAfterSameDay = 0;
+            if ($day->status === 'present') {
+                foreach (['late', 'early', 'exit'] as $kind) {
+                    if (! isset($blocked[$date.'|'.$kind])) {
+                        $uncoveredAfterSameDay += max(0, $base[$kind] - $sameDayByKind[$kind]);
+                    }
+                }
+            }
+            $settlesHours = $day->status === 'present' && HoursSettlement::applies((int) $day->short_minutes, $sameDayLeave);
+            $withinTolerance = ! $settlesHours && $day->status === 'present'
+                && HoursSettlement::withinTolerance((int) $day->short_minutes, $uncoveredAfterSameDay,
+                    (int) ($day->policy?->minor_gap_tolerance_minutes ?? 0));
             foreach ($base as $kind => $minutes) {
                 $remaining[$kind] = max(0, $minutes - $matched[$kind]);
                 if ($day->status === 'present' && in_array($kind, ['late', 'early', 'exit'], true)
                     && ! isset($blocked[$date.'|'.$kind])
-                    && HoursSettlement::applies((int) $day->short_minutes, $sameDayLeave)) {
+                    && ($settlesHours || $withinTolerance)) {
                     $settledByHours[$kind] = $remaining[$kind];
                     $remaining[$kind] = 0;
                 }
