@@ -20,11 +20,17 @@ class UploadDetector
     public function detect(Company $company, UploadedFile $file, array $allowed = ['attendance', 'leave', 'leave_balance', 'employees']): array
     {
         $name = $file->getClientOriginalName();
-        if (in_array(strtolower($file->getClientOriginalExtension()), ['pdf', 'png', 'jpg', 'jpeg', 'eml', 'msg'], true)) {
+        $extension = strtolower($file->getClientOriginalExtension());
+        if (! in_array($extension, ['csv', 'txt', 'xlsx', 'pdf', 'png', 'jpg', 'jpeg', 'eml', 'msg'], true)) {
+            return ['kind' => 'unknown', 'mapping' => null, 'settings' => [], 'preview' => null, 'headers' => [],
+                'message' => __('messages.upload_center.unsupported_type', ['type' => '.'.$extension])];
+        }
+        if (in_array($extension, ['pdf', 'png', 'jpg', 'jpeg', 'eml', 'msg'], true)) {
             return ['kind' => 'announcement', 'mapping' => null, 'settings' => [], 'preview' => null, 'headers' => []];
         }
         $matches = [];
         $damagedHeader = false;
+        $couldNotOpen = false;
         foreach ($allowed as $kind) {
             if ($kind === 'announcement') {
                 continue;
@@ -39,6 +45,9 @@ class UploadDetector
             } catch (ValidationException $exception) {
                 // Each inspector owns its header rules; a rejected layout may belong to another report.
                 $damagedHeader = $damagedHeader || in_array(__('messages.import.damaged_arabic_header'), $exception->errors()['sourceFile'] ?? [], true);
+            } catch (\Throwable $exception) {
+                report($exception);
+                $couldNotOpen = true;
             }
         }
         if (isset($matches['employees']) && ! preg_match('/\bHC\b|employee/i', $name)
@@ -54,7 +63,8 @@ class UploadDetector
         };
         if ($matches === []) {
             return ['kind' => 'unknown', 'mapping' => null, 'settings' => [], 'preview' => null, 'headers' => [],
-                'message' => $damagedHeader ? __('messages.import.damaged_arabic_header') : null];
+                'message' => $couldNotOpen ? __('messages.upload_center.could_not_open')
+                    : ($damagedHeader ? __('messages.import.damaged_arabic_header') : null)];
         }
         $kind = $preferred !== null && isset($matches[$preferred]) ? $preferred : null;
         foreach (['leave_balance', 'leave', 'attendance', 'employees'] as $candidate) {

@@ -1,12 +1,29 @@
 <x-filament-panels::page>
-    <div class="space-y-5" @if($this->hasPendingEmployeeRun()) wire:poll.3s="pollImport" @endif>
+    <div class="space-y-5" x-data="{ phase: 'idle', progress: 0, uploadError: false, dragging: 0 }" @if($this->hasPendingEmployeeRun()) wire:poll.3s="pollImport" @endif>
         <p class="text-sm text-gray-600">{{ __('messages.clear_screens.upload_context') }}</p>
-        <section class="rounded-xl border border-line bg-white p-4 shadow-sm sm:p-5">
+        <section class="rounded-xl border border-line bg-white p-4 shadow-sm sm:p-5"
+            x-on:livewire-upload-start="phase = 'uploading'; progress = 0; uploadError = false"
+            x-on:livewire-upload-progress="progress = $event.detail.progress; if (progress >= 100) phase = 'reading'"
+            x-on:livewire-upload-finish="phase = 'idle'; $refs.fileInput.value = ''"
+            x-on:livewire-upload-error="phase = 'idle'; uploadError = true; $refs.fileInput.value = ''"
+            x-on:livewire-upload-cancel="phase = 'idle'; $refs.fileInput.value = ''">
             <h2 class="font-semibold text-ink">{{ __('messages.upload_center.choose') }}</h2>
             <p class="mt-1 text-sm text-gray-600">{{ __('messages.clear_screens.upload_instruction') }}</p>
-            <input type="file" multiple wire:model.live="incomingFiles" accept=".csv,.txt,.xlsx,.pdf,.png,.jpg,.jpeg,.eml,.msg,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" class="mt-3 block w-full min-w-0 rounded-lg border border-line p-2 text-sm">
-            @error('incomingFiles.*') <p class="mt-2 text-red-700">{{ $message }}</p> @enderror
-            <p class="mt-2 text-sm text-gray-600">{{ __('messages.upload_center.accepted') }}</p>
+            <label class="mt-3 flex min-h-36 w-full min-w-0 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-line px-4 py-6 text-center focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary"
+                x-bind:class="dragging > 0 ? 'border-primary bg-primary-light' : 'bg-white'"
+                x-on:dragenter.prevent="dragging++" x-on:dragleave.prevent="dragging = Math.max(0, dragging - 1)"
+                x-on:dragover.prevent x-on:drop.prevent="dragging = 0; $refs.fileInput.files = $event.dataTransfer.files; $refs.fileInput.dispatchEvent(new Event('change', { bubbles: true }))">
+                <input x-ref="fileInput" type="file" multiple wire:model.live="incomingFiles" class="sr-only">
+                <span class="rounded-lg border border-line bg-white px-4 py-2 font-semibold text-ink">{{ __('messages.upload_center.choose_files') }}</span>
+                <span class="text-sm text-gray-600">{{ __('messages.upload_center.drag_here') }}</span>
+            </label>
+            <div x-show="phase === 'uploading'" x-cloak role="status" aria-live="polite" class="mt-3 space-y-2 text-sm text-ink">
+                <p>{{ __('messages.upload_center.uploading') }} <span x-text="progress + '%'" class="font-mono"></span></p>
+                <div role="progressbar" aria-valuemin="0" aria-valuemax="100" x-bind:aria-valuenow="progress" class="h-2 overflow-hidden rounded-full bg-bg"><div class="h-full bg-primary" x-bind:style="'width: ' + progress + '%'"></div></div>
+            </div>
+            <p x-show="phase === 'reading'" x-cloak role="status" aria-live="polite" class="mt-3 flex items-center gap-2 text-sm text-ink"><span class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-line border-t-primary" aria-hidden="true"></span>{{ __('messages.upload_center.reading') }}</p>
+            <p x-show="uploadError" x-cloak role="alert" class="mt-3 text-sm text-red-700">{{ __('messages.upload_center.upload_error') }}</p>
+            @error('incomingFiles.*') <p role="alert" class="mt-3 text-sm text-red-700">{{ $message }}</p> @enderror
         </section>
 
         @if($rows)
@@ -157,7 +174,19 @@
                     </div>
                 @endforeach
             </section>
-            <button type="button" wire:click="import" wire:loading.attr="disabled" class="rounded-lg bg-signal px-4 py-2 font-semibold text-night hover:bg-signal-deep disabled:opacity-50">{{ __('messages.upload_center.import') }}</button>
+            @php $showImport = collect($rows)->contains(fn (array $row): bool => $row['kind'] !== 'announcement' && $row['batch_id'] === null && ($row['run_id'] ?? null) === null); @endphp
+            @if($showImport)
+                @php $importableCount = $this->importableCount(); @endphp
+                <div class="flex flex-wrap items-center gap-3">
+                    <button type="button" wire:click="import" wire:loading.attr="disabled" wire:target="import" @disabled($importableCount === 0 || $this->hasPendingEmployeeRun())
+                        data-blocked="{{ $importableCount === 0 || $this->hasPendingEmployeeRun() ? '1' : '0' }}" x-bind:disabled="phase !== 'idle' || $el.dataset.blocked === '1'"
+                        class="rounded-lg bg-signal px-4 py-2 font-semibold text-night hover:bg-signal-deep disabled:cursor-not-allowed disabled:opacity-50">
+                        <span wire:loading.remove wire:target="import">{{ $importableCount === 0 ? __('messages.upload_center.import') : trans_choice('messages.upload_center.import_count', $importableCount, ['count' => $importableCount]) }}</span>
+                        <span wire:loading wire:target="import">{{ __('messages.upload_center.importing') }}</span>
+                    </button>
+                    @if($importableCount === 0)<p class="text-sm text-gray-600">{{ __('messages.upload_center.nothing_to_import') }}</p>@endif
+                </div>
+            @endif
         @endif
         <details wire:ignore.self class="rounded-xl border border-line bg-white p-4 text-sm">
             <summary class="cursor-pointer font-medium">{{ __('messages.upload_center.advanced') }}</summary>
