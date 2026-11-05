@@ -6,6 +6,7 @@ use App\Events\CoverageChanged;
 use App\Models\Attendance\DataIssue;
 use App\Models\Company;
 use App\Models\User;
+use App\Services\Attendance\Reporting\MonthSummaries;
 use App\Services\AuditLogger;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Support\Facades\DB;
@@ -54,6 +55,10 @@ class DataIssues
                 'type' => $issue->type, 'subject_key' => $issue->subject_key,
                 'before' => 'open', 'after' => $status,
             ], $actor);
+            if ($issue->type === 'leave_with_attendance_nothing_to_reconcile'
+                && preg_match('/^employee:(\d+):request_day:\d+\|(\d{4}-\d{2}-\d{2})$/', $issue->subject_key, $matches)) {
+                app(MonthSummaries::class)->markDirty($issue->company_id, [(int) $matches[1]], $matches[2], $matches[2]);
+            }
             if ($issue->type === 'device_outage' && preg_match('/^branch:(\d+):(\d{4}-\d{2}-\d{2})$/', $issue->subject_key, $matches)) {
                 event(new CoverageChanged((int) $issue->company_id, [(int) $matches[1]], $matches[2], $matches[2]));
             }

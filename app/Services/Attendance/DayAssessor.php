@@ -14,6 +14,7 @@ use App\Models\Company;
 use App\Models\Employee;
 use App\Models\EmployeeVersion;
 use App\Models\Leave\RequestDay;
+use App\Services\Attendance\Reporting\MonthSummaries;
 use App\Services\AuditLogger;
 use App\Services\Employees\EmployeeHistory;
 use App\Support\Tenancy\TenantContext;
@@ -132,6 +133,8 @@ class DayAssessor
 
     private function assessChunk(Company $company, array $ids, array $scope, array $dates, string $from, string $to, array $policies, ProcessingRun $run, array &$outageCache, array &$changedEmployees, array &$changedDates): int
     {
+        $dirtyEmployees = [];
+        $dirtyDates = [];
         $employees = Employee::query()->where('company_id', $company->id)->whereIn('id', $ids)
             ->orderBy('id')->lockForUpdate()->get();
         $ids = $employees->pluck('id')->all();
@@ -220,6 +223,8 @@ class DayAssessor
                         $changed++;
                         $changedEmployees[$employee->id] = true;
                         $changedDates[$date] = true;
+                        $dirtyEmployees[$employee->id] = true;
+                        $dirtyDates[$date] = true;
                     }
 
                     continue;
@@ -290,6 +295,8 @@ class DayAssessor
                         $changed++;
                         $changedEmployees[$employee->id] = true;
                         $changedDates[$date] = true;
+                        $dirtyEmployees[$employee->id] = true;
+                        $dirtyDates[$date] = true;
                     }
 
                     continue;
@@ -316,6 +323,8 @@ class DayAssessor
                         $changed++;
                         $changedEmployees[$employee->id] = true;
                         $changedDates[$date] = true;
+                        $dirtyEmployees[$employee->id] = true;
+                        $dirtyDates[$date] = true;
                     }
 
                     continue;
@@ -373,7 +382,15 @@ class DayAssessor
                 $changed++;
                 $changedEmployees[$employee->id] = true;
                 $changedDates[$date] = true;
+                $dirtyEmployees[$employee->id] = true;
+                $dirtyDates[$date] = true;
             }
+        }
+
+        if ($dirtyDates !== []) {
+            app(MonthSummaries::class)->markDirty(
+                $company->id, array_keys($dirtyEmployees), min(array_keys($dirtyDates)), max(array_keys($dirtyDates)),
+            );
         }
 
         return $changed;

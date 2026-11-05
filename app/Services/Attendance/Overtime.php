@@ -9,6 +9,7 @@ use App\Models\Employee;
 use App\Models\Leave\EntitlementConsumption;
 use App\Services\Attendance\Reporting\AttendanceSummary;
 use App\Services\Attendance\Reporting\ReportFilters;
+use App\Services\Attendance\Reporting\ResultCache;
 use App\Support\Tenancy\TenantContext;
 use Carbon\CarbonImmutable;
 use Generator;
@@ -18,9 +19,18 @@ class Overtime
 {
     private const DAY_COLUMNS = ['id', 'employee_id', 'work_date', 'overtime_minutes', 'overtime_basis', 'early_arrival_minutes'];
 
-    public function __construct(private AttendanceSummary $summary) {}
+    public function __construct(private AttendanceSummary $summary, private ResultCache $cache) {}
 
     public function totals(ReportFilters $filters, ?string $asOf = null): array
+    {
+        if ($asOf !== null) {
+            return $this->totalsLive($filters, $asOf);
+        }
+
+        return $this->cache->remember('overtime_totals', $filters, fn (): array => $this->totalsLive($filters));
+    }
+
+    public function totalsLive(ReportFilters $filters, ?string $asOf = null): array
     {
         $totals = $this->emptyRow();
         $totals['employee_ids'] = [];

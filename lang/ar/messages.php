@@ -1,6 +1,11 @@
 <?php
 
 return [
+    'month_summaries' => [
+        'invalid_company' => 'أدخل معرّف شركة صحيحاً.',
+        'build_counts' => 'عُثر على :count شهر موظف للبناء.',
+        'verify_counts' => 'فُحص :checked شهر؛ منها :mismatched غير مطابق. الحقول: :fields',
+    ],
     'announcement' => [
         'reading' => 'جارٍ قراءة هذا الإعلان…', 'read_failed' => 'توقفت القراءة. حاول مجدداً أو أدخل التفاصيل يدوياً.',
         'retry' => 'إعادة المحاولة', 'what' => 'نوع الإعلان', 'choose_kind' => 'اختر نوع الإعلان',

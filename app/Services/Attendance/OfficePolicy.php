@@ -4,7 +4,9 @@ namespace App\Services\Attendance;
 
 use App\Models\Attendance\Policy;
 use App\Models\Company;
+use App\Models\Employee;
 use App\Models\User;
+use App\Services\Attendance\Reporting\MonthSummaries;
 use App\Services\AuditLogger;
 use App\Support\Tenancy\TenantContext;
 use Carbon\CarbonInterface;
@@ -77,6 +79,10 @@ class OfficePolicy
                 'version' => 1, 'effective_from' => $policy->effective_from->toDateString(),
                 'before' => [], 'after' => self::DEFAULTS,
             ], $actor);
+            $date = today('Asia/Baghdad')->toDateString();
+            $ids = Employee::query()->where('company_id', $company->id)->pluck('id')->all();
+            app(MonthSummaries::class)->markDirty($company->id, $ids);
+            app(MonthSummaries::class)->markDirty($company->id, $ids, $date, $date);
 
             return $policy;
         });
@@ -110,6 +116,9 @@ class OfficePolicy
                 'before' => $current === null ? [] : array_intersect_key($current->toArray(), self::DEFAULTS),
                 'after' => $values, 'reason' => $reason,
             ], $actor);
+            app(MonthSummaries::class)->markDirty($company->id,
+                Employee::query()->where('company_id', $company->id)->pluck('id')->all(),
+                $effectiveDate, today('Asia/Baghdad')->toDateString());
             DB::afterCommit(fn () => app(AssessmentTriggers::class)->policyAdded($policy));
 
             return $policy;

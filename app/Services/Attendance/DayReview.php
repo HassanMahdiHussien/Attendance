@@ -10,6 +10,7 @@ use App\Models\Attendance\ManualPunch;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\User;
+use App\Services\Attendance\Reporting\MonthSummaries;
 use App\Services\AuditLogger;
 use App\Support\Tenancy\TenantContext;
 use Carbon\CarbonImmutable;
@@ -212,6 +213,7 @@ class DayReview
 
     private function dispatch(Employee $employee, string $date): void
     {
+        app(MonthSummaries::class)->markDirty($employee->company_id, [$employee->id], $date, $date);
         AssessDaysJob::dispatch($employee->company_id, [
             'employee_ids' => [$employee->id], 'from' => $date, 'to' => $date,
         ], 'review')->afterCommit();

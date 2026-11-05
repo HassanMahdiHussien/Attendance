@@ -5,6 +5,8 @@ namespace App\Services\Attendance\Reporting;
 use App\Models\Attendance\DataIssue;
 use App\Models\Attendance\Day;
 use App\Models\Attendance\Meal;
+use App\Models\Attendance\MonthSummary;
+use App\Models\Company;
 use App\Models\Employee;
 use App\Models\EmployeeVersion;
 use App\Models\Leave\Allocation;
@@ -16,6 +18,7 @@ use App\Services\Attendance\OfficePolicy;
 use App\Services\Employees\EmployeeHistory;
 use App\Services\Leave\HoursSettlement;
 use App\Support\Tenancy\TenantContext;
+use Carbon\CarbonImmutable;
 use Generator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -34,6 +37,15 @@ class AttendanceSummary
 
     public function totals(ReportFilters $filters): array
     {
+        if ($this->hasDayFilters($filters) || $filters->caseState !== null || $filters->caseIssueType !== null) {
+            return $this->totalsLive($filters);
+        }
+
+        return $this->totalsCached($filters);
+    }
+
+    public function totalsLive(ReportFilters $filters): array
+    {
         $this->assertCompany($filters);
         $totals = $this->emptySummary();
         $totals['employee_ids'] = [];
@@ -50,16 +62,131 @@ class AttendanceSummary
         return $totals;
     }
 
-    public function perEmployee(ReportFilters $filters): Generator
+    private function totalsCached(ReportFilters $filters): array
     {
         $this->assertCompany($filters);
+        $company = Company::findOrFail($filters->companyId);
+        $summaries = app(MonthSummaries::class);
+        $totals = $this->emptySummary();
+        $totals['employee_ids'] = [];
+        $employees = Employee::query()->where('company_id', $filters->companyId);
+        if ($filters->employeeIds !== []) {
+            $employees->whereIn('id', $filters->employeeIds);
+        }
+        $today = CarbonImmutable::now('Asia/Baghdad')->toDateString();
+        $allIssues = $this->attributableIssuesAll($filters);
+        $months = [];
+        for ($month = CarbonImmutable::parse($filters->from)->startOfMonth(); $month->toDateString() <= $filters->to; $month = $month->addMonth()) {
+            $first = $month->toDateString();
+            $last = $month->endOfMonth()->toDateString();
+            $months[$first] = [
+                'from' => max($filters->from, $first), 'to' => min($filters->to, $last),
+                'whole' => $filters->from <= $first && $filters->to >= min($last, $today) && $first <= $today,
+            ];
+        }
+        $lastId = 0;
+        while (true) {
+            $chunk = (clone $employees)->where('id', '>', $lastId)->orderBy('id')->limit(100)->get();
+            if ($chunk->isEmpty()) {
+                break;
+            }
+            $lastId = (int) $chunk->last()->id;
+            $ids = $chunk->pluck('id')->all();
+            $rows = [];
+            foreach ($chunk as $employee) {
+                $rows[$employee->id] = $this->emptySummary();
+                $rows[$employee->id]['employee_id'] = (int) $employee->id;
+                $rows[$employee->id]['active_employees'] = $employee->is_active ? 1 : 0;
+                $rows[$employee->id]['without_work_pattern'] = $employee->work_pattern === null ? 1 : 0;
+            }
+            $stored = MonthSummary::query()->where('company_id', $filters->companyId)
+                ->whereIn('employee_id', $ids)->whereIn('month', array_keys($months))->get()
+                ->keyBy(fn (MonthSummary $row): string => $row->employee_id.'|'.$row->month->toDateString());
+            foreach ($months as $month => $slice) {
+                $liveIds = $ids;
+                if ($slice['whole']) {
+                    $liveIds = [];
+                    $missing = [];
+                    $stale = [];
+                    foreach ($ids as $id) {
+                        $cached = $stored->get($id.'|'.$month);
+                        if ($cached !== null && ! $cached->is_dirty && $cached->attendance !== null
+                            && ($month !== substr($today, 0, 8).'01'
+                                || $cached->built_at?->timezone('Asia/Baghdad')->toDateString() === $today)) {
+                            $this->mergeSnapshot($rows[$id], $cached->attendance);
+                        } else {
+                            $liveIds[] = $id;
+                            if ($cached === null) {
+                                $missing[] = $id;
+                            } elseif (! $cached->is_dirty && $month === substr($today, 0, 8).'01') {
+                                $stale[] = $id;
+                            }
+                        }
+                    }
+                    if ($missing !== []) {
+                        $summaries->ensureMissing($filters->companyId, $missing, $month);
+                    }
+                    if ($stale !== []) {
+                        $summaries->markDirty($filters->companyId, $stale, $month, $month);
+                    } elseif ($liveIds !== [] && $missing === []) {
+                        $summaries->queue($filters->companyId);
+                    }
+                }
+                if ($liveIds !== []) {
+                    $liveFilters = ReportFilters::fromArray($company, ['from' => $slice['from'],
+                        'to' => $slice['whole'] ? min($slice['to'], $today) : $slice['to'],
+                        'employee_ids' => $liveIds]);
+                    foreach ($this->perEmployee($liveFilters) as $live) {
+                        $this->mergeSnapshot($rows[$live['employee_id']], MonthSummaries::snapshot($live));
+                    }
+                }
+                if ($slice['whole'] && $slice['to'] > $today) {
+                    $futureFilters = ReportFilters::fromArray($company, ['from' => CarbonImmutable::parse($today)->addDay()->toDateString(),
+                        'to' => $slice['to'], 'employee_ids' => $ids]);
+                    foreach ($this->perEmployee($futureFilters) as $live) {
+                        $this->mergeSnapshot($rows[$live['employee_id']], MonthSummaries::snapshot($live));
+                    }
+                }
+            }
+            $pending = $this->pendingRequests($filters, $ids, []);
+            $credits = $this->credits($filters, $ids);
+            foreach ($chunk as $employee) {
+                $row = &$rows[$employee->id];
+                $row['pending_leave_requests'] = $pending[$employee->id] ?? [];
+                $row['credits'] = $credits[$employee->id] ?? $row['credits'];
+                $row['issues']['attributable'] = $allIssues[$employee->id] ?? [];
+                $totals['employee_ids'][] = (int) $employee->id;
+                $this->merge($totals, $row);
+                unset($row);
+            }
+        }
+        $nonEmployeeMeals = $this->nonEmployeeMeals($filters);
+        $totals['meals']['non_employee'] = array_sum($nonEmployeeMeals);
+        $totals['meals']['non_employee_by_department'] = $nonEmployeeMeals;
+        $totals['issues']['company_wide'] = $this->companyIssues($filters);
+        $totals['leave_day_equivalents'] = array_map(fn (int $minutes): float => $minutes / 480, $totals['leave']);
+
+        return $totals;
+    }
+
+    private function mergeSnapshot(array &$row, array $snapshot): void
+    {
+        $office = $row['office_employees_assessed'];
+        $this->merge($row, array_replace($this->emptySummary(), $snapshot));
+        $row['office_employees_assessed'] = max($office, $snapshot['office_employees_assessed']);
+    }
+
+    public function perEmployee(ReportFilters $filters, bool $includeLive = true): Generator
+    {
+        $this->assertCompany($filters);
+        $allIssues = $includeLive ? $this->attributableIssuesAll($filters) : [];
         $employees = Employee::query()->where('company_id', $filters->companyId);
         if ($filters->employeeIds !== []) {
             $employees->whereIn('id', $filters->employeeIds);
         }
         $lastId = 0;
         while (true) {
-            $chunk = (clone $employees)->where('id', '>', $lastId)->orderBy('id')->limit(250)->get();
+            $chunk = (clone $employees)->where('id', '>', $lastId)->orderBy('id')->limit(100)->get();
             if ($chunk->isEmpty()) {
                 break;
             }
@@ -77,10 +204,9 @@ class AttendanceSummary
             $allocations = $this->allocations($filters, $days->pluck('id')->all());
             $blocked = $allocations->isEmpty() && ! $this->hasToleranceCandidates($days) ? [] : $this->blockedKinds($filters, $days);
             $leave = $this->leaveDays($filters, $ids, $selectedDates);
-            $pending = $this->pendingRequests($filters, $ids, $selectedDates);
-            $credits = $this->credits($filters, $ids);
+            $pending = $includeLive ? $this->pendingRequests($filters, $ids, $selectedDates) : [];
+            $credits = $includeLive ? $this->credits($filters, $ids) : [];
             $meals = $this->meals($filters, $ids, $selectedDates);
-            $issues = $this->attributableIssues($filters, $chunk);
             $nothingDays = $this->nothingToReconcileDays($filters, $ids);
             foreach ($chunk as $employee) {
                 $employeeDays = $byEmployee->get($employee->id, collect());
@@ -101,7 +227,7 @@ class AttendanceSummary
                 $row['pending_leave_requests'] = $pending[$employee->id] ?? [];
                 $row['credits'] = $credits[$employee->id] ?? $row['credits'];
                 $row['meals'] = $meals[$employee->id] ?? $row['meals'];
-                $row['issues']['attributable'] = $issues[$employee->id] ?? [];
+                $row['issues']['attributable'] = $allIssues[$employee->id] ?? [];
                 yield $row;
             }
         }
@@ -673,34 +799,42 @@ class AttendanceSummary
             ->mapWithKeys(fn ($row): array => [(string) $row->department_label => (int) $row->meals])->all();
     }
 
-    private function attributableIssues(ReportFilters $filters, Collection $employees): array
+    private function attributableIssuesAll(ReportFilters $filters): array
     {
         $result = [];
-        $codes = $employees->pluck('id', 'employee_code');
+        $codes = Employee::query()->where('company_id', $filters->companyId)
+            ->when($filters->employeeIds !== [], fn ($query) => $query->whereIn('id', $filters->employeeIds))
+            ->pluck('id', 'employee_code');
+        $employeeIds = $codes->values()->flip();
         $requestIds = LeaveRequest::query()->where('company_id', $filters->companyId)
-            ->whereIn('employee_id', $employees->pluck('id'))->pluck('employee_id', 'id');
-        $keys = array_merge($codes->keys()->all(),
-            $codes->keys()->map(fn ($code): string => 'owner:'.$code)->all(),
-            $requestIds->keys()->map(fn ($id): string => 'request:'.$id)->all());
-        DataIssue::query()->where('company_id', $filters->companyId)->where('status', 'open')
-            ->where(function ($query) use ($keys, $employees): void {
-                $query->whereIn('subject_key', $keys)->orWhere(function ($nested) use ($employees): void {
-                    $nested->where('subject_type', 'leave_request_day')->where(function ($prefixes) use ($employees): void {
-                        foreach ($employees as $employee) {
-                            $prefixes->orWhere('subject_key', 'like', 'employee:'.$employee->id.':request_day:%');
+            ->when($filters->employeeIds !== [], fn ($query) => $query->whereIn('employee_id', $filters->employeeIds))
+            ->pluck('employee_id', 'id');
+        $issues = DataIssue::query()->where('company_id', $filters->companyId)->where('status', 'open');
+        if ($filters->employeeIds !== []) {
+            $keys = array_merge($codes->keys()->all(), $codes->keys()->map(fn ($code): string => 'owner:'.$code)->all(),
+                $requestIds->keys()->map(fn ($id): string => 'request:'.$id)->all());
+            $issues->where(function ($query) use ($keys, $filters): void {
+                $query->whereIn('subject_key', $keys)->orWhere(function ($nested) use ($filters): void {
+                    $nested->where('subject_type', 'leave_request_day')->where(function ($prefixes) use ($filters): void {
+                        foreach ($filters->employeeIds as $id) {
+                            $prefixes->orWhere('subject_key', 'like', 'employee:'.$id.':request_day:%');
                         }
                     });
                 });
-            })->get()->each(function (DataIssue $issue) use (&$result, $codes, $requestIds, $employees): void {
+            });
+        }
+        $issues->select(['id', 'subject_type', 'subject_key', 'type'])->cursor()
+            ->each(function (DataIssue $issue) use (&$result, $codes, $requestIds, $employeeIds): void {
                 $key = $issue->subject_key;
-                $id = $codes[$key] ?? $codes[substr($key, 6)] ?? null;
+                $id = $codes[$key] ?? (str_starts_with($key, 'owner:') ? $codes[substr($key, 6)] ?? null : null);
                 if ($id === null && str_starts_with($key, 'request:')) {
                     $id = $requestIds[(int) substr($key, 8)] ?? null;
                 }
-                if ($id === null && preg_match('/^employee:(\d+):request_day:/', $key, $matches)) {
+                if ($id === null && $issue->subject_type === 'leave_request_day'
+                    && preg_match('/^employee:(\d+):request_day:/', $key, $matches)) {
                     $id = (int) $matches[1];
                 }
-                if ($id !== null && $employees->contains('id', $id)) {
+                if ($id !== null && $employeeIds->has((int) $id)) {
                     $result[$id][$issue->type] = ($result[$id][$issue->type] ?? 0) + 1;
                 }
             });
