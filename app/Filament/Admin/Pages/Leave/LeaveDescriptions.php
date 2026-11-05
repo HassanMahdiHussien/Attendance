@@ -6,9 +6,7 @@ use App\Filament\Admin\Resources\Leave\LeavePage;
 use App\Jobs\Leave\ReadLeaveDescriptionsJob;
 use App\Models\Branch;
 use App\Models\Leave\DescriptionReading;
-use App\Models\Leave\EntitlementConsumption;
 use App\Services\Leave\LeaveDescriptionDecisions;
-use App\Services\Leave\LeaveDescriptionEffects;
 use App\Services\Leave\LeaveDescriptionReader;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -20,8 +18,6 @@ class LeaveDescriptions extends LeavePage
     protected string $view = 'filament.admin.pages.leave.descriptions';
 
     public string $category = '';
-
-    public string $status = '';
 
     public string $branchId = '';
 
@@ -42,12 +38,10 @@ class LeaveDescriptions extends LeavePage
     private function filtered(): Builder
     {
         $query = DescriptionReading::query()->with(['request.employee', 'request.leaveType', 'request.currentVersion'])
-            ->where('company_id', $this->company()->id);
+            ->where('company_id', $this->company()->id)->whereHas('request',
+                fn (Builder $requests) => $requests->where('status', 'approved'));
         if (in_array($this->category, LeaveDescriptionReader::CATEGORIES, true)) {
             $query->where('category', $this->category);
-        }
-        if (in_array($this->status, ['proposed', 'confirmed', 'rejected', 'not_needed', 'failed'], true)) {
-            $this->status === 'failed' ? $query->whereNotNull('error_code') : $query->where('status', $this->status);
         }
         $query->whereHas('request', function (Builder $requests): void {
             if (ctype_digit($this->branchId)) {
@@ -79,59 +73,23 @@ class LeaveDescriptions extends LeavePage
         return LeaveDescriptionReader::CATEGORIES;
     }
 
-    public function effectReason(DescriptionReading $reading): ?string
-    {
-        return $reading->category === null ? 'information_only'
-            : app(LeaveDescriptionEffects::class)->reason($reading->request, $reading);
-    }
-
-    public function currentCreditDate(DescriptionReading $reading): ?string
-    {
-        if ($reading->category !== 'compensation_for_day' || $reading->status !== 'proposed') {
-            return null;
-        }
-
-        return EntitlementConsumption::query()->with('entitlement')
-            ->where('company_id', $this->company()->id)->where('request_id', $reading->request_id)
-            ->whereNull('superseded_by_run_id')->orderBy('id')->first()?->entitlement?->work_date?->toDateString();
-    }
-
-    public function hourlyPreview(DescriptionReading $reading): array
-    {
-        return app(LeaveDescriptionEffects::class)->hourlyPreview($reading->request, $reading);
-    }
-
     public function counts(): array
     {
-        $query = DescriptionReading::query()->where('company_id', $this->company()->id);
+        $companyId = $this->company()->id;
+        $query = DescriptionReading::query()->where('company_id', $companyId)
+            ->whereHas('request', fn (Builder $requests) => $requests->where('status', 'approved'));
 
         return [
             'categories' => (clone $query)->selectRaw('category, COUNT(*) AS total')->groupBy('category')->pluck('total', 'category')->all(),
-            'statuses' => (clone $query)->selectRaw('status, COUNT(*) AS total')->groupBy('status')->pluck('total', 'status')->all(),
-            'failures' => (clone $query)->whereNotNull('error_code')->count(),
+            'failures' => DescriptionReading::query()->where('company_id', $companyId)->whereNotNull('error_code')->count(),
             'total' => (clone $query)->count(),
-            'read' => (clone $query)->whereNotNull('category')->count(),
         ];
     }
 
-    public function confirmableCount(): int
-    {
-        return (clone $this->filtered())->where('status', 'proposed')->where('confidence', 'high')
-            ->whereNull('error_code')->get()->filter(fn (DescriptionReading $reading): bool => $this->effectReason($reading) === null)->count();
-    }
-
-    public function decide(int $id, string $decision, LeaveDescriptionDecisions $service): void
+    public function undo(int $id, LeaveDescriptionDecisions $service): void
     {
         $reading = DescriptionReading::query()->where('company_id', $this->company()->id)->findOrFail($id);
-        $service->decide($reading, $decision, auth()->user());
-    }
-
-    public function confirmAll(LeaveDescriptionDecisions $service): void
-    {
-        $ids = (clone $this->filtered())->where('status', 'proposed')->where('confidence', 'high')
-            ->whereNull('error_code')->get()->filter(fn (DescriptionReading $reading): bool => $this->effectReason($reading) === null)
-            ->pluck('id')->all();
-        $service->confirmAll($this->company(), $ids, auth()->user());
+        $service->decide($reading, 'proposed', auth()->user());
     }
 
     public function retry(int $id, LeaveDescriptionReader $reader): void

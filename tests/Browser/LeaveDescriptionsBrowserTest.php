@@ -19,7 +19,7 @@ test('HR can read an invented description at phone width in either direction', f
         $employee = Employee::factory()->create(['company_id' => $company->id,
             'employee_code' => '00004567']);
         $request = LeaveRequest::factory()->create(['company_id' => $company->id,
-            'employee_id' => $employee->id, 'external_id' => 'FORM-INVENTED']);
+            'employee_id' => $employee->id, 'external_id' => 'FORM-INVENTED', 'status' => 'approved']);
         $batch = ImportBatch::factory()->create(['company_id' => $company->id]);
         $version = RequestVersion::factory()->create(['company_id' => $company->id,
             'request_id' => $request->id, 'batch_id' => $batch->id, 'row_number' => 2,
@@ -36,8 +36,10 @@ test('HR can read an invented description at phone width in either direction', f
         ->fill('email', $user->email)->fill('password', 'password')->press('Log in')
         ->assertPathIs('/home')
         ->navigate('/admin/'.$company->id.'/leave/descriptions')
+        ->assertSee($locale === 'ar' ? 'ملاحظات الإجازات' : 'Leave notes')
         ->assertSee('FORM-INVENTED')
         ->assertSee('An invented personal reason')
+        ->assertDontSee('Confirm all')
         ->assertScript('document.documentElement.scrollWidth <= window.innerWidth')
         ->assertScript('document.documentElement.dir', $locale === 'ar' ? 'rtl' : 'ltr')
         ->assertNoJavaScriptErrors();

@@ -2,6 +2,8 @@
 
 **Decision date:** 2026-11-04
 
+**2026-11-05 owner decision:** The Leave notes page is read-only for approved forms; it offers no confirmation or rejection, so viewing AI readings changes no calculation. Decision services remain unused by this page.
+
 ## Problem
 
 The new company leave export includes a filled-down record type and free-text description. Earlier imports lost both, so work-from-home and travel forms with blank leave type became unmapped. Descriptions can identify a compensatory worked date or an earlier period of hourly leave. Saved `Leave Entry` forms currently go unnoticed.
