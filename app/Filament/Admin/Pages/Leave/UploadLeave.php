@@ -67,7 +67,7 @@ class UploadLeave extends LeavePage
         $this->batchId = null;
         $saved = ImportMapping::query()->where('company_id', $this->company()->id)
             ->where('header_signature', $sheet['header_signature'])->first();
-        $this->mapping = $saved?->mapping ?? $file->suggest($this->headers);
+        $this->mapping = $saved === null ? $file->suggest($this->headers) : $file->withNewColumns($saved->mapping, $this->headers);
         $this->scope = ['scope' => 'partial', 'period_from' => null, 'period_to' => null, 'snapshot_at' => $sheet['snapshot_at']];
         $this->clearPreview();
         $this->step = $saved === null ? 'mapping' : 'scope';

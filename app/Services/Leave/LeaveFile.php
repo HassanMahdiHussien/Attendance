@@ -68,6 +68,19 @@ class LeaveFile
         return $mapping;
     }
 
+    /** A mapping saved before these columns were read would otherwise skip them forever, because the header list is unchanged. */
+    public function withNewColumns(array $saved, array $headers): array
+    {
+        foreach ($this->suggest($headers) as $index => $field) {
+            if (in_array($field, ['record_type', 'description'], true)
+                && ! in_array($field, $saved, true) && ! isset($saved[$index])) {
+                $saved[$index] = $field;
+            }
+        }
+
+        return $saved;
+    }
+
     public function validateMapping(array $mapping, array $headers): array
     {
         $clean = [];

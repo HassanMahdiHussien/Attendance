@@ -211,6 +211,25 @@ test('CSV import keeps a leading-zero employee code and a stable upload snapshot
     expect(LeaveRequest::query()->where('external_id', 'FORM-CSV')->value('owner_code'))->toBe('00001234');
 });
 
+test('a mapping saved before the record type was read still picks it up from a sorted header', function (): void {
+    $row = leaveRow('FORM-OLD-MAPPING');
+    $row[7] = '';
+    $headers = LeaveFile::HEADERS;
+    $headers[0] .= '  ↑';
+    $csv = implode(',', $headers)."\n".implode(',', ['Work From Home', 'An invented note', ...$row])."\n";
+    $file = UploadedFile::fake()->createWithContent('leave-report.csv', $csv);
+    $reader = app(LeaveFile::class);
+    $sheet = $reader->inspect($file);
+    $saved = array_filter($reader->suggest($sheet['headers']), fn (string $field): bool => ! in_array($field, ['record_type', 'description'], true));
+
+    expect(iterator_to_array($reader->rows($file, $saved))[0]['errors'])->toContain('type_name_required');
+
+    $parsed = iterator_to_array($reader->rows($file, $reader->withNewColumns($saved, $sheet['headers'])))[0];
+    expect($parsed['errors'])->not->toContain('type_name_required')
+        ->and($parsed['values']['type_name'])->toBe('Work From Home')
+        ->and($parsed['values']['description'])->toBe('An invented note');
+});
+
 test('an HR user cannot preview a leave report for another company', function (): void {
     $other = Company::factory()->create();
     $file = leaveSheet([leaveRow('FORM-1')]);
