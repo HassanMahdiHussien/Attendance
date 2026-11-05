@@ -13,7 +13,7 @@ use App\Services\Attendance\Reporting\AttendanceExports;
 use App\Services\Attendance\Reporting\AttendanceSummary;
 use App\Services\Attendance\Reporting\EmployeeFilterSearch;
 use App\Services\Attendance\Reporting\ExportKinds;
-use App\Services\Attendance\Reporting\HrJourney;
+use App\Services\Attendance\Reporting\HomeOverview;
 use App\Services\Attendance\Reporting\LastUpdate;
 use App\Services\Attendance\Reporting\ReportFilters;
 use App\Services\Attendance\Reporting\ReportTiles;
@@ -154,11 +154,11 @@ class HrDashboard extends Component
         return route($route, $parameters).'?'.http_build_query(['tile' => $tile] + $this->filters());
     }
 
-    public function render(AttendanceSummary $summary, LastUpdate $lastUpdate, EmployeeFilterSearch $search, Overtime $overtime): View
+    public function render(AttendanceSummary $summary, LastUpdate $lastUpdate, EmployeeFilterSearch $search, Overtime $overtime, HomeOverview $overview): View
     {
         $company = $this->company();
 
-        return app(TenantContext::class)->runForCompany($company, function () use ($company, $summary, $lastUpdate, $search, $overtime): View {
+        return app(TenantContext::class)->runForCompany($company, function () use ($company, $summary, $lastUpdate, $search, $overtime, $overview): View {
             $filters = ReportFilters::fromArray($company, $this->filters());
             $totals = $summary->totals($filters);
             $overtimeTotals = $overtime->totals($filters);
@@ -167,17 +167,15 @@ class HrDashboard extends Component
             $freshness = $lastUpdate->for($filters);
             $tiles = ReportTiles::fromTotals($totals) + ReportTiles::overtime($overtimeTotals)
                 + app(FollowUpCases::class)->tileTotals($filters);
-            $actions = [];
-            foreach (['absent', 'missing_punch', 'shift_unresolved', 'late', 'early', 'short_hours_alerts', 'data_issues', 'pending', 'waiting_hr'] as $key) {
-                if (($tiles[$key] ?? 0) > 0) {
-                    $actions[] = ['label' => __('messages.clear_screens.review_action', ['item' => ReportTiles::label($key)]), 'url' => $this->tileUrl($key)];
-                }
-            }
+            $previous = $summary->totals($overview->previousFilters($company, $filters));
 
             return view('livewire.dashboard.hr-dashboard', [
                 'company' => $company, 'tiles' => $tiles,
                 'totals' => $totals,
-                'freshness' => $freshness, 'journey' => app(HrJourney::class)->for($company, $freshness + ['actions' => $actions]),
+                'freshness' => $freshness, 'tasks' => $overview->tasks($tiles),
+                'figures' => $overview->figures($totals, $previous),
+                'topLate' => $overview->topLate($filters, $totals['employee_ids']),
+                'latestFiles' => $overview->latestFiles($freshness['sources']),
                 'employees' => $employees, 'managers' => $managers,
                 'branches' => Branch::query()->where('company_id', $company->id)->orderBy('name')->get(),
                 'departments' => Employee::query()->where('company_id', $company->id)

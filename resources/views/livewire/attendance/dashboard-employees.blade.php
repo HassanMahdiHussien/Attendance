@@ -9,7 +9,7 @@
         <tbody>
         @forelse ($employees as $employee)
             <tr>
-                <x-ui.td :label="__('messages.reporting_ui.employee')"><a class="ui-link" href="{{ route('employees.show', $employee) }}">{{ $employee->name }}</a><span class="block text-xs"><bdi dir="ltr">{{ $employee->employee_code }}</bdi> · {{ $employee->department }}</span></x-ui.td>
+                <x-ui.td :label="__('messages.reporting_ui.employee')"><a class="ui-link" href="{{ route('employees.show', $employee).($tile === 'absent_uncovered' ? '?'.http_build_query(['attendance_tile' => $tile, 'from' => $from, 'to' => $to]) : '') }}">{{ $employee->name }}</a><span class="block text-xs"><bdi dir="ltr">{{ $employee->employee_code }}</bdi> · {{ $employee->department }}</span></x-ui.td>
                 <x-ui.td :label="__('messages.office_ui.branch')">{{ $employee->branch?->name ?? '—' }}</x-ui.td>
                 <x-ui.td :label="\App\Services\Attendance\Reporting\ReportTiles::label($tile)">@if(isset($overtimeRows[$employee->id]))@if($tile === 'overtime_minutes')<bdi dir="auto">{{ app(\App\Services\Attendance\Reporting\DurationText::class)->format($overtimeRows[$employee->id][$tile]) }}</bdi>@else {{ $tile === 'entitled_employees' ? 1 : number_format($overtimeRows[$employee->id][$tile], 1) }} @endif @else — @endif</x-ui.td>
                 <x-ui.td :label="__('messages.leave_balance_ui.annual_balance')">@if($balance = $balances->get($employee->id)){{ number_format((float) $balance->remaining_days, 2) }} {{ __('messages.leave_balance_ui.days') }} · <bdi dir="ltr">{{ $balance->balance_date->toDateString() }}</bdi>@else — @endif</x-ui.td>

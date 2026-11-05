@@ -139,7 +139,7 @@ test('daily status and dashboard needs shift count use the same drill down', fun
         ->and($summary->totals($filters)['assessed_working_days'])->toBe(1)
         ->and(ReportTiles::fromTotals($summary->totals($filters))['shift_unresolved'])->toBe(1)
         ->and($summary->drillDown($filters, 'shift_unresolved'))->toBe([$this->employee->id]);
-    Livewire::test(HrDashboard::class)->assertSee('Needs shift');
+    Livewire::test(HrDashboard::class)->assertSee('day needs a shift');
     Livewire::withQueryParams(['tile' => 'shift_unresolved', 'from' => '2026-10-21', 'to' => '2026-10-21'])
         ->test(DashboardEmployees::class)->assertSee('Local Shift Worker')->assertDontSee('Office Colleague');
 });

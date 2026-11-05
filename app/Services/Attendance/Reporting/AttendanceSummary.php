@@ -346,7 +346,7 @@ class AttendanceSummary
 
     public function drillDownDayIds(ReportFilters $filters, string $status): Generator
     {
-        abort_unless(in_array($status, ReportFilters::STATUSES, true), 404);
+        abort_unless(in_array($status, [...ReportFilters::STATUSES, 'absent_uncovered'], true), 404);
         foreach ($this->perEmployee($filters) as $employee) {
             $ids = $employee['day_ids'][$status] ?? [];
             if ($status === 'present') {
@@ -589,6 +589,9 @@ class AttendanceSummary
     {
         $row['days'][$day['status']]++;
         $row['day_ids'][$day['status']][] = $day['day_id'];
+        if ($day['status'] === 'absent' && ! $day['flags']['absence_closed_by_request']) {
+            $row['day_ids']['absent_uncovered'][] = $day['day_id'];
+        }
         if ($day['status'] === 'holiday_worked') {
             $row['holiday_work_minutes'] += (int) $day['observed']['presence'];
         } elseif ($day['status'] === 'rest_day_worked') {
@@ -902,6 +905,9 @@ class AttendanceSummary
 
     private function matchesTile(array $row, string $tile): bool
     {
+        if ($tile === 'absent_uncovered') {
+            return count($row['day_ids']['absent_uncovered'] ?? []) > 0;
+        }
         if ($tile === 'present') {
             return $row['days']['present'] + $row['days']['field_work'] > 0;
         }

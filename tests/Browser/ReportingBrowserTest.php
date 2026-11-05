@@ -16,7 +16,7 @@ test('HR opens the attendance dashboard and an employee record', function (): vo
 
     visitBound('/login')->fill('email', $hr->email)->fill('password', 'password')->press('Log in')
         ->assertSee('Attendance dashboard')
-        ->navigate('/dashboard')->assertSee('Last data update')->assertNoJavaScriptErrors()
+        ->navigate('/dashboard')->assertSee('Needed from you')->assertNoJavaScriptErrors()
         ->navigate('/employees/'.$employee->id)->assertSee('Daily record')->assertNoJavaScriptErrors();
 });
 

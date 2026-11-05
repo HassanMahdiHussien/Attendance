@@ -2,48 +2,44 @@
     <div class="flex flex-wrap items-center justify-between gap-3"><x-ui.page-header :title="__('messages.reporting_ui.dashboard')" />
         @if($uploadItem = (\App\Support\Access\AdminNav::uploadItems(auth()->user())[0] ?? null))<a href="{{ $uploadItem['url'] }}" class="rounded-lg border border-line bg-white px-4 py-2 text-sm font-medium text-ink">{{ __('messages.upload_center.dashboard_button') }}</a>@endif
     </div>
-    <x-ui.card>
-        <h2 class="text-lg font-bold text-ink">{{ $company->name }}</h2>
-        <p class="text-sm text-gray-500"><bdi dir="ltr">{{ $from }} → {{ $to }}</bdi></p>
-        <div class="mt-3 flex flex-wrap gap-3 text-sm">
+    <p class="text-sm text-gray-600">{{ $company->name }} · <bdi dir="ltr" class="whitespace-nowrap">{{ $from }} → {{ $to }}</bdi> · {{ __('messages.reporting_ui.data_up_to', ['date' => $freshness['last_data_update'] ? \Carbon\CarbonImmutable::parse($freshness['last_data_update'])->timezone('Asia/Baghdad')->translatedFormat('j M') : '—']) }} · {{ $freshness['results_updating'] ? __('messages.reporting_ui.updating') : ($tasks === [] ? __('messages.reporting_ui.nothing_needed') : trans_choice('messages.reporting_ui.things_needed', count($tasks), ['count' => count($tasks)])) }}</p>
+    <div class="flex flex-wrap gap-2 text-sm">
             <x-ui.filter-button wire:click="period('current')" :selected="$from === now('Asia/Baghdad')->startOfMonth()->toDateString()">{{ __('messages.reporting_ui.current_month') }}</x-ui.filter-button>
             <x-ui.filter-button wire:click="period('previous')" :selected="$from === now('Asia/Baghdad')->subMonthNoOverflow()->startOfMonth()->toDateString()">{{ __('messages.reporting_ui.previous_month') }}</x-ui.filter-button>
             <x-ui.filter-button wire:click="period('last_30')" :selected="$from === now('Asia/Baghdad')->subDays(29)->toDateString()">{{ __('messages.reporting_ui.last_30') }}</x-ui.filter-button>
-        </div>
-
-        @error('period') <p class="text-red-700">{{ $message }}</p> @enderror
-    </x-ui.card>
-    <x-ui.route-rail :steps="$journey['steps']" />
-    @if ($journey['action'])<a href="{{ $journey['action']['url'] }}" class="ui-button ui-button-primary">{{ $journey['action']['label'] }}</a>@endif
-    <p class="text-sm text-gray-600">{{ __('messages.reporting_ui.freshness') }}: <bdi dir="ltr">{{ $freshness['last_data_update'] ?? '—' }}</bdi> · {{ $freshness['results_updating'] ? __('messages.reporting_ui.updating') : __('messages.clear_screens.results_ready') }}</p>
-
-    <div class="max-w-xl rounded-xl border border-line bg-white p-4">
-            <div class="relative text-sm">
-                <label for="report-employee-search">{{ __('messages.reporting_ui.employee') }}</label>
-                <div class="flex gap-2">
-                    <input id="report-employee-search" type="search" wire:model.live.debounce.250ms="employeeSearch" role="combobox" aria-autocomplete="list" aria-controls="report-employee-results" aria-expanded="{{ $employeeId === '' && mb_strlen(trim($employeeSearch)) >= 2 ? 'true' : 'false' }}" placeholder="{{ __('messages.search.placeholder') }}" class="ui-control block w-full rounded-xl border border-gray-200 px-3 py-2" />
-                    @if ($employeeSearch !== '') <button type="button" wire:click="clearEmployee" class="ui-link" aria-label="{{ __('messages.reporting_ui.clear_employee') }}">{{ __('messages.reporting_ui.all') }}</button> @endif
-                </div>
-                @if ($employeeId === '' && mb_strlen(trim($employeeSearch)) >= 2)
-                    <div id="report-employee-results" role="listbox" class="absolute inset-x-0 z-20 mt-1 max-h-64 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-xl">
-                        @forelse ($employees as $employee)
-                            <button type="button" role="option" aria-selected="false" wire:click="chooseEmployee({{ $employee->id }})" class="block w-full px-3 py-2 text-start hover:bg-primary-light focus:bg-primary-light"><strong class="block">{{ $employee->name }}</strong><span class="text-xs text-gray-500"><bdi dir="ltr">{{ $employee->employee_code }}</bdi> · {{ $employee->branch_name }}</span></button>
-                        @empty <p class="p-3 text-gray-500">{{ __('messages.search.no_results') }}</p> @endforelse
-                    </div>
-                @endif
-            </div>
     </div>
-    <h2 class="text-lg font-semibold">{{ __('messages.clear_screens.needs_action') }}</h2>
-    <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        @foreach (['absent', 'missing_punch', 'shift_unresolved', 'late', 'early', 'short_hours_alerts', 'data_issues', 'pending', 'waiting_hr'] as $key)
-            @if (isset($tiles[$key]))
-                <x-ui.tile :label="\App\Services\Attendance\Reporting\ReportTiles::label($key)" :value="\App\Services\Attendance\Reporting\ReportTiles::isMinutes($key) ? app(\App\Services\Attendance\Reporting\DurationText::class)->format($tiles[$key]) : \App\Support\Format\Ui::number($tiles[$key])" :tone="$tiles[$key] > 0 ? (in_array($key, ['absent', 'missing_punch', 'data_issues'], true) ? 'red' : (in_array($key, ['late', 'early', 'short_hours_alerts'], true) ? 'amber' : 'white')) : 'white'" :href="$this->tileUrl($key)" />
-            @endif
+    @error('period') <p class="text-red-700">{{ $message }}</p> @enderror
+    <x-ui.card>
+        <h2 class="text-lg font-semibold text-ink">{{ __('messages.reporting_ui.needed_from_you') }}</h2>
+        @forelse ($tasks as $task)
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-line py-4 last:border-0">
+                <div class="min-w-0 flex-1"><p class="font-semibold text-ink"><span class="font-mono tabular-nums">{{ \App\Support\Format\Ui::number($task['count']) }}</span> {{ trans_choice('messages.reporting_ui.task_counts.'.$task['key'], $task['count']) }}</p><p class="text-sm text-gray-600">{{ __('messages.reporting_ui.task_help.'.$task['key']) }}</p></div>
+                <a href="{{ $this->tileUrl($task['key']) }}" class="ui-button {{ $loop->first ? 'ui-button-primary' : 'ui-button-secondary' }}">{{ __('messages.reporting_ui.task_actions.'.$task['key']) }}</a>
+            </div>
+        @empty
+            <p class="mt-3 text-sm text-gray-600">{{ __('messages.reporting_ui.nothing_needed') }}</p>
+        @endforelse
+    </x-ui.card>
+    <section><h2 class="mb-3 text-lg font-semibold text-ink">{{ __('messages.reporting_ui.month_figures') }}</h2><div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        @foreach ($figures as $figure)
+            <a href="{{ $this->tileUrl($figure['key'] === 'attendance_rate' ? 'present' : $figure['key']) }}" class="min-w-0 rounded-xl border border-line bg-white p-4 text-ink">
+                <span class="block text-sm">{{ __('messages.reporting_ui.figure_labels.'.$figure['key']) }}</span>
+                <strong class="mt-2 block whitespace-nowrap font-mono text-lg tabular-nums sm:text-2xl">{{ $figure['value'] === null ? '—' : ($figure['key'] === 'attendance_rate' ? \App\Support\Format\Ui::number($figure['value']).'%' : app(\App\Services\Attendance\Reporting\DurationText::class)->format($figure['value'])) }}</strong>
+                <span class="mt-2 block text-xs {{ $figure['tone'] === 'better' ? 'text-green-700' : ($figure['tone'] === 'worse' ? 'text-red-700' : 'text-gray-500') }}">{{ $figure['difference'] === null ? __('messages.reporting_ui.no_comparison') : ($figure['difference'] === 0 ? __('messages.reporting_ui.same_period') : __('messages.reporting_ui.change_period', ['change' => ($figure['difference'] > 0 ? '+' : '−').($figure['key'] === 'attendance_rate' ? abs($figure['difference']).' '.__('messages.reporting_ui.points') : app(\App\Services\Attendance\Reporting\DurationText::class)->format(abs($figure['difference'])))]) ) }}</span>
+            </a>
         @endforeach
+    </div></section>
+    <div class="grid gap-3 lg:grid-cols-2">
+        @if ($topLate !== [])<x-ui.card><h2 class="font-semibold text-ink">{{ __('messages.reporting_ui.most_late') }}</h2>
+            @foreach ($topLate as $employee)<a href="{{ route('employees.show', $employee->employee_id) }}" class="flex justify-between gap-3 border-b border-line py-3 text-sm last:border-0"><span class="min-w-0 text-ink">{{ $employee->name }} <bdi dir="ltr" class="text-gray-500">{{ $employee->employee_code }}</bdi></span><bdi dir="auto" class="shrink-0 font-mono">{{ app(\App\Services\Attendance\Reporting\DurationText::class)->format((int) $employee->minutes) }}</bdi></a>@endforeach
+        </x-ui.card>@endif
+        <x-ui.card><h2 class="font-semibold text-ink">{{ __('messages.reporting_ui.latest_files') }}</h2>
+            @foreach ($latestFiles as $file)<div class="border-b border-line py-3 text-sm last:border-0"><p>{{ __('messages.reporting_ui.sources.'.$file['source']) }}: <bdi dir="ltr" class="font-mono">{{ $file['time'] ?? '—' }}</bdi></p>@if ($file['old'] && $uploadItem)<a href="{{ $uploadItem['url'] }}" class="text-amber-800">{{ __('messages.reporting_ui.upload_newer') }}</a>@endif</div>@endforeach
+        </x-ui.card>
     </div>
     <details wire:ignore.self class="rounded-xl border border-line bg-white p-4"><summary class="cursor-pointer font-semibold">{{ __('messages.clear_screens.more_figures') }}</summary><div class="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
         @foreach ($tiles as $key => $value)
-            @unless (in_array($key, ['absent', 'missing_punch', 'shift_unresolved', 'late', 'early', 'short_hours_alerts', 'data_issues', 'pending', 'waiting_hr'], true))
+            @unless (in_array($key, array_merge(array_column($tasks, 'key'), ['late', 'early', 'remaining']), true))
                 <x-ui.tile :label="\App\Services\Attendance\Reporting\ReportTiles::label($key)" :value="\App\Services\Attendance\Reporting\ReportTiles::isMinutes($key) ? app(\App\Services\Attendance\Reporting\DurationText::class)->format($value) : (\App\Services\Attendance\Reporting\ReportTiles::isDays($key) ? number_format($value, 1) : \App\Support\Format\Ui::number($value))" :href="$this->tileUrl($key)">
                     @if ($key === 'holiday_worked')<span class="block text-sm text-gray-600">{{ __('messages.holiday_ui.hours') }} <bdi dir="auto">{{ app(\App\Services\Attendance\Reporting\DurationText::class)->format($totals['holiday_work_minutes']) }}</bdi></span>@endif
                 </x-ui.tile>
@@ -52,6 +48,9 @@
     </div></details>
         <details wire:ignore.self class="mt-4" @if ($employeeId !== '' || $branchId !== '' || $department !== '' || $managerId !== '' || $workPattern !== '' || $status !== '') open @endif><summary class="cursor-pointer font-semibold text-primary">{{ __('messages.clear_screens.more_filters') }}</summary>
         <form wire:submit="apply" class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div class="relative text-sm"><label for="report-employee-search">{{ __('messages.reporting_ui.employee') }}</label><div class="flex gap-2"><input id="report-employee-search" type="search" wire:model.live.debounce.250ms="employeeSearch" role="combobox" aria-autocomplete="list" aria-controls="report-employee-results" aria-expanded="{{ $employeeId === '' && mb_strlen(trim($employeeSearch)) >= 2 ? 'true' : 'false' }}" placeholder="{{ __('messages.search.placeholder') }}" class="ui-control block w-full min-w-0 rounded-xl border border-gray-200 px-3 py-2" />@if ($employeeSearch !== '') <button type="button" wire:click="clearEmployee" class="ui-link" aria-label="{{ __('messages.reporting_ui.clear_employee') }}">{{ __('messages.reporting_ui.all') }}</button> @endif</div>
+                @if ($employeeId === '' && mb_strlen(trim($employeeSearch)) >= 2)<div id="report-employee-results" role="listbox" class="absolute inset-x-0 z-20 mt-1 max-h-64 overflow-y-auto rounded-xl border border-line bg-white shadow-xl">@forelse ($employees as $employee)<button type="button" role="option" aria-selected="false" wire:click="chooseEmployee({{ $employee->id }})" class="block w-full px-3 py-2 text-start hover:bg-primary-light"><strong class="block">{{ $employee->name }}</strong><span class="text-xs text-gray-500"><bdi dir="ltr">{{ $employee->employee_code }}</bdi> · {{ $employee->branch_name }}</span></button>@empty <p class="p-3 text-gray-500">{{ __('messages.search.no_results') }}</p> @endforelse</div>@endif
+            </div>
             <label class="text-sm">{{ __('messages.reporting_ui.from') }} <input type="date" wire:model="from" class="ui-control block w-full rounded-xl border border-gray-200 px-3 py-2" /></label>
             <label class="text-sm">{{ __('messages.reporting_ui.to') }} <input type="date" wire:model="to" class="ui-control block w-full rounded-xl border border-gray-200 px-3 py-2" /></label>
             <label class="text-sm">{{ __('messages.reporting_ui.branch') }} <select wire:model="branchId" class="ui-control block w-full rounded-xl border border-gray-200 px-3 py-2"><option value="">{{ __('messages.reporting_ui.all') }}</option>@foreach ($branches as $branch)<option value="{{ $branch->id }}">{{ $branch->name }}</option>@endforeach</select></label>

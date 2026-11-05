@@ -56,6 +56,12 @@ class EmployeeAttendance extends Component
         if (request()->query('attendance_tab') === 'overtime') {
             $this->tab = 'overtime';
         }
+        if (request()->query('attendance_tile') === 'absent_uncovered') {
+            $filters = ReportFilters::fromArray($this->employee()->company, request()->only(['from', 'to']));
+            $this->from = $filters->from;
+            $this->to = $filters->to;
+            $this->showTile('absent_uncovered');
+        }
     }
 
     public function period(string $choice): void
@@ -242,7 +248,7 @@ class EmployeeAttendance extends Component
             return $day['status'] === $tile;
         }
         if ($tile === 'absent_uncovered') {
-            return $day['status'] === 'absent' && $day['minutes']['absence']['remaining'] > 0;
+            return $day['status'] === 'absent' && ! $day['flags']['absence_closed_by_request'];
         }
         if ($tile === 'late_early') {
             return $day['minutes']['late']['gross'] > 0 || $day['minutes']['early']['gross'] > 0;

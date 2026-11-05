@@ -19,6 +19,7 @@ use App\Models\User;
 use App\Services\Attendance\Reporting\AttendanceSummary;
 use App\Services\Attendance\Reporting\EmployeeFilterSearch;
 use App\Services\Attendance\Reporting\ReportFilters;
+use App\Services\Attendance\Reporting\ReportTiles;
 use App\Services\Leave\Reconciler;
 use App\Support\Tenancy\TenantContext;
 use Carbon\Carbon;
@@ -55,7 +56,7 @@ test('dashboard and employee attendance show the same current projection and pre
 
     $this->actingAs($hr);
     Livewire::test(HrDashboard::class)->assertSet('from', '2026-10-01')->assertSet('to', '2026-10-23')
-        ->assertSee('Attendance dashboard')->assertSee('Present days')->assertSee('Pending days')
+        ->assertSee('Attendance dashboard')->assertSee('Month figures')->assertSee('Pending days')
         ->set('employeeId', (string) $employee->id)->call('apply')->assertHasNoErrors();
     Livewire::test(EmployeeAttendance::class, ['employeeId' => $employee->id])
         ->assertSet('from', '2026-10-01')->assertSet('dayFilter', 'review')
@@ -66,6 +67,26 @@ test('dashboard and employee attendance show the same current projection and pre
     Livewire::withQueryParams(['tile' => 'present', 'from' => '2026-10-01', 'to' => '2026-10-23'])
         ->test(DashboardEmployees::class)->assertSee($employee->name)->assertSee('Matching employees');
     expect(app(AttendanceSummary::class)->drillDown($filters, 'present'))->toBe([$employee->id]);
+});
+
+test('home shows one primary task action and an empty state in both languages', function (): void {
+    $company = Company::factory()->create();
+    app(TenantContext::class)->setCompany($company);
+    $branch = Branch::factory()->create();
+    $hr = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::HrStaff]);
+    $this->actingAs($hr);
+    Livewire::test(HrDashboard::class)->assertSee('Nothing needs you right now.')
+        ->assertSee('Upload a newer file');
+    $employee = Employee::factory()->create(['branch_id' => $branch->id]);
+    Day::factory()->create(['employee_id' => $employee->id, 'branch_id' => $branch->id,
+        'work_date' => '2026-10-21', 'status' => 'absent']);
+    $page = Livewire::test(HrDashboard::class);
+    expect($page->html())->toMatch('/Review absences<\/a>/')
+        ->toMatch('/ui-button-primary[^>]*>Review absences<\/a>/');
+    app()->setLocale('ar');
+    Livewire::test(HrDashboard::class)->assertSee('بانتظار إجراء منك')->assertSee('راجع الغياب')
+        ->assertSee('أحدث الملفات');
+    app()->setLocale('en');
 });
 
 test('employee daily record shows out time on the row and interval in details', function (): void {
@@ -217,6 +238,13 @@ test('daily review excludes fully covered absence and pending while all days kee
     expect($tile->html())->toMatch('/Absent without leave.*?<bdi dir="auto">1<\/bdi>/s');
     $tile->call('showTile', 'absent_uncovered')->assertSet('selectedTile', 'absent_uncovered')
         ->assertSee('20 October')->assertDontSee('21 October')->assertDontSee('22 October');
+    $filters = ReportFilters::fromArray($company, ['employee_ids' => [$employee->id]]);
+    expect(ReportTiles::fromTotals(app(AttendanceSummary::class)->totals($filters))['absent_uncovered'])->toBe(1)
+        ->and(app(AttendanceSummary::class)->drillDown($filters, 'absent_uncovered'))->toBe([$employee->id])
+        ->and(iterator_to_array(app(AttendanceSummary::class)->drillDownDayIds($filters, 'absent_uncovered')))
+        ->toBe([Day::query()->where('work_date', '2026-10-20')->where('employee_id', $employee->id)->value('id')]);
+    Livewire::withQueryParams(['tile' => 'absent_uncovered'])->test(DashboardEmployees::class)
+        ->assertSee($employee->name);
 });
 
 test('late and early tile opens both kinds of days', function (): void {
