@@ -46,7 +46,8 @@ class LeaveRequests extends LeavePage
         $query = LeaveRequest::query()->with(['employee', 'leaveType'])
             ->where('company_id', $this->company()->id);
         if ($this->status === 'cancelled') {
-            $query->whereExists($this->activeCancellation(...));
+            $query->where(fn ($requests) => $requests->where('status', 'cancelled')
+                ->orWhereExists($this->activeCancellation(...)));
         } elseif ($this->status !== '') {
             $query->where('status', $this->status);
             $query->whereNotExists($this->activeCancellation(...));

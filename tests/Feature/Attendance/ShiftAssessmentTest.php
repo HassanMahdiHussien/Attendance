@@ -272,7 +272,7 @@ test('office presence over eight hours is not short while a full leave day settl
         ]));
         expect((int) Allocation::query()->where('target_day_id', $absent->id)->sum('minutes'))->toBe(480)
             ->and($summary['minutes']['absence'])->toBe([
-                'gross' => 480, 'reconciled_by_leave' => 480, 'reconciled_by_credit' => 0, 'remaining' => 0,
+                'gross' => 480, 'reconciled_by_leave' => 480, 'reconciled_by_credit' => 0, 'settled_by_hours' => 0, 'remaining' => 0,
             ]);
         Queue::assertPushed(AssessDaysJob::class, 1);
         app(Reconciler::class)->run($fixture['company'], [$fixture['employee']->id], 'replay');

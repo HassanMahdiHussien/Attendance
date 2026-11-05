@@ -30,6 +30,7 @@
                             <livewire:attendance.announcement-review :source-id="$row['source_id']" :key="'announcement-'.$row['source_id'].'-'.$index" />
                         @elseif($row['batch_id'] !== null)
                             <p><x-ui.badge :tone="app(\App\Services\Attendance\Reporting\JobStatePresentation::class)->tone('completed')">{{ __('messages.upload_center.imported') }}</x-ui.badge> <a class="ui-link" href="{{ $this->batchUrl($index) }}">{{ __('messages.upload_center.view_batch') }} #{{ $row['batch_id'] }}</a></p>
+                            @if($row['kind'] === 'leave' && ($row['description_count'] ?? 0) > 0)<p><a class="ui-link" href="{{ \App\Filament\Admin\Pages\Leave\LeaveDescriptions::getUrl(panel: 'admin', tenant: $this->company()) }}">{{ __('messages.leave_descriptions.review_count', ['count' => $row['description_count']]) }}</a></p>@endif
                         @else
                             @if($row['kind'] === 'employees' && ($row['run_id'] ?? null) && !$row['error'])
                                 <p><x-ui.badge :tone="app(\App\Services\Attendance\Reporting\JobStatePresentation::class)->tone('processing')">{{ __('messages.clear_screens.processing') }}</x-ui.badge> {{ __('messages.employee_import_ui.importing', ['count' => \App\Models\EmployeeImportRun::query()->where('company_id', $this->company()->id)->find($row['run_id'])?->row_count ?? 0]) }}</p>

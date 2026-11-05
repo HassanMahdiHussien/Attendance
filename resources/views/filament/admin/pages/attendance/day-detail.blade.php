@@ -17,7 +17,7 @@
                     <div><span class="text-sm text-gray-600">{{ __('messages.office_ui.'.$field) }}</span><strong class="block font-mono" dir="ltr">{{ $day->{$field}?->format('H:i') ?? '—' }}</strong></div>
                 @endforeach
                 @foreach (['elapsed_minutes', 'presence_minutes', 'late_minutes', 'early_minutes', 'exit_minutes', 'short_minutes', 'balance_minutes'] as $field)
-                    <div><span class="text-sm text-gray-600">{{ __('messages.office_ui.minutes.'.$field) }}</span><strong class="block"><bdi dir="auto">{{ $this->minutes($day->{$field}) }}</bdi></strong></div>
+                    <div><span class="text-sm text-gray-600">{{ __('messages.office_ui.minutes.'.$field) }}</span><strong class="block"><bdi dir="auto">{{ $this->minutes($field === 'short_minutes' ? ($presentation['short_remaining'] ?? $day->short_minutes) : $day->{$field}) }}</bdi></strong></div>
                 @endforeach
                 <div><span class="text-sm text-gray-600">{{ __('messages.office_ui.reviewed') }}</span><strong class="block">{{ $day->reviewed ? __('messages.office_ui.yes') : __('messages.office_ui.no') }}</strong></div>
                 <div><span class="text-sm text-gray-600">{{ __('messages.overtime_ui.overtime') }}</span><strong class="block"><bdi dir="auto">{{ $this->minutes($overtime['overtime_minutes'] ?? null) }}</bdi></strong>@if ($overtime['overtime_basis'] ?? null)<span>{{ __('messages.overtime_ui.basis.'.$overtime['overtime_basis']) }}</span>@endif</div>
@@ -84,7 +84,7 @@
                     @if (array_key_exists($field, $day->inputs ?? []))<div><span class="text-sm text-gray-600">{{ __('messages.office_ui.inputs.'.$field) }}</span><strong class="block break-words font-mono text-sm" dir="auto">{{ $this->displayValue($day->inputs[$field], $field) }}</strong></div>@endif
                 @endforeach
                 @if ($day->policy)<div><span class="text-sm text-gray-600">{{ __('messages.office_ui.policy_fields.office_start') }}</span><strong class="block font-mono" dir="ltr">{{ $day->policy->office_start }}</strong></div>
-                    @foreach (['flex_minutes', 'workday_minutes', 'min_presence_minutes', 'absence_minutes', 'close_grace_minutes', 'exits_count_toward_balance', 'office_rest_days', 'shift_starts', 'shift_minutes', 'shift_break_minutes', 'shift_min_presence_minutes', 'shift_rest_days', 'security_min_presence_minutes', 'inference_tolerance_minutes', 'overtime_min_minutes', 'overtime_step_minutes', 'rest_day_half_minutes', 'rest_day_full_minutes', 'compensatory_rest_days'] as $field)
+                    @foreach (['flex_minutes', 'workday_minutes', 'min_presence_minutes', 'absence_minutes', 'close_grace_minutes', 'minor_gap_tolerance_minutes', 'exits_count_toward_balance', 'office_rest_days', 'shift_starts', 'shift_minutes', 'shift_break_minutes', 'shift_min_presence_minutes', 'shift_rest_days', 'security_min_presence_minutes', 'inference_tolerance_minutes', 'overtime_min_minutes', 'overtime_step_minutes', 'rest_day_half_minutes', 'rest_day_full_minutes', 'compensatory_rest_days'] as $field)
                         <div><span class="text-sm text-gray-600">{{ __('messages.office_ui.policy_fields.'.$field) }}</span><strong class="block break-words font-mono" dir="auto">{{ $this->displayValue($day->policy->{$field}, $field) }}</strong></div>
                     @endforeach
                 @endif
@@ -117,9 +117,9 @@
         </x-ui.card></details>
         <x-ui.card :title="__('messages.leave_ui.day_reconciliation')">
             @php $reconciliation = $this->leaveReconciliation(); @endphp
-            <x-ui.table><thead><tr><th scope="col">{{ __('messages.leave_ui.type') }}</th><th scope="col">{{ __('messages.leave_ui.reconciled') }}</th><th scope="col">{{ __('messages.leave_ui.remaining') }}</th></tr></thead><tbody>
+            <x-ui.table><thead><tr><th scope="col">{{ __('messages.leave_ui.type') }}</th><th scope="col">{{ __('messages.leave_ui.reconciled') }}</th><th scope="col">{{ __('messages.clear_screens.settled_by_hours') }}</th><th scope="col">{{ __('messages.leave_ui.remaining') }}</th></tr></thead><tbody>
             @foreach (['absence', 'late', 'early', 'exit'] as $kind)
-                <tr><x-ui.td :label="__('messages.leave_ui.type')">{{ app()->getLocale() === 'en' ? ucfirst(__('messages.leave_ui.target_kinds.'.$kind)) : __('messages.leave_ui.target_kinds.'.$kind) }}</x-ui.td><x-ui.td :label="__('messages.leave_ui.reconciled')"><bdi dir="auto">{{ $this->minutes($reconciliation['reconciled'][$kind] ?? 0) }}</bdi></x-ui.td><x-ui.td :label="__('messages.leave_ui.remaining')"><bdi dir="auto">{{ $this->minutes($reconciliation['remaining'][$kind] ?? 0) }}</bdi></x-ui.td></tr>
+                <tr><x-ui.td :label="__('messages.leave_ui.type')">{{ app()->getLocale() === 'en' ? ucfirst(__('messages.leave_ui.target_kinds.'.$kind)) : __('messages.leave_ui.target_kinds.'.$kind) }}</x-ui.td><x-ui.td :label="__('messages.leave_ui.reconciled')"><bdi dir="auto">{{ $this->minutes($reconciliation['reconciled'][$kind] ?? 0) }}</bdi></x-ui.td><x-ui.td :label="__('messages.clear_screens.settled_by_hours')"><bdi dir="auto">{{ $this->minutes($reconciliation['settled_by_hours'][$kind] ?? 0) }}</bdi></x-ui.td><x-ui.td :label="__('messages.leave_ui.remaining')"><bdi dir="auto">{{ $this->minutes($reconciliation['remaining'][$kind] ?? 0) }}</bdi></x-ui.td></tr>
             @endforeach
             </tbody></x-ui.table>
             @if (($reconciliation['absence_closed'] ?? false) && $reconciliation['closed_by_request'])
@@ -132,6 +132,9 @@
             @endforeach
             @foreach ($reconciliation['pending_requests'] ?? [] as $pending)
                 <p>{{ __('messages.leave_ui.pending_request', ['request' => "\u{2066}".$pending['external_id']."\u{2069}", 'approver' => $pending['approver_name'] ?? '']) }}</p>
+            @endforeach
+            @foreach ($this->describedRequests() as $request)
+                <p><bdi dir="ltr">{{ $request->external_id }}</bdi> · <span class="whitespace-pre-wrap break-words" dir="auto">{{ $request->currentVersion->values['description'] }}</span> @if ($request->descriptionReading?->category)· {{ __('messages.leave_descriptions.categories.'.$request->descriptionReading->category) }} @endif</p>
             @endforeach
         </x-ui.card>
         @if ($case = $this->followUpCase())

@@ -7,6 +7,7 @@ use App\Models\Employee;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class LeaveRequest extends Model
 {
@@ -41,5 +42,10 @@ class LeaveRequest extends Model
     public function currentVersion(): BelongsTo
     {
         return $this->belongsTo(RequestVersion::class, 'current_version_id');
+    }
+
+    public function descriptionReading(): HasOne
+    {
+        return $this->hasOne(DescriptionReading::class, 'request_id');
     }
 }

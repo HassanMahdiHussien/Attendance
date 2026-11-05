@@ -81,6 +81,12 @@ class FollowUpCasesPage extends AttendancePage
             ->with('employee')->latest('work_date')->latest('id')->paginate(25);
     }
 
+    public function leaveEntryCount(): int
+    {
+        return FollowUpCase::query()->where('company_id', $this->company()->id)
+            ->where('case_kind', 'leave_entry')->where('state', '!=', 'closed')->count();
+    }
+
     public function branches()
     {
         return Branch::query()->where('company_id', $this->company()->id)->orderBy('name')->get();

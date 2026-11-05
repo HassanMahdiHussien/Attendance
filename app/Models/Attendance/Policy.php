@@ -19,6 +19,7 @@ class Policy extends Model
 
     protected $attributes = [
         'absence_minutes' => 480,
+        'minor_gap_tolerance_minutes' => 5,
         'shift_starts' => '["00:00","08:00","16:00"]',
         'shift_minutes' => 480,
         'shift_break_minutes' => 30,
@@ -46,6 +47,7 @@ class Policy extends Model
             'shift_rest_days' => 'array',
             'compensatory_rest_days' => 'array',
             'exits_count_toward_balance' => 'boolean',
+            'minor_gap_tolerance_minutes' => 'integer',
             'created_at' => 'datetime',
         ];
     }

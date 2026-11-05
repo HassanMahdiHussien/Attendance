@@ -39,7 +39,7 @@
         <tr><th>{{ __('messages.export_ui.present_days') }}</th><td class="mono">{{ $totals['days']['present'] + $totals['days']['field_work'] }}</td></tr>
         <tr><th>{{ __('messages.export_ui.pending_days') }}</th><td class="mono">{{ $totals['days']['pending'] }}</td></tr>
         @foreach (['absence', 'late', 'early', 'exit'] as $kind)
-            <tr><th>{{ ucfirst(__('messages.leave_ui.target_kinds.'.$kind)) }}</th><td class="mono">{{ $totals['minutes'][$kind]['gross'] }} / {{ $totals['minutes'][$kind]['reconciled_by_leave'] }} / {{ $totals['minutes'][$kind]['reconciled_by_credit'] }} / {{ $totals['minutes'][$kind]['remaining'] }}</td></tr>
+            <tr><th>{{ ucfirst(__('messages.leave_ui.target_kinds.'.$kind)) }}</th><td class="mono">{{ $totals['minutes'][$kind]['gross'] }} / {{ $totals['minutes'][$kind]['reconciled_by_leave'] }} / {{ $totals['minutes'][$kind]['reconciled_by_credit'] }} / {{ $totals['minutes'][$kind]['settled_by_hours'] }} / {{ $totals['minutes'][$kind]['remaining'] }}</td></tr>
         @endforeach
         @foreach (['created', 'used_in_period', 'available_at_period_end'] as $kind)
             <tr><th>{{ __('messages.export_ui.credit_totals.'.$kind) }}</th><td class="mono">{{ $totals['credits'][$kind] }}</td></tr>

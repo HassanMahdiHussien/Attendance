@@ -4,6 +4,8 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 
 ---
 
+- Gross late, early or exit minutes can exceed leave + credit + remaining because present-day worked hours or the full-hours minor-gap tolerance settle the rest; neither creates an allocation. (2026-11-05)
+
 - Upload preview samples and technical counts fold after the visible import decision; Livewire upload inputs and progress polling stay outside disclosures so their state continues updating. (2026-11-04)
 - Read-only policy values lose the translated “minutes” suffix when displayed as duration text; editable policy inputs keep that suffix because HR still enters raw minutes. (2026-11-04)
 - Daily and review lists project only their visible page of stored day IDs through AttendanceSummary before calling DayPresentation; day detail projects its one ID the same way. This keeps status wording consistent with the employee record without changing the list queries. (2026-11-03)
@@ -99,3 +101,11 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 - Field work counts as a full worked day even with no punches, but preserves the actual punch-derived presence and grants no overtime or rest-day entitlement (2026-11-04, spec 517).
 - A field-work reassessment still queues the existing leave reconciliation worker so it can close old follow-up cases; field-work days themselves offer no minutes to allocate. (2026-11-04, spec 517)
 - A withdrawn or rejected announcement record does not block a later approval from the same source; an active draft or approval does. Older withdrawn records remain in history. (2026-11-04, spec 517)
+- A leave-description backfill appends a correction version under its original batch using a reserved row number above the source rows. The existing unique batch-row key and immutable imported version remain intact. (2026-11-04, spec 518)
+- Saved `Leave Entry` forms have per-form follow-up cases with a separate case key; the original employee-day cases keep their day key. Both enter one notification batch and can share a manager email. A saved form still covers nothing. (2026-11-04, spec 518)
+- When an hourly description names two nonadjacent months, its settlement period includes the intervening months; allocations use the range's oldest unreconciled minutes first. (2026-11-04, spec 518)
+- If all of a leave form's minutes settle the named earlier period, an absence on the form's own date stays uncovered. (2026-11-04, spec 518)
+- The leave notes page is read-only by owner decision on 2026-11-05, so its readings change no calculation even though the decision services remain.
+- `LeaveFile::suggest` ignores sort arrows in headers, because the report tool appends one to the sorted column (`MyForm: Record Type  ↑`).
+- `HolidayClient` and `ClaudeChatModel` pass a Guzzle client with a timeout, because the Anthropic SDK's `timeout` option is advisory and a hung call stalls the whole queue.
+- `LeaveDescriptionReader` reads 25 items per call and splits a failing batch, because batches of 50 stalled past the time limit on real data. A refusal from the API (for example no credit) stops the run instead of spending the daily cap.

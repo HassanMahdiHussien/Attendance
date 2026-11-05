@@ -16,6 +16,9 @@ class LeaveStatus
         if ($status === 'leave entry') {
             return ['status' => 'draft', 'unknown' => false];
         }
+        if (in_array($status, ['cancelled', 'canceled'], true)) {
+            return ['status' => 'cancelled', 'unknown' => false];
+        }
         if (str_contains($status, 'approval')) {
             return ['status' => 'pending', 'unknown' => false];
         }

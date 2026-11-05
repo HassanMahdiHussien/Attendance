@@ -18,10 +18,12 @@ The full requirements are in `docs/attendance/PRD-EN.md`. This file records what
 | Topic | Decision |
 |---|---|
 | Leave duration | 1 day = 8 hours, 0.5 day = 4 hours. The report gives days only; the half-day position is never assumed. |
-| Status `Leave Entry` | A form the employee saved but never submitted. Covers nothing; nobody is reminded. If a later report shows the same form number submitted, update that request. |
+| Status `Leave Entry` | A saved but unsubmitted form. Covers nothing. From 2026-11-04 (spec 518), a form starting within the last 30 days or later creates a manager follow-up through the existing review-first notification route; HR sees it. A later submitted, approved, rejected or cancelled form closes the item. Employees receive nothing. |
 | Statuses `Manager Approval`, `HR Approval`, `Department Manager Approval` | Pending. Remind the current approver (`Form Approver` column), never the employee. |
 | Rejection | A request is rejected whenever `Leave Form Rejected` has a date, whatever the status column says. |
-| Cancellation | Never appears in the report. HR can mark a request cancelled manually, which reverses its allocations (PRD §11.3). A request missing from a later full report raises an HR alert; it is not cancelled automatically. |
+| Cancellation | Since the 2026-11-04 report, `Cancelled` can appear and counts as cancelled (owner decision 2026-11-05). HR can also mark a request cancelled manually, which reverses its allocations (PRD §11.3). A request missing from a later full report raises an HR alert; it is not cancelled automatically. |
+| Present-day leave and worked hours | Owner decision 2026-11-05: when same-day approved leave covers the stored short-hours gap, remaining late, early and exit minutes are settled by worked hours after same-day leave is allocated. Credit is not spent on those minutes. Short-hours alerts use the gap net of leave and credit; the day shows its leave. |
+| Minor full-hours gap | Owner decision 2026-11-05: on a present day with no stored short-hours gap, up to five uncovered late, early and counted exit minutes in total are ignored after same-day leave and worked-hours settlement, before credit. Above five, all remain. The versioned policy setting ranges from zero to sixty minutes and defaults to five for existing versions. |
 | Covered-but-working types | Work From Home, Business Travel and Sick Leave mark the day as covered (not absent). |
 | Annual Leave | Covers the day; it comes from the employee's balance in the company system. |
 | No punches + no leave on a working day | Absent when declared coverage and the spec 516 person and branch device-data checks pass; otherwise waiting. |
@@ -48,7 +50,7 @@ The full requirements are in `docs/attendance/PRD-EN.md`. This file records what
 - `Leave Duration (WorkDays, Approved)` is empty in every row; use `Leave Duration (Work Days)`.
 - All 1,934 rows without a duration are `Leave Entry`.
 - Leave type `0200` (6 rows, one of 83 days) is unknown — not counted as cover until HR maps it (Q4).
-- **No description column in this export.** A version with descriptions will be supplied; the AI-interpretation spec waits for it.
+- The earlier export had no description column. The 2026-11-04 export adds `MyForm: Record Type` and `Leave Description`. Record type fills down between Subtotal and Total rows. Work From Home, Business Travel Request and Administrative Leave can have blank `Leave Type`; the record type supplies it. Descriptions may refer to a worked date or earlier hourly-leave period, not the form date. Medical source text stays out of fixtures and docs.
 - Approver and manager are names, not IDs or emails.
 
 **Attendance transactions** (`Transaction_…xlsx`, 4,828 rows, title in row 1, header in row 2):
@@ -66,7 +68,7 @@ The full requirements are in `docs/attendance/PRD-EN.md`. This file records what
 | Q1–Q4 | Resolved 2026-10-21 — see §2. | — |
 | Q5 | Resolved 2026-10-23: side by side only; attendance never opens or suggests a disciplinary case. | — |
 | Q6 | Resolved 2026-10-22: active list = `HC.xlsx` (columns in spec 501 Clarifications); the email / work-pattern file is still to come and is uploaded as a partial update. | — |
-| Q7 | Holiday email sample received 2026-10-23 (Iraq Sovereignty Day, 30 Sep–3 Oct 2026, Al-Waha employees only; announcement is an image inside the PDF). Used by spec 507. Still pending: leave export with descriptions; overtime report. | later |
+| Q7 | Holiday email sample received 2026-10-23 and used by spec 507. Leave export with descriptions received 2026-11-04 and used by spec 518. Approved-overtime report still pending. | later |
 | Q8 | PRD §26 items (office departure after 09:00 arrival, overtime thresholds, credit allocation mechanism — including which overtime/credit hours `Overtime Equivelant Leave` draws from, …). | 503 onward |
 | Q8a | Resolved 2026-10-22 for office staff (spec 503): arrival after 09:00 → required leave 18:00; before 08:00 → 17:00; exits not in the balance; a day is assessed once coverage passes its end + 2 h. Overtime thresholds and credit allocation remain open. | — |
 
@@ -89,4 +91,6 @@ Each spec is one branch and one PR, built with the spec-kit flow (`/speckit-plan
 | 510 notifications | Follow-up cases per employee-day (uncovered absence, missing punch, unreconciled late/early/exit minutes), routed to the direct manager or the pending request's mapped approver; one consolidated email per recipient per batch, review or auto mode, reminders every 2 working days (max 3), at-most-once delivery with attempts; cases, notifications and approver-mapping screens | 509 |
 | 512 admin chat | Assistant page: Claude tool loop over the same reporting, employee, case, balance and export services as the screens; reports only through the export pipeline; employee changes only as proposals the user confirms (EmployeeHistory, source `chat`, stale check), switched off per company by default; server-written "changes applied" footer; metadata-only AI log. Verified on real data with a scripted test model; real-model check pending the API key | 510 |
 | 513 upload-and-dashboard | Step 1 in progress: one Upload page for employee, leave balance, leave and attendance files; later steps cover progress and dashboard changes | 512 |
-| later | 509b approved-overtime report import; 511 leave export with descriptions (description AI); **merge back into Displanary** | — |
+| 518 leave-descriptions | New leave export columns, description AI proposals and HR confirmation, deterministic compensation and hourly settlement, saved-form manager follow-up. This is the work previously listed as 511. | 517 |
+| 2026-11-05 owner decision | The Leave notes page is read-only for approved forms: no confirmation or rejection and no calculation change from viewing readings; decision services remain unused by this page. | 518 |
+| later | 509b approved-overtime report import; **merge back into Displanary** | — |

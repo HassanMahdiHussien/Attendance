@@ -94,7 +94,7 @@ test('real assessment and reconciliation give one absent category with separate 
             ->and($totals['days']['absent'])->toBe(1)
             ->and($totals['days']['pending'])->toBe(1)
             ->and($totals['minutes']['absence'])->toBe([
-                'gross' => 480, 'reconciled_by_leave' => 480, 'reconciled_by_credit' => 0, 'remaining' => 0,
+                'gross' => 480, 'reconciled_by_leave' => 480, 'reconciled_by_credit' => 0, 'settled_by_hours' => 0, 'remaining' => 0,
             ])
             ->and($totals['flags']['hr_confirmed_absence'])->toBe(1)
             ->and($totals['flags']['absence_closed_by_request'])->toBe(1)
@@ -129,10 +129,10 @@ test('credit is counted once and its available balance is measured at period end
             ->and($replayed['credits'])->toBe($both['credits'])
             ->and($replayed['minutes'])->toBe($both['minutes'])
             ->and($both['minutes']['early'])->toBe([
-                'gross' => 180, 'reconciled_by_leave' => 180, 'reconciled_by_credit' => 0, 'remaining' => 0,
+                'gross' => 180, 'reconciled_by_leave' => 180, 'reconciled_by_credit' => 0, 'settled_by_hours' => 0, 'remaining' => 0,
             ])
             ->and($both['minutes']['late'])->toBe([
-                'gross' => 15, 'reconciled_by_leave' => 0, 'reconciled_by_credit' => 15, 'remaining' => 0,
+                'gross' => 15, 'reconciled_by_leave' => 0, 'reconciled_by_credit' => 15, 'settled_by_hours' => 0, 'remaining' => 0,
             ]);
     });
 });
@@ -150,7 +150,7 @@ test('a half-day leave keeps the uncovered half of an absence visible', function
         app(Reconciler::class)->run($fixture['company'], [$fixture['employee']->id], 'report_test');
         $totals = app(AttendanceSummary::class)->totals(reportingFilters($fixture));
         expect($totals['minutes']['absence'])->toBe([
-            'gross' => 480, 'reconciled_by_leave' => 240, 'reconciled_by_credit' => 0, 'remaining' => 240,
+            'gross' => 480, 'reconciled_by_leave' => 240, 'reconciled_by_credit' => 0, 'settled_by_hours' => 0, 'remaining' => 240,
         ])->and($totals['leave_day_equivalents']['Annual Leave|approved'])->toBe(0.5)
             ->and($totals['flags']['absence_closed_by_request'])->toBe(0);
     });
@@ -306,4 +306,14 @@ test('department, manager, work pattern and status filters use the day inputs', 
         expect($totals['days']['present'])->toBe(1)->and($totals['days']['absent'])->toBe(0)
             ->and(iterator_to_array(app(AttendanceSummary::class)->drillDownDayIds($filters, 'present')))->toHaveCount(1);
     });
+});
+
+test('more day ids than MySQL allows in one query still load their allocations', function (): void {
+    $fixture = reportingFixture();
+    $allocations = new ReflectionMethod(AttendanceSummary::class, 'allocations');
+
+    $result = app(TenantContext::class)->runForCompany($fixture['company'],
+        fn () => $allocations->invoke(app(AttendanceSummary::class), reportingFilters($fixture), range(1, 70000)));
+
+    expect($result)->toBeEmpty();
 });

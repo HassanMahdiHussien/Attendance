@@ -1,6 +1,7 @@
 <x-filament-panels::page>
     <div class="space-y-5">
         <p class="text-sm text-gray-600">{{ __('messages.clear_screens.notifications_context') }}</p>
+        <p class="text-sm">{{ __('messages.leave_entry_ui.open_count', ['count' => $this->leaveEntryCount()]) }}</p>
         @if ($this->canManage())
             <section class="space-y-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                 <h2 class="font-semibold">{{ __('messages.follow_up_ui.settings') }}</h2>

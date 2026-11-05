@@ -183,7 +183,7 @@ class AttendanceDemoSeeder extends Seeder
         $rows[] = ['DEMO-LEAVE-9', $employees[8]->employee_code, $employees[8]->name_en,
             'Demo Approver', 'Demo Site', 'Demo Department', 'Manager Approval', 'Annual Leave', '',
             $rejectedDate, $rejectedDate, '1', '', 'Demo HR', $rejectedDate, 'Demo Manager', $rejectedDate];
-        $file = $this->csv('IRAQ All Leave REPORT-'.$end->format('Y-m-d').'-23-55-00.csv', LeaveFile::HEADERS, $rows);
+        $file = $this->csv('IRAQ All Leave REPORT-'.$end->format('Y-m-d').'-23-55-00.csv', array_slice(LeaveFile::HEADERS, 2), $rows);
         try {
             $reader = app(LeaveFile::class);
             $mapping = $reader->suggest($reader->inspect($file)['headers']);

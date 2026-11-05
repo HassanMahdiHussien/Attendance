@@ -4,6 +4,7 @@ namespace App\Models\Attendance;
 
 use App\Models\Concerns\BelongsToCompany;
 use App\Models\Employee;
+use App\Models\Leave\LeaveRequest;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,7 +18,7 @@ class FollowUpCase extends Model
 
     protected $guarded = [];
 
-    protected array $companyParents = ['employee', 'day'];
+    protected array $companyParents = ['employee', 'day', 'leaveRequest'];
 
     protected array $companyUserKeys = ['manual_closed_by'];
 
@@ -38,6 +39,11 @@ class FollowUpCase extends Model
     public function day(): BelongsTo
     {
         return $this->belongsTo(Day::class, 'day_id');
+    }
+
+    public function leaveRequest(): BelongsTo
+    {
+        return $this->belongsTo(LeaveRequest::class, 'leave_request_id');
     }
 
     public function events(): HasMany

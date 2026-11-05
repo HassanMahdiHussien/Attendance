@@ -20,6 +20,7 @@ use App\Models\Leave\RequestDecision;
 use App\Models\Leave\Setting;
 use App\Services\Attendance\DataIssues;
 use App\Services\Attendance\FollowUp\CaseSync;
+use App\Services\Attendance\FollowUp\LeaveEntryCases;
 use App\Services\Attendance\HolidayCalendar;
 use App\Services\AuditLogger;
 use App\Support\Tenancy\TenantContext;
@@ -36,6 +37,7 @@ class Reconciler
         private AuditLogger $audit,
         private DataIssues $issues,
         private CaseSync $cases,
+        private LeaveEntryCases $leaveEntryCases,
     ) {}
 
     /** Open request-level issue keys of the employee being replayed, loaded once per replay. */
@@ -61,6 +63,7 @@ class Reconciler
                     foreach ($employees as $employee) {
                         $result = $this->replayEmployee($company, $employee, $run);
                         $this->cases->syncLocked($company, $employee, $run->trigger_source);
+                        $this->leaveEntryCases->syncEmployee($company, $employee);
                         $count += (int) $result['changed'];
                         if ($result['dates'] !== []) {
                             $assessmentDates[$employee->id] = $result['dates'];
@@ -85,11 +88,12 @@ class Reconciler
     private function replayEmployee(Company $company, Employee $employee, ProcessingRun $run): array
     {
         $requests = LeaveRequest::query()->where('company_id', $company->id)->where('employee_id', $employee->id)
-            ->with('leaveType')->orderBy('id')->get();
+            ->with(['leaveType', 'descriptionReading', 'currentVersion'])->orderBy('id')->get();
         $this->openRequestIssues = DataIssue::query()->where('company_id', $company->id)
             ->whereIn('open_key', $requests->flatMap(fn (LeaveRequest $request): array => array_map(
                 fn (string $type): string => $type.'|leave_request|request:'.$request->id,
-                ['leave_counted_holiday', 'leave_duration_mismatch', 'leave_rest_day_missing', 'leave_entitlement_exceeded'],
+                ['leave_counted_holiday', 'leave_duration_mismatch', 'leave_rest_day_missing', 'leave_entitlement_exceeded',
+                    'described_work_date_no_credit', 'described_period_shortfall'],
             ))->all())->pluck('open_key')->flip()->all();
         $versions = EmployeeVersion::query()->where('company_id', $company->id)->where('employee_id', $employee->id)
             ->orderBy('effective_from')->orderBy('id')->get()
@@ -220,18 +224,26 @@ class Reconciler
                 continue;
             }
             if (isset($compensationIds[$request->id])) {
+                $reading = $request->descriptionReading;
                 $compensationRequests[] = [
                     'request_id' => $request->id, 'external_id' => $request->external_id,
                     'start_date' => $values['start_date'], 'quantity' => (float) $values['duration_days'],
                     'request_day_key' => isset($distribution['days'][0])
                         ? $request->id.'|'.$distribution['days'][0]['work_date'] : null,
+                    'worked_dates' => $reading !== null && app(LeaveDescriptionEffects::class)
+                        ->applies($request, $reading, 'compensation_for_day') ? ($reading->worked_dates ?? []) : [],
                 ];
             }
+            $reading = $request->descriptionReading;
+            $settlesHours = $reading !== null && app(LeaveDescriptionEffects::class)
+                ->applies($request, $reading, 'hourly_settlement');
             foreach ($distribution['days'] as $day) {
                 $plannedDays[] = [
                     'key' => $request->id.'|'.$day['work_date'], 'request_id' => $request->id,
                     'external_id' => $request->external_id, 'work_date' => $day['work_date'], 'minutes' => $day['minutes'],
                     'credit_allowed' => ! isset($compensationIds[$request->id]),
+                    'settled_from' => $settlesHours ? $reading->settled_from->toDateString() : null,
+                    'settled_to' => $settlesHours ? $reading->settled_to->toDateString() : null,
                 ];
             }
         }
@@ -249,7 +261,9 @@ class Reconciler
                         continue;
                     }
                     if ((int) $day->{$column} > 0) {
-                        $targets[] = ['day_id' => $day->id, 'work_date' => $date, 'kind' => $kind, 'minutes' => (int) $day->{$column}];
+                        $targets[] = ['day_id' => $day->id, 'work_date' => $date, 'kind' => $kind,
+                            'minutes' => (int) $day->{$column}, 'short_minutes' => (int) $day->short_minutes,
+                            'tolerance_minutes' => (int) ($day->policy?->minor_gap_tolerance_minutes ?? 0)];
                     }
                 }
             }
@@ -289,6 +303,10 @@ class Reconciler
                 'quantity' => $entitlement->quantity,
             ])->all();
         $entitlementPlan = $this->entitlementAllocator->allocate($compensationRequests, $availableEntitlements);
+        foreach ($requests as $request) {
+            $this->syncDescriptionFlag($company, $request, 'described_work_date_no_credit',
+                in_array($request->id, $entitlementPlan['missing_worked_date'], true));
+        }
         $exceeded = array_fill_keys($entitlementPlan['exceeded'], true);
         foreach ($requests as $request) {
             $methodsChanged = $this->syncEntitlementExceeded($company, $request, isset($exceeded[$request->id])) || $methodsChanged;
@@ -299,6 +317,10 @@ class Reconciler
             $sourceDays[] = ['id' => $day['key'], 'external_id' => $day['external_id'],
                 'work_date' => $day['work_date'], 'minutes' => $day['minutes'],
                 'credit_allowed' => $day['credit_allowed']];
+            if ($day['settled_from'] !== null) {
+                $sourceDays[array_key_last($sourceDays)]['settled_from'] = $day['settled_from'];
+                $sourceDays[array_key_last($sourceDays)]['settled_to'] = $day['settled_to'];
+            }
         }
         $targetlessPresentDates = $days->filter(fn (Day $day): bool => $day->status === 'present'
             && ! collect($targets)->contains('work_date', $day->work_date->toDateString()))
@@ -307,6 +329,10 @@ class Reconciler
             ->map(fn (Day $day): string => $day->work_date->toDateString())->all();
         $plan = $this->allocator->allocate($sourceDays, $targets, $blocked, $expiry === null ? null : (int) $expiry,
             $targetlessPresentDates, $creditEligibleDates);
+        foreach ($requests as $request) {
+            $shortfall = collect($plan['period_shortfalls'])->keys()->contains(fn (string $key): bool => str_starts_with($key, $request->id.'|'));
+            $this->syncDescriptionFlag($company, $request, 'described_period_shortfall', $shortfall);
+        }
         $flagKeys = [];
         foreach ($plan['flags'] as $flag) {
             $key = 'employee:'.$employee->id.':request_day:'.$flag['request_day_id'];
@@ -448,6 +474,31 @@ class Reconciler
         return $hadFlag !== $exceeded;
     }
 
+    private function syncDescriptionFlag(Company $company, LeaveRequest $request, string $code, bool $active): void
+    {
+        $flags = $request->flags ?? [];
+        if (in_array($code, $flags, true) !== $active) {
+            $flags = array_values(array_diff($flags, [$code]));
+            if ($active) {
+                $flags[] = $code;
+            }
+            $request->update(['flags' => $flags]);
+            $this->audit->log('leave.description.flag_changed', $request, ['code' => $code, 'active' => $active]);
+        }
+        $key = $code.'|leave_request|request:'.$request->id;
+        if ($active && ! isset($this->openRequestIssues[$key])) {
+            $this->issues->open($company, $code, 'leave_request', 'request:'.$request->id);
+            $this->openRequestIssues[$key] = true;
+        } elseif (! $active && isset($this->openRequestIssues[$key])) {
+            $issue = DataIssue::query()->where('company_id', $company->id)->where('open_key', $key)->first();
+            if ($issue !== null) {
+                $issue->update(['status' => 'resolved', 'open_key' => null, 'resolved_at' => now()]);
+                $this->audit->log('leave.issue.resolved', $issue, ['type' => $issue->type]);
+            }
+            unset($this->openRequestIssues[$key]);
+        }
+    }
+
     private function sameConsumptionLedger(array $planned, $current): bool
     {
         $plannedRows = array_map(fn (array $row): array => [
@@ -529,12 +580,13 @@ class Reconciler
         $existingCredits = $credits->map(fn (Credit $credit): array => [$dayKeys[$credit->source_day_id] ?? '', (int) $credit->minutes, $credit->expires_on?->toDateString()])->all();
         $planned = array_map(fn (array $allocation): array => [
             $allocation['source_kind'], $allocation['source_day_id'], $allocation['target_day_id'],
-            $allocation['target_kind'], $allocation['minutes'],
+            $allocation['target_kind'], $allocation['minutes'], $this->explanationSignature($allocation['explanation']),
         ], $plan['allocations']);
         $existing = $allocations->map(fn (Allocation $allocation): array => [
             $allocation->source_credit_id === null ? 'same_day' : 'credit',
             $allocation->source_credit_id === null ? ($dayKeys[$allocation->source_request_day_id] ?? '') : ($creditKeys[$allocation->source_credit_id] ?? ''),
             (int) $allocation->target_day_id, $allocation->target_kind, (int) $allocation->minutes,
+            $this->explanationSignature($allocation->explanation),
         ])->all();
         sort($plannedCredits);
         sort($existingCredits);
@@ -542,5 +594,10 @@ class Reconciler
         sort($existing);
 
         return $plannedCredits === $existingCredits && $planned === $existing;
+    }
+
+    private function explanationSignature(array $explanation): string
+    {
+        return implode('|', [$explanation['code'] ?? '', $explanation['settled_from'] ?? '', $explanation['settled_to'] ?? '']);
     }
 }

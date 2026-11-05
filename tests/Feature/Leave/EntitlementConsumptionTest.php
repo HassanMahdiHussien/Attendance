@@ -7,9 +7,12 @@ use App\Models\Company;
 use App\Models\Employee;
 use App\Models\Leave\Allocation;
 use App\Models\Leave\Credit;
+use App\Models\Leave\DescriptionReading;
 use App\Models\Leave\EntitlementConsumption;
+use App\Models\Leave\ImportBatch;
 use App\Models\Leave\LeaveRequest;
 use App\Models\Leave\LeaveType;
+use App\Models\Leave\RequestVersion;
 use App\Models\User;
 use App\Services\Attendance\Overtime;
 use App\Services\Attendance\Reporting\ReportFilters;
@@ -135,4 +138,28 @@ test('reconciliation rejects a company outside the tenant context', function ():
     app(TenantContext::class)->runForCompany($this->company, function () use ($other): void {
         expect(fn () => app(Reconciler::class)->run($other, [], 'test'))->toThrow(HttpException::class);
     });
+});
+
+test('confirmed worked date changes replay and undo restores the earlier entitlement choice', function (): void {
+    $this->type->update(['name' => 'Compensation Leave']);
+    $old = overtimeEntitlement($this->employee, '2026-10-02', 1.0);
+    $worked = overtimeEntitlement($this->employee, '2026-10-09', 1.0);
+    $request = overtimeRequest($this->employee, $this->type, 'INVENTED-COMP', '2026-10-15', 1.0);
+    $batch = ImportBatch::factory()->create(['company_id' => $this->company->id]);
+    $version = RequestVersion::factory()->create(['company_id' => $this->company->id,
+        'request_id' => $request->id, 'batch_id' => $batch->id, 'row_number' => 2,
+        'values' => ['description' => 'compensation 09.10.2026'], 'raw_values' => []]);
+    $request->update(['current_version_id' => $version->id]);
+    $reading = DescriptionReading::create(['company_id' => $this->company->id,
+        'request_id' => $request->id, 'text_hash' => hash('sha256', 'compensation 09.10.2026'),
+        'category' => 'compensation_for_day', 'worked_dates' => ['2026-10-09'],
+        'confidence' => 'high', 'status' => 'proposed']);
+    replayOvertimeLeave($this->company, $this->employee);
+    expect(EntitlementConsumption::query()->whereNull('superseded_by_run_id')->sole()->entitlement_id)->toBe($old->id);
+    $reading->update(['status' => 'confirmed']);
+    replayOvertimeLeave($this->company, $this->employee);
+    expect(EntitlementConsumption::query()->whereNull('superseded_by_run_id')->sole()->entitlement_id)->toBe($worked->id);
+    $reading->update(['status' => 'proposed']);
+    replayOvertimeLeave($this->company, $this->employee);
+    expect(EntitlementConsumption::query()->whereNull('superseded_by_run_id')->sole()->entitlement_id)->toBe($old->id);
 });

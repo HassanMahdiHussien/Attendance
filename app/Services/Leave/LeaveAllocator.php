@@ -21,10 +21,38 @@ class LeaveAllocator
         $allocations = [];
         $credits = [];
         $flags = [];
+        $periodShortfalls = [];
+        $sameDayMinutes = [];
+        $sameDayByTarget = [];
         foreach ($sources as $source) {
             $available = (int) $source['minutes'];
+            $periodUsed = false;
+            if (isset($source['settled_from'], $source['settled_to'])) {
+                $periodTargets = array_filter($targets, fn (array $target): bool => $target['work_date'] >= $source['settled_from']
+                    && $target['work_date'] <= $source['settled_to'] && in_array($target['kind'], ['late', 'early', 'exit'], true));
+                foreach ($periodTargets as $target) {
+                    $key = $target['day_id'].'|'.$target['kind'];
+                    if (isset($blocked[$target['work_date'].'|'.$target['kind']])) {
+                        continue;
+                    }
+                    $used = min($available, $remaining[$key]);
+                    if ($used > 0) {
+                        $allocation = $this->allocation($source, $target, $used, 'same_day');
+                        $allocation['explanation']['code'] = 'leave_description_period';
+                        $allocation['explanation']['settled_from'] = $source['settled_from'];
+                        $allocation['explanation']['settled_to'] = $source['settled_to'];
+                        $allocations[] = $allocation;
+                        $remaining[$key] -= $used;
+                        $available -= $used;
+                        $periodUsed = true;
+                    }
+                }
+                if ($available > 0) {
+                    $periodShortfalls[$source['id']] = $available;
+                }
+            }
             $sameDay = array_filter($targets, fn (array $target): bool => $target['work_date'] === $source['work_date']);
-            if (in_array($source['work_date'], $targetlessPresentDates, true)) {
+            if (! $periodUsed && in_array($source['work_date'], $targetlessPresentDates, true)) {
                 $flags[] = ['request_day_id' => $source['id'], 'code' => 'leave_with_attendance_nothing_to_reconcile'];
             }
             foreach ($sameDay as $target) {
@@ -35,6 +63,8 @@ class LeaveAllocator
                 $used = min($available, $remaining[$key]);
                 if ($used > 0) {
                     $allocations[] = $this->allocation($source, $target, $used, 'same_day');
+                    $sameDayMinutes[$target['day_id']] = ($sameDayMinutes[$target['day_id']] ?? 0) + $used;
+                    $sameDayByTarget[$key] = ($sameDayByTarget[$key] ?? 0) + $used;
                     $remaining[$key] -= $used;
                     $available -= $used;
                 }
@@ -49,6 +79,39 @@ class LeaveAllocator
                         ->modify('+'.$expiryDays.' days')->format('Y-m-d'),
                 ];
             }
+        }
+        $settledByHours = [];
+        foreach ($targets as $target) {
+            if (! isset($target['short_minutes']) || ! HoursSettlement::applies((int) $target['short_minutes'], $sameDayMinutes[$target['day_id']] ?? 0)
+                || isset($blocked[$target['work_date'].'|'.$target['kind']])) {
+                continue;
+            }
+            $key = $target['day_id'].'|'.$target['kind'];
+            $settledByHours[$key] = $remaining[$key];
+            $remaining[$key] = 0;
+        }
+        $uncoveredByDay = [];
+        foreach ($targets as $target) {
+            if (! isset($target['tolerance_minutes']) || ! in_array($target['kind'], ['late', 'early', 'exit'], true)
+                || isset($blocked[$target['work_date'].'|'.$target['kind']])) {
+                continue;
+            }
+            $key = $target['day_id'].'|'.$target['kind'];
+            $uncoveredByDay[$target['day_id']] = ($uncoveredByDay[$target['day_id']] ?? 0)
+                + max(0, (int) $target['minutes'] - ($sameDayByTarget[$key] ?? 0));
+        }
+        foreach ($targets as $target) {
+            if (! isset($target['short_minutes'], $target['tolerance_minutes'])
+                || ! in_array($target['kind'], ['late', 'early', 'exit'], true)
+                || isset($blocked[$target['work_date'].'|'.$target['kind']])
+                || HoursSettlement::applies((int) $target['short_minutes'], $sameDayMinutes[$target['day_id']] ?? 0)
+                || ! HoursSettlement::withinTolerance((int) $target['short_minutes'], $uncoveredByDay[$target['day_id']] ?? 0,
+                    (int) $target['tolerance_minutes'])) {
+                continue;
+            }
+            $key = $target['day_id'].'|'.$target['kind'];
+            $settledByHours[$key] = $remaining[$key];
+            $remaining[$key] = 0;
         }
         foreach ($targets as $target) {
             $key = $target['day_id'].'|'.$target['kind'];
@@ -73,7 +136,8 @@ class LeaveAllocator
             unset($credit);
         }
 
-        return ['allocations' => $allocations, 'credits' => $credits, 'remaining' => $remaining, 'flags' => $flags];
+        return ['allocations' => $allocations, 'credits' => $credits, 'remaining' => $remaining,
+            'settled_by_hours' => $settledByHours, 'flags' => $flags, 'period_shortfalls' => $periodShortfalls];
     }
 
     private function allocation(array $source, array $target, int $minutes, string $kind): array

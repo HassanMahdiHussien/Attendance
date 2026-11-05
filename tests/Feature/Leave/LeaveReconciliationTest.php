@@ -3,19 +3,27 @@
 use App\Enums\UserRole;
 use App\Events\DaysAssessed;
 use App\Jobs\Leave\ReconcileLeaveJob;
+use App\Models\Attendance\AttendanceExport;
 use App\Models\Attendance\DataIssue;
 use App\Models\Attendance\Day;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\Leave\Allocation;
 use App\Models\Leave\Credit;
+use App\Models\Leave\DescriptionReading;
+use App\Models\Leave\ImportBatch;
 use App\Models\Leave\LeaveRequest;
 use App\Models\Leave\LeaveType;
 use App\Models\Leave\RequestDay;
 use App\Models\Leave\RequestDecision;
+use App\Models\Leave\RequestVersion;
 use App\Models\User;
+use App\Services\Attendance\Ai\ChatTools;
 use App\Services\Attendance\DayAssessor;
 use App\Services\Attendance\OfficePolicy;
+use App\Services\Attendance\Reporting\AttendanceSummary;
+use App\Services\Attendance\Reporting\ExportData;
+use App\Services\Attendance\Reporting\ReportFilters;
 use App\Services\Leave\DayReconciliation;
 use App\Services\Leave\LeaveActions;
 use App\Services\Leave\LeaveSettings;
@@ -78,6 +86,56 @@ test('same day leave settles a balance and surplus credit pays later lateness', 
         ->and(app(DayReconciliation::class)->for($this->employee, '2026-10-20')['2026-10-20']['remaining']['late'])->toBe(0);
     $credit = Allocation::query()->whereNotNull('source_credit_id')->firstOrFail();
     expect($credit->explanation['request'])->toBe('FORM-A')->and($credit->minutes)->toBe(15);
+});
+
+test('confirmed hourly period takes older minutes first and undo and cancellation replay cleanly', function (): void {
+    $this->type->update(['name' => 'Overtime Equivelant Leave']);
+    $request = reconciledRequest($this->employee, $this->type, 'INVENTED-HOURS', '2026-10-19');
+    $batch = ImportBatch::factory()->create(['company_id' => $this->company->id]);
+    $version = RequestVersion::factory()->create(['company_id' => $this->company->id,
+        'request_id' => $request->id, 'batch_id' => $batch->id, 'row_number' => 2,
+        'values' => ['description' => 'hourly leave during July 2026 and August 2026'], 'raw_values' => []]);
+    $request->update(['current_version_id' => $version->id]);
+    $reading = DescriptionReading::create(['company_id' => $this->company->id,
+        'request_id' => $request->id, 'text_hash' => hash('sha256', 'hourly leave during July 2026 and August 2026'),
+        'category' => 'hourly_settlement', 'worked_dates' => [],
+        'settled_from' => '2026-07-01', 'settled_to' => '2026-08-31',
+        'confidence' => 'high', 'status' => 'proposed']);
+    $july = reconciledDay($this->employee, '2026-07-04', 'present', late: 120);
+    reconciledDay($this->employee, '2026-08-05', 'present', early: 60);
+    reconciledDay($this->employee, '2026-10-19', 'present', early: 180);
+    replayLeave($this->company, $this->employee);
+    $before = (int) Allocation::query()->whereNull('superseded_by_run_id')->where('target_day_id', $july->id)->sum('minutes');
+    expect($before)->toBe(60);
+    $reading->update(['status' => 'confirmed']);
+    replayLeave($this->company, $this->employee);
+    expect((int) Allocation::query()->whereNull('superseded_by_run_id')->where('target_day_id', $july->id)->sum('minutes'))->toBe(120)
+        ->and(Allocation::query()->whereNull('superseded_by_run_id')->where('explanation->code', 'leave_description_period')->count())->toBe(2);
+    $filterInput = ['from' => '2026-07-04', 'to' => '2026-10-19', 'employee_ids' => [$this->employee->id]];
+    $filters = ReportFilters::fromArray($this->company, $filterInput);
+    $profileDay = collect(iterator_to_array(app(AttendanceSummary::class)->perDay($filters, $this->employee->id)))
+        ->firstWhere('work_date', '2026-07-04');
+    $dashboard = app(AttendanceSummary::class)->totals($filters);
+    $chat = app(ChatTools::class)->execute('day_details',
+        ['employee_ids' => [$this->employee->id], 'filters' => $filterInput], $this->company, $this->actor);
+    $chatDay = collect($chat['data'])->pluck('day')->firstWhere('work_date', '2026-07-04');
+    $export = AttendanceExport::factory()->create(['company_id' => $this->company->id,
+        'kind' => 'lateness_reconciliation', 'filters' => $filterInput]);
+    $reportDay = collect(iterator_to_array(app(ExportData::class)->rows($export, $filters)))
+        ->firstWhere('date', '2026-07-04');
+    expect($profileDay['minutes']['late']['reconciled_by_leave'])->toBe(120)
+        ->and($chatDay['minutes']['late'])->toBe($profileDay['minutes']['late'])
+        ->and($reportDay['leave'])->toBe(120)
+        ->and($dashboard['minutes']['late']['reconciled_by_leave'])->toBe(120);
+    $active = Allocation::query()->whereNull('superseded_by_run_id')->pluck('id')->all();
+    replayLeave($this->company, $this->employee);
+    expect(Allocation::query()->whereNull('superseded_by_run_id')->pluck('id')->all())->toBe($active);
+    $reading->update(['status' => 'proposed']);
+    replayLeave($this->company, $this->employee);
+    expect((int) Allocation::query()->whereNull('superseded_by_run_id')->where('target_day_id', $july->id)->sum('minutes'))->toBe(60);
+    app(LeaveActions::class)->cancel($request, 'Invented correction', $this->actor);
+    replayLeave($this->company, $this->employee);
+    expect(Allocation::query()->whereNull('superseded_by_run_id')->count())->toBe(0);
 });
 
 test('a half day leaves four hours of absence and a full day closes it', function (): void {

@@ -21,6 +21,7 @@ use App\Models\Company;
 use App\Models\Employee;
 use App\Models\Leave\LeaveRequest;
 use App\Models\User;
+use App\Services\Attendance\Ai\ChatTools;
 use App\Services\Attendance\FollowUp\ApproverMappings;
 use App\Services\Attendance\FollowUp\FollowUpCases;
 use App\Services\Attendance\Reporting\ExportData;
@@ -111,6 +112,34 @@ test('case filters, dashboard counts and export rows share the same scoped cases
     expect($requested->fresh()->row_count)->toBe(1)
         ->and(collect($xlsxRows)->pluck(0))->toContain($this->employee->employee_code)
         ->and((int) $total[5])->toBe(480);
+});
+
+test('day and saved-form cases agree across the tile, list, export and chat', function (): void {
+    $request = LeaveRequest::factory()->create(['company_id' => $this->company->id,
+        'employee_id' => $this->employee->id, 'external_id' => 'FORM-INVENTED',
+        'start_date' => '2026-10-22', 'end_date' => '2026-10-22',
+        'raw_status' => 'Leave Entry', 'status' => 'draft']);
+    $form = FollowUpCase::factory()->create(['company_id' => $this->company->id,
+        'employee_id' => $this->employee->id, 'day_id' => null,
+        'leave_request_id' => $request->id, 'case_kind' => 'leave_entry',
+        'work_date' => '2026-10-22', 'items' => [['type' => 'leave_entry', 'minutes' => null]],
+        'routes' => []]);
+    $filters = ReportFilters::fromArray($this->company, ['from' => '2026-10-01', 'to' => '2026-10-31']);
+    $service = app(FollowUpCases::class);
+    $page = Livewire::test(FollowUpCasesPage::class)->set('from', '2026-10-01')->set('to', '2026-10-31')
+        ->set('state', 'open_cases');
+    $export = AttendanceExport::factory()->create(['company_id' => $this->company->id,
+        'kind' => 'follow_up_cases']);
+    $rows = iterator_to_array(app(ExportData::class)->rows($export, $filters), false);
+    $chat = app(ChatTools::class)->execute('list_cases', ['filters' => [
+        'from' => '2026-10-01', 'to' => '2026-10-31',
+    ]], $this->company, $this->hr);
+    expect($service->tileTotals($filters)['open_cases'])->toBe(2)
+        ->and($page->instance()->cases()->total())->toBe(2)
+        ->and($rows)->toHaveCount(2)
+        ->and($chat['data'])->toHaveCount(2)
+        ->and($service->forTile($filters, 'open_cases')->pluck('id')->all())
+        ->toContain($form->id, $this->case->id);
 });
 
 test('case appears on the day and employee pages and HR can close it with a reason', function (): void {

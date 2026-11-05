@@ -18,6 +18,7 @@ use App\Models\User;
 use App\Support\Tenancy\TenantContext;
 use Carbon\Carbon;
 use Filament\Facades\Filament;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
 
@@ -197,6 +198,26 @@ test('overtime appears on the daily and detail pages and policy edits retain oth
     expect($latest->overtime_min_minutes)->toBe(45)
         ->and($latest->overtime_step_minutes)->toBe($this->policy->overtime_step_minutes)
         ->and($latest->compensatory_rest_days)->toEqual($this->policy->compensatory_rest_days);
+});
+
+test('minor gap tolerance is versioned, visible and limited to sixty minutes', function (): void {
+    Queue::fake([AssessDaysJob::class]);
+    Livewire::test(OfficePolicyPage::class)->assertSee('Minor gap tolerance')
+        ->assertSee('Applies to office, shift and security days')
+        ->set('effectiveFrom', '2026-10-22')->set('minorGapToleranceMinutes', 61)
+        ->set('reason', 'Invented policy review')->call('addVersion')->assertHasErrors(['minorGapToleranceMinutes']);
+
+    Livewire::test(OfficePolicyPage::class)->set('effectiveFrom', '2026-10-22')
+        ->set('minorGapToleranceMinutes', 0)->set('reason', 'Invented policy review')
+        ->call('addVersion')->assertHasNoErrors();
+
+    $latest = Policy::query()->where('company_id', $this->company->id)->orderByDesc('version')->firstOrFail();
+    $default = DB::table('information_schema.columns')->where('table_schema', DB::getDatabaseName())
+        ->where('table_name', 'attendance_policies')->where('column_name', 'minor_gap_tolerance_minutes')
+        ->value('column_default');
+    expect($latest->minor_gap_tolerance_minutes)->toBe(0)
+        ->and($latest->version)->toBeGreaterThan($this->policy->version)
+        ->and((int) $default)->toBe(5);
 });
 
 test('review actions and detail requests cannot cross company boundaries', function (): void {

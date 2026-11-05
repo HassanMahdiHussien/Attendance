@@ -10,6 +10,7 @@ use App\Models\Attendance\FollowUpCase;
 use App\Models\Attendance\ManualPunch;
 use App\Models\Branch;
 use App\Models\Employee;
+use App\Models\Leave\LeaveRequest;
 use App\Services\Attendance\FollowUp\FollowUpCases;
 use App\Services\Attendance\HolidayLabels;
 use App\Services\Attendance\Overtime;
@@ -123,6 +124,15 @@ class DayDetail extends AttendancePage
     public function leaveReconciliation(): array
     {
         return app(DayReconciliation::class)->for($this->employee(), $this->date)[$this->date] ?? [];
+    }
+
+    public function describedRequests(): array
+    {
+        return LeaveRequest::query()->with(['currentVersion', 'descriptionReading'])
+            ->where('company_id', $this->company()->id)->where('employee_id', $this->employeeId)
+            ->whereDate('start_date', '<=', $this->date)->whereDate('end_date', '>=', $this->date)
+            ->get()->filter(fn (LeaveRequest $request): bool => trim((string) ($request->currentVersion?->values['description'] ?? '')) !== '')
+            ->all();
     }
 
     public function overtime(): array

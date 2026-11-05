@@ -13,4 +13,6 @@ return [
     'max_file_bytes' => 100 * 1024 * 1024,
     'pdf' => ['chrome_path' => env('ATTENDANCE_CHROME_PATH', '/usr/local/bin/chrome-headless-shell')],
     'holidays' => ['ai_daily_cap' => 20],
+    'leave_descriptions' => ['ai_daily_cap' => 80],
+    'leave_entry' => ['notify_window_days' => 30],
 ];

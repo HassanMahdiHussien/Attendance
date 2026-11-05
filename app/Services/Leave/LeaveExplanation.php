@@ -7,7 +7,7 @@ class LeaveExplanation
     public function render(array $explanation): string
     {
         $code = $explanation['code'] ?? '';
-        if (! in_array($code, ['leave_same_day', 'leave_credit_applied'], true)) {
+        if (! in_array($code, ['leave_same_day', 'leave_credit_applied', 'leave_description_period'], true)) {
             return __('messages.leave_ui.explanations.unknown');
         }
         $ltr = fn (mixed $value): string => "\u{2066}".(string) $value."\u{2069}";
@@ -19,6 +19,8 @@ class LeaveExplanation
             'target_date' => $ltr($explanation['target_date'] ?? ''),
             'kind' => __('messages.leave_ui.target_kinds.'.($explanation['target_kind'] ?? 'unknown')),
             'minutes' => $ltr(sprintf('%d:%02d', intdiv($minutes, 60), $minutes % 60)),
+            'settled_from' => $ltr($explanation['settled_from'] ?? ''),
+            'settled_to' => $ltr($explanation['settled_to'] ?? ''),
         ]);
     }
 }

@@ -118,7 +118,7 @@ test('queued imports are pushed balance then leave then attendance', function ()
     $balance = UploadedFile::fake()->createWithContent('Annual Balance.csv',
         "Pers.No.,Total Remaining Annual Leave Days,ANNUAL LEAVE DAYS EMPLOYEE IS/TO BE ENTITELED IN 2026\n99999999,15,20\n");
     $stream = fopen('php://temp', 'w+');
-    fputcsv($stream, LeaveFile::HEADERS);
+    fputcsv($stream, array_slice(LeaveFile::HEADERS, 2));
     fputcsv($stream, ['FORM-1', '99999999', 'Fake New', 'Fake Approver', 'Hilla', 'Operations',
         'Approved', 'Annual Leave', '', '10/20/2026', '10/20/2026', '1', '', 'Fake Creator', '10/1/2026', 'Fake Manager', '']);
     rewind($stream);

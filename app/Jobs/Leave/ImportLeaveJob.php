@@ -23,6 +23,8 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
@@ -95,6 +97,7 @@ class ImportLeaveJob implements ShouldBeUnique, ShouldQueue
                     'requests' => ImportRow::query()->where('batch_id', $batch->id)->whereNotNull('request_id')->distinct()->count('request_id'),
                     'errors' => ImportRow::query()->where('batch_id', $batch->id)->whereRaw('JSON_LENGTH(`errors`) > 0')->count(),
                 ]);
+                ReadLeaveDescriptionsJob::dispatch($company->id)->afterCommit();
             } catch (\Throwable $exception) {
                 $code = $exception instanceof ValidationException ? 'invalid_file'
                     : ($exception instanceof RuntimeException && str_starts_with($exception->getMessage(), 'Stored leave file')
@@ -129,6 +132,10 @@ class ImportLeaveJob implements ShouldBeUnique, ShouldQueue
             $missing = DataIssue::query()->where('company_id', $company->id)->where('type', 'leave_request_missing')
                 ->whereIn('open_key', $requests->pluck('id')->map(fn (int $id): string => 'leave_request_missing|leave_request|request:'.$id))
                 ->pluck('subject_key')->mapWithKeys(fn (string $key): array => [(int) substr($key, 8) => true])->all();
+            $statusIssues = DataIssue::query()->where('company_id', $company->id)
+                ->whereIn('open_key', $requests->pluck('id')->flatMap(fn (int $id): array => [
+                    'leave_unknown_status|leave_request|request:'.$id, 'leave_invalid_duration|leave_request|request:'.$id,
+                ]))->get()->keyBy('open_key');
             $typeIds = [];
             $rows = [];
             foreach ($chunk as $row) {
@@ -179,7 +186,18 @@ class ImportLeaveJob implements ShouldBeUnique, ShouldQueue
                             'duration_days' => $values['duration_days'], 'approver_name' => $values['approver_name'],
                             'created_on' => $values['created_on'], 'flags' => array_values(array_unique($errors)),
                         ];
+                        foreach (['record_type', 'description'] as $field) {
+                            if (array_key_exists($field, $values)) {
+                                $parsed[$field] = $values[$field];
+                            }
+                        }
+                        if (array_key_exists('record_type', $values)) {
+                            $parsed['type_name'] = $values['type_name'];
+                        }
                         $this->observe($request, $batch, $row, $parsed);
+                        if ((int) $request->latest_batch_id === (int) $batch->id) {
+                            $this->resolveRecognised($statusIssues, $request, $batch, $errors);
+                        }
                         if ($previousOwnerCode !== $request->owner_code) {
                             $previousOwnerCodes[$previousOwnerCode] = true;
                         }
@@ -232,7 +250,7 @@ class ImportLeaveJob implements ShouldBeUnique, ShouldQueue
             || $batch->snapshot_at->greaterThan($request->latest_snapshot_at)
             || ($batch->snapshot_at->equalTo($request->latest_snapshot_at) && $batch->id > $request->latest_batch_id);
         if ($newer) {
-            $request->fill($parsed);
+            $request->fill(Arr::except($parsed, ['description', 'record_type', 'type_name']));
             $request->latest_snapshot_at = $batch->snapshot_at;
             $request->latest_batch_id = $batch->id;
             if ($version !== null) {
@@ -270,6 +288,22 @@ class ImportLeaveJob implements ShouldBeUnique, ShouldQueue
         $actor = $batch->uploaded_by === null ? null : User::find($batch->uploaded_by);
         if ($issue !== null && $actor !== null) {
             app(DataIssues::class)->resolve($issue, $actor, __('messages.leave_import.request_reappeared'));
+        }
+    }
+
+    // A status the parser did not know when the issue was opened may be known by the time a newer report arrives.
+    private function resolveRecognised(Collection $open, LeaveRequest $request, ImportBatch $batch, array $errors): void
+    {
+        $cleared = in_array('unknown_status', $errors, true) ? [] : ['leave_unknown_status'];
+        if ($request->status === 'cancelled' && array_intersect(['invalid_duration', 'missing_duration', 'duration_mismatch'], $errors) === []) {
+            $cleared[] = 'leave_invalid_duration';
+        }
+        $actor = $batch->uploaded_by === null ? null : User::find($batch->uploaded_by);
+        foreach ($cleared as $type) {
+            $issue = $open->get($type.'|leave_request|request:'.$request->id);
+            if ($issue !== null && $actor !== null) {
+                app(DataIssues::class)->resolve($issue, $actor, __('messages.leave_import.status_refresh_issue_resolved'));
+            }
         }
     }
 

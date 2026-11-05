@@ -15,6 +15,7 @@ use OpenSpout\Reader\XLSX\Reader;
 class LeaveFile
 {
     public const HEADERS = [
+        'MyForm: Record Type', 'Leave Description',
         'MyForm: Form Number', 'Owner Pers. No.', 'MyForm: Owner Name', 'Form Approver',
         'Owner Location', 'Owner Department', 'Leave Status', 'Leave Type', 'Leave Type (Other)',
         'Leave Starting Date', 'Leave End Date', 'Leave Duration (Work Days)',
@@ -23,6 +24,7 @@ class LeaveFile
     ];
 
     public const FIELDS = [
+        'record_type', 'description',
         'external_id', 'owner_code', 'owner_name', 'approver_name', 'owner_location',
         'owner_department', 'raw_status', 'type_name', 'other_type_name', 'start_date',
         'end_date', 'duration_days', 'approved_duration_days', 'created_by_name',
@@ -55,13 +57,28 @@ class LeaveFile
     {
         $mapping = [];
         foreach ($headers as $index => $header) {
-            $position = array_search(mb_strtolower(trim($header)), array_map('mb_strtolower', self::HEADERS), true);
+            // The report tool appends a sort arrow to whichever column the report was sorted by.
+            $name = mb_strtolower(trim(preg_replace('/[↑↓▲▼]/u', '', $header)));
+            $position = array_search($name, array_map('mb_strtolower', self::HEADERS), true);
             if ($position !== false) {
                 $mapping[$index] = self::FIELDS[$position];
             }
         }
 
         return $mapping;
+    }
+
+    /** A mapping saved before these columns were read would otherwise skip them forever, because the header list is unchanged. */
+    public function withNewColumns(array $saved, array $headers): array
+    {
+        foreach ($this->suggest($headers) as $index => $field) {
+            if (in_array($field, ['record_type', 'description'], true)
+                && ! in_array($field, $saved, true) && ! isset($saved[$index])) {
+                $saved[$index] = $field;
+            }
+        }
+
+        return $saved;
     }
 
     public function validateMapping(array $mapping, array $headers): array
@@ -92,6 +109,7 @@ class LeaveFile
         [$path, $name] = $this->pathAndName($file, $name);
         $sheet = $this->inspect($file, $name);
         $mapping = $this->validateMapping($mapping, $sheet['headers']);
+        $recordType = '';
         foreach ($this->rawRows($path, $name) as $row) {
             if ($row['number'] === 1 || $row['cells'] === [null]) {
                 continue;
@@ -104,7 +122,21 @@ class LeaveFile
             $values = array_fill_keys(self::FIELDS, '');
             foreach ($mapping as $index => $field) {
                 $cell = $row['cells'][$index] ?? null;
-                $values[$field] = $this->cellText($cell, $field);
+                $values[$field] = $field === 'description' ? $this->sourceText($cell) : $this->cellText($cell, $field);
+            }
+            if ($values['record_type'] !== '') {
+                $recordType = in_array(mb_strtolower($values['record_type']), ['subtotal', 'total'], true)
+                    ? '' : $values['record_type'];
+            } else {
+                $values['record_type'] = $recordType;
+            }
+            if (in_array('record_type', $mapping, true) && $values['external_id'] === ''
+                && (in_array(mb_strtolower($values['record_type']), ['subtotal', 'total'], true)
+                || count(array_filter($values, fn (string $value): bool => $value !== '')) <= 1)) {
+                continue;
+            }
+            if ($values['type_name'] === '' && $values['other_type_name'] === '') {
+                $values['type_name'] = $values['record_type'];
             }
             $errors = [];
             if (count($row['cells']) !== count($sheet['headers'])) {
@@ -116,7 +148,7 @@ class LeaveFile
                 }
             }
             foreach ($values as $field => $value) {
-                if (mb_strlen($value) > 255) {
+                if (mb_strlen($value) > ($field === 'description' ? 10000 : 255)) {
                     $errors[] = $field.'_too_long';
                 }
             }
@@ -146,19 +178,28 @@ class LeaveFile
             if ($status['unknown']) {
                 $errors[] = 'unknown_status';
             }
-            if ($duration === null && $status['status'] !== 'draft') {
+            if ($duration === null && ! in_array($status['status'], ['draft', 'cancelled'], true)) {
                 $errors[] = 'missing_duration';
             }
 
+            $parsed = [
+                'external_id' => $values['external_id'], 'owner_code' => $values['owner_code'],
+                'approver_name' => $values['approver_name'] ?: null, 'raw_status' => $values['raw_status'],
+                'status' => $status['status'], 'type_name' => $values['type_name'],
+                'other_type_name' => $values['other_type_name'] ?: null,
+                'start_date' => $start, 'end_date' => $end, 'duration_days' => $duration,
+                'rejected_on' => $rejected, 'created_on' => $created,
+            ];
+            if (in_array('record_type', $mapping, true)) {
+                $parsed['record_type'] = $values['record_type'] ?: null;
+            }
+            if (in_array('description', $mapping, true)) {
+                $parsed['description'] = $values['description'] ?: null;
+            }
+
             yield [
-                'number' => $row['number'], 'raw' => $raw, 'values' => [
-                    'external_id' => $values['external_id'], 'owner_code' => $values['owner_code'],
-                    'approver_name' => $values['approver_name'] ?: null, 'raw_status' => $values['raw_status'],
-                    'status' => $status['status'], 'type_name' => $values['type_name'],
-                    'other_type_name' => $values['other_type_name'] ?: null,
-                    'start_date' => $start, 'end_date' => $end, 'duration_days' => $duration,
-                    'rejected_on' => $rejected, 'created_on' => $created,
-                ], 'errors' => array_values(array_unique($errors)),
+                'number' => $row['number'], 'raw' => $raw, 'values' => $parsed,
+                'errors' => array_values(array_unique($errors)),
             ];
         }
     }

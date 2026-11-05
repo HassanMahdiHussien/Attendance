@@ -81,6 +81,7 @@
 
         @if ($step === 'progress' && ($progress = $this->progress()))
             <x-ui.card :title="__('messages.leave_ui.progress')">
+                @if(($progress['batch']->summary['preview_counts']['descriptions'] ?? 0) > 0)<p><a class="ui-link" href="{{ \App\Filament\Admin\Pages\Leave\LeaveDescriptions::getUrl(panel: 'admin', tenant: $this->company()) }}">{{ __('messages.leave_descriptions.review_count', ['count' => $progress['batch']->summary['preview_counts']['descriptions']]) }}</a></p>@endif
                 <div wire:poll.3s>
                     <p><bdi dir="ltr">#{{ $progress['batch']->id }} · {{ $progress['batch']->file_name }}</bdi></p>
                     @foreach ($progress['events'] as $event)

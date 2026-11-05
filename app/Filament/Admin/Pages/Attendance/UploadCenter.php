@@ -313,6 +313,9 @@ class UploadCenter extends AttendancePage
                         return;
                     }
                     $this->rows[$index]['batch_id'] = $batch->id;
+                    if ($kind === 'leave') {
+                        $this->rows[$index]['description_count'] = $preview['counts']['descriptions'] ?? 0;
+                    }
                     $earlierImported = true;
                     Cache::forget($this->cacheKey($index));
                 } catch (ValidationException $exception) {

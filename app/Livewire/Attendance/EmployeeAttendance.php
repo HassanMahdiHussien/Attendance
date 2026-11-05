@@ -152,7 +152,7 @@ class EmployeeAttendance extends Component
                 array_push($holidayIds, ...$day['holiday_ids']);
             }
             $holidayNames = app(HolidayLabels::class)->forIds($employee->company_id, $holidayIds);
-            $requests = $this->tab === 'leave' ? LeaveRequest::query()->with(['leaveType', 'currentVersion'])
+            $requests = $this->tab === 'leave' ? LeaveRequest::query()->with(['leaveType', 'currentVersion', 'descriptionReading'])
                 ->where('employee_id', $employee->id)->where('start_date', '<=', $filters->to)
                 ->where('end_date', '>=', $filters->from)->orderByDesc('start_date')->get() : collect();
             if (str_starts_with($this->selectedTile, 'leave_status:')) {
