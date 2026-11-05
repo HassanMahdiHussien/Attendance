@@ -50,9 +50,66 @@ test('recognised attendance has a summary and imports with one click', function 
     $page = Livewire::test(UploadCenter::class)->set('incomingFiles', [centerAttendanceFile()])
         ->assertSee('2026-10-20')->assertSee('1 punches');
     $page->call('import')->assertSee('Imported')->assertSee('View batch');
+    expect($page->html())->not->toContain('wire:click="import"');
     $batch = ImportBatch::query()->where('company_id', $this->company->id)->sole();
     expect($batch->coverage_branch_ids)->toBe([$this->branch->id])
         ->and($batch->mapping)->toContain('person_code');
+});
+
+test('selections add rows and clear the incoming files', function (): void {
+    $page = Livewire::test(UploadCenter::class)->set('incomingFiles', [
+        centerAttendanceFile(), centerAttendanceFile('12345678', '08:01', 'Transaction_20261020084332.csv'),
+    ])->assertSet('incomingFiles', [])->assertSet('rows.0.kind', 'attendance')->assertSet('rows.1.kind', 'attendance');
+
+    $page->set('incomingFiles', [centerAttendanceFile('12345678', '08:02', 'Transaction_20261020084333.csv')])
+        ->assertSet('incomingFiles', [])->assertSet('rows.2.kind', 'attendance');
+    expect($page->instance()->rows)->toHaveCount(3);
+});
+
+test('an unsupported type gets a row without losing the other file', function (): void {
+    Livewire::test(UploadCenter::class)->set('incomingFiles', [
+        UploadedFile::fake()->createWithContent('notes.docx', 'not a report'), centerAttendanceFile(),
+    ])->assertSet('incomingFiles', [])->assertSet('rows.0.kind', 'unknown')
+        ->assertSee('This file type (.docx) cannot be read')->assertSet('rows.1.kind', 'attendance');
+});
+
+test('an upload that stored no file says so', function (): void {
+    Livewire::test(UploadCenter::class)->set('incomingFiles', [])
+        ->assertSee('This file could not be uploaded.');
+});
+
+test('a damaged workbook gets an unknown row', function (): void {
+    Livewire::test(UploadCenter::class)->set('incomingFiles', [
+        UploadedFile::fake()->createWithContent('broken.xlsx', 'not a workbook'),
+    ])->assertSet('incomingFiles', [])->assertSet('rows.0.kind', 'unknown')
+        ->assertSee('This file could not be opened. It may be damaged.');
+});
+
+test('a file over the limit gets a row and the next file is processed', function (): void {
+    Livewire::test(UploadCenter::class)->set('incomingFiles', [
+        UploadedFile::fake()->create('large.pdf', 25601), centerAttendanceFile(),
+    ])->assertSet('incomingFiles', [])->assertSet('rows.0.kind', 'unknown')
+        ->assertSee('kilobytes')->assertSet('rows.1.kind', 'attendance');
+});
+
+test('the import button counts ready files and disables for decisions and unknown files', function (): void {
+    $page = Livewire::test(UploadCenter::class)->set('incomingFiles', [centerAttendanceFile()]);
+    expect($page->instance()->importableCount())->toBe(1);
+    $page->assertSee('Import 1 file');
+
+    $page->set('incomingFiles', [centerAttendanceFile('12345678', '08:01', 'Transaction_20261020084332.csv')]);
+    expect($page->instance()->importableCount())->toBe(2);
+    $page->assertSee('Import 2 files');
+
+    $page->set('rows.0.editing', true)->set('rows.1.editing', true);
+    expect($page->instance()->importableCount())->toBe(0);
+    $page->assertSee('Nothing to import yet');
+    expect($page->html())->toMatch('/<button[^>]*wire:click="import"[^>]*disabled/');
+
+    $page->set('incomingFiles', [UploadedFile::fake()->createWithContent('notes.docx', 'not a report')]);
+    expect($page->instance()->importableCount())->toBe(0);
+    $page->set('rows.0.editing', false)->set('rows.1.editing', false)->call('import');
+    expect($page->instance()->importableCount())->toBe(0);
 });
 
 test('more than half unknown codes need explicit confirmation', function (): void {
@@ -188,7 +245,7 @@ test('an employee import permission denial keeps that kind out of preview and im
     Gate::define('importEmployees', fn (): bool => false);
     $employees = UploadedFile::fake()->createWithContent('HC employees.csv',
         "employee_id,name,branch\n99999999,Fake New,Hilla\n");
-    Livewire::test(UploadCenter::class)->set('incomingFiles', [$employees])->assertSee('Unknown file')->call('import');
+    Livewire::test(UploadCenter::class)->set('incomingFiles', [$employees])->assertSee('Unknown report')->call('import');
     expect(EmployeeImportBatch::count())->toBe(0);
 });
 

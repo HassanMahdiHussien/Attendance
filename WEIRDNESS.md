@@ -10,6 +10,7 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 - Gross late, early or exit minutes can exceed leave + credit + remaining because present-day worked hours or the full-hours minor-gap tolerance settle the rest; neither creates an allocation. (2026-11-05)
 
 - Upload preview samples and technical counts fold after the visible import decision; Livewire upload inputs and progress polling stay outside disclosures so their state continues updating. (2026-11-04)
+- The central upload shows reading after transfer progress reaches 100%, because Livewire finishes the property update and row detection before emitting its upload-finish event. (2026-11-05)
 - Read-only policy values lose the translated “minutes” suffix when displayed as duration text; editable policy inputs keep that suffix because HR still enters raw minutes. (2026-11-04)
 - Daily and review lists project only their visible page of stored day IDs through AttendanceSummary before calling DayPresentation; day detail projects its one ID the same way. This keeps status wording consistent with the employee record without changing the list queries. (2026-11-03)
 - Exports has a Results menu entry because the journey grouping needs a direct destination; access still uses the page's existing Filament check. (2026-11-03)

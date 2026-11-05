@@ -65,37 +65,61 @@ class UploadCenter extends AttendancePage
     public function updatedIncomingFiles(): void
     {
         $this->company();
-        $this->validate(['incomingFiles' => 'array', 'incomingFiles.*' => 'file|max:102400']);
-        foreach ($this->incomingFiles as $file) {
-            $index = $this->files === [] ? 0 : max(array_keys($this->files)) + 1;
-            $this->files[$index] = $file;
-            $allowed = $this->allowedKinds();
-            $detected = app(UploadDetector::class)->detect($this->company(), $file, $allowed);
-            $kind = $detected['kind'];
-            if ($kind !== 'unknown') {
-                $this->authorizeKind($kind);
-                $limit = $kind === 'announcement' ? 25600 : ($kind === 'employees' ? 10240 : ($kind === 'attendance' ? 102400 : 51200));
-                $extensions = $kind === 'announcement' ? 'pdf,png,jpg,jpeg,eml,msg' : ($kind === 'employees' ? 'csv,txt,xlsx' : 'csv,xlsx');
-                $this->validate(["files.$index" => "file|extensions:$extensions|max:$limit"]);
-            }
-            $this->rows[$index] = [
-                'kind' => $kind, 'name' => $file->getClientOriginalName(),
-                'message' => $detected['message'] ?? null,
-                'headers' => $detected['headers'], 'subheaders' => $detected['subheaders'] ?? [],
-                'mapping' => $detected['mapping'] ?? [], 'settings' => $detected['settings'],
-                'distinct_codes' => $detected['distinct_codes'] ?? null,
-                'needs_mapping' => $detected['needs_mapping'] ?? false,
-                'editing' => false, 'confirmed' => false, 'batch_id' => null, 'run_id' => null,
-                'after_employee_preview' => false,
-                'error' => null, 'preview_key' => bin2hex(random_bytes(16)), 'source_id' => null,
-            ];
-            if ($kind === 'announcement') {
-                $source = app(HolidaySources::class)->upload($this->company(), $file, auth()->user());
-                $this->rows[$index]['source_id'] = $source->id;
-            }
-            $this->savePreview($index, $detected['preview']);
+        $this->resetErrorBag('incomingFiles.*');
+        // Livewire reports success even when the server stored no file, so the page would otherwise stay silent.
+        if ($this->incomingFiles === []) {
+            $this->addError('incomingFiles.*', __('messages.upload_center.upload_error'));
+
+            return;
         }
-        $this->incomingFiles = [];
+        try {
+            foreach ($this->incomingFiles as $file) {
+                $index = $this->files === [] ? 0 : max(array_keys($this->files)) + 1;
+                $this->files[$index] = $file;
+                $detected = ['kind' => 'unknown', 'message' => null, 'headers' => [], 'mapping' => [], 'settings' => [], 'preview' => null];
+                try {
+                    $this->validate(["files.$index" => 'file|max:102400']);
+                    $detected = app(UploadDetector::class)->detect($this->company(), $file, $this->allowedKinds());
+                    $kind = $detected['kind'];
+                    if ($kind !== 'unknown') {
+                        $this->authorizeKind($kind);
+                        $limit = $kind === 'announcement' ? 25600 : ($kind === 'employees' ? 10240 : ($kind === 'attendance' ? 102400 : 51200));
+                        $extensions = $kind === 'announcement' ? 'pdf,png,jpg,jpeg,eml,msg' : ($kind === 'employees' ? 'csv,txt,xlsx' : 'csv,xlsx');
+                        $this->validate(["files.$index" => "file|extensions:$extensions|max:$limit"]);
+                    }
+                } catch (ValidationException $exception) {
+                    $detected = ['kind' => 'unknown', 'message' => collect($exception->errors())->flatten()->first(),
+                        'headers' => [], 'mapping' => [], 'settings' => [], 'preview' => null];
+                }
+                $this->rows[$index] = [
+                    'kind' => $detected['kind'], 'name' => $file->getClientOriginalName(),
+                    'message' => $detected['message'] ?? null,
+                    'headers' => $detected['headers'], 'subheaders' => $detected['subheaders'] ?? [],
+                    'mapping' => $detected['mapping'] ?? [], 'settings' => $detected['settings'],
+                    'distinct_codes' => $detected['distinct_codes'] ?? null,
+                    'needs_mapping' => $detected['needs_mapping'] ?? false,
+                    'editing' => false, 'confirmed' => false, 'batch_id' => null, 'run_id' => null,
+                    'after_employee_preview' => false,
+                    'error' => null, 'preview_key' => bin2hex(random_bytes(16)), 'source_id' => null,
+                ];
+                if ($detected['kind'] === 'announcement') {
+                    $source = app(HolidaySources::class)->upload($this->company(), $file, auth()->user());
+                    $this->rows[$index]['source_id'] = $source->id;
+                }
+                $this->savePreview($index, $detected['preview']);
+            }
+        } finally {
+            $this->incomingFiles = [];
+        }
+    }
+
+    public function importableCount(): int
+    {
+        return collect($this->rows)->filter(fn (array $row, int $index): bool => $row['batch_id'] === null
+            && ($row['run_id'] ?? null) === null
+            && ! in_array($row['kind'], ['unknown', 'announcement'], true)
+            && $this->preview($index) !== null
+            && $this->needsDecision($index) === null)->count();
     }
 
     public function remove(int $index): void
