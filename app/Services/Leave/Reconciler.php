@@ -22,6 +22,7 @@ use App\Services\Attendance\DataIssues;
 use App\Services\Attendance\FollowUp\CaseSync;
 use App\Services\Attendance\FollowUp\LeaveEntryCases;
 use App\Services\Attendance\HolidayCalendar;
+use App\Services\Attendance\Reporting\MonthSummaries;
 use App\Services\AuditLogger;
 use App\Support\Tenancy\TenantContext;
 use Carbon\CarbonImmutable;
@@ -56,12 +57,15 @@ class Reconciler
             $changed = 0;
             $assessmentDates = [];
             foreach (array_chunk($ids, 100) as $chunk) {
-                $changed += DB::transaction(function () use ($company, $chunk, $run, &$assessmentDates): int {
+                $changed += DB::transaction(function () use ($company, $chunk, $run, $from, $to, &$assessmentDates): int {
                     $employees = Employee::query()->where('company_id', $company->id)->whereIn('id', $chunk)
                         ->orderBy('id')->lockForUpdate()->get();
                     $count = 0;
                     foreach ($employees as $employee) {
                         $result = $this->replayEmployee($company, $employee, $run);
+                        if (! $result['changed']) {
+                            app(MonthSummaries::class)->markDirty($company->id, [$employee->id], $from, $to);
+                        }
                         $this->cases->syncLocked($company, $employee, $run->trigger_source);
                         $this->leaveEntryCases->syncEmployee($company, $employee);
                         $count += (int) $result['changed'];
@@ -410,6 +414,8 @@ class Reconciler
                 ]);
             }
         }
+
+        app(MonthSummaries::class)->markDirty($company->id, [$employee->id]);
 
         return ['changed' => true, 'dates' => $changedDates];
     }

@@ -1,6 +1,11 @@
 <?php
 
 return [
+    'month_summaries' => [
+        'invalid_company' => 'Pass a valid company ID.',
+        'build_counts' => ':count employee-months found for building.',
+        'verify_counts' => ':checked months checked; :mismatched mismatched. Fields: :fields',
+    ],
     'announcement' => [
         'reading' => 'Reading this announcement…', 'read_failed' => 'Reading stopped. Try again or enter the details by hand.',
         'retry' => 'Retry', 'what' => 'What it is', 'choose_kind' => 'Choose what this announces',

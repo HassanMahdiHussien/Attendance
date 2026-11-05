@@ -6,6 +6,7 @@ use App\Models\Attendance\Person;
 use App\Models\Attendance\ProcessingRun;
 use App\Models\Attendance\Transaction;
 use App\Models\Company;
+use App\Services\Attendance\Reporting\MonthSummaries;
 use App\Services\AuditLogger;
 use App\Support\Tenancy\TenantContext;
 use Carbon\CarbonImmutable;
@@ -55,6 +56,7 @@ class AttendanceProcessor
                 $readEnd = $end->addHours($gap);
                 $punchCount = 0;
                 $mealCount = 0;
+                $dirtyMealEmployees = [];
                 foreach ($people as $person) {
                     $transactions = Transaction::query()->with('device')->where('company_id', $company->id)
                         ->where('person_code', $person->person_code)
@@ -78,11 +80,14 @@ class AttendanceProcessor
                     }
                     $punchCount += count($punchRows);
 
-                    DB::table('attendance_meals')->where('company_id', $company->id)
+                    $oldMeals = DB::table('attendance_meals')->where('company_id', $company->id)
                         ->where('person_code', $person->person_code)
                         ->whereBetween('meal_date', [$start->toDateString(), $end->toDateString()])
-                        ->whereNull('superseded_by_run_id')
-                        ->update(['superseded_by_run_id' => $runs['meals']->id]);
+                        ->whereNull('superseded_by_run_id');
+                    foreach ((clone $oldMeals)->whereNotNull('employee_id')->distinct()->pluck('employee_id') as $id) {
+                        $dirtyMealEmployees[(int) $id] = true;
+                    }
+                    $oldMeals->update(['superseded_by_run_id' => $runs['meals']->id]);
                     $mealRows = array_values(array_filter(
                         $this->meals->rows($company, $person, $transactions, $this->roles, $runs['meals']->id),
                         fn (array $row): bool => $row['meal_date'] >= $start->toDateString() && $row['meal_date'] <= $end->toDateString(),
@@ -90,8 +95,15 @@ class AttendanceProcessor
                     foreach (array_chunk($mealRows, 500) as $chunk) {
                         DB::table('attendance_meals')->insert($chunk);
                     }
+                    foreach ($mealRows as $meal) {
+                        if ($meal['employee_id'] !== null) {
+                            $dirtyMealEmployees[(int) $meal['employee_id']] = true;
+                        }
+                    }
                     $mealCount += count($mealRows);
                 }
+                app(MonthSummaries::class)->markDirty($company->id, array_keys($dirtyMealEmployees),
+                    $start->toDateString(), $end->toDateString());
                 $counts = ['cleanup' => ['punches' => $punchCount], 'meals' => ['days' => $mealCount]];
                 foreach ($runs as $kind => $run) {
                     $run->update(['status' => 'completed', 'counts' => $counts[$kind], 'finished_at' => now()]);

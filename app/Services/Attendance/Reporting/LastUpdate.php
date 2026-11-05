@@ -38,7 +38,8 @@ use Illuminate\Support\Facades\DB;
 
 class LastUpdate
 {
-    public function __construct(private CoverageWindows $coverage, private OfficeDayCalculator $calculator, private EmployeeHistory $history) {}
+    public function __construct(private CoverageWindows $coverage, private OfficeDayCalculator $calculator,
+        private EmployeeHistory $history, private ResultCache $cache) {}
 
     public function for(ReportFilters $filters): array
     {
@@ -98,7 +99,8 @@ class LastUpdate
                 || ($employees !== null && ($assessment === null || $employees > $assessment))
                 || ($newestAssessmentInput !== null && ($assessment === null || $newestAssessmentInput > $assessment))
                 || ($newestReconciliationInput !== null && ($reconciliation === null || $newestReconciliationInput > $reconciliation)),
-            'coverage' => $this->coverageQuality($company, $filters),
+            'coverage' => $this->cache->remember('coverage_quality', $filters,
+                fn (): array => $this->coverageQuality($company, $filters), 600),
         ];
     }
 

@@ -29,6 +29,7 @@ Schedule::command('attendance:assess-pending')->hourly()->timezone('Asia/Baghdad
 Schedule::command('attendance:clean-exports')->dailyAt('03:00')->timezone('Asia/Baghdad')->withoutOverlapping();
 Schedule::command('attendance:prune-import-drafts')->dailyAt('03:30')->timezone('Asia/Baghdad')->withoutOverlapping();
 Schedule::command('attendance:build-notifications')->everyFifteenMinutes()->timezone('Asia/Baghdad')->withoutOverlapping();
+Schedule::command('attendance:month-summaries-build --refresh-current')->dailyAt('02:45')->timezone('Asia/Baghdad')->withoutOverlapping();
 
 Schedule::command('backup:run')->dailyAt('01:00')->timezone('Asia/Baghdad')
     ->when(fn () => config('displanery.backups.enabled'))->withoutOverlapping();

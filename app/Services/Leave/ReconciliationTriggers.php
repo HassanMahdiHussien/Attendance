@@ -4,6 +4,7 @@ namespace App\Services\Leave;
 
 use App\Events\DaysAssessed;
 use App\Jobs\Leave\ReconcileLeaveJob;
+use App\Services\Attendance\Reporting\MonthSummaries;
 
 class ReconciliationTriggers
 {
@@ -18,6 +19,10 @@ class ReconciliationTriggers
         sort($ids, SORT_NUMERIC);
         if ($ids === []) {
             return;
+        }
+
+        if ($trigger !== 'days') {
+            app(MonthSummaries::class)->markDirty($companyId, $ids);
         }
 
         // One employee's entire allocation chain is replayed whenever any of its inputs changes.

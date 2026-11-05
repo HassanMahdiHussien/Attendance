@@ -11,6 +11,8 @@ use App\Models\Attendance\CoverageInterval;
 use App\Models\Attendance\Person;
 use App\Models\Attendance\Policy;
 use App\Models\Company;
+use App\Models\Employee;
+use App\Services\Attendance\Reporting\MonthSummaries;
 use App\Support\Tenancy\TenantContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
@@ -63,11 +65,13 @@ class AssessmentTriggers
                 ->where('effective_from', '>', $policy->effective_from->toDateString())
                 ->orderBy('effective_from')->first();
             $lastCoverage = CoverageInterval::query()->where('company_id', $company->id)->max('coverage_to');
-            if ($lastCoverage === null) {
+            $lastDay = DB::table('attendance_days')->where('company_id', $company->id)
+                ->whereNull('superseded_by_run_id')->max('work_date');
+            if ($lastCoverage === null && $lastDay === null) {
                 return;
             }
             $to = min(
-                substr($lastCoverage, 0, 10),
+                max(substr((string) $lastCoverage, 0, 10), (string) $lastDay),
                 $next === null ? today()->toDateString() : CarbonImmutable::parse($next->effective_from)->subDay()->toDateString(),
             );
             if ($to >= $policy->effective_from->toDateString()) {
@@ -100,6 +104,10 @@ class AssessmentTriggers
         if (($scope['from'] ?? '') > ($scope['to'] ?? '')) {
             return;
         }
+        app(TenantContext::class)->runForCompany(Company::findOrFail($companyId), function () use ($companyId, $scope): void {
+            $ids = $scope['employee_ids'] ?? Employee::query()->where('company_id', $companyId)->pluck('id')->all();
+            app(MonthSummaries::class)->markDirty($companyId, $ids, $scope['from'], $scope['to']);
+        });
         AssessDaysJob::dispatch($companyId, $scope, $trigger)->afterCommit();
     }
 }
