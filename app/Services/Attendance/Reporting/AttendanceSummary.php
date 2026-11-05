@@ -316,9 +316,15 @@ class AttendanceSummary
             return collect();
         }
 
-        return Allocation::query()->where('company_id', $filters->companyId)->whereIn('target_day_id', $dayIds)
-            ->whereNull('superseded_by_run_id')->selectRaw("target_day_id, target_kind, source_credit_id IS NOT NULL AS from_credit, (source_request_day_id IS NOT NULL AND JSON_UNQUOTE(JSON_EXTRACT(explanation, '$.code')) = 'leave_same_day') AS same_day, SUM(minutes) AS minutes, MIN(id) AS first_id")
-            ->groupBy('target_day_id', 'target_kind', 'from_credit', 'same_day')->get()->groupBy('target_day_id');
+        // MySQL refuses more than 65,535 placeholders, which 250 employees over a long period exceed.
+        $rows = collect();
+        foreach (array_chunk($dayIds, 5000) as $chunk) {
+            $rows = $rows->concat(Allocation::query()->where('company_id', $filters->companyId)->whereIn('target_day_id', $chunk)
+                ->whereNull('superseded_by_run_id')->selectRaw("target_day_id, target_kind, source_credit_id IS NOT NULL AS from_credit, (source_request_day_id IS NOT NULL AND JSON_UNQUOTE(JSON_EXTRACT(explanation, '$.code')) = 'leave_same_day') AS same_day, SUM(minutes) AS minutes, MIN(id) AS first_id")
+                ->groupBy('target_day_id', 'target_kind', 'from_credit', 'same_day')->get());
+        }
+
+        return $rows->groupBy('target_day_id');
     }
 
     private function blockedKinds(ReportFilters $filters, Collection $days): array

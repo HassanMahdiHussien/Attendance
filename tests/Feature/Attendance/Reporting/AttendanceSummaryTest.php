@@ -307,3 +307,13 @@ test('department, manager, work pattern and status filters use the day inputs', 
             ->and(iterator_to_array(app(AttendanceSummary::class)->drillDownDayIds($filters, 'present')))->toHaveCount(1);
     });
 });
+
+test('more day ids than MySQL allows in one query still load their allocations', function (): void {
+    $fixture = reportingFixture();
+    $allocations = new ReflectionMethod(AttendanceSummary::class, 'allocations');
+
+    $result = app(TenantContext::class)->runForCompany($fixture['company'],
+        fn () => $allocations->invoke(app(AttendanceSummary::class), reportingFilters($fixture), range(1, 70000)));
+
+    expect($result)->toBeEmpty();
+});
