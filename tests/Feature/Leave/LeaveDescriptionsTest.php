@@ -475,6 +475,38 @@ test('a stalled batch is split and read instead of failing every row', function 
         ->and(DescriptionReading::query()->where('status', 'not_needed')->count())->toBe(12);
 });
 
+test('one unusable answer fails only its own form, not its whole batch', function (): void {
+    config()->set('services.anthropic.key', 'test-only-key');
+    $type = LeaveType::factory()->create(['company_id' => $this->company->id, 'name' => 'Annual Leave']);
+    foreach (range(1, 4) as $number) {
+        readableDescriptionRequest($this->company, $this->employee, $type, 'FORM-ISOLATE-'.$number, 'An invented reason '.$number, $number + 1);
+    }
+    $bad = LeaveRequest::query()->where('external_id', 'FORM-ISOLATE-3')->sole();
+    $fake = new class extends HolidayClient
+    {
+        public array $sizes = [];
+
+        public function send(array $blocks, array $known, array $schema, string $system, ?callable $onAttempt = null, int $maxAttempts = 3, string $effort = 'high', int $timeout = 120): array
+        {
+            $items = json_decode($blocks[0]['text'], true, 512, JSON_THROW_ON_ERROR)['items'];
+            $this->sizes[] = count($items);
+            $readings = array_map(fn (array $item): array => ['category' => 'reason_only', 'worked_dates' => [],
+                'settled_from' => $item['text'] === 'An invented reason 3' ? '2026-01-01' : null,
+                'settled_to' => null, 'hours' => null, 'confidence' => 'high'], $items);
+            $result = ['model' => HolidayClient::MODEL, 'stop_reason' => 'end_turn',
+                'text' => json_encode(['readings' => $readings], JSON_THROW_ON_ERROR)];
+            $onAttempt?->__invoke('succeeded', null, $result);
+
+            return $result;
+        }
+    };
+    app()->instance(HolidayClient::class, $fake);
+    app(LeaveDescriptionReader::class)->read($this->company);
+    expect($fake->sizes)->toBe([4, 2, 2, 1, 1])
+        ->and(DescriptionReading::query()->where('status', 'not_needed')->count())->toBe(3)
+        ->and(DescriptionReading::query()->where('error_code', 'invalid_schema')->sole()->request_id)->toBe($bad->id);
+});
+
 test('reader rejects malformed schema and can retry after a valid response', function (): void {
     config()->set('services.anthropic.key', 'test-only-key');
     $type = LeaveType::factory()->create(['company_id' => $this->company->id, 'name' => 'Compensation Leave']);
