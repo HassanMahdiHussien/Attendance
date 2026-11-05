@@ -829,7 +829,7 @@ return [
         'dashboard' => 'لوحة الحضور', 'employee_list' => 'الموظفون المرتبطون بالنتيجة',
         'needed_from_you' => 'بانتظار إجراء منك', 'month_figures' => 'أرقام الفترة',
         'most_late' => 'الأكثر تأخراً في هذه الفترة', 'latest_files' => 'أحدث الملفات',
-        'data_up_to' => 'آخر تحديث :date', 'nothing_needed' => 'لا يوجد ما يحتاج إلى تدخلك الآن.',
+        'data_up_to' => 'آخر تحديث :date', 'open_employee_hint' => 'افتح اسم الموظف لترى هذه الأيام وبصماتها.', 'more_days' => 'و:count أيام أخرى', 'nothing_needed' => 'لا يوجد ما يحتاج إلى تدخلك الآن.',
         'things_needed' => '{1} أمر واحد يحتاج إلى تدخلك|[2,10] :count أمور تحتاج إلى تدخلك|[11,*] :count أمراً يحتاج إلى تدخلك',
         'upload_newer' => 'ارفع ملفاً أحدث', 'no_comparison' => 'لا توجد فترة سابقة للمقارنة',
         'same_period' => 'كما في الفترة السابقة', 'change_period' => ':change مقارنة بالفترة السابقة', 'points' => 'نقاط مئوية',

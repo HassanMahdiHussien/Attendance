@@ -243,8 +243,27 @@ test('daily review excludes fully covered absence and pending while all days kee
         ->and(app(AttendanceSummary::class)->drillDown($filters, 'absent_uncovered'))->toBe([$employee->id])
         ->and(iterator_to_array(app(AttendanceSummary::class)->drillDownDayIds($filters, 'absent_uncovered')))
         ->toBe([Day::query()->where('work_date', '2026-10-20')->where('employee_id', $employee->id)->value('id')]);
-    Livewire::withQueryParams(['tile' => 'absent_uncovered'])->test(DashboardEmployees::class)
-        ->assertSee($employee->name);
+    Livewire::withQueryParams(['tile' => 'absent_uncovered', 'from' => '2026-10-01', 'to' => '2026-10-31'])->test(DashboardEmployees::class)
+        ->assertSee($employee->name)->assertSee('20 Oct')->assertDontSee('21 Oct')
+        ->assertSee('Open an employee to see these days and their punches.')
+        ->assertSeeHtml('attendance_tile=absent_uncovered');
+});
+
+test('employee list shows each employee figure and days, biggest first', function (): void {
+    $company = Company::factory()->create();
+    app(TenantContext::class)->setCompany($company);
+    $few = Employee::factory()->create(['name' => 'Aaa One Day', 'work_pattern' => 'office', 'hire_date' => '2020-01-01']);
+    $many = Employee::factory()->create(['name' => 'Zzz Three Days', 'work_pattern' => 'office', 'hire_date' => '2020-01-01']);
+    foreach ([[$few, '2026-10-20'], [$many, '2026-10-20'], [$many, '2026-10-21'], [$many, '2026-10-22']] as [$employee, $date]) {
+        Day::factory()->create(['employee_id' => $employee->id, 'branch_id' => $employee->branch_id,
+            'work_date' => $date, 'status' => 'missing_punch']);
+    }
+    $this->actingAs(User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::HrStaff]));
+    $filters = ReportFilters::fromArray($company, ['from' => '2026-10-01', 'to' => '2026-10-31']);
+
+    expect(app(AttendanceSummary::class)->drillDownRows($filters, 'missing_punch')[$many->id]['value'])->toBe(3);
+    Livewire::withQueryParams(['tile' => 'missing_punch', 'from' => '2026-10-01', 'to' => '2026-10-31'])->test(DashboardEmployees::class)
+        ->assertSeeInOrder(['Zzz Three Days', '>3<', '20 Oct', '21 Oct', '22 Oct', 'Aaa One Day', '>1<', '20 Oct'], false);
 });
 
 test('late and early tile opens both kinds of days', function (): void {

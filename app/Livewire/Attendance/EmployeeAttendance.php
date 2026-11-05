@@ -56,11 +56,12 @@ class EmployeeAttendance extends Component
         if (request()->query('attendance_tab') === 'overtime') {
             $this->tab = 'overtime';
         }
-        if (request()->query('attendance_tile') === 'absent_uncovered') {
+        $tile = request()->query('attendance_tile');
+        if (is_string($tile) && (ReportTiles::allowed($tile) || in_array($tile, ['absent_uncovered', 'late_early'], true))) {
             $filters = ReportFilters::fromArray($this->employee()->company, request()->only(['from', 'to']));
             $this->from = $filters->from;
             $this->to = $filters->to;
-            $this->showTile('absent_uncovered');
+            $this->showTile($tile);
         }
     }
 

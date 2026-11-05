@@ -829,7 +829,7 @@ return [
         'dashboard' => 'Attendance dashboard', 'employee_list' => 'Employees for this result',
         'needed_from_you' => 'Needed from you', 'month_figures' => 'Month figures',
         'most_late' => 'Most late this period', 'latest_files' => 'Latest files',
-        'data_up_to' => 'last updated :date', 'nothing_needed' => 'Nothing needs you right now.',
+        'data_up_to' => 'last updated :date', 'open_employee_hint' => 'Open an employee to see these days and their punches.', 'more_days' => '+:count more', 'nothing_needed' => 'Nothing needs you right now.',
         'things_needed' => '{1} :count thing needs you|[2,*] :count things need you',
         'upload_newer' => 'Upload a newer file', 'no_comparison' => 'No previous period to compare',
         'same_period' => 'same as last period', 'change_period' => ':change vs last period', 'points' => 'points',

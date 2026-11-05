@@ -333,15 +333,31 @@ class AttendanceSummary
 
     public function drillDown(ReportFilters $filters, string $tile): array
     {
+        return array_keys($this->drillDownRows($filters, $tile));
+    }
+
+    /**
+     * Matching employees with their own figure for the tile and, for day tiles, the matching day ids.
+     *
+     * @return array<int, array{value: int|float|null, day_ids: list<int>}>
+     */
+    public function drillDownRows(ReportFilters $filters, string $tile): array
+    {
         $this->assertCompany($filters);
-        $ids = [];
+        $dayKey = $tile === 'absent_uncovered' || in_array($tile, ReportFilters::STATUSES, true) ? $tile : null;
+        $rows = [];
         foreach ($this->perEmployee($filters) as $employee) {
-            if ($this->matchesTile($employee, $tile)) {
-                $ids[] = $employee['employee_id'];
+            if (! $this->matchesTile($employee, $tile)) {
+                continue;
             }
+            $dayIds = $dayKey === null ? [] : ($employee['day_ids'][$dayKey] ?? []);
+            if ($tile === 'present') {
+                $dayIds = array_merge($dayIds, $employee['day_ids']['field_work'] ?? []);
+            }
+            $rows[$employee['employee_id']] = ['value' => ReportTiles::fromTotals($employee)[$tile] ?? null, 'day_ids' => $dayIds];
         }
 
-        return $ids;
+        return $rows;
     }
 
     public function drillDownDayIds(ReportFilters $filters, string $status): Generator

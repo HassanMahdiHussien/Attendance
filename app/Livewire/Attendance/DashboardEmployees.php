@@ -3,6 +3,7 @@
 namespace App\Livewire\Attendance;
 
 use App\Enums\UserRole;
+use App\Models\Attendance\Day;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Services\Attendance\FollowUp\FollowUpCases;
@@ -52,15 +53,22 @@ class DashboardEmployees extends Component
 
         return app(TenantContext::class)->runForCompany($company, function () use ($company, $summary, $overtime): View {
             $filters = ReportFilters::fromArray($company, $this->filters);
+            $rows = [];
             if (in_array($this->tile, FollowUpCases::TILES, true)) {
                 $ids = app(FollowUpCases::class)->employeeIds($filters, $this->tile);
             } elseif (in_array($this->tile, ['overtime_minutes', 'entitled_employees', 'entitlements_available_now', 'entitlements_overdue_now'], true)) {
                 $ids = $overtime->drillDownEmployeeIds($filters, $this->tile);
             } else {
-                $ids = $summary->drillDown($filters, $this->tile);
+                $rows = $summary->drillDownRows($filters, $this->tile);
+                $ids = array_keys($rows);
             }
             $employees = $ids === [] ? collect() : Employee::query()->where('company_id', $company->id)
                 ->whereIn('id', $ids)->with('branch')->orderBy('name')->get();
+            // Biggest figure first so HR starts with the employees who matter most.
+            $employees = $employees->sortByDesc(fn (Employee $employee): float => (float) ($rows[$employee->id]['value'] ?? 0))->values();
+            $dayIds = array_merge([], ...array_map(fn (array $row): array => $row['day_ids'], array_values($rows)));
+            $dates = $dayIds === [] ? collect() : Day::query()->where('company_id', $company->id)
+                ->whereIn('id', $dayIds)->pluck('work_date', 'id');
             $balances = app(LeaveBalances::class)->currentFor($company->id, $employees->pluck('id')->all());
             $overtimeRows = [];
             if (in_array($this->tile, ['overtime_minutes', 'entitled_employees', 'entitlements_available_now', 'entitlements_overdue_now'], true)) {
@@ -71,7 +79,7 @@ class DashboardEmployees extends Component
 
             return view('livewire.attendance.dashboard-employees', [
                 'company' => $company, 'employees' => $employees, 'balances' => $balances,
-                'overtimeRows' => $overtimeRows,
+                'overtimeRows' => $overtimeRows, 'rows' => $rows, 'dates' => $dates,
                 'from' => $filters->from, 'to' => $filters->to,
             ])->layout('layouts.workspace');
         });
