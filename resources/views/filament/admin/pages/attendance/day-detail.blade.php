@@ -1,4 +1,5 @@
 <x-filament-panels::page>
+    <a class="ui-link" href="{{ $this->backUrl() }}">{{ $this->backLabel() }}</a>
     @php $day = $this->day(); $presentation = $this->dayPresentation(); $latest = $this->latestReview($day); $overtime = $this->overtime(); $entitlement = $this->entitlement(); @endphp
     <div class="space-y-5">
         <x-ui.card>
@@ -146,6 +147,7 @@
                 @if ($case->closure_source) <p>{{ __('messages.follow_up_ui.closure_source') }}: {{ __('messages.follow_up_ui.closure_kinds.'.($case->closure_source['kind'] ?? 'reassessment')) }} @foreach (app(\App\Services\Attendance\FollowUp\FollowUpCases::class)->closureRequests($case) as $request)<a class="ui-link" href="{{ \App\Filament\Admin\Pages\Leave\LeaveRequestDetail::getUrl(panel: 'admin', tenant: $this->company()).'?'.http_build_query(['request' => $request->id]) }}"><bdi dir="ltr">{{ $request->external_id }}</bdi></a> @endforeach</p> @endif
                 @if (($case->closure_source['kind'] ?? null) === 'manual' && $case->closure_reason) <p>{{ __('messages.follow_up_ui.reason') }}: {{ $case->closure_reason }}</p> @endif
                 <details><summary>{{ __('messages.follow_up_ui.event_history') }}</summary>@foreach ($case->events as $event)<p><bdi dir="ltr">{{ $event->created_at }}</bdi> · {{ __('messages.follow_up_ui.events.'.$event->event) }}</p>@endforeach</details>
+                @include('attendance.partials.follow-up-close', ['case' => $case, 'company' => $this->company(), 'model' => 'closeReasons.'.$case->id, 'emailUrl' => route('employees.show', $case->employee_id).'#follow-up-email'])
             </x-ui.card>
         @endif
     </div>

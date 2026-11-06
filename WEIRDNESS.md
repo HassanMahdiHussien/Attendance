@@ -5,6 +5,7 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 ---
 
 - Stored employee-months cache the live attendance calculation; `attendance:month-summaries-verify` checks them against that calculation. (2026-11-05)
+- Closed partial reporting periods cache their totals against the touched month-summary versions and employee update timestamp; periods including today remain live. (2026-11-06)
 - The coverage-quality panel uses a 10-minute result cache because its assessable count depends on the clock crossing each day's closing time; sources, runs and updating state remain live. (2026-11-05)
 
 - Gross late, early or exit minutes can exceed leave + credit + remaining because present-day worked hours or the full-hours minor-gap tolerance settle the rest; neither creates an allocation. (2026-11-05)

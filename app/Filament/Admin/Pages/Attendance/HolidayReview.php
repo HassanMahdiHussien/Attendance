@@ -41,6 +41,40 @@ class HolidayReview extends AttendancePage
 
     public array $employeeIds = [];
 
+    public string $employeeSearch = '';
+
+    public function employeeMatches()
+    {
+        $term = trim($this->employeeSearch);
+        if (mb_strlen($term) < 2) {
+            return collect();
+        }
+
+        return Employee::query()->where('company_id', $this->company()->id)
+            ->where(fn ($query) => $query->where('name', 'like', '%'.$term.'%')
+                ->orWhere('name_en', 'like', '%'.$term.'%')
+                ->orWhere('employee_code', 'like', $term.'%'))
+            ->whereNotIn('id', $this->employeeIds)->orderBy('name')->limit(20)->get();
+    }
+
+    public function selectedEmployees()
+    {
+        return Employee::query()->where('company_id', $this->company()->id)
+            ->whereIn('id', $this->employeeIds)->orderBy('name')->get();
+    }
+
+    public function addEmployee(int $id): void
+    {
+        Employee::query()->where('company_id', $this->company()->id)->findOrFail($id);
+        $this->employeeIds = array_values(array_unique([...$this->employeeIds, $id]));
+        $this->employeeSearch = '';
+    }
+
+    public function removeEmployee(int $id): void
+    {
+        $this->employeeIds = array_values(array_filter($this->employeeIds, fn ($selected): bool => (int) $selected !== $id));
+    }
+
     public string $kind = 'holiday';
 
     public bool $everyoneConfirmed = false;

@@ -10,6 +10,8 @@ use App\Services\Attendance\Reporting\AttendanceSummary;
 use App\Services\Attendance\Reporting\DayPresentation;
 use App\Services\Attendance\Reporting\ReportFilters;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\Paginator;
+use Livewire\Attributes\Url;
 
 class ReviewQueue extends AttendancePage
 {
@@ -19,12 +21,16 @@ class ReviewQueue extends AttendancePage
 
     protected string $view = 'filament.admin.pages.attendance.review';
 
+    #[Url]
     public string $branchId = '';
 
+    #[Url]
     public string $from = '';
 
+    #[Url]
     public string $to = '';
 
+    #[Url]
     public string $reviewState = 'awaiting';
 
     public static function getNavigationLabel(): string
@@ -40,8 +46,8 @@ class ReviewQueue extends AttendancePage
     public function mount(): void
     {
         parent::mount();
-        $this->from = today('Asia/Baghdad')->subDays(30)->toDateString();
-        $this->to = today('Asia/Baghdad')->toDateString();
+        $this->from = (string) request()->query('from', today('Asia/Baghdad')->subDays(30)->toDateString());
+        $this->to = (string) request()->query('to', today('Asia/Baghdad')->toDateString());
     }
 
     public function branches(): array
@@ -92,7 +98,10 @@ class ReviewQueue extends AttendancePage
     public function detailUrl(Day $day): string
     {
         return DayDetail::getUrl(panel: 'admin', tenant: $this->company())
-            .'?'.http_build_query(['employee' => $day->employee_id, 'date' => $day->work_date->toDateString()]);
+            .'?'.http_build_query(['employee' => $day->employee_id, 'date' => $day->work_date->toDateString(),
+                'back_review' => ['from' => $this->from, 'to' => $this->to,
+                    'branchId' => $this->branchId, 'reviewState' => $this->reviewState,
+                    'page' => Paginator::resolveCurrentPage()]]);
     }
 
     public function dayPresentations(): array

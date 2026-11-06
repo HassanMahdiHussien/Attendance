@@ -19,6 +19,7 @@ use App\Models\User;
 use App\Services\Attendance\Reporting\AttendanceSummary;
 use App\Services\Attendance\Reporting\DayPresentation;
 use App\Services\Attendance\Reporting\ReportFilters;
+use App\Services\Attendance\Reporting\ResultCache;
 use App\Services\Leave\DayReconciliation;
 use App\Services\Leave\LeaveActions;
 use App\Services\Leave\Reconciler;
@@ -162,13 +163,15 @@ test('a two-minute full-hours gap is within tolerance in every projection', func
     $presentation = app(DayPresentation::class)->from($day);
 
     expect($day['minutes']['early']['remaining'])->toBe(0)
-        ->and($day['minutes']['early']['settled_by_hours'])->toBe(2)
+        ->and($day['minutes']['early']['gross'])->toBe(0)
+        ->and($day['minutes']['early']['settled_by_hours'])->toBe(0)
         ->and($day['flags']['within_tolerance'])->toBeTrue()
         ->and($day['minor_gap_tolerance'])->toBe(5)
         ->and($reconciliation['remaining']['early'])->toBe(0)
         ->and($reconciliation['settled_by_hours']['early'])->toBe(2)
         ->and($totals['minutes']['early']['remaining'])->toBe(0)
-        ->and($totals['minutes']['early']['settled_by_hours'])->toBe(2)
+        ->and($totals['minutes']['early']['gross'])->toBe(0)
+        ->and($totals['minutes']['early']['settled_by_hours'])->toBe(0)
         ->and($totals['flags']['within_tolerance'])->toBe(1)
         ->and($presentation['status_key'])->toBe('present')
         ->and($presentation['tone'])->toBe('green')
@@ -198,7 +201,7 @@ test('credit skips a tolerable day and reaches the next unreconciled day', funct
     $allocations = Allocation::query()->whereNull('superseded_by_run_id')->get();
     [$day] = settlementRows($this);
 
-    expect($day['minutes']['early']['settled_by_hours'])->toBe(2)
+    expect($day['flags']['within_tolerance'])->toBeTrue()
         ->and($allocations->where('target_day_id', $day['day_id']))->toHaveCount(0)
         ->and((int) $allocations->where('target_kind', 'early')->sum('minutes'))->toBe(20);
 
@@ -254,8 +257,8 @@ test('counted exits share the same five-minute allowance', function (): void {
     [$day] = settlementRows($this);
     $reconciliation = app(DayReconciliation::class)->for($this->employee, '2026-10-19')['2026-10-19'];
 
-    expect($day['minutes']['early']['settled_by_hours'])->toBe(2)
-        ->and($day['minutes']['exit']['settled_by_hours'])->toBe(3)
+    expect($day['minutes']['early']['gross'])->toBe(0)
+        ->and($day['minutes']['exit']['gross'])->toBe(0)
         ->and($reconciliation['remaining']['early'])->toBe(0)
         ->and($reconciliation['remaining']['exit'])->toBe(0);
 });
@@ -326,4 +329,16 @@ test('tolerance and its policy field have English and Arabic labels', function (
             ->and(Lang::has('messages.office_ui.policy_fields.minor_gap_tolerance_minutes', $locale))->toBeTrue()
             ->and(Lang::has('messages.office_ui.minor_gap_tolerance_help', $locale))->toBeTrue();
     }
+});
+
+test('allowed minutes leave the late and early totals but other days still count', function (): void {
+    settlementDay($this, 0, 4, 0, 536);
+    settlementDay($this, 0, 30, 30, 510, '2026-10-20');
+    app(Reconciler::class)->run($this->company, [$this->employee->id], 'test');
+    $filters = ReportFilters::fromArray($this->company, ['from' => '2026-10-19', 'to' => '2026-10-20',
+        'employee_ids' => [$this->employee->id]]);
+    $totals = app(ResultCache::class)->withoutCache(fn () => app(AttendanceSummary::class)->totals($filters));
+
+    expect($totals['minutes']['early']['gross'])->toBe(30)
+        ->and($totals['minutes']['early']['remaining'])->toBe(30);
 });

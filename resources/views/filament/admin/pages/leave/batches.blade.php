@@ -8,7 +8,7 @@
                 @php $event = $this->latestEvent($batch); @endphp
                 <tr class="border-t" wire:key="leave-batch-{{ $batch->id }}">
                     <x-ui.td :label="__('messages.leave_ui.file')"><bdi dir="ltr">{{ $batch->file_name }}</bdi></x-ui.td>
-                    <x-ui.td :label="__('messages.leave_ui.uploader')">{{ \App\Models\User::find($batch->uploaded_by)?->name }}</x-ui.td>
+                    <x-ui.td :label="__('messages.leave_ui.uploader')">{{ $this->uploaderName($batch) }}</x-ui.td>
                     <x-ui.td :label="__('messages.leave_ui.time')">{{ $batch->created_at->format('Y-m-d H:i') }}</x-ui.td>
                     <x-ui.td :label="__('messages.leave_ui.scope')">{{ __('messages.leave_ui.'.$batch->scope) }} <bdi dir="ltr">{{ $batch->period_from?->toDateString() }} – {{ $batch->period_to?->toDateString() }}</bdi></x-ui.td>
                     <x-ui.td :label="__('messages.leave_ui.snapshot_at')">{{ $batch->snapshot_at->format('Y-m-d H:i:s') }}</x-ui.td>

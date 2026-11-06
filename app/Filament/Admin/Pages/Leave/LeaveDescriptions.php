@@ -10,6 +10,7 @@ use App\Services\Leave\LeaveDescriptionDecisions;
 use App\Services\Leave\LeaveDescriptionReader;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Livewire\Attributes\Url;
 
 class LeaveDescriptions extends LeavePage
 {
@@ -17,12 +18,16 @@ class LeaveDescriptions extends LeavePage
 
     protected string $view = 'filament.admin.pages.leave.descriptions';
 
+    #[Url]
     public string $category = '';
 
+    #[Url]
     public string $branchId = '';
 
+    #[Url]
     public string $from = '';
 
+    #[Url]
     public string $to = '';
 
     public static function getNavigationLabel(): string

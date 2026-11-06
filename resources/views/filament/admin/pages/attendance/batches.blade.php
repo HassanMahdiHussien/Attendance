@@ -8,9 +8,9 @@
                 @php $event = $this->latestEvent($batch); @endphp
                 <tr class="border-t" wire:key="attendance-batch-{{ $batch->id }}">
                     <x-ui.td :label="__('messages.attendance_ui.file')">{{ $batch->file_name }}</x-ui.td>
-                    <x-ui.td :label="__('messages.attendance_ui.uploader')">{{ \App\Models\User::find($batch->uploaded_by)?->name }}</x-ui.td>
+                    <x-ui.td :label="__('messages.attendance_ui.uploader')">{{ $this->uploaderName($batch) }}</x-ui.td>
                     <x-ui.td :label="__('messages.attendance_ui.time')">{{ $batch->created_at->format('Y-m-d H:i') }}</x-ui.td>
-                    <x-ui.td :label="__('messages.attendance_ui.coverage')"><bdi dir="ltr">{{ $batch->coverage_from?->format('Y-m-d H:i') }} – {{ $batch->coverage_to?->format('Y-m-d H:i') }}</bdi><br>{{ implode(', ', \App\Models\Branch::query()->whereIn('id', $batch->coverage_branch_ids)->pluck('name')->all()) }}</x-ui.td>
+                    <x-ui.td :label="__('messages.attendance_ui.coverage')"><bdi dir="ltr">{{ $batch->coverage_from?->format('Y-m-d H:i') }} – {{ $batch->coverage_to?->format('Y-m-d H:i') }}</bdi><br>{{ $this->branchNames($batch) }}</x-ui.td>
                     <x-ui.td :label="__('messages.attendance_ui.counts_label')">@if ($event?->counts) @foreach ($event->counts as $key => $count) <span class="block">{{ __('messages.attendance_ui.count_labels.'.$key) }}: <bdi dir="ltr">{{ $count }}</bdi></span> @endforeach @else — @endif</x-ui.td>
                     <x-ui.td :label="__('messages.attendance_ui.state')"><x-ui.badge :tone="app(\App\Services\Attendance\Reporting\JobStatePresentation::class)->tone($event?->state)">{{ __('messages.attendance_ui.states.'.($event?->state ?? 'queued')) }}</x-ui.badge> @if ($event?->error_code) — {{ __('messages.attendance_ui.failures.'.$event->error_code) }} @endif</x-ui.td>
                     <x-ui.td :label="__('messages.attendance_ui.actions')"><a class="underline" href="{{ route('attendance.import.file', ['company' => \Filament\Facades\Filament::getTenant()->id, 'attendanceBatch' => $batch->id]) }}">{{ __('messages.attendance_ui.download') }}</a>

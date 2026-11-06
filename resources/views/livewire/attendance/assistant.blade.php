@@ -99,7 +99,7 @@
                                     <p class="mt-3 text-xs text-gray-600">{{ __('messages.chat_ui.recalculate_note') }}</p>
                                     @if($card['can_decide'])
                                         <div class="mt-3 flex flex-wrap gap-2">
-                                            <button type="button" wire:click="confirm({{ $proposalId }})" class="rounded-lg bg-signal px-3 py-2 font-semibold text-night">{{ __('messages.chat_ui.confirm') }}</button>
+                                            <button type="button" wire:click="confirm({{ $proposalId }})" class="ui-button ui-button-secondary ui-button-small">{{ __('messages.chat_ui.confirm') }}</button>
                                             <button type="button" wire:click="cancel({{ $proposalId }})" class="rounded-lg border border-line px-3 py-2">{{ __('messages.chat_ui.cancel') }}</button>
                                         </div>
                                     @endif

@@ -9,6 +9,7 @@ use App\Models\Branch;
 use App\Services\Attendance\DeviceRegistry;
 use Filament\Notifications\Notification;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class AttendanceDevices extends AttendancePage
@@ -53,12 +54,23 @@ class AttendanceDevices extends AttendancePage
             ->orderBy('serial_number')->paginate(25);
         $ids = $this->devicePage->getCollection()->pluck('id')->all();
         if ($ids !== []) {
-            $stats = DB::table('attendance_transactions')->where('company_id', $this->company()->id)
-                ->whereIn('device_id', $ids)->select('device_id')
-                ->selectRaw('MIN(punched_at) AS first_at, MAX(punched_at) AS last_at, COUNT(*) AS punches, COUNT(DISTINCT person_code) AS people')
-                ->groupBy('device_id')->get()->keyBy('device_id');
+            $companyId = $this->company()->id;
+            // Original punches are never edited, so the newest punch id is enough to know when these counts change;
+            // without the cache every visit scans all of the company's punches (about 2 s at 430k rows).
+            $lastPunch = (int) DB::table('attendance_transactions')->where('company_id', $companyId)->max('id');
+            // One entry per company and page, overwritten when punches change: the database cache never prunes old keys.
+            $key = 'attendance:device-stats:'.$companyId.':'.hash('sha256', implode(',', $ids));
+            $hit = Cache::get($key);
+            if (! is_array($hit) || ($hit['last_punch'] ?? null) !== $lastPunch) {
+                $hit = ['last_punch' => $lastPunch, 'rows' => DB::table('attendance_transactions')->where('company_id', $companyId)
+                    ->whereIn('device_id', $ids)->select('device_id')
+                    ->selectRaw('MIN(punched_at) AS first_at, MAX(punched_at) AS last_at, COUNT(*) AS punches, COUNT(DISTINCT person_code) AS people')
+                    ->groupBy('device_id')->get()->map(fn (object $row): array => (array) $row)->all()];
+                Cache::put($key, $hit, now()->addDays(7));
+            }
+            $stats = collect($hit['rows'])->map(fn (array $row): object => (object) $row)->keyBy('device_id');
             $settings = DeviceSetting::query()->with('branch')->whereIn('device_id', $ids)
-                ->whereDate('effective_from', '<=', today())->orderByDesc('effective_from')->orderByDesc('id')
+                ->where('effective_from', '<=', today()->toDateString())->orderByDesc('effective_from')->orderByDesc('id')
                 ->get()->unique('device_id')->keyBy('device_id');
             foreach ($ids as $id) {
                 $stat = $stats->get($id);
@@ -86,7 +98,7 @@ class AttendanceDevices extends AttendancePage
         if (isset($this->deviceDetails[$device->id])) {
             return $this->deviceDetails[$device->id];
         }
-        $setting = DeviceSetting::query()->where('device_id', $device->id)->whereDate('effective_from', '<=', today())
+        $setting = DeviceSetting::query()->where('device_id', $device->id)->where('effective_from', '<=', today()->toDateString())
             ->orderByDesc('effective_from')->orderByDesc('id')->first();
         $times = DB::table('attendance_transactions')->where('company_id', $this->company()->id)
             ->where('device_id', $device->id)->selectRaw('MIN(punched_at) AS first_at, MAX(punched_at) AS last_at')->first();

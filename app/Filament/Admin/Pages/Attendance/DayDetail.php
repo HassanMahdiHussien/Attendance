@@ -2,6 +2,7 @@
 
 namespace App\Filament\Admin\Pages\Attendance;
 
+use App\Enums\UserRole;
 use App\Filament\Admin\Pages\Attendance\Concerns\ReviewsDays;
 use App\Filament\Admin\Resources\Attendance\AttendancePage;
 use App\Models\Attendance\Day;
@@ -11,15 +12,19 @@ use App\Models\Attendance\ManualPunch;
 use App\Models\Branch;
 use App\Models\Employee;
 use App\Models\Leave\LeaveRequest;
+use App\Services\Attendance\FollowUp\CaseSync;
 use App\Services\Attendance\FollowUp\FollowUpCases;
 use App\Services\Attendance\HolidayLabels;
 use App\Services\Attendance\Overtime;
 use App\Services\Attendance\Reporting\AttendanceSummary;
 use App\Services\Attendance\Reporting\DayPresentation;
 use App\Services\Attendance\Reporting\ReportFilters;
+use App\Services\Attendance\Reporting\ReportTiles;
 use App\Services\Leave\DayReconciliation;
+use App\Support\Tenancy\TenantContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Locked;
 
 class DayDetail extends AttendancePage
@@ -38,6 +43,30 @@ class DayDetail extends AttendancePage
     #[Locked]
     public string $date = '';
 
+    #[Locked]
+    public string $backBranch = '';
+
+    #[Locked]
+    public string $backStatus = '';
+
+    #[Locked]
+    public string $backTile = '';
+
+    #[Locked]
+    public array $backFilters = [];
+
+    #[Locked]
+    public string $backSearch = '';
+
+    #[Locked]
+    public int $backPage = 1;
+
+    #[Locked]
+    public array $backReview = [];
+
+    #[Locked]
+    public array $backFollowUp = [];
+
     public static function getNavigationLabel(): string
     {
         return __('messages.office_ui.detail_title');
@@ -48,11 +77,73 @@ class DayDetail extends AttendancePage
         return static::getNavigationLabel();
     }
 
+    public function backUrl(): string
+    {
+        if ($this->backFollowUp !== []) {
+            $filters = array_filter(array_intersect_key($this->backFollowUp,
+                array_flip(['from', 'to', 'state', 'issueType', 'branchId', 'managerId', 'page'])),
+                fn ($value): bool => is_string($value) || is_int($value));
+
+            return FollowUpCasesPage::getUrl(panel: 'admin', tenant: $this->company()).'?'.http_build_query($filters);
+        }
+
+        if ($this->backReview !== []) {
+            $filters = array_filter(array_intersect_key($this->backReview,
+                array_flip(['from', 'to', 'branchId', 'reviewState', 'page'])),
+                fn ($value): bool => is_string($value) || is_int($value));
+
+            return ReviewQueue::getUrl(panel: 'admin', tenant: $this->company()).'?'.http_build_query($filters);
+        }
+
+        if (ReportTiles::allowed($this->backTile)) {
+            $route = auth()->user()?->primary_role === UserRole::PlatformAdmin
+                ? route('dashboard.company.employees', ['company' => $this->company()->id])
+                : route('dashboard.employees');
+            $filters = array_intersect_key($this->backFilters, array_flip(['from', 'to', 'employee_ids', 'branch_ids',
+                'departments', 'manager_employee_ids', 'work_patterns', 'statuses']));
+
+            return $route.'?'.http_build_query($filters + ['tile' => $this->backTile, 'search' => $this->backSearch,
+                'page' => $this->backPage]);
+        }
+
+        return DailyAttendance::getUrl(panel: 'admin', tenant: $this->company()).'?'.http_build_query([
+            'date' => $this->date,
+            'branchId' => ctype_digit($this->backBranch) ? $this->backBranch : '',
+            'status' => in_array($this->backStatus, ReportFilters::STATUSES, true) ? $this->backStatus : '',
+        ]);
+    }
+
+    public function backLabel(): string
+    {
+        if ($this->backFollowUp !== []) {
+            return __('messages.office_ui.back_to_follow_up');
+        }
+
+        if ($this->backReview !== []) {
+            return __('messages.office_ui.back_to_review');
+        }
+
+        return ReportTiles::allowed($this->backTile)
+            ? __('messages.office_ui.back_to_employees') : __('messages.office_ui.back_to_daily');
+    }
+
     public function mount(): void
     {
         parent::mount();
         $employee = request()->query('employee');
         $date = request()->query('date');
+        $this->backBranch = (string) request()->query('back_branch', '');
+        $this->backStatus = (string) request()->query('back_status', '');
+        $this->backTile = (string) request()->query('back_tile', '');
+        $backFilters = request()->query('back_filters', []);
+        $this->backFilters = is_array($backFilters) ? $backFilters : [];
+        $this->backSearch = (string) request()->query('back_search', '');
+        $backPage = request()->query('back_page', 1);
+        $this->backPage = ctype_digit((string) $backPage) ? max(1, (int) $backPage) : 1;
+        $backReview = request()->query('back_review', []);
+        $this->backReview = is_array($backReview) ? $backReview : [];
+        $backFollowUp = request()->query('back_follow_up', []);
+        $this->backFollowUp = is_array($backFollowUp) ? $backFollowUp : [];
         abort_unless((is_string($employee) || is_int($employee)) && ctype_digit((string) $employee)
             && is_string($date) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date), 404);
         $this->employeeId = (int) $employee;
@@ -79,6 +170,21 @@ class DayDetail extends AttendancePage
         $row = app(AttendanceSummary::class)->presentationRowsForDays($filters, [$day->id])[$day->id] ?? null;
 
         return $row === null ? null : app(DayPresentation::class)->from($row);
+    }
+
+    /** @var array<int, string> */
+    public array $closeReasons = [];
+
+    public function closeFollowUpCase(int $id, CaseSync $sync): void
+    {
+        $company = $this->company();
+        $case = FollowUpCase::query()->where('company_id', $company->id)
+            ->where('employee_id', $this->employee()->id)->findOrFail($id);
+        Gate::authorize('sendAttendanceNotifications', $company);
+        $this->validate(['closeReasons.'.$id => 'required|string|max:1000'],
+            ['closeReasons.'.$id.'.required' => __('messages.follow_up.reason_required')]);
+        app(TenantContext::class)->runForCompany($company, fn () => $sync->closeManually($case, $this->closeReasons[$id], auth()->user()));
+        unset($this->closeReasons[$id]);
     }
 
     public function followUpCase(): ?FollowUpCase

@@ -12,6 +12,7 @@ use App\Services\Attendance\Reporting\AttendanceExports;
 use App\Services\Attendance\Reporting\ReportFilters;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Gate;
+use Livewire\Attributes\Url;
 
 class FollowUpCasesPage extends AttendancePage
 {
@@ -19,23 +20,29 @@ class FollowUpCasesPage extends AttendancePage
 
     protected string $view = 'filament.admin.pages.attendance.follow-up-cases';
 
+    #[Url]
     public string $from = '';
 
+    #[Url]
     public string $to = '';
 
+    #[Url]
     public string $state = '';
 
+    #[Url]
     public string $issueType = '';
 
+    #[Url]
     public string $branchId = '';
 
+    #[Url]
     public string $managerId = '';
 
     public string $managerSearch = '';
 
     public array $reportFilters = [];
 
-    public string $closeReason = '';
+    public array $closeReasons = [];
 
     public static function getNavigationLabel(): string
     {
@@ -53,8 +60,9 @@ class FollowUpCasesPage extends AttendancePage
         $this->from = (string) request()->query('from', now('Asia/Baghdad')->startOfMonth()->toDateString());
         $this->to = (string) request()->query('to', now('Asia/Baghdad')->toDateString());
         $this->state = (string) request()->query('state', '');
-        $this->branchId = (string) (request()->query('branch_ids')[0] ?? '');
-        $this->managerId = (string) (request()->query('manager_employee_ids')[0] ?? '');
+        $this->issueType = (string) request()->query('issueType', '');
+        $this->branchId = (string) request()->query('branchId', request()->query('branch_ids')[0] ?? '');
+        $this->managerId = (string) request()->query('managerId', request()->query('manager_employee_ids')[0] ?? '');
         $this->reportFilters = request()->only(['employee_ids', 'departments', 'work_patterns', 'statuses']);
     }
 
@@ -114,9 +122,9 @@ class FollowUpCasesPage extends AttendancePage
     public function closeCase(int $id, CaseSync $sync): void
     {
         $case = FollowUpCase::query()->where('company_id', $this->company()->id)->findOrFail($id);
-        $this->validate(['closeReason' => 'required|string|max:1000']);
-        $sync->closeManually($case, $this->closeReason, auth()->user());
-        $this->closeReason = '';
+        $this->validate(['closeReasons.'.$id => 'required|string|max:1000']);
+        $sync->closeManually($case, $this->closeReasons[$id], auth()->user());
+        unset($this->closeReasons[$id]);
     }
 
     public function export(AttendanceExports $exports): void
