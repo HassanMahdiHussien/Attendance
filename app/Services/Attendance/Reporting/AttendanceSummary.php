@@ -41,6 +41,11 @@ class AttendanceSummary
             return $this->totalsLive($filters);
         }
 
+        if ($filters->to < CarbonImmutable::now('Asia/Baghdad')->toDateString()) {
+            return app(ResultCache::class)->remember('attendance_totals', $filters,
+                fn (): array => $this->totalsCached($filters), 86400);
+        }
+
         return $this->totalsCached($filters);
     }
 
@@ -344,7 +349,7 @@ class AttendanceSummary
     public function drillDownRows(ReportFilters $filters, string $tile): array
     {
         $this->assertCompany($filters);
-        $dayKey = $tile === 'absent_uncovered' || in_array($tile, ReportFilters::STATUSES, true) ? $tile : null;
+        $dayKey = in_array($tile, ['absent_uncovered', 'short_hours_alerts', 'late', 'early', 'remaining', ...ReportFilters::STATUSES], true) ? $tile : null;
         $rows = [];
         foreach ($this->perEmployee($filters) as $employee) {
             if (! $this->matchesTile($employee, $tile)) {
@@ -607,6 +612,17 @@ class AttendanceSummary
         $row['day_ids'][$day['status']][] = $day['day_id'];
         if ($day['status'] === 'absent' && ! $day['flags']['absence_closed_by_request']) {
             $row['day_ids']['absent_uncovered'][] = $day['day_id'];
+        }
+        if ($day['flags']['short_hours']) {
+            $row['day_ids']['short_hours_alerts'][] = $day['day_id'];
+        }
+        foreach (['late', 'early'] as $kind) {
+            if ($day['minutes'][$kind]['gross'] > 0) {
+                $row['day_ids'][$kind][] = $day['day_id'];
+            }
+        }
+        if (array_sum(array_map(fn (string $kind): int => $day['minutes'][$kind]['remaining'], self::KINDS)) > 0) {
+            $row['day_ids']['remaining'][] = $day['day_id'];
         }
         if ($day['status'] === 'holiday_worked') {
             $row['holiday_work_minutes'] += (int) $day['observed']['presence'];

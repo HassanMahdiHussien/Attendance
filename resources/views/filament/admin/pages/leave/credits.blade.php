@@ -17,11 +17,12 @@
             @if ($this->employee()) <p class="mt-2"><bdi dir="ltr">{{ $this->employee()->employee_code }}</bdi></p> @endif
         </x-ui.card>
         @if ($this->employee())
+            @php $credits = $this->credits(); $deductions = $this->deductions(); $reversals = $this->reversals(); @endphp
             <x-ui.card :title="__('messages.leave_ui.credit_balance')">
                 <x-ui.table>
                     <thead><tr>@foreach (['form_number', 'minutes', 'used', 'available', 'expires_on'] as $column)<th scope="col">{{ __('messages.leave_ui.'.$column) }}</th>@endforeach</tr></thead>
                     <tbody>
-                    @forelse ($this->credits() as $credit)
+                    @forelse ($credits as $credit)
                         <tr wire:key="leave-credit-{{ $credit->id }}">
                             <x-ui.td :label="__('messages.leave_ui.form_number')"><bdi dir="ltr">{{ $credit->sourceDay->request->external_id }}</bdi><span class="block text-xs">{{ $credit->sourceDay->work_date->locale(app()->getLocale())->translatedFormat('l j F Y') }}</span></x-ui.td>
                             <x-ui.td :label="__('messages.leave_ui.minutes')"><bdi dir="auto">{{ $this->minutes($credit->minutes) }}</bdi></x-ui.td>
@@ -32,18 +33,20 @@
                     @empty <tr><td colspan="5" class="p-4"><x-ui.empty :title="__('messages.list_empty')" /></td></tr> @endforelse
                     </tbody>
                 </x-ui.table>
+                {{ $credits->links() }}
             </x-ui.card>
             <x-ui.card :title="__('messages.leave_ui.deductions')">
                 <label>{{ __('messages.leave_ui.reason') }} <input type="text" wire:model="reason" class="rounded-xl border border-gray-200 p-2"></label>
                 @error('reason') <p class="text-red-600">{{ $message }}</p> @enderror
                 <x-ui.table><thead><tr><th scope="col">{{ __('messages.leave_ui.deductions') }}</th><th scope="col">{{ __('messages.office_ui.date') }}</th><th scope="col">{{ __('messages.leave_ui.actions') }}</th></tr></thead><tbody>
-                @forelse ($this->deductions() as $deduction)
+                @forelse ($deductions as $deduction)
                     <tr wire:key="leave-deduction-{{ $deduction->id }}"><x-ui.td :label="__('messages.leave_ui.deductions')">{{ app(\App\Services\Leave\LeaveExplanation::class)->render($deduction->explanation) }}</x-ui.td><x-ui.td :label="__('messages.office_ui.date')">{{ $deduction->targetDay?->work_date?->locale(app()->getLocale())->translatedFormat('l j F Y') ?? '—' }}</x-ui.td><x-ui.td :label="__('messages.leave_ui.actions')"><button class="ui-link" wire:click="reverseDeduction({{ $deduction->id }})">{{ __('messages.leave_ui.reverse_deduction') }}</button></x-ui.td></tr>
-                @empty @if($this->reversals() === [])<tr><td colspan="3" class="p-4"><x-ui.empty :title="__('messages.list_empty')" /></td></tr>@endif @endforelse
-                @foreach ($this->reversals() as $decision)
+                @empty @if($reversals->count() === 0)<tr><td colspan="3" class="p-4"><x-ui.empty :title="__('messages.list_empty')" /></td></tr>@endif @endforelse
+                @foreach ($reversals as $decision)
                     <tr wire:key="leave-reversal-{{ $decision->id }}"><x-ui.td :label="__('messages.leave_ui.deductions')">{{ __('messages.leave_ui.decision_kinds.'.$decision->decision) }} · {{ $decision->reason }}</x-ui.td><x-ui.td :label="__('messages.office_ui.date')">{{ $decision->work_date?->locale(app()->getLocale())->translatedFormat('l j F Y') ?? '—' }}</x-ui.td><x-ui.td :label="__('messages.leave_ui.actions')">@if ($decision->decision === 'reverse_deduction' && ! $this->isWithdrawn($decision))<button class="ui-link" wire:click="withdraw({{ $decision->id }})">{{ __('messages.leave_ui.withdraw') }}</button>@else — @endif</x-ui.td></tr>
                 @endforeach
                 </tbody></x-ui.table>
+                {{ $deductions->links() }} {{ $reversals->links() }}
             </x-ui.card>
         @endif
         <details wire:ignore.self class="rounded-xl border border-line bg-white p-4"><summary class="cursor-pointer font-semibold">{{ __('messages.leave_ui.credit_settings') }}</summary>

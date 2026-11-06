@@ -1,4 +1,5 @@
 <x-filament-panels::page>
+    <a class="ui-link" href="{{ $this->backUrl() }}">{{ $this->backLabel() }}</a>
     @php $day = $this->day(); $presentation = $this->dayPresentation(); $latest = $this->latestReview($day); $overtime = $this->overtime(); $entitlement = $this->entitlement(); @endphp
     <div class="space-y-5">
         <x-ui.card>

@@ -2,6 +2,7 @@
 
 use App\Enums\UserRole;
 use App\Filament\Admin\Pages\Attendance\AttendancePunches;
+use App\Filament\Admin\Pages\Attendance\DailyAttendance;
 use App\Livewire\Attendance\DashboardEmployees;
 use App\Livewire\Attendance\EmployeeAttendance;
 use App\Livewire\Dashboard\HrDashboard;
@@ -25,6 +26,7 @@ use App\Support\Tenancy\TenantContext;
 use Carbon\Carbon;
 use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
 
@@ -244,7 +246,7 @@ test('daily review excludes fully covered absence and pending while all days kee
         ->and(iterator_to_array(app(AttendanceSummary::class)->drillDownDayIds($filters, 'absent_uncovered')))
         ->toBe([Day::query()->where('work_date', '2026-10-20')->where('employee_id', $employee->id)->value('id')]);
     Livewire::withQueryParams(['tile' => 'absent_uncovered', 'from' => '2026-10-01', 'to' => '2026-10-31'])->test(DashboardEmployees::class)
-        ->assertSee($employee->name)->assertSee('20 Oct')->assertDontSee('21 Oct')
+        ->assertSee($employee->name)->assertSee('20 October')->assertDontSee('21 October')
         ->assertSee('Open an employee to see these days and their punches.')
         ->assertSeeHtml('attendance_tile=absent_uncovered');
 });
@@ -263,7 +265,57 @@ test('employee list shows each employee figure and days, biggest first', functio
 
     expect(app(AttendanceSummary::class)->drillDownRows($filters, 'missing_punch')[$many->id]['value'])->toBe(3);
     Livewire::withQueryParams(['tile' => 'missing_punch', 'from' => '2026-10-01', 'to' => '2026-10-31'])->test(DashboardEmployees::class)
-        ->assertSeeInOrder(['Zzz Three Days', '>3<', '20 Oct', '21 Oct', '22 Oct', 'Aaa One Day', '>1<', '20 Oct'], false);
+        ->assertSeeInOrder(['Zzz Three Days', '>3<', '20 October', '21 October', '22 October', 'Aaa One Day', '>1<', '20 October'], false)
+        ->set('search', 'Aaa')->assertSee('Aaa One Day')->assertDontSee('Zzz Three Days');
+});
+
+test('employee drill down explains missing punches and short hours with day links', function (): void {
+    foreach (['en', 'ar'] as $locale) {
+        foreach (['missing_punch', 'shift_unresolved', 'short_hours_alerts', 'absent_uncovered', 'late', 'early', 'remaining', ...ReportFilters::STATUSES] as $tile) {
+            expect(Lang::has('messages.reporting_ui.task_help.'.$tile, $locale))->toBeTrue();
+        }
+    }
+    $company = Company::factory()->create();
+    app(TenantContext::class)->setCompany($company);
+    $employee = Employee::factory()->create(['work_pattern' => 'office', 'hire_date' => '2020-01-01']);
+    $hr = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::HrStaff]);
+    Day::factory()->create(['employee_id' => $employee->id, 'branch_id' => $employee->branch_id,
+        'work_date' => '2026-10-20', 'status' => 'missing_punch',
+        'first_in' => '2026-10-20 08:05:00', 'last_out' => null]);
+    Day::factory()->create(['employee_id' => $employee->id, 'branch_id' => $employee->branch_id,
+        'work_date' => '2026-10-21', 'status' => 'present',
+        'first_in' => '2026-10-21 09:00:00', 'last_out' => '2026-10-21 16:40:00',
+        'presence_minutes' => 460, 'short_minutes' => 80]);
+    $this->actingAs($hr);
+
+    Livewire::withQueryParams(['tile' => 'missing_punch', 'from' => '2026-10-01', 'to' => '2026-10-31'])
+        ->test(DashboardEmployees::class)->assertSee('08:05')->assertSee('Check-out')->assertSee('Missing out punch')
+        ->assertSee('date=2026-10-20', escape: false)->assertSee('employee='.$employee->id, escape: false);
+    Livewire::withQueryParams(['tile' => 'short_hours_alerts', 'from' => '2026-10-01', 'to' => '2026-10-31'])
+        ->test(DashboardEmployees::class)->assertSee('09:00')->assertSee('16:40')
+        ->assertSee('Short hours 1 h 20 min')->assertSee('date=2026-10-21', escape: false);
+    Day::factory()->create(['employee_id' => $employee->id, 'branch_id' => $employee->branch_id,
+        'work_date' => '2026-10-22', 'status' => 'shift_unresolved',
+        'shift_evidence' => ['candidate_starts' => ['08:00:00', '16:00:00']]]);
+    Livewire::withQueryParams(['tile' => 'shift_unresolved', 'from' => '2026-10-01', 'to' => '2026-10-31'])
+        ->test(DashboardEmployees::class)->assertSee('Possible shifts')->assertSee('08:00, 16:00');
+});
+
+test('daily page still lists only days matching its selected date', function (): void {
+    $company = Company::factory()->create();
+    app(TenantContext::class)->setCompany($company);
+    $employee = Employee::factory()->create();
+    $hr = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::HrStaff]);
+    Day::factory()->create(['employee_id' => $employee->id, 'branch_id' => $employee->branch_id,
+        'work_date' => '2026-10-20', 'status' => 'present']);
+    Day::factory()->create(['employee_id' => $employee->id, 'branch_id' => $employee->branch_id,
+        'work_date' => '2026-10-21', 'status' => 'absent']);
+    actingInAdminTenant($this, $hr, $company);
+
+    $page = Livewire::test(DailyAttendance::class)->set('date', '2026-10-20');
+    expect($page->instance()->days()->total())->toBe(1);
+    $page->set('date', '2026-10-21');
+    expect($page->instance()->days()->total())->toBe(1);
 });
 
 test('late and early tile opens both kinds of days', function (): void {

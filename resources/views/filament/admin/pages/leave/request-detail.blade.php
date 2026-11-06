@@ -1,4 +1,5 @@
 <x-filament-panels::page>
+    <a class="ui-link" href="{{ $this->backUrl() }}">{{ $this->backLabel() }}</a>
     @php $request = $this->record(); $effective = $this->effectiveValues(); @endphp
     <div class="space-y-5">
         <x-ui.card :title="__('messages.leave_ui.detail_title')">
@@ -7,7 +8,7 @@
                 <p>{{ __('messages.leave_ui.status') }}: <x-ui.badge :tone="match ($effective['status']) { 'approved' => 'green', 'rejected' => 'red', 'pending' => 'indigo', default => 'gray' }">{{ __('messages.leave_ui.statuses.'.$effective['status']) }}</x-ui.badge></p>
                 <p>{{ __('messages.leave_ui.type') }}: {{ $request->leaveType?->name ?? '—' }}</p>
                 <p>{{ __('messages.leave_ui.dates') }}: <bdi dir="ltr">{{ $effective['start_date'] }} – {{ $effective['end_date'] }}</bdi></p>
-                <p>{{ __('messages.leave_ui.duration') }}: <bdi dir="ltr">{{ $effective['duration_days'] ?? '—' }}</bdi></p>
+                <p>{{ __('messages.leave_ui.duration') }}: <bdi dir="ltr">{{ $effective['duration_days'] ?? '—' }}</bdi> @if (($effective['duration_days'] ?? null) !== null){{ __('messages.leave_balance_ui.days') }}@endif</p>
                 <p>{{ __('messages.leave_ui.counting_method') }}: {{ $request->counting_method === null ? '—' : __('messages.leave_ui.counting_methods.'.$request->counting_method) }}</p>
                 <p>{{ __('messages.leave_ui.approver') }}: {{ $request->approver_name ?? '—' }}</p>
                 <p>{{ __('messages.leave_ui.snapshot_at') }}: <bdi dir="ltr">{{ $request->latest_snapshot_at?->format('Y-m-d H:i:s') }}</bdi></p>
@@ -34,7 +35,7 @@
         <x-ui.card :title="__('messages.leave_ui.versions')">
             <x-ui.table><thead><tr><th scope="col">{{ __('messages.leave_ui.snapshot_at') }}</th><th scope="col">{{ __('messages.leave_ui.status') }}</th><th scope="col">{{ __('messages.leave_ui.changed_fields') }}</th></tr></thead><tbody>
             @forelse ($this->versions() as $version)
-                <tr wire:key="leave-version-{{ $version->id }}"><x-ui.td :label="__('messages.leave_ui.snapshot_at')"><bdi dir="ltr">{{ $version->snapshot_at->format('Y-m-d H:i:s') }} · #{{ $version->batch_id }}</bdi></x-ui.td><x-ui.td :label="__('messages.leave_ui.status')"><x-ui.badge :tone="match ($version->values['status'] ?? 'pending') { 'approved' => 'green', 'rejected' => 'red', 'pending' => 'indigo', default => 'gray' }">{{ __('messages.leave_ui.statuses.'.($version->values['status'] ?? 'pending')) }}</x-ui.badge></x-ui.td><x-ui.td :label="__('messages.leave_ui.changed_fields')">@foreach ($this->changedFields($version) as $field) {{ $field }}@if (! $loop->last), @endif @endforeach</x-ui.td></tr>
+                <tr wire:key="leave-version-{{ $version->id }}"><x-ui.td :label="__('messages.leave_ui.snapshot_at')"><bdi dir="ltr">{{ $version->snapshot_at->format('Y-m-d H:i:s') }}</bdi> · <a class="ui-link" href="{{ \App\Filament\Admin\Pages\Leave\LeaveBatches::getUrl(panel: 'admin', tenant: $this->company()).'?'.http_build_query(['batchId' => $version->batch_id]) }}"><bdi dir="ltr">#{{ $version->batch_id }}</bdi></a></x-ui.td><x-ui.td :label="__('messages.leave_ui.status')"><x-ui.badge :tone="match ($version->values['status'] ?? 'pending') { 'approved' => 'green', 'rejected' => 'red', 'pending' => 'indigo', default => 'gray' }">{{ __('messages.leave_ui.statuses.'.($version->values['status'] ?? 'pending')) }}</x-ui.badge></x-ui.td><x-ui.td :label="__('messages.leave_ui.changed_fields')">@foreach ($this->changedFields($version) as $field) {{ $field }}@if (! $loop->last), @endif @endforeach</x-ui.td></tr>
             @empty <tr><td colspan="3" class="p-4"><x-ui.empty :title="__('messages.list_empty')" /></td></tr> @endforelse
             </tbody></x-ui.table>
             {{ $this->versions()->links() }}
@@ -69,7 +70,7 @@
                         · {{ __('messages.leave_ui.distribution_mode') }}: {{ __('messages.leave_ui.'.($decision->values['mode'] === 'dates' ? 'pick_dates' : 'from_start')) }}
                         @if ($decision->values['dates']) <bdi dir="ltr">{{ implode(', ', $decision->values['dates']) }}</bdi> @endif
                     @elseif ($decision->decision === 'fix_dates')
-                        · <bdi dir="ltr">{{ $decision->values['start_date'] }} – {{ $decision->values['end_date'] }} · {{ $decision->values['duration_days'] }}</bdi>
+                        · <bdi dir="ltr">{{ $decision->values['start_date'] }} – {{ $decision->values['end_date'] }} · {{ $decision->values['duration_days'] }}</bdi> {{ __('messages.leave_balance_ui.days') }}
                     @elseif ($decision->decision === 'withdraw')
                         · {{ __('messages.leave_ui.withdraws_decision') }} <bdi dir="ltr">#{{ $decision->values['decision_id'] }}</bdi>
                     @endif

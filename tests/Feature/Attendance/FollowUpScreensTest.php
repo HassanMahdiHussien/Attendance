@@ -151,7 +151,7 @@ test('case appears on the day and employee pages and HR can close it with a reas
         ->set('reason', 'Confirmed contact details')->call('save')->assertHasNoErrors();
     expect($this->employee->fresh()->email)->toBe('person@example.test');
 
-    Livewire::test(FollowUpCasesPage::class)->set('closeReason', 'Manager confirmed resolution')
+    Livewire::test(FollowUpCasesPage::class)->set('closeReasons.'.$this->case->id, 'Manager confirmed resolution')
         ->call('closeCase', $this->case->id)->assertHasNoErrors();
     expect($this->case->fresh()->state)->toBe('closed');
 });
@@ -249,7 +249,7 @@ test('notification mutations require an active user with the send gate', functio
 });
 
 test('another company case cannot be closed from the current panel', function (): void {
-    Livewire::test(FollowUpCasesPage::class)->set('closeReason', 'No access')
+    Livewire::test(FollowUpCasesPage::class)->set('closeReasons.'.$this->foreign->id, 'No access')
         ->call('closeCase', $this->foreign->id)->assertNotFound();
     Livewire::test(NotificationsPage::class)->call('preview', $this->foreignMessage->id)->assertNotFound();
     Livewire::test(ApproverMappingsPage::class)

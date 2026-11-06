@@ -9,10 +9,14 @@ use App\Models\Attendance\Transaction;
 use App\Models\Employee;
 use App\Services\Attendance\Reporting\EmployeeFilterSearch;
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Validator;
+use Livewire\WithPagination;
 
 class AttendancePunches extends AttendancePage
 {
+    use WithPagination;
+
     protected static ?string $slug = 'attendance/punches';
 
     protected string $view = 'filament.admin.pages.attendance.punches';
@@ -26,6 +30,18 @@ class AttendancePunches extends AttendancePage
     public string $from = '';
 
     public string $to = '';
+
+    private ?LengthAwarePaginator $punchPage = null;
+
+    public function punchCount(): int
+    {
+        return $this->punchPage?->total() ?? 0;
+    }
+
+    public function punchPages(): ?LengthAwarePaginator
+    {
+        return $this->punchPage;
+    }
 
     public static function getNavigationLabel(): string
     {
@@ -70,6 +86,22 @@ class AttendancePunches extends AttendancePage
     public function updatedEmployeeSearch(): void
     {
         $this->employeeId = null;
+        $this->resetPage();
+    }
+
+    public function updatedPersonCode(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedFrom(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedTo(): void
+    {
+        $this->resetPage();
     }
 
     public function chooseEmployee(int $id, EmployeeFilterSearch $search): void
@@ -77,6 +109,7 @@ class AttendancePunches extends AttendancePage
         $selected = $search->selected(auth()->user(), $this->company(), $id);
         $this->employeeId = $selected['id'];
         $this->employeeSearch = $selected['name'].' · '.$selected['code'];
+        $this->resetPage();
     }
 
     public function clearEmployee(): void
@@ -84,10 +117,12 @@ class AttendancePunches extends AttendancePage
         $this->company();
         $this->employeeId = null;
         $this->employeeSearch = '';
+        $this->resetPage();
     }
 
     public function days(): array
     {
+        $this->punchPage = null;
         $company = $this->company();
         if (Validator::make([
             'employeeId' => $this->employeeId, 'personCode' => $this->personCode,
@@ -109,9 +144,10 @@ class AttendancePunches extends AttendancePage
             return [];
         }
         $raw = Transaction::query()->where('company_id', $company->id)->where('person_code', $code)
-            ->whereBetween('punch_date', [$this->from, $this->to])->orderBy('punched_at')->orderBy('id')->limit(2000)->get();
+            ->whereBetween('punch_date', [$this->from, $this->to])->orderBy('punched_at')->orderBy('id')->paginate(100);
+        $this->punchPage = $raw;
         $punches = Punch::query()->where('company_id', $company->id)->where('person_code', $code)
-            ->whereNull('superseded_by_run_id')->whereBetween('punched_at', [$this->from.' 00:00:00', $this->to.' 23:59:59'])
+            ->whereNull('superseded_by_run_id')->whereIn('transaction_id', $raw->getCollection()->pluck('id'))
             ->get()->keyBy('transaction_id');
         $meals = Meal::query()->where('company_id', $company->id)->where('person_code', $code)
             ->whereNull('superseded_by_run_id')->whereBetween('meal_date', [$this->from, $this->to])->get()->keyBy(fn (Meal $meal): string => $meal->meal_date->toDateString());

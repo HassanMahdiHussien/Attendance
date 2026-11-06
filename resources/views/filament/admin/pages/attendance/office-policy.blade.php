@@ -12,12 +12,12 @@
                     @endforeach
                     <div><span class="text-sm text-gray-600">{{ __('messages.office_ui.rest_allowance') }}</span><strong class="block"><bdi dir="auto">{{ app(\App\Services\Attendance\Reporting\DurationText::class)->format(\App\Services\Attendance\OfficePolicy::restMinutes((int) $current->workday_minutes, (int) $current->min_presence_minutes)) }}</bdi></strong></div>
                     <div><span class="text-sm text-gray-600">{{ __('messages.office_ui.policy_fields.exits_count_toward_balance') }}</span><strong class="block">{{ $current->exits_count_toward_balance ? __('messages.office_ui.yes') : __('messages.office_ui.no') }}</strong></div>
-                    <div><span class="text-sm text-gray-600">{{ __('messages.office_ui.policy_fields.office_rest_days') }}</span><strong class="block font-mono" dir="ltr">{{ implode(', ', $current->office_rest_days ?? []) }}</strong></div>
+                    <div><span class="text-sm text-gray-600">{{ __('messages.office_ui.policy_fields.office_rest_days') }}</span><strong class="block">{{ implode(', ', array_map(fn ($day) => __('messages.office_ui.weekdays.'.$day), $current->office_rest_days ?? [])) }}</strong></div>
                 </div>
                 <h3 class="mt-4 font-semibold">{{ __('messages.office_ui.policy_sections.shift') }}</h3>
                 <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     @foreach (['shift_starts', 'shift_minutes', 'shift_break_minutes', 'shift_min_presence_minutes', 'shift_rest_days'] as $field)
-                        <div><span class="text-sm text-gray-600">{{ str_replace(' ('.__('messages.clear_screens.minutes_unit').')', '', __('messages.office_ui.policy_fields.'.$field)) }}</span><strong class="block {{ is_array($current->{$field}) ? 'font-mono' : '' }}"><bdi dir="{{ is_array($current->{$field}) ? 'ltr' : 'auto' }}">{{ is_array($current->{$field}) ? implode(', ', $current->{$field}) : app(\App\Services\Attendance\Reporting\DurationText::class)->format($current->{$field}) }}</bdi></strong></div>
+                        <div><span class="text-sm text-gray-600">{{ str_replace(' ('.__('messages.clear_screens.minutes_unit').')', '', __('messages.office_ui.policy_fields.'.$field)) }}</span><strong class="block {{ $field === 'shift_starts' ? 'font-mono' : '' }}"><bdi dir="{{ $field === 'shift_starts' ? 'ltr' : 'auto' }}">{{ $field === 'shift_rest_days' ? implode(', ', array_map(fn ($day) => __('messages.office_ui.weekdays.'.$day), $current->{$field} ?? [])) : (is_array($current->{$field}) ? implode(', ', $current->{$field}) : app(\App\Services\Attendance\Reporting\DurationText::class)->format($current->{$field})) }}</bdi></strong></div>
                     @endforeach
                 </div>
                 <h3 class="mt-4 font-semibold">{{ __('messages.office_ui.policy_sections.security') }}</h3>

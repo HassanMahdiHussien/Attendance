@@ -30,6 +30,7 @@ function uiInventoryFor(string $source): array
         'permission_conditions' => uiInventoryMatches('/@(?:if|elseif)\(([^)]*\$canManage[^)]*)\)/s', $source),
         'file_bindings' => $fileBindings,
         'routes' => uiInventoryMatches('/\broute\(\s*["\']([^"\']+)["\']/s', $source),
+        'filament_pages' => uiInventoryMatches('/\b([A-Za-z]+)::getUrl\(/s', $source),
         'links' => uiInventoryMatches('/\b(?:href|action|back)\s*=\s*["\'](\/[^"\']*)["\']/s', $source),
         'controls' => uiInventoryMatches('/\baria-controls="([^"]+)"/s', $source),
     ];

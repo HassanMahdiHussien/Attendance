@@ -8,6 +8,7 @@ use App\Models\Employee;
 use App\Models\Leave\LeaveRequest;
 use App\Services\Attendance\DataIssues;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Url;
 use Livewire\WithPagination;
@@ -34,6 +35,14 @@ class AttendanceIssues extends AttendancePage
 
     public string $bulkNote = '';
 
+    private ?LengthAwarePaginator $issuePage = null;
+
+    private ?string $issuePageKey = null;
+
+    private Collection $employeeSubjects;
+
+    private Collection $requestSubjects;
+
     public static function getNavigationLabel(): string
     {
         return __('messages.attendance_ui.issues_title');
@@ -46,11 +55,31 @@ class AttendanceIssues extends AttendancePage
 
     public function issues(): LengthAwarePaginator
     {
-        return DataIssue::query()->where('company_id', $this->company()->id)
+        $key = implode('|', [$this->type, $this->subjectKey, $this->status, (string) Paginator::resolveCurrentPage()]);
+        if ($this->issuePage !== null && $this->issuePageKey === $key) {
+            return $this->issuePage;
+        }
+        $this->issuePageKey = $key;
+        $this->issuePage = DataIssue::query()->where('company_id', $this->company()->id)
             ->when($this->type !== '', fn ($query) => $query->where('type', $this->type))
             ->when($this->subjectKey !== '', fn ($query) => $query->where('subject_key', $this->subjectKey))
             ->when($this->status !== '', fn ($query) => $query->where('status', $this->status))
             ->latest('id')->paginate(25);
+        $employeeIds = [];
+        $requestIds = [];
+        foreach ($this->issuePage->items() as $issue) {
+            if (in_array($issue->subject_type, ['employee', 'manager'], true)
+                && preg_match('/^(?:employee|manager):(\d+)$/', $issue->subject_key, $matches)) {
+                $employeeIds[] = (int) $matches[1];
+            } elseif ($issue->subject_type === 'leave_request'
+                && preg_match('/^request:(\d+)$/', $issue->subject_key, $matches)) {
+                $requestIds[] = (int) $matches[1];
+            }
+        }
+        $this->employeeSubjects = Employee::query()->where('company_id', $this->company()->id)->whereIn('id', $employeeIds)->get()->keyBy('id');
+        $this->requestSubjects = LeaveRequest::query()->where('company_id', $this->company()->id)->whereIn('id', $requestIds)->get()->keyBy('id');
+
+        return $this->issuePage;
     }
 
     public function typeCounts(): Collection
@@ -121,7 +150,9 @@ class AttendanceIssues extends AttendancePage
             return null;
         }
 
-        return Employee::query()->where('company_id', $this->company()->id)->find((int) $matches[1]);
+        $this->issues();
+
+        return $this->employeeSubjects->get((int) $matches[1]);
     }
 
     public function leaveRequestSubject(DataIssue $issue): ?LeaveRequest
@@ -130,7 +161,9 @@ class AttendanceIssues extends AttendancePage
             return null;
         }
 
-        return LeaveRequest::query()->where('company_id', $this->company()->id)->find((int) $matches[1]);
+        $this->issues();
+
+        return $this->requestSubjects->get((int) $matches[1]);
     }
 
     public function close(int $issueId, string $action, DataIssues $issues): void
