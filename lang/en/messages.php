@@ -335,7 +335,7 @@ return [
         'back_to_daily' => 'Back to daily attendance',
         'back_to_review' => 'Back to review queue', 'back_to_employees' => 'Back to employee list',
         'back_to_follow_up' => 'Back to follow-up cases',
-        'minor_gap_tolerance_help' => 'Applies to office, shift and security days when the required hours were worked.',
+        'minor_gap_tolerance_help' => 'Applies to office, shift and security days when the required hours were worked. These minutes are not counted as lateness or early leave anywhere. Default 5.',
         'daily_title' => 'Daily attendance', 'review_title' => 'Review queue',
         'policy_title' => 'Attendance policy', 'detail_title' => 'Attendance day',
         'office_presence_replacement_reason' => 'Office short-hours threshold: 9 hours; absence: 8 hours',
@@ -384,7 +384,7 @@ return [
             'balance_minutes' => 'Balance to reconcile',
         ],
         'policy_fields' => [
-            'minor_gap_tolerance_minutes' => 'Minor gap tolerance (minutes)',
+            'minor_gap_tolerance_minutes' => 'Allowed late and early minutes',
             'office_start' => 'Office start', 'flex_minutes' => 'Flex window (minutes)',
             'workday_minutes' => 'Workday (minutes)', 'min_presence_minutes' => 'Minimum presence (minutes)',
             'close_grace_minutes' => 'Close grace (minutes)',

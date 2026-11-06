@@ -202,7 +202,7 @@ test('overtime appears on the daily and detail pages and policy edits retain oth
 
 test('minor gap tolerance is versioned, visible and limited to sixty minutes', function (): void {
     Queue::fake([AssessDaysJob::class]);
-    Livewire::test(OfficePolicyPage::class)->assertSee('Minor gap tolerance')
+    Livewire::test(OfficePolicyPage::class)->assertSee('Allowed late and early minutes')
         ->assertSee('Applies to office, shift and security days')
         ->set('effectiveFrom', '2026-10-22')->set('minorGapToleranceMinutes', 61)
         ->set('reason', 'Invented policy review')->call('addVersion')->assertHasErrors(['minorGapToleranceMinutes']);

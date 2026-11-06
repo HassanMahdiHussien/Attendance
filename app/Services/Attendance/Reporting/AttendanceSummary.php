@@ -538,10 +538,14 @@ class AttendanceSummary
             $leave = $allocations->isEmpty() ? 0 : (int) $allocations->where('target_kind', $kind)->where('from_credit', 0)->sum('minutes');
             $credit = $allocations->isEmpty() ? 0 : (int) $allocations->where('target_kind', $kind)->where('from_credit', 1)->sum('minutes');
             $remaining = max(0, $gross[$kind] - $leave - $credit);
-            $settled = ($settlesHours || $withinTolerance) && in_array($kind, ['late', 'early', 'exit'], true)
-                && ! isset($blocked[$day->employee_id.'|'.$day->work_date->toDateString().'|'.$kind]) ? $remaining : 0;
-            $minutes[$kind] = ['gross' => $gross[$kind], 'reconciled_by_leave' => $leave,
-                'reconciled_by_credit' => $credit, 'settled_by_hours' => $settled, 'remaining' => $remaining - $settled];
+            $closable = in_array($kind, ['late', 'early', 'exit'], true)
+                && ! isset($blocked[$day->employee_id.'|'.$day->work_date->toDateString().'|'.$kind]);
+            $settled = $settlesHours && $closable ? $remaining : 0;
+            // Minutes inside HR's allowed tolerance are not lateness at all, so they leave the gross too:
+            // otherwise every total (cards, dashboard, reports) counts minutes the day rows call "within the allowed".
+            $tolerated = $withinTolerance && $closable ? $remaining : 0;
+            $minutes[$kind] = ['gross' => $gross[$kind] - $tolerated, 'reconciled_by_leave' => $leave,
+                'reconciled_by_credit' => $credit, 'settled_by_hours' => $settled, 'remaining' => $remaining - $settled - $tolerated];
         }
         $shortRemaining = max(0, (int) $day->short_minutes - array_sum(array_column($minutes, 'reconciled_by_leave'))
             - array_sum(array_column($minutes, 'reconciled_by_credit')));
