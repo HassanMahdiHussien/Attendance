@@ -14,6 +14,7 @@
                         @if ($case->closure_source) <p>{{ __('messages.follow_up_ui.closure_source') }}: {{ __('messages.follow_up_ui.closure_kinds.'.($case->closure_source['kind'] ?? 'reassessment')) }} @foreach (app(\App\Services\Attendance\FollowUp\FollowUpCases::class)->closureRequests($case) as $request)<a class="ui-link" href="{{ \App\Filament\Admin\Pages\Leave\LeaveRequestDetail::getUrl(panel: 'admin', tenant: $employee->company).'?'.http_build_query(['request' => $request->id]) }}"><bdi dir="ltr">{{ $request->external_id }}</bdi></a> @endforeach</p> @endif
                         @if (($case->closure_source['kind'] ?? null) === 'manual' && $case->closure_reason) <p>{{ __('messages.follow_up_ui.reason') }}: {{ $case->closure_reason }}</p> @endif
                         <details><summary>{{ __('messages.follow_up_ui.event_history') }}</summary>@foreach ($case->events as $event)<p><bdi dir="ltr">{{ $event->created_at }}</bdi> · {{ __('messages.follow_up_ui.events.'.$event->event) }}</p>@endforeach</details>
+                        @include('attendance.partials.follow-up-close', ['case' => $case, 'company' => $employee->company, 'model' => 'closeReasons.'.$case->id, 'emailUrl' => '#follow-up-email'])
                     </x-ui.td>
                 </tr>
             @empty <tr><td colspan="4" class="p-4"><x-ui.empty :title="__('messages.follow_up_ui.none')" /></td></tr> @endforelse
@@ -21,7 +22,7 @@
         </x-ui.table>
     </x-ui.card>
     @can('update', $employee)
-        <x-ui.card :title="__('messages.follow_up_ui.save_email')">
+        <x-ui.card id="follow-up-email" :title="__('messages.follow_up_ui.save_email')">
             <div class="flex flex-wrap gap-3">
                 <label>{{ __('messages.follow_up_ui.email') }} <input type="email" wire:model="email" class="rounded-xl border p-2" dir="ltr"></label>
                 <label>{{ __('messages.follow_up_ui.fallback_email') }} <input type="email" wire:model="fallbackEmail" class="rounded-xl border p-2" dir="ltr"></label>

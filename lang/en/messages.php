@@ -953,7 +953,10 @@ return [
     'follow_up_ui' => [
         'cases' => 'Follow-up cases', 'notifications' => 'Notifications', 'approver_mappings' => 'Approver mappings',
         'from' => 'From', 'to' => 'To', 'state' => 'State', 'issue' => 'Issue', 'reason' => 'Reason',
-        'export' => 'Export cases', 'close' => 'Close case', 'none' => 'No records',
+        'export' => 'Export cases', 'close' => 'Close case',
+        'hr_next_step' => 'Nobody could be notified because the manager and fallback emails are missing. Add an email on the employee page so reminders can go out, or close the case with a reason.',
+        'hr_next_step_open' => 'If this no longer needs follow-up, close it with a reason.',
+        'add_email' => 'Add manager email', 'close_reason_placeholder' => 'Why is it closed? e.g. manager confirmed', 'none' => 'No records',
         'waiting_hr_reason' => 'Waiting for HR to supply a recipient', 'settings' => 'Notification settings',
         'approver_unmapped' => 'Approver not mapped', 'approver_email_missing' => 'Approver email missing',
         'manager_email_missing' => 'Manager and fallback email missing',

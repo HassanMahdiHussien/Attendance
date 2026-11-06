@@ -12,6 +12,7 @@ use App\Models\Attendance\ManualPunch;
 use App\Models\Branch;
 use App\Models\Employee;
 use App\Models\Leave\LeaveRequest;
+use App\Services\Attendance\FollowUp\CaseSync;
 use App\Services\Attendance\FollowUp\FollowUpCases;
 use App\Services\Attendance\HolidayLabels;
 use App\Services\Attendance\Overtime;
@@ -20,8 +21,10 @@ use App\Services\Attendance\Reporting\DayPresentation;
 use App\Services\Attendance\Reporting\ReportFilters;
 use App\Services\Attendance\Reporting\ReportTiles;
 use App\Services\Leave\DayReconciliation;
+use App\Support\Tenancy\TenantContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Locked;
 
 class DayDetail extends AttendancePage
@@ -167,6 +170,21 @@ class DayDetail extends AttendancePage
         $row = app(AttendanceSummary::class)->presentationRowsForDays($filters, [$day->id])[$day->id] ?? null;
 
         return $row === null ? null : app(DayPresentation::class)->from($row);
+    }
+
+    /** @var array<int, string> */
+    public array $closeReasons = [];
+
+    public function closeFollowUpCase(int $id, CaseSync $sync): void
+    {
+        $company = $this->company();
+        $case = FollowUpCase::query()->where('company_id', $company->id)
+            ->where('employee_id', $this->employee()->id)->findOrFail($id);
+        Gate::authorize('sendAttendanceNotifications', $company);
+        $this->validate(['closeReasons.'.$id => 'required|string|max:1000'],
+            ['closeReasons.'.$id.'.required' => __('messages.follow_up.reason_required')]);
+        app(TenantContext::class)->runForCompany($company, fn () => $sync->closeManually($case, $this->closeReasons[$id], auth()->user()));
+        unset($this->closeReasons[$id]);
     }
 
     public function followUpCase(): ?FollowUpCase
