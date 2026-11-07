@@ -65,7 +65,7 @@ class DashboardEmployees extends Component
 
         $this->company();
         $this->filters = request()->only(['from', 'to', 'employee_ids', 'branch_ids', 'departments',
-            'manager_employee_ids', 'work_patterns', 'statuses']);
+            'manager_employee_ids', 'work_patterns', 'shifts', 'statuses']);
         $this->search = (string) request()->query('search', '');
         $page = request()->query('page', 1);
         $this->page = ctype_digit((string) $page) ? max(1, (int) $page) : 1;

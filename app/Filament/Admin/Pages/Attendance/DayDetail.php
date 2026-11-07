@@ -20,6 +20,7 @@ use App\Services\Attendance\Reporting\AttendanceSummary;
 use App\Services\Attendance\Reporting\DayPresentation;
 use App\Services\Attendance\Reporting\ReportFilters;
 use App\Services\Attendance\Reporting\ReportTiles;
+use App\Services\Attendance\ShiftDisplay;
 use App\Services\Leave\DayReconciliation;
 use App\Support\Tenancy\TenantContext;
 use Carbon\CarbonImmutable;
@@ -48,6 +49,9 @@ class DayDetail extends AttendancePage
 
     #[Locked]
     public string $backStatus = '';
+
+    #[Locked]
+    public string $backShift = '';
 
     #[Locked]
     public string $backTile = '';
@@ -100,7 +104,7 @@ class DayDetail extends AttendancePage
                 ? route('dashboard.company.employees', ['company' => $this->company()->id])
                 : route('dashboard.employees');
             $filters = array_intersect_key($this->backFilters, array_flip(['from', 'to', 'employee_ids', 'branch_ids',
-                'departments', 'manager_employee_ids', 'work_patterns', 'statuses']));
+                'departments', 'manager_employee_ids', 'work_patterns', 'shifts', 'statuses']));
 
             return $route.'?'.http_build_query($filters + ['tile' => $this->backTile, 'search' => $this->backSearch,
                 'page' => $this->backPage]);
@@ -110,6 +114,7 @@ class DayDetail extends AttendancePage
             'date' => $this->date,
             'branchId' => ctype_digit($this->backBranch) ? $this->backBranch : '',
             'status' => in_array($this->backStatus, ReportFilters::STATUSES, true) ? $this->backStatus : '',
+            'shift' => in_array($this->backShift, ShiftDisplay::KEYS, true) ? $this->backShift : '',
         ]);
     }
 
@@ -134,6 +139,7 @@ class DayDetail extends AttendancePage
         $date = request()->query('date');
         $this->backBranch = (string) request()->query('back_branch', '');
         $this->backStatus = (string) request()->query('back_status', '');
+        $this->backShift = (string) request()->query('back_shift', '');
         $this->backTile = (string) request()->query('back_tile', '');
         $backFilters = request()->query('back_filters', []);
         $this->backFilters = is_array($backFilters) ? $backFilters : [];

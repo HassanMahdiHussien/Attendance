@@ -10,6 +10,7 @@ use App\Services\Attendance\Overtime;
 use App\Services\Attendance\Reporting\AttendanceSummary;
 use App\Services\Attendance\Reporting\DayPresentation;
 use App\Services\Attendance\Reporting\ReportFilters;
+use App\Services\Attendance\ShiftDisplay;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\Paginator;
@@ -30,6 +31,9 @@ class DailyAttendance extends AttendancePage
 
     #[Url]
     public string $status = '';
+
+    #[Url]
+    public string $shift = '';
 
     private ?LengthAwarePaginator $daysPage = null;
 
@@ -58,7 +62,7 @@ class DailyAttendance extends AttendancePage
 
     public function days(): LengthAwarePaginator
     {
-        $key = implode('|', [$this->date, $this->branchId, $this->status, (string) Paginator::resolveCurrentPage()]);
+        $key = implode('|', [$this->date, $this->branchId, $this->status, $this->shift, (string) Paginator::resolveCurrentPage()]);
         if ($this->daysPage !== null && $this->daysPageKey === $key) {
             return $this->daysPage;
         }
@@ -92,6 +96,7 @@ class DailyAttendance extends AttendancePage
             'from' => $this->date, 'to' => $this->date,
             'branch_ids' => $this->branchId === '' ? [] : [$this->branchId],
             'statuses' => $this->status === '' ? [] : [$this->status],
+            'shifts' => $this->shift === '' ? [] : [$this->shift],
         ]);
         $presentations = [];
         $display = app(DayPresentation::class);
@@ -111,6 +116,7 @@ class DailyAttendance extends AttendancePage
             'from' => $this->date, 'to' => $this->date,
             'branch_ids' => $this->branchId === '' ? [] : [$this->branchId],
             'statuses' => $this->status === '' ? [] : [$this->status],
+            'shifts' => $this->shift === '' ? [] : [$this->shift],
         ]);
         $rows = [];
         $dayIds = array_map(fn (Day $day): int => $day->id, $this->days()->items());
@@ -133,6 +139,7 @@ class DailyAttendance extends AttendancePage
             'from' => $this->date, 'to' => $this->date,
             'branch_ids' => $this->branchId === '' ? [] : [$this->branchId],
             'statuses' => $this->status === '' ? [] : [$this->status],
+            'shifts' => $this->shift === '' ? [] : [$this->shift],
         ]);
         $rows = [];
         $dayIds = array_map(fn (Day $day): int => $day->id, $this->days()->items());
@@ -159,7 +166,7 @@ class DailyAttendance extends AttendancePage
     {
         return DayDetail::getUrl(panel: 'admin', tenant: $this->company())
             .'?'.http_build_query(['employee' => $day->employee_id, 'date' => $day->work_date->toDateString(),
-                'back_branch' => $this->branchId, 'back_status' => $this->status]);
+                'back_branch' => $this->branchId, 'back_status' => $this->status, 'back_shift' => $this->shift]);
     }
 
     private function query(bool $includeStatus = true): Builder
@@ -172,6 +179,10 @@ class DailyAttendance extends AttendancePage
         if ($this->branchId !== '') {
             $query->where('branch_id', ctype_digit($this->branchId) ? (int) $this->branchId : 0);
         }
+        if ($this->shift !== '' && ! in_array($this->shift, ShiftDisplay::KEYS, true)) {
+            return $query->whereRaw('1 = 0');
+        }
+        ShiftDisplay::filterDays($query, $this->shift === '' ? [] : [$this->shift]);
         if ($includeStatus && $this->status !== '') {
             $query->where('status', in_array($this->status, self::statuses(), true) ? $this->status : 'invalid');
         }

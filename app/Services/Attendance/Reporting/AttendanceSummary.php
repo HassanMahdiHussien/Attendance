@@ -15,6 +15,7 @@ use App\Models\Leave\LeaveRequest;
 use App\Models\Leave\RequestDay;
 use App\Models\Leave\RequestDecision;
 use App\Services\Attendance\OfficePolicy;
+use App\Services\Attendance\ShiftDisplay;
 use App\Services\Employees\EmployeeHistory;
 use App\Services\Leave\HoursSettlement;
 use App\Support\Tenancy\TenantContext;
@@ -417,6 +418,7 @@ class AttendanceSummary
         if ($filters->workPatterns !== []) {
             $query->whereIn(DB::raw("JSON_UNQUOTE(JSON_EXTRACT(inputs, '$.work_pattern'))"), $filters->workPatterns);
         }
+        ShiftDisplay::filterDays($query, $filters->shifts);
         if ($filters->statuses !== []) {
             $query->whereIn('status', $filters->statuses);
         }
@@ -819,7 +821,7 @@ class AttendanceSummary
     private function nonEmployeeMeals(ReportFilters $filters): array
     {
         if ($filters->employeeIds !== [] || $filters->departments !== [] || $filters->managerEmployeeIds !== []
-            || $filters->workPatterns !== [] || $filters->statuses !== []) {
+            || $filters->workPatterns !== [] || $filters->shifts !== [] || $filters->statuses !== []) {
             return [];
         }
         $query = Meal::query()->where('company_id', $filters->companyId)->whereNull('employee_id')
@@ -994,7 +996,7 @@ class AttendanceSummary
     private function hasDayFilters(ReportFilters $filters): bool
     {
         return $filters->branchIds !== [] || $filters->departments !== [] || $filters->managerEmployeeIds !== []
-            || $filters->workPatterns !== [] || $filters->statuses !== [];
+            || $filters->workPatterns !== [] || $filters->shifts !== [] || $filters->statuses !== [];
     }
 
     private function assertCompany(ReportFilters $filters): void

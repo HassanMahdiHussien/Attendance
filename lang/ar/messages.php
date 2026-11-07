@@ -1,6 +1,16 @@
 <?php
 
 return [
+    'shifts' => [
+        'label' => 'الوردية',
+        'names' => [
+            'night' => 'الوردية الليلية', 'shift_a' => 'الوردية A', 'shift_b' => 'الوردية B',
+            'office' => 'الدوام المكتبي', 'security' => 'الأمن', 'unresolved' => 'الوردية غير محددة',
+        ],
+        'days' => '{1} يوم|[2,*] أيام',
+        'category_not_set' => 'غير محدد',
+        'category_shift' => 'ورديات',
+    ],
     'month_summaries' => [
         'invalid_company' => 'أدخل معرّف شركة صحيحاً.',
         'build_counts' => 'عُثر على :count شهر موظف للبناء.',

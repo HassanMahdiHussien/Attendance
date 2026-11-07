@@ -46,6 +46,8 @@ class HrDashboard extends Component
 
     public string $workPattern = '';
 
+    public string $shift = '';
+
     public string $status = '';
 
     public string $exportKind = 'lateness_reconciliation';
@@ -194,6 +196,7 @@ class HrDashboard extends Component
             'departments' => $this->department === '' ? [] : [$this->department],
             'manager_employee_ids' => $this->managerId === '' ? [] : [$this->managerId],
             'work_patterns' => $this->workPattern === '' ? [] : [$this->workPattern],
+            'shifts' => $this->shift === '' ? [] : [$this->shift],
             'statuses' => $this->status === '' ? [] : [$this->status],
         ];
     }

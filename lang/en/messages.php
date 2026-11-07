@@ -1,6 +1,16 @@
 <?php
 
 return [
+    'shifts' => [
+        'label' => 'Shift',
+        'names' => [
+            'night' => 'Night shift', 'shift_a' => 'Shift A', 'shift_b' => 'Shift B',
+            'office' => 'Office', 'security' => 'Security', 'unresolved' => 'Shift not determined',
+        ],
+        'days' => '{1} day|[2,*] days',
+        'category_not_set' => 'Not set',
+        'category_shift' => 'Shifts',
+    ],
     'month_summaries' => [
         'invalid_company' => 'Pass a valid company ID.',
         'build_counts' => ':count employee-months found for building.',

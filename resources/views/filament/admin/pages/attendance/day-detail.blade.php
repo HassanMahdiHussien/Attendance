@@ -10,7 +10,7 @@
             @if($presentation && $presentation['problems'])<p class="mt-3 text-sm">{{ implode(' · ', $presentation['problems']) }}</p>@endif
             <div class="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
                 @if (in_array($day->inputs['work_pattern'] ?? null, ['shift', 'security'], true))
-                    <div><span class="text-sm text-gray-600">{{ __('messages.office_ui.shift') }}</span><strong class="block font-mono" dir="ltr">{{ \App\Services\Attendance\ShiftDisplay::hours($day->shift_start, $day->policy?->shift_minutes) ?? '—' }}</strong></div>
+                    <div><span class="text-sm text-gray-600">{{ __('messages.office_ui.shift') }}</span><strong class="block">{{ \App\Services\Attendance\ShiftDisplay::name($day->inputs['work_pattern'] ?? null, $day->shift_start) }} @if($hours = \App\Services\Attendance\ShiftDisplay::hours($day->shift_start, $day->policy?->shift_minutes))(<bdi dir="ltr" class="font-mono">{{ $hours }}</bdi>)@endif</strong></div>
                     <div><span class="text-sm text-gray-600">{{ __('messages.office_ui.shift_source') }}</span><strong class="block">{{ __('messages.office_ui.shift_sources.'.($day->shift_source ?? 'unknown')) }}</strong></div>
                     <div><span class="text-sm text-gray-600">{{ __('messages.office_ui.shift_confidence') }}</span><strong class="block">{{ __('messages.office_ui.shift_confidences.'.($day->shift_confidence ?? 'unresolved')) }}</strong></div>
                 @endif

@@ -20,6 +20,7 @@ use App\Services\Attendance\Reporting\DayPresentation;
 use App\Services\Attendance\Reporting\LastUpdate;
 use App\Services\Attendance\Reporting\ReportFilters;
 use App\Services\Attendance\Reporting\ReportTiles;
+use App\Services\Attendance\ShiftDisplay;
 use App\Services\Employees\EmployeeHistory;
 use App\Services\Leave\DayReconciliation;
 use App\Support\Tenancy\TenantContext;
@@ -37,6 +38,9 @@ class EmployeeAttendance extends Component
 
     public string $to = '';
 
+    #[Locked]
+    public array $shifts = [];
+
     public string $tab = 'days';
 
     public string $dayFilter = 'review';
@@ -53,14 +57,21 @@ class EmployeeAttendance extends Component
     {
         $this->employeeId = $employeeId;
         $this->period('current');
+        if (request()->has('shifts')) {
+            // Platform admins have no company selected yet; read the filter inside the employee's company.
+            $employee = $this->employee();
+            $this->shifts = app(TenantContext::class)->runForCompany($employee->company_id,
+                fn (): array => ReportFilters::fromArray($employee->company, ['shifts' => request()->query('shifts', [])])->shifts);
+        }
         if (request()->query('attendance_tab') === 'overtime') {
             $this->tab = 'overtime';
         }
         $tile = request()->query('attendance_tile');
         if (is_string($tile) && (ReportTiles::allowed($tile) || in_array($tile, ['absent_uncovered', 'late_early'], true))) {
-            $filters = ReportFilters::fromArray($this->employee()->company, request()->only(['from', 'to']));
+            $filters = ReportFilters::fromArray($this->employee()->company, request()->only(['from', 'to', 'shifts']));
             $this->from = $filters->from;
             $this->to = $filters->to;
+            $this->shifts = $filters->shifts;
             $this->showTile($tile);
         }
     }
@@ -119,7 +130,7 @@ class EmployeeAttendance extends Component
         abort_unless(in_array($this->exportKind, ['employee_statement_xlsx', 'statement_pdf'], true), 403);
         app(TenantContext::class)->runForCompany($employee->company_id, function () use ($employee, $exports): void {
             $exports->request($employee->company, auth()->user(), $this->exportKind,
-                ['from' => $this->from, 'to' => $this->to, 'employee_ids' => [$employee->id]], $this->exportLocale);
+                ['from' => $this->from, 'to' => $this->to, 'employee_ids' => [$employee->id], 'shifts' => $this->shifts], $this->exportLocale);
         });
         $this->exportQueued = true;
     }
@@ -130,7 +141,7 @@ class EmployeeAttendance extends Component
 
         return app(TenantContext::class)->runForCompany($employee->company_id, function () use ($employee, $summary, $reconciliation, $lastUpdate, $overtime): View {
             $filters = ReportFilters::fromArray($employee->company, [
-                'from' => $this->from, 'to' => $this->to, 'employee_ids' => [$employee->id],
+                'from' => $this->from, 'to' => $this->to, 'employee_ids' => [$employee->id], 'shifts' => $this->shifts,
             ]);
             $totals = $summary->totals($filters);
             $overtimeTotals = $overtime->totals($filters);
@@ -212,6 +223,8 @@ class EmployeeAttendance extends Component
 
             return view('livewire.attendance.employee-attendance', [
                 'employee' => $employee, 'totals' => $totals,
+                'shiftCounts' => $employee->work_pattern?->value === 'shift'
+                    ? ShiftDisplay::workedCounts($employee->company_id, $employee->id, $filters->from, $filters->to) : [],
                 'tiles' => array_diff_key(ReportTiles::fromTotals($totals) + ReportTiles::overtime($overtimeTotals), array_flip([
                     'active_employees', 'office_employees_assessed', 'without_work_pattern',
                 ])),
