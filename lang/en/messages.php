@@ -332,6 +332,12 @@ return [
         ],
     ],
     'office_ui' => [
+        'effective_from_help' => 'Only days from this date use the new values; earlier days keep the old ones. To test on a past month, choose a date at or before its first day.',
+        'saved_version' => 'Version :version saved. It applies to days from :date.',
+        'saved_version_body' => 'Days from that date are being recalculated now. The status line at the top of this page says when every page shows the new values.',
+        'recalculating' => 'Recalculating: :count employee-months are still being updated. Totals for those months may show old values until this reaches zero.',
+        'recalculated' => 'All totals are up to date with the current policy.',
+        'changes' => 'What changed',
         'back_to_daily' => 'Back to daily attendance',
         'back_to_review' => 'Back to review queue', 'back_to_employees' => 'Back to employee list',
         'back_to_follow_up' => 'Back to follow-up cases',
