@@ -4,7 +4,7 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 
 ---
 
-- Time Management prints one row for a night that is also Friday or a holiday; its time contributes to each matching category total, while overtime contributes once. (2026-11-07)
+- Time Management lists a night that is also Friday or a holiday in each matching sheet and tab; its time contributes to each matching category total, while overtime and the unique-day row count contribute once. (2026-11-07)
 
 - Stored employee-months cache the live attendance calculation; `attendance:month-summaries-verify` checks them against that calculation. (2026-11-05)
 - Closed partial reporting periods cache their totals against the touched month-summary versions and employee update timestamp; periods including today remain live. (2026-11-06)

@@ -243,7 +243,7 @@ test('attendance export kinds, states and columns have English and Arabic labels
                 ExportData::CASE_COLUMNS, ExportData::TIME_MANAGEMENT_COLUMNS,
                 ExportData::TIME_MANAGEMENT_TOTAL_COLUMNS))),
         ...array_map(fn (string $label): string => 'time_management.'.$label,
-            ['days_sheet', 'totals_sheet', 'missing_check_out', 'types.night', 'types.friday', 'types.holiday']),
+            ['night_sheet', 'friday_sheet', 'holiday_sheet', 'totals_sheet', 'missing_check_out']),
     ];
     foreach ($labels as $label) {
         expect(data_get($english, 'export_ui.'.$label))->not->toBeNull()

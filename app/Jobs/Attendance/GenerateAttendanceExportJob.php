@@ -8,6 +8,7 @@ use App\Services\Attendance\Reporting\AttendanceExports;
 use App\Services\Attendance\Reporting\AttendanceSummary;
 use App\Services\Attendance\Reporting\ExportData;
 use App\Services\Attendance\Reporting\ReportFilters;
+use App\Services\Attendance\Reporting\TimeManagementDisplay;
 use App\Services\AuditLogger;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Bus\Queueable;
@@ -177,18 +178,22 @@ class GenerateAttendanceExportJob implements ShouldQueue
 
     private function timeManagementXlsx(AttendanceExport $export, Company $company, ReportFilters $filters, ExportData $data, string $path): int
     {
-        [$days, $totals] = $data->timeManagement($filters);
+        $report = $data->timeManagement($filters);
+        $totals = $report['totals'];
         $writer = new Writer;
         $writer->openToFile($path);
         try {
-            $writer->getCurrentSheet()->setName(__('messages.export_ui.time_management.days_sheet'));
-            foreach ($data->header($export, $company, $filters) as $header) {
-                $writer->addRow(Row::fromValues($header));
-            }
-            $writer->addRow(Row::fromValues(['']));
-            $writer->addRow(Row::fromValues(array_map(fn (string $column): string => __('messages.export_ui.columns.'.$column), ExportData::TIME_MANAGEMENT_COLUMNS)));
-            foreach ($days as $day) {
-                $writer->addRow(Row::fromValues(array_values($day)));
+            foreach (['night', 'friday', 'holiday'] as $index => $type) {
+                $sheet = $index === 0 ? $writer->getCurrentSheet() : $writer->addNewSheetAndMakeItCurrent();
+                $sheet->setName(__('messages.export_ui.time_management.'.$type.'_sheet'));
+                foreach ($data->header($export, $company, $filters) as $header) {
+                    $writer->addRow(Row::fromValues($header));
+                }
+                $writer->addRow(Row::fromValues(['']));
+                $writer->addRow(Row::fromValues(array_map(fn (string $column): string => __('messages.export_ui.columns.'.$column), ExportData::TIME_MANAGEMENT_COLUMNS)));
+                foreach ($report[$type] as $day) {
+                    $writer->addRow(Row::fromValues(array_values($day)));
+                }
             }
 
             $writer->addNewSheetAndMakeItCurrent()->setName(__('messages.export_ui.time_management.totals_sheet'));
@@ -196,32 +201,15 @@ class GenerateAttendanceExportJob implements ShouldQueue
             foreach ($totals as $row) {
                 $writer->addRow(Row::fromValues(array_values($row)));
             }
-            $sum = ['employee_code' => __('messages.export_ui.total'), 'employee_name' => '', 'department' => ''];
-            foreach (['night', 'friday', 'holiday'] as $type) {
-                $sum[$type.'_count'] = array_sum(array_column($totals, $type.'_count'));
-                $sum[$type.'_total_time'] = $this->sumHours(array_column($totals, $type.'_total_time'));
-            }
-            $sum['total_overtime'] = $this->sumHours(array_column($totals, 'total_overtime'));
-            $writer->addRow(Row::fromValues(array_values($sum)));
+            $writer->addRow(Row::fromValues(array_values(app(TimeManagementDisplay::class)->totalRow($totals))));
         } finally {
             $writer->close();
         }
         if ($export->locale === 'ar') {
-            $this->rightToLeftSheet($path, 2);
+            $this->rightToLeftSheet($path, 4);
         }
 
-        return count($days);
-    }
-
-    private function sumHours(array $times): string
-    {
-        $minutes = 0;
-        foreach ($times as $time) {
-            [$hours, $remainder] = explode(':', $time);
-            $minutes += (int) $hours * 60 + (int) $remainder;
-        }
-
-        return intdiv($minutes, 60).':'.str_pad((string) ($minutes % 60), 2, '0', STR_PAD_LEFT);
+        return app(TimeManagementDisplay::class)->dayCount($report);
     }
 
     private function rightToLeftSheet(string $path, int $sheetCount = 1): void

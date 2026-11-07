@@ -57,6 +57,12 @@ class EmployeeAttendance extends Component
     {
         $this->employeeId = $employeeId;
         $this->period('current');
+        if (request()->has(['from', 'to']) && ! request()->has('attendance_tile')) {
+            $filters = ReportFilters::fromArray($this->employee()->company, request()->only(['from', 'to']));
+            $this->from = $filters->from;
+            $this->to = $filters->to;
+            $this->dayFilter = 'all';
+        }
         if (request()->has('shifts')) {
             // Platform admins have no company selected yet; read the filter inside the employee's company.
             $employee = $this->employee();

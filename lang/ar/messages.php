@@ -750,7 +750,8 @@ return [
             'time_management' => 'إدارة الوقت',
         ],
         'time_management' => [
-            'days_sheet' => 'الأيام', 'totals_sheet' => 'المجموع لكل موظف',
+            'night_sheet' => 'الورديات الليلية', 'friday_sheet' => 'أيام الجمعة',
+            'holiday_sheet' => 'العطل الرسمية', 'totals_sheet' => 'المجموع لكل موظف',
             'types' => ['night' => 'الوردية الليلية', 'friday' => 'الجمعة', 'holiday' => 'العطلة'],
             'missing_check_out' => 'خروج غير مسجل',
         ],
@@ -783,6 +784,11 @@ return [
             'holiday_count' => 'أيام العطل المعمولة', 'holiday_total_time' => 'مجموع وقت العطل',
             'total_overtime' => 'مجموع العمل الإضافي',
         ],
+    ],
+    'time_management_ui' => [
+        'month' => 'الشهر', 'export_excel' => 'تصدير إلى إكسل', 'loading' => 'جارٍ تحميل التقرير…',
+        'employees' => 'الموظفون', 'rows' => 'الصفوف', 'nights' => 'الليالي', 'fridays' => 'أيام الجمعة',
+        'holidays' => 'العطل', 'overtime' => 'مجموع الوقت الإضافي', 'missing_check_outs' => 'حالات غياب تسجيل الخروج',
     ],
     'duration_text' => ['hours' => ':hours س', 'minutes' => ':minutes د', 'hours_minutes' => ':hours س :minutes د'],
     'day_presentation' => [

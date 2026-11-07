@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Services\Attendance\Reporting\AttendanceExports;
 use App\Services\Attendance\Reporting\ExportData;
 use App\Services\Attendance\Reporting\ReportFilters;
+use App\Services\Attendance\Reporting\TimeManagementDisplay;
 use App\Services\Attendance\Reporting\TimeManagementReport;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Queue;
@@ -85,20 +86,23 @@ test('time management selects worked shift nights Fridays and holidays once and 
             ->and($service->totals($days)[0]['friday_count'])->toBe(1)
             ->and($service->totals($days)[0]['holiday_minutes'])->toBe(960);
 
-        [$formatted, $totals] = app(ExportData::class)->timeManagement($filters);
-        expect($formatted[0]['check_in'])->toBe('2026-10-13 23:00')
-            ->and($formatted[1]['check_in'])->toBe('23:00')
-            ->and($formatted[1]['check_out'])->toBe('2026-10-16 07:00')
-            ->and($formatted[1]['shift'])->toBe('Night shift (00:00–08:00)')
-            ->and($formatted[1]['total_time'])->toBe('8:00')
-            ->and($formatted[1]['overtime'])->toBe('1:00')
-            ->and($formatted[2]['type'])->toBe('Night shift · Friday')
-            ->and($formatted[5]['check_out'])->toBe('')
-            ->and($formatted[5]['total_time'])->toBe('1:30')
-            ->and($formatted[5]['overtime'])->toBe('0:00')
-            ->and($formatted[5]['note'])->toBe('Missing check out')
-            ->and($totals[0]['night_total_time'])->toBe('24:00')
-            ->and($totals[0]['total_overtime'])->toBe('11:00');
+        $formatted = app(ExportData::class)->timeManagement($filters);
+        expect(array_keys($formatted))->toBe(['night', 'friday', 'holiday', 'totals'])
+            ->and(array_column($formatted['night'], 'date'))->toBe(['2026-10-14', '2026-10-15', '2026-10-16'])
+            ->and(array_column($formatted['friday'], 'date'))->toBe(['2026-10-16', '2026-10-23'])
+            ->and(array_column($formatted['holiday'], 'date'))->toBe(['2026-10-19', '2026-10-20'])
+            ->and($formatted['night'][0]['check_in'])->toBe('2026-10-13 23:00')
+            ->and($formatted['night'][1]['check_in'])->toBe('23:00')
+            ->and($formatted['night'][1]['check_out'])->toBe('2026-10-16 07:00')
+            ->and($formatted['night'][1]['shift'])->toBe('Night shift (00:00–08:00)')
+            ->and($formatted['night'][1]['total_time'])->toBe('8:00')
+            ->and($formatted['night'][1]['overtime'])->toBe('1:00')
+            ->and($formatted['friday'][1]['check_out'])->toBe('')
+            ->and($formatted['friday'][1]['total_time'])->toBe('1:30')
+            ->and($formatted['friday'][1]['overtime'])->toBe('0:00')
+            ->and($formatted['friday'][1]['note'])->toBe('Missing check out')
+            ->and($formatted['totals'][0]['night_total_time'])->toBe('24:00')
+            ->and($formatted['totals'][0]['total_overtime'])->toBe('11:00');
 
         expect($service->days(ReportFilters::fromArray($company, ['from' => '2026-10-01', 'to' => '2026-10-31',
             'employee_ids' => [$employee->id]])))->toHaveCount(5)
@@ -109,7 +113,7 @@ test('time management selects worked shift nights Fridays and holidays once and 
     });
 });
 
-test('time management appears in exports and writes two localized sheets with selected days', function (): void {
+test('time management export writes four ordered localized sheets that match grouped data', function (string $locale, array $names): void {
     Storage::fake('local');
     Queue::fake();
     $company = Company::factory()->create();
@@ -119,13 +123,15 @@ test('time management appears in exports and writes two localized sheets with se
     $employee = Employee::factory()->create(['branch_id' => $branch->id, 'employee_code' => '0007',
         'work_pattern' => 'shift', 'hire_date' => '2020-01-01']);
     $hr = User::factory()->create(['company_id' => $company->id, 'primary_role' => UserRole::HrStaff]);
-    timeManagementDay($employee, $branch, $policy, '2026-10-16', ['status' => 'rest_day_worked']);
-    timeManagementDay($employee, $branch, $policy, '2026-10-17', ['shift_start' => '00:00:00']);
+    timeManagementDay($employee, $branch, $policy, '2026-10-16', ['shift_start' => '00:00:00',
+        'status' => 'rest_day_worked', 'overtime_minutes' => 60]);
+    timeManagementDay($employee, $branch, $policy, '2026-10-17', ['shift_start' => '00:00:00',
+        'overtime_minutes' => 120]);
 
     $this->actingAs($hr);
     Livewire::test(HrDashboard::class)->assertSee('Time Management');
     $export = app(AttendanceExports::class)->request($company, $hr, 'time_management',
-        ['from' => '2026-10-16', 'to' => '2026-10-17', 'branch_ids' => [$branch->id]], 'ar');
+        ['from' => '2026-10-16', 'to' => '2026-10-17', 'branch_ids' => [$branch->id]], $locale);
     app()->call([new GenerateAttendanceExportJob($export->id), 'handle']);
     $export->refresh();
 
@@ -140,19 +146,42 @@ test('time management appears in exports and writes two localized sheets with se
         $sheets[$sheet->getName()] = $rows;
     }
     $reader->close();
-    expect(array_keys($sheets))->toBe(['الأيام', 'المجموع لكل موظف'])
+
+    app()->setLocale($locale);
+    $filters = ReportFilters::fromArray($company, $export->filters);
+    $data = app(ExportData::class);
+    $grouped = $data->timeManagement($filters);
+    // The reader skips the blank spacer row after the header block.
+    $headingsAt = count($data->header($export, $company, $filters));
+    expect(array_keys($sheets))->toBe($names)
         ->and($export->row_count)->toBe(2)
-        ->and(collect($sheets['الأيام'])->pluck(0)->filter(fn ($value) => $value === '0007'))->toHaveCount(2)
-        ->and($sheets['المجموع لكل موظف'][1][0])->toBe('0007')
-        ->and($sheets['المجموع لكل موظف'][1][3])->toBe(1)
-        ->and($sheets['المجموع لكل موظف'][1][4])->toBe('8:00')
-        ->and($sheets['المجموع لكل موظف'][1][5])->toBe(1)
-        ->and($sheets['المجموع لكل موظف'][1][6])->toBe('8:00')
-        ->and($sheets['المجموع لكل موظف'][2][0])->toBe('الإجمالي')
-        ->and($sheets['المجموع لكل موظف'][2][4])->toBe('8:00');
-    $zip = new ZipArchive;
-    $zip->open(Storage::disk('local')->path($export->file_path));
-    expect($zip->getFromName('xl/worksheets/sheet1.xml'))->toContain('rightToLeft="1"')
-        ->and($zip->getFromName('xl/worksheets/sheet2.xml'))->toContain('rightToLeft="1"');
-    $zip->close();
-});
+        ->and(ExportData::TIME_MANAGEMENT_COLUMNS)->not->toContain('type')
+        ->and(array_column($grouped['night'], 'date'))->toBe(['2026-10-16', '2026-10-17'])
+        ->and(array_column($grouped['friday'], 'date'))->toBe(['2026-10-16'])
+        ->and($grouped['holiday'])->toBe([])
+        ->and($grouped['totals'][0]['total_overtime'])->toBe('3:00');
+    foreach (['night', 'friday', 'holiday'] as $index => $type) {
+        $rows = $sheets[$names[$index]];
+        expect($rows[0][0])->toBe(__('messages.export_ui.report'))
+            ->and($rows[$headingsAt])->toBe(array_map(
+                fn (string $column): string => __('messages.export_ui.columns.'.$column),
+                ExportData::TIME_MANAGEMENT_COLUMNS))
+            ->and(array_slice($rows, $headingsAt + 1))->toBe(array_map('array_values', $grouped[$type]));
+    }
+    expect($sheets[$names[3]][0])->toBe(array_map(
+        fn (string $column): string => __('messages.export_ui.columns.'.$column),
+        ExportData::TIME_MANAGEMENT_TOTAL_COLUMNS))
+        ->and($sheets[$names[3]][1])->toBe(array_values($grouped['totals'][0]))
+        ->and($sheets[$names[3]][2])->toBe(array_values(app(TimeManagementDisplay::class)->totalRow($grouped['totals'])));
+    if ($locale === 'ar') {
+        $zip = new ZipArchive;
+        $zip->open(Storage::disk('local')->path($export->file_path));
+        foreach (range(1, 4) as $sheet) {
+            expect($zip->getFromName('xl/worksheets/sheet'.$sheet.'.xml'))->toContain('rightToLeft="1"');
+        }
+        $zip->close();
+    }
+})->with([
+    'English' => ['en', ['Night shifts', 'Fridays', 'Holidays', 'Totals per employee']],
+    'Arabic' => ['ar', ['الورديات الليلية', 'أيام الجمعة', 'العطل الرسمية', 'المجموع لكل موظف']],
+]);

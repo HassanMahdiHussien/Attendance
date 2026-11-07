@@ -56,6 +56,7 @@ test('HR journey groups retain every accessible admin destination', function ():
     expect(array_column($groups['check'], 'label'))->toContain(__('messages.attendance_ui.devices_title'));
     expect(array_column($groups['review'], 'label'))->toContain(__('messages.office_ui.daily_title'));
     expect(array_column($groups['results'], 'label'))->toContain(__('messages.export_ui.exports'));
+    expect(array_column($groups['results'], 'label'))->toContain(__('messages.export_ui.kinds.time_management'));
     expect(array_column($groups['setup'], 'label'))->toContain(__('Employee records'));
     expect(array_column($groups['setup'], 'url'))->toContain(AdminNav::items($user)[0]['url']);
 });

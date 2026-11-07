@@ -750,7 +750,8 @@ return [
             'time_management' => 'Time Management',
         ],
         'time_management' => [
-            'days_sheet' => 'Days', 'totals_sheet' => 'Totals per employee',
+            'night_sheet' => 'Night shifts', 'friday_sheet' => 'Fridays',
+            'holiday_sheet' => 'Holidays', 'totals_sheet' => 'Totals per employee',
             'types' => ['night' => 'Night shift', 'friday' => 'Friday', 'holiday' => 'Holiday'],
             'missing_check_out' => 'Missing check out',
         ],
@@ -783,6 +784,11 @@ return [
             'holiday_count' => 'Holidays worked', 'holiday_total_time' => 'Holiday total time',
             'total_overtime' => 'Total overtime',
         ],
+    ],
+    'time_management_ui' => [
+        'month' => 'Month', 'export_excel' => 'Export to Excel', 'loading' => 'Loading report…',
+        'employees' => 'Employees', 'rows' => 'Rows', 'nights' => 'Nights', 'fridays' => 'Fridays',
+        'holidays' => 'Holidays', 'overtime' => 'Total overtime', 'missing_check_outs' => 'Missing check outs',
     ],
     'duration_text' => ['hours' => ':hours h', 'minutes' => ':minutes min', 'hours_minutes' => ':hours h :minutes min'],
     'day_presentation' => [
