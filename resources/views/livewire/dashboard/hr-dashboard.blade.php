@@ -79,7 +79,7 @@
         <form wire:submit="requestExport" class="mt-3 flex flex-wrap items-end gap-3">
             <label class="text-sm">{{ __('messages.export_ui.report') }}
                 <select wire:model="exportKind" class="ui-control block rounded-xl border border-gray-200 px-3 py-2">
-                    @foreach (['lateness_reconciliation', 'absence', 'missing_punches', 'leave_and_credit', 'restaurant_usage', 'data_issues', 'overtime', 'compensatory_days'] as $kind)
+                    @foreach (['lateness_reconciliation', 'absence', 'missing_punches', 'leave_and_credit', 'restaurant_usage', 'data_issues', 'overtime', 'compensatory_days', 'time_management'] as $kind)
                         <option value="{{ $kind }}">{{ __('messages.export_ui.kinds.'.$kind) }}</option>
                     @endforeach
                 </select>

@@ -13,8 +13,11 @@ use App\Models\Leave\RequestDay;
 use App\Models\Leave\RequestDecision;
 use App\Services\Attendance\FollowUp\FollowUpCases;
 use App\Services\Attendance\Overtime;
+use App\Services\Attendance\ShiftDisplay;
 use App\Services\Leave\LeaveBalances;
 use App\Services\Leave\LeaveExplanation;
+use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use Generator;
 
 class ExportData
@@ -42,7 +45,13 @@ class ExportData
 
     public const CASE_COLUMNS = ['employee_code', 'employee_name', 'date', 'status', 'issue_type', 'minutes', 'request_numbers', 'routes'];
 
-    public function __construct(private AttendanceSummary $summary, private LastUpdate $lastUpdate, private LeaveExplanation $explanations, private Overtime $overtime) {}
+    public const TIME_MANAGEMENT_COLUMNS = ['employee_code', 'employee_name', 'department', 'date', 'weekday',
+        'type', 'shift', 'check_in', 'check_out', 'total_time', 'overtime', 'note'];
+
+    public const TIME_MANAGEMENT_TOTAL_COLUMNS = ['employee_code', 'employee_name', 'department', 'night_count',
+        'night_total_time', 'friday_count', 'friday_total_time', 'holiday_count', 'holiday_total_time', 'total_overtime'];
+
+    public function __construct(private AttendanceSummary $summary, private LastUpdate $lastUpdate, private LeaveExplanation $explanations, private Overtime $overtime, private TimeManagementReport $timeManagement) {}
 
     public function columns(string $kind): array
     {
@@ -53,6 +62,7 @@ class ExportData
             'overtime' => self::OVERTIME_COLUMNS,
             'compensatory_days' => self::ENTITLEMENT_COLUMNS,
             'follow_up_cases' => self::CASE_COLUMNS,
+            'time_management' => self::TIME_MANAGEMENT_COLUMNS,
             default => self::DAY_COLUMNS,
         };
     }
@@ -99,6 +109,11 @@ class ExportData
 
     public function rows(AttendanceExport $export, ReportFilters $filters): Generator
     {
+        if ($export->kind === 'time_management') {
+            yield from $this->timeManagementDays($this->timeManagement->days($filters));
+
+            return;
+        }
         if ($export->kind === 'restaurant_usage') {
             yield from $this->meals($filters);
 
@@ -243,6 +258,62 @@ class ExportData
                 ];
             }
         }
+    }
+
+    public function timeManagement(ReportFilters $filters): array
+    {
+        $days = $this->timeManagement->days($filters);
+
+        return [iterator_to_array($this->timeManagementDays($days), false),
+            array_map(fn (array $row): array => [
+                'employee_code' => $row['employee_code'], 'employee_name' => $row['employee_name'],
+                'department' => $row['department'], 'night_count' => $row['night_count'],
+                'night_total_time' => self::hours($row['night_minutes']), 'friday_count' => $row['friday_count'],
+                'friday_total_time' => self::hours($row['friday_minutes']), 'holiday_count' => $row['holiday_count'],
+                'holiday_total_time' => self::hours($row['holiday_minutes']),
+                'total_overtime' => self::hours($row['overtime_minutes']),
+            ], $this->timeManagement->totals($days))];
+    }
+
+    private function timeManagementDays(array $days): Generator
+    {
+        foreach ($days as $day) {
+            $date = $day['date'];
+            $types = [];
+            foreach (['night', 'friday', 'holiday'] as $type) {
+                if ($day[$type]) {
+                    $types[] = __('messages.export_ui.time_management.types.'.$type);
+                }
+            }
+            $shiftName = ShiftDisplay::name('shift', $day['shift_start']);
+            $hours = ShiftDisplay::hours($day['shift_start'], $day['shift_minutes']);
+            yield [
+                'employee_code' => $day['employee_code'], 'employee_name' => $day['employee_name'],
+                'department' => $day['department'], 'date' => $date,
+                'weekday' => __('messages.office_ui.weekdays.'.CarbonImmutable::parse($date)->isoWeekday()),
+                'type' => implode(' · ', $types),
+                'shift' => $shiftName === null ? '' : $shiftName.($hours === null ? '' : ' ('.$hours.')'),
+                'check_in' => self::punch($day['first_in'], $date),
+                'check_out' => self::punch($day['last_out'], $date),
+                'total_time' => self::hours($day['presence_minutes']),
+                'overtime' => self::hours($day['overtime_minutes']),
+                'note' => $day['last_out'] === null ? __('messages.export_ui.time_management.missing_check_out') : '',
+            ];
+        }
+    }
+
+    private static function punch(?CarbonInterface $time, string $workDate): string
+    {
+        if ($time === null) {
+            return '';
+        }
+
+        return ($time->toDateString() === $workDate ? '' : $time->toDateString().' ').$time->format('H:i');
+    }
+
+    private static function hours(int $minutes): string
+    {
+        return intdiv($minutes, 60).':'.str_pad((string) ($minutes % 60), 2, '0', STR_PAD_LEFT);
     }
 
     public function statement(AttendanceExport $export, Company $company, ReportFilters $filters): array
