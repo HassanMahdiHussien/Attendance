@@ -25,7 +25,10 @@ class TimeManagementPage extends AttendancePage
     protected string $view = 'filament.admin.pages.attendance.time-management';
 
     #[Url]
-    public string $month = '';
+    public string $from = '';
+
+    #[Url]
+    public string $to = '';
 
     #[Url]
     public string $branchId = '';
@@ -51,15 +54,39 @@ class TimeManagementPage extends AttendancePage
     public function mount(): void
     {
         parent::mount();
-        $this->month = (string) request()->query('month', CarbonImmutable::now('Asia/Baghdad')->startOfMonth()->subMonth()->format('Y-m'));
+        $previous = CarbonImmutable::now('Asia/Baghdad')->startOfMonth()->subMonth();
+        $month = (string) request()->query('month', '');
+        if (preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $month) === 1) {
+            // Older links carried a whole month.
+            $previous = CarbonImmutable::parse($month.'-01');
+        }
+        $this->from = (string) request()->query('from', $previous->toDateString());
+        $this->to = (string) request()->query('to', $previous->endOfMonth()->toDateString());
         $tab = request()->query('tab', 'night');
         $this->tab = in_array($tab, ['night', 'friday', 'holiday', 'totals'], true) ? $tab : 'night';
     }
 
-    public function updatedMonth(): void
+    public function updatedFrom(): void
     {
+        if (self::isDate($this->from) && self::isDate($this->to) && $this->to < $this->from) {
+            $this->to = $this->from;
+        }
         $this->resetDayPages();
         $this->exportQueued = false;
+    }
+
+    public function updatedTo(): void
+    {
+        if (self::isDate($this->from) && self::isDate($this->to) && $this->to < $this->from) {
+            $this->from = $this->to;
+        }
+        $this->resetDayPages();
+        $this->exportQueued = false;
+    }
+
+    private static function isDate(string $value): bool
+    {
+        return preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) === 1 && checkdate((int) substr($value, 5, 2), (int) substr($value, 8, 2), (int) substr($value, 0, 4));
     }
 
     public function updatedBranchId(): void
@@ -120,10 +147,10 @@ class TimeManagementPage extends AttendancePage
     public function filters(): ReportFilters
     {
         $this->company();
-        abort_unless(preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $this->month)
-            && (int) substr($this->month, 0, 4) > 0, 422);
-        $from = $this->month.'-01';
-        $to = CarbonImmutable::parse($from)->endOfMonth()->toDateString();
+        abort_unless(self::isDate($this->from) && self::isDate($this->to) && $this->from <= $this->to
+            && CarbonImmutable::parse($this->from)->diffInDays(CarbonImmutable::parse($this->to)) <= 366, 422);
+        $from = $this->from;
+        $to = $this->to;
 
         return ReportFilters::fromArray($this->company(), [
             'from' => $from, 'to' => $to,

@@ -103,6 +103,9 @@ class ExportData
         if ($export->kind === 'overtime') {
             $header[] = [__('messages.overtime_ui.matching_note')];
         }
+        if ($export->kind === 'time_management') {
+            $header[] = [__('messages.time_management_ui.time_note')];
+        }
 
         return $header;
     }

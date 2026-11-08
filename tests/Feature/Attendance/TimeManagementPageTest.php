@@ -56,7 +56,7 @@ test('HR sees the exact export day and employee total values with a missing chec
     $filters = ReportFilters::fromArray($this->company, ['from' => '2026-10-01', 'to' => '2026-10-31']);
     $grouped = app(ExportData::class)->timeManagement($filters);
 
-    $page = Livewire::test(TimeManagementPage::class)->set('month', '2026-10');
+    $page = Livewire::test(TimeManagementPage::class)->set('from', '2026-10-01')->set('to', '2026-10-31');
     expect($page->instance()->report())->toBe($grouped);
     expect($page->instance()->summary($grouped))->toMatchArray([
         'rows' => 1, 'nights' => 1, 'fridays' => 1, 'holidays' => 0,
@@ -93,13 +93,13 @@ test('each day tab contains only its category and an overlapping day appears twi
         ['shift_start' => '08:00:00', 'overtime_basis' => 'holiday']);
     timeManagementPageDay($both, $this->branch, $this->policy, '2026-10-16');
 
-    Livewire::test(TimeManagementPage::class)->set('month', '2026-10')
+    Livewire::test(TimeManagementPage::class)->set('from', '2026-10-01')->set('to', '2026-10-31')
         ->assertSee('NIGHT')->assertSee('BOTH')->assertDontSee('FRIDAY')->assertDontSee('HOLIDAY')
         ->call('showFriday')->assertSee('FRIDAY')->assertSee('BOTH')->assertDontSee('NIGHT')->assertDontSee('HOLIDAY')
         ->call('showHoliday')->assertSee('HOLIDAY')->assertDontSee('BOTH')->assertDontSee('FRIDAY')
         ->call('showTotals')->assertSee('NIGHT')->assertSee('FRIDAY')->assertSee('HOLIDAY')->assertSee('BOTH');
 
-    Livewire::withQueryParams(['month' => '2026-10', 'tab' => 'friday'])
+    Livewire::withQueryParams(['from' => '2026-10-01', 'to' => '2026-10-31', 'tab' => 'friday'])
         ->test(TimeManagementPage::class)->assertSet('tab', 'friday')->assertSee('FRIDAY')->assertDontSee('NIGHT');
 });
 
@@ -110,17 +110,17 @@ test('month branch and department select only matching report days', function ()
     timeManagementPageDay($second, $this->secondBranch, $this->policy, '2026-10-16');
     timeManagementPageDay($first, $this->branch, $this->policy, '2026-09-15');
 
-    Livewire::test(TimeManagementPage::class)->set('month', '2026-10')
+    Livewire::test(TimeManagementPage::class)->set('from', '2026-10-01')->set('to', '2026-10-31')
         ->assertSee('A001')->assertSee('B002')
         ->set('branchId', (string) $this->branch->id)->assertSee('A001')->assertDontSee('B002')
         ->set('branchId', '')->set('department', 'Finance')->assertSee('B002')->assertDontSee('A001')
-        ->set('month', '2026-09')->assertDontSee('B002');
+        ->set('from', '2026-09-01')->set('to', '2026-09-30')->assertDontSee('B002');
 });
 
 test('export action queues the same filtered month in the UI locale', function (): void {
     $this->hr->forceFill(['locale' => 'ar'])->save();
     app()->setLocale('ar');
-    Livewire::test(TimeManagementPage::class)->set('month', '2026-10')
+    Livewire::test(TimeManagementPage::class)->set('from', '2026-10-01')->set('to', '2026-10-31')
         ->set('branchId', (string) $this->branch->id)->set('department', 'Finance')
         ->call('requestExport')->assertSet('exportQueued', true);
 
@@ -140,7 +140,7 @@ test('page denies a non HR user and never shows another company', function (): v
         $employee = timeManagementPageEmployee('FOREIGN', $branch);
         timeManagementPageDay($employee, $branch, $policy, '2026-10-16');
     });
-    Livewire::test(TimeManagementPage::class)->set('month', '2026-10')->assertDontSee('FOREIGN');
+    Livewire::test(TimeManagementPage::class)->set('from', '2026-10-01')->set('to', '2026-10-31')->assertDontSee('FOREIGN');
 
     $viewer = User::factory()->create(['company_id' => $this->company->id, 'primary_role' => UserRole::HrStaff, 'is_active' => false]);
     actingInAdminTenant($this, $viewer, $this->company);
@@ -152,11 +152,31 @@ test('days paginate after fifty rows', function (): void {
         $employee = timeManagementPageEmployee(sprintf('PAGE%03d', $i), $this->branch);
         timeManagementPageDay($employee, $this->branch, $this->policy, '2026-10-16');
     }
-    $page = Livewire::test(TimeManagementPage::class)->set('month', '2026-10');
+    $page = Livewire::test(TimeManagementPage::class)->set('from', '2026-10-01')->set('to', '2026-10-31');
     $page->assertSee('PAGE001')->assertDontSee('PAGE051')->call('gotoPage', 2, 'nightPage')
         ->assertSee('PAGE051')->assertDontSee('PAGE001')
         ->call('showFriday')->assertSee('PAGE001')->assertDontSee('PAGE051')
         ->call('gotoPage', 2, 'fridayPage')->assertSee('PAGE051')->assertDontSee('PAGE001')
         ->call('showNight')->assertSee('PAGE051')->assertDontSee('PAGE001');
     expect($page->instance()->daysPage($page->instance()->report()['night'], 'night')->total())->toBe(51);
+});
+
+test('start and end dates select the days between them and never cross', function (): void {
+    $employee = timeManagementPageEmployee('RANGE01', $this->branch);
+    timeManagementPageDay($employee, $this->branch, $this->policy, '2026-10-09');
+    timeManagementPageDay($employee, $this->branch, $this->policy, '2026-10-16');
+
+    $page = Livewire::test(TimeManagementPage::class)->set('from', '2026-10-10')->set('to', '2026-10-20');
+    expect(array_column($page->instance()->report()['night'], 'date'))->toBe(['2026-10-16']);
+    $page->assertSee(__('messages.time_management_ui.time_note'));
+
+    $page->set('to', '2026-10-05');
+    expect($page->get('from'))->toBe('2026-10-05');
+    $page->set('from', '2026-10-12');
+    expect($page->get('to'))->toBe('2026-10-12');
+});
+
+test('an old month link opens that whole month', function (): void {
+    $page = Livewire::withQueryParams(['month' => '2026-09'])->test(TimeManagementPage::class);
+    expect($page->get('from'))->toBe('2026-09-01')->and($page->get('to'))->toBe('2026-09-30');
 });

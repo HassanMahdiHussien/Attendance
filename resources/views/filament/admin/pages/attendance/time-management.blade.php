@@ -9,14 +9,16 @@
     <div class="space-y-5">
         <x-ui.card>
             <div class="flex flex-wrap items-end gap-4">
-                <label class="text-sm">{{ __('messages.time_management_ui.month') }} <input type="month" wire:model.live="month" dir="ltr" class="ui-control block rounded-xl border border-gray-200 px-3 py-2"></label>
+                <label class="text-sm">{{ __('messages.time_management_ui.from') }} <input type="date" wire:model.live="from" dir="ltr" class="ui-control block rounded-xl border border-gray-200 px-3 py-2"></label>
+                <label class="text-sm">{{ __('messages.time_management_ui.to') }} <input type="date" wire:model.live="to" dir="ltr" class="ui-control block rounded-xl border border-gray-200 px-3 py-2"></label>
                 <label class="text-sm">{{ __('messages.office_ui.branch') }} <select wire:model.live="branchId" class="ui-control block rounded-xl border border-gray-200 px-3 py-2"><option value="">{{ __('messages.office_ui.all') }}</option>@foreach ($this->branches() as $id => $name)<option value="{{ $id }}">{{ $name }}</option>@endforeach</select></label>
                 <label class="text-sm">{{ __('messages.export_ui.columns.department') }} <select wire:model.live="department" class="ui-control block rounded-xl border border-gray-200 px-3 py-2"><option value="">{{ __('messages.office_ui.all') }}</option>@foreach ($this->departments() as $name)<option value="{{ $name }}">{{ $name }}</option>@endforeach</select></label>
                 <button type="button" wire:click="requestExport" class="ui-button ui-button-primary">{{ __('messages.time_management_ui.export_excel') }}</button>
             </div>
-            <p wire:loading wire:target="month,branchId,department" class="mt-3 text-sm">{{ __('messages.time_management_ui.loading') }}</p>
+            <p wire:loading wire:target="from,to,branchId,department" class="mt-3 text-sm">{{ __('messages.time_management_ui.loading') }}</p>
             @if ($exportQueued)<p class="mt-3 text-sm text-green-800">{{ __('messages.export_ui.queued_notice') }} <a class="ui-link" href="{{ \App\Filament\Admin\Pages\Attendance\AttendanceExportsPage::getUrl(panel: 'admin', tenant: $this->company()) }}">{{ __('messages.export_ui.exports') }}</a></p>@endif
         </x-ui.card>
+        <p class="text-sm text-gray-600">{{ __('messages.time_management_ui.time_note') }}</p>
         <div class="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
             @foreach (['employees', 'rows', 'nights', 'fridays', 'holidays', 'overtime', 'missing_check_outs'] as $key)
                 <x-ui.card><span class="text-sm text-gray-600">{{ __('messages.time_management_ui.'.$key) }}</span><strong class="mt-1 block font-mono text-xl"><bdi dir="ltr">{{ $summary[$key] }}</bdi></strong></x-ui.card>

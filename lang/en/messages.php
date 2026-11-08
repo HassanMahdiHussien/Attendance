@@ -786,7 +786,8 @@ return [
         ],
     ],
     'time_management_ui' => [
-        'month' => 'Month', 'export_excel' => 'Export to Excel', 'loading' => 'Loading report…',
+        'from' => 'Start date', 'to' => 'End date', 'export_excel' => 'Export to Excel', 'loading' => 'Loading report…',
+        'time_note' => 'Total time is the time from check in to check out. Overtime is the part the overtime rules count as extra: on Fridays and holidays all time worked (in 15-minute steps); on a normal night only the time after 08:00, when it is 30 minutes or more.',
         'employees' => 'Employees', 'rows' => 'Rows', 'nights' => 'Nights', 'fridays' => 'Fridays',
         'holidays' => 'Holidays', 'overtime' => 'Total overtime', 'missing_check_outs' => 'Missing check outs',
     ],
