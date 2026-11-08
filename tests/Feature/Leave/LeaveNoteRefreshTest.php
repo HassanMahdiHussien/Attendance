@@ -113,6 +113,8 @@ test('refresh counts without writing then audits and queues only this tenants ap
         ->and(AuditLog::query()->where('action', 'leave.description.period_refreshed')->count())->toBe(0);
     Queue::assertNotPushed(ReconcileLeaveJob::class);
 
+    // A console run starts without a company, as on the server.
+    app(TenantContext::class)->clear();
     $this->artisan('attendance:leave-notes-refresh-periods', ['--company' => $this->company->id])
         ->expectsOutputToContain('Readings changed: 1; readings now applying: 1; employees to replay: 1.')
         ->assertExitCode(0);

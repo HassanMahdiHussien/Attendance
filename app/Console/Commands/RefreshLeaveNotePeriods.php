@@ -80,7 +80,9 @@ class RefreshLeaveNotePeriods extends Command
         });
 
         if (! $this->option('dry-run')) {
-            $triggers->dispatch($company->id, array_values($employeeIds), 'description');
+            // Marking months dirty and queueing the replay are tenant-scoped; a console run has no company of its own.
+            app(TenantContext::class)->runForCompany($company,
+                fn () => $triggers->dispatch($company->id, array_values($employeeIds), 'description'));
         }
         $this->line(__('messages.leave_descriptions.refresh_counts', [
             'changed' => $changed, 'applying' => $applying, 'employees' => count($employeeIds),
