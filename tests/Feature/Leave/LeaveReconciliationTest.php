@@ -28,6 +28,7 @@ use App\Services\Attendance\Reporting\ExportData;
 use App\Services\Attendance\Reporting\ReportFilters;
 use App\Services\Leave\DayReconciliation;
 use App\Services\Leave\LeaveActions;
+use App\Services\Leave\LeaveDescriptionReader;
 use App\Services\Leave\LeaveSettings;
 use App\Services\Leave\LeaveTypes;
 use App\Services\Leave\PendingReconciliation;
@@ -92,7 +93,7 @@ test('same day leave settles a balance and surplus credit pays later lateness', 
     expect($credit->explanation['request'])->toBe('FORM-A')->and($credit->minutes)->toBe(15);
 });
 
-test('confirmed hourly period takes older minutes first and undo and cancellation replay cleanly', function (): void {
+test('proposed hourly period takes older minutes first and rejection and cancellation replay cleanly', function (): void {
     $this->type->update(['name' => 'Overtime Equivelant Leave']);
     $request = reconciledRequest($this->employee, $this->type, 'INVENTED-HOURS', '2026-10-19');
     $batch = ImportBatch::factory()->create(['company_id' => $this->company->id]);
@@ -110,7 +111,7 @@ test('confirmed hourly period takes older minutes first and undo and cancellatio
     reconciledDay($this->employee, '2026-10-19', 'present', early: 180);
     replayLeave($this->company, $this->employee);
     $before = (int) Allocation::query()->whereNull('superseded_by_run_id')->where('target_day_id', $july->id)->sum('minutes');
-    expect($before)->toBe(60);
+    expect($before)->toBe(120);
     $reading->update(['status' => 'confirmed']);
     replayLeave($this->company, $this->employee);
     expect((int) Allocation::query()->whereNull('superseded_by_run_id')->where('target_day_id', $july->id)->sum('minutes'))->toBe(120)
@@ -134,12 +135,39 @@ test('confirmed hourly period takes older minutes first and undo and cancellatio
     $active = Allocation::query()->whereNull('superseded_by_run_id')->pluck('id')->all();
     replayLeave($this->company, $this->employee);
     expect(Allocation::query()->whereNull('superseded_by_run_id')->pluck('id')->all())->toBe($active);
-    $reading->update(['status' => 'proposed']);
+    $reading->update(['status' => 'rejected']);
     replayLeave($this->company, $this->employee);
     expect((int) Allocation::query()->whereNull('superseded_by_run_id')->where('target_day_id', $july->id)->sum('minutes'))->toBe(60);
     app(LeaveActions::class)->cancel($request, 'Invented correction', $this->actor);
     replayLeave($this->company, $this->employee);
     expect(Allocation::query()->whereNull('superseded_by_run_id')->count())->toBe(0);
+});
+
+test('hours last week cover Sunday early leave before January absence', function (): void {
+    $this->type->update(['name' => 'Annual Leave']);
+    $request = reconciledRequest($this->employee, $this->type, 'FORM-WEEK', '2026-11-02');
+    $batch = ImportBatch::factory()->create(['company_id' => $this->company->id]);
+    $version = RequestVersion::factory()->create(['company_id' => $this->company->id,
+        'request_id' => $request->id, 'batch_id' => $batch->id, 'row_number' => 2,
+        'values' => ['description' => 'Hours last week'], 'raw_values' => []]);
+    $request->update(['current_version_id' => $version->id]);
+    $period = app(LeaveDescriptionReader::class)->hourlyPeriod('Hours last week', '2026-11-02', 'high');
+    DescriptionReading::create(['company_id' => $this->company->id, 'request_id' => $request->id,
+        'text_hash' => hash('sha256', 'Hours last week'), 'category' => 'hourly_settlement',
+        'worked_dates' => [], 'status' => 'proposed'] + $period);
+    $old = reconciledDay($this->employee, '2026-01-05', 'absent');
+    $sunday = reconciledDay($this->employee, '2026-11-01', 'present', early: 72);
+    reconciledDay($this->employee, '2026-11-02', 'present');
+    replayLeave($this->company, $this->employee);
+
+    $periodAllocation = Allocation::query()->whereNull('superseded_by_run_id')
+        ->where('target_day_id', $sunday->id)->sole();
+    $creditAllocation = Allocation::query()->whereNull('superseded_by_run_id')
+        ->where('target_day_id', $old->id)->firstOrFail();
+    expect($periodAllocation->minutes)->toBe(72)
+        ->and($periodAllocation->explanation['code'])->toBe('leave_description_period')
+        ->and($creditAllocation->minutes)->toBe(168)
+        ->and($creditAllocation->source_credit_id)->not->toBeNull();
 });
 
 test('a half day leaves four hours of absence and a full day closes it', function (): void {

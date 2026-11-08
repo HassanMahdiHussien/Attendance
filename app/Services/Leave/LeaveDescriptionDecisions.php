@@ -72,7 +72,8 @@ class LeaveDescriptionDecisions
                 'before' => $before, 'after' => $decision, 'category' => $reading->category,
                 'request_id' => $reading->request_id,
             ], $actor);
-            if ($before === 'confirmed' || $decision === 'confirmed') {
+            if ($before === 'confirmed' || $decision === 'confirmed'
+                || ($reading->category === 'hourly_settlement' && in_array('proposed', [$before, $decision], true))) {
                 $employeeId = $reading->request?->employee_id;
                 if ($employeeId !== null) {
                     $this->triggers->dispatch($company->id, [$employeeId], 'description_decision');

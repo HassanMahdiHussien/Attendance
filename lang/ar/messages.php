@@ -1137,8 +1137,8 @@ return [
     ],
     'leave_descriptions' => [
         'title' => 'ملاحظات الإجازات', 'review_count' => ':count ملاحظة إجازة للاطلاع',
-        'read_only_intro' => 'قرأ النظام الملاحظات التي كتبها الموظفون على الإجازات المعتمدة وصنّفها. هذه الصفحة للاطلاع فقط ولا تغيّر أي حساب.',
-        'note_count' => ':count ملاحظة على إجازات معتمدة', 'show_by_category' => 'عرض حسب التصنيف',
+        'read_only_intro' => 'يقرأ النظام ملاحظات الإجازات ويعرض أثرها على الحضور. عرض هذه الصفحة لا يغيّر أي حساب.',
+        'note_count' => ':count ملاحظة إجازة', 'show_by_category' => 'عرض حسب التصنيف',
         'failures' => 'فشلت قراءة :count وصف', 'category' => 'التصنيف',
         'branch' => 'الفرع', 'employee_wrote' => 'كتب الموظف', 'understood' => 'فهم النظام',
         'waiting' => 'بانتظار القراءة', 'failed' => 'فشلت القراءة',
@@ -1155,6 +1155,12 @@ return [
         'hours_suffix' => ' (:hours ساعة)', 'low_confidence' => 'غير متأكد، راجع نص الملاحظة',
         'no_rest_credit' => 'تذكر الاستمارة عملاً بتاريخ :date ولا يوجد رصيد يوم راحة لذلك التاريخ',
         'period_shortfall' => 'الفترة المذكورة فيها دقائق غير مسواة أقل من مدة هذه الإجازة',
+        'refresh_company_required' => 'يجب تحديد رقم شركة صالح.',
+        'refresh_description' => 'إعادة حساب فترات ملاحظات الإجازة بالساعات وتوزيعها',
+        'refresh_counts' => 'القراءات المتغيرة: :changed؛ القراءات المطبقة الآن: :applying؛ الموظفون لإعادة الحساب: :employees.',
+        'outcomes' => ['applied' => 'مطبّقة', 'not_approved' => 'الإجازة غير معتمدة',
+            'type_mismatch' => 'نوع الإجازة لا يسمح بهذه التسوية', 'no_period' => 'لم تُحدّد فترة في الملاحظة',
+            'rejected' => 'مرفوضة', 'low_confidence' => 'درجة الثقة بالقراءة منخفضة'],
         'categories' => [
             'compensation_for_day' => 'تعويض عن يوم عمل',
             'hourly_settlement' => 'تسوية إجازة ساعات سابقة', 'work_from_home' => 'عمل من المنزل',

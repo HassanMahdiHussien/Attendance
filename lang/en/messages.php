@@ -1137,8 +1137,8 @@ return [
     ],
     'leave_descriptions' => [
         'title' => 'Leave notes', 'review_count' => ':count leave notes to view',
-        'read_only_intro' => 'The system read the notes employees wrote on approved leave forms and sorted them. For viewing only: this page changes no calculation.',
-        'note_count' => ':count notes on approved leave', 'show_by_category' => 'Show by category',
+        'read_only_intro' => 'The system reads leave notes and shows how they affect attendance. Viewing this page changes no calculation.',
+        'note_count' => ':count leave notes', 'show_by_category' => 'Show by category',
         'failures' => ':count readings failed', 'category' => 'Category',
         'branch' => 'Branch', 'employee_wrote' => 'Employee wrote', 'understood' => 'System understood',
         'waiting' => 'Waiting for reading', 'failed' => 'Reading failed',
@@ -1155,6 +1155,12 @@ return [
         'hours_suffix' => ' (:hours hours)', 'low_confidence' => 'Not sure, read the note',
         'no_rest_credit' => 'Form says worked on :date, no rest-day credit for that date',
         'period_shortfall' => 'The described period has fewer unreconciled minutes than this leave',
+        'refresh_company_required' => 'A valid company ID is required.',
+        'refresh_description' => 'Recompute hourly leave-note periods and replay affected allocations',
+        'refresh_counts' => 'Readings changed: :changed; readings now applying: :applying; employees to replay: :employees.',
+        'outcomes' => ['applied' => 'Applied', 'not_approved' => 'Leave is not approved',
+            'type_mismatch' => 'Leave type does not allow this settlement', 'no_period' => 'No period found in the note',
+            'rejected' => 'Rejected', 'low_confidence' => 'Reading confidence is low'],
         'categories' => [
             'compensation_for_day' => 'Compensation for a worked day',
             'hourly_settlement' => 'Earlier hourly leave settlement', 'work_from_home' => 'Work from home',

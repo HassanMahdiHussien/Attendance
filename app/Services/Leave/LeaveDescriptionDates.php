@@ -92,12 +92,33 @@ class LeaveDescriptionDates
         }
         if ($ranges === []) {
             $dates = $this->dates($text, $startDate);
-            if ($dates['dates'] === []) {
-                return null;
+            if ($dates['dates'] !== []) {
+                return ['from' => min($dates['dates']), 'to' => max($dates['dates']),
+                    'inferred_year' => $dates['inferred_year']];
             }
 
-            return ['from' => min($dates['dates']), 'to' => max($dates['dates']),
-                'inferred_year' => $dates['inferred_year']];
+            if ($startDate === null) {
+                return null;
+            }
+            foreach (config('leave_description_lexicon.relative_periods') as $kind => $phrases) {
+                foreach ($phrases as $phrase) {
+                    if (preg_match('/(?<![\pL\pN])'.preg_quote($phrase, '/').'(?![\pL\pN])/iu', $text) !== 1) {
+                        continue;
+                    }
+                    $anchor = CarbonImmutable::parse($startDate, 'Asia/Baghdad');
+                    [$from, $to] = match ($kind) {
+                        'last_week' => [$anchor->subDays(7), $anchor->subDay()],
+                        'this_week' => [$anchor->subDays(6), $anchor],
+                        'yesterday' => [$anchor->subDay(), $anchor->subDay()],
+                        'last_month' => [$anchor->subMonthNoOverflow()->startOfMonth(), $anchor->subMonthNoOverflow()->endOfMonth()],
+                    };
+
+                    return ['from' => $from->toDateString(), 'to' => $to->toDateString(),
+                        'inferred_year' => false, 'relative' => true];
+                }
+            }
+
+            return null;
         }
 
         return ['from' => min(array_column($ranges, 0)), 'to' => max(array_column($ranges, 1)),

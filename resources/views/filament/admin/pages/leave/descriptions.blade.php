@@ -62,15 +62,13 @@
                     @if ($reading->hours !== null){{ __('messages.leave_descriptions.hours_suffix', ['hours' => (float) $reading->hours]) }}@endif
                 </p>
                 @if ($reading->confidence === 'low')<p class="mt-1 text-xs text-gray-500">{{ __('messages.leave_descriptions.low_confidence') }}</p>@endif
+                @if ($reading->category === 'hourly_settlement')<p class="mt-2 text-sm font-medium">{{ __('messages.leave_descriptions.outcomes.'.$this->hourlyOutcome($reading)) }}</p>@endif
                 @if (in_array('described_work_date_no_credit', $request?->flags ?? [], true))<p class="mt-2 text-sm text-amber-800">{{ __('messages.leave_descriptions.no_rest_credit', ['date' => implode(', ', $reading->worked_dates ?? [])]) }}</p>@endif
                 @if (in_array('described_period_shortfall', $request?->flags ?? [], true))<p class="mt-2 text-sm text-amber-800">{{ __('messages.leave_descriptions.period_shortfall') }}</p>@endif
                 @if ($reading->error_code)<p class="mt-2 text-sm text-red-700">{{ __('messages.leave_descriptions.errors.'.(in_array($reading->error_code, ['ai_unavailable', 'read_failed'], true) ? $reading->error_code : 'other')) }}</p>@endif
                 <div class="mt-3 flex flex-wrap items-center gap-2">
                     @if ($reading->error_code)<button type="button" wire:click="retry({{ $reading->id }})" class="ui-control rounded-lg border border-line px-3 py-2">{{ __('messages.leave_descriptions.retry') }}</button>@endif
-                    @if (in_array($reading->status, ['confirmed', 'rejected'], true))
-                        <span class="text-xs text-gray-500">{{ __('messages.leave_descriptions.statuses.'.$reading->status) }}</span>
-                        <button type="button" wire:click="undo({{ $reading->id }})" class="ui-control rounded-lg border border-line px-3 py-2">{{ __('messages.leave_descriptions.undo') }}</button>
-                    @endif
+                    @if (in_array($reading->status, ['confirmed', 'rejected'], true))<span class="text-xs text-gray-500">{{ __('messages.leave_descriptions.statuses.'.$reading->status) }}</span>@endif
                 </div>
             </x-ui.card>
         @empty

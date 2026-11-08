@@ -94,4 +94,5 @@ Each spec is one branch and one PR, built with the spec-kit flow (`/speckit-plan
 | 513 upload-and-dashboard | Step 1 in progress: one Upload page for employee, leave balance, leave and attendance files; later steps cover progress and dashboard changes | 512 |
 | 518 leave-descriptions | New leave export columns, description AI proposals and HR confirmation, deterministic compensation and hourly settlement, saved-form manager follow-up. This is the work previously listed as 511. | 517 |
 | 2026-11-05 owner decision | The Leave notes page is read-only for approved forms: no confirmation or rejection and no calculation change from viewing readings; decision services remain unused by this page. | 518 |
+| 2026-11-08 owner decision | Proposed hourly-settlement readings with a resolved period and medium or high confidence settle hours automatically; rejected readings do not. Relative periods use the form start date as anchor. The notes page reports the effect without offering decisions. Compensation readings still require confirmation. | 518 |
 | later | 509b approved-overtime report import; **merge back into Displanary** | — |

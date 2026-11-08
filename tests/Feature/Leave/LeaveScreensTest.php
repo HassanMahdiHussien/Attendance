@@ -283,7 +283,7 @@ test('failed leave batch can be retried from the batch page', function (): void 
     Queue::assertPushed(ImportLeaveJob::class, fn (ImportLeaveJob $job): bool => $job->batchId === $batch->id);
 });
 
-test('leave notes list only approved forms and category filters stay scoped', function (): void {
+test('leave notes list forms with their approval state and category filters stay scoped', function (): void {
     $request = LeaveRequest::factory()->create(['company_id' => $this->company->id,
         'employee_id' => $this->employee->id, 'external_id' => 'FORM-READ', 'status' => 'approved']);
     $reading = DescriptionReading::create(['company_id' => $this->company->id,
@@ -297,12 +297,12 @@ test('leave notes list only approved forms and category filters stay scoped', fu
             'category' => 'reason_only', 'worked_dates' => [], 'confidence' => 'high', 'status' => 'not_needed']);
     }
     $page = Livewire::test(LeaveDescriptions::class)->assertSee('FORM-READ')
-        ->assertDontSee('FORM-DRAFT')->assertDontSee('FORM-PENDING')->assertDontSee('FORM-REJECTED')
-        ->assertSee(__('messages.leave_descriptions.note_count', ['count' => 1]))
+        ->assertSee('FORM-DRAFT')->assertSee('FORM-PENDING')->assertSee('FORM-REJECTED')
+        ->assertSee(__('messages.leave_descriptions.note_count', ['count' => 4]))
         ->set('category', 'medical')->assertDontSee('FORM-READ')
         ->set('category', 'reason_only')->assertSee('FORM-READ');
-    expect($page->instance()->counts()['total'])->toBe(1)
-        ->and((int) $page->instance()->counts()['categories']['reason_only'])->toBe(1)
+    expect($page->instance()->counts()['total'])->toBe(4)
+        ->and((int) $page->instance()->counts()['categories']['reason_only'])->toBe(4)
         ->and($reading->fresh()->status)->toBe('not_needed');
 });
 
@@ -317,7 +317,7 @@ test('description review filters failures and retries all of them in one action'
     $hiddenFailure = DescriptionReading::create(['company_id' => $this->company->id,
         'request_id' => $draft->id, 'text_hash' => hash('sha256', 'another invented reason'),
         'status' => 'proposed', 'error_code' => 'daily_cap']);
-    Livewire::test(LeaveDescriptions::class)->assertSee('FORM-FAILED')->assertDontSee('FORM-DRAFT-FAILED')
+    Livewire::test(LeaveDescriptions::class)->assertSee('FORM-FAILED')->assertSee('FORM-DRAFT-FAILED')
         ->assertSee(__('messages.leave_descriptions.failures', ['count' => 2]))
         ->call('retryAll')->assertHasNoErrors();
     expect($reading->fresh()->error_code)->toBeNull()
@@ -388,7 +388,7 @@ test('leave notes explain compensation and hourly readings with and without date
         ->assertSee(__('messages.leave_descriptions.hourly_no_period'));
 });
 
-test('undo is available only for earlier decisions and cannot reach another company', function (): void {
+test('leave note decisions are not offered on the review page and another company stays hidden', function (): void {
     $request = LeaveRequest::factory()->create(['company_id' => $this->company->id,
         'employee_id' => $this->employee->id, 'external_id' => 'FORM-DECIDED', 'status' => 'approved']);
     $reading = DescriptionReading::create(['company_id' => $this->company->id,
@@ -406,11 +406,11 @@ test('undo is available only for earlier decisions and cannot reach another comp
         'text_hash' => hash('sha256', 'foreign invented note'), 'category' => 'reason_only',
         'worked_dates' => [], 'confidence' => 'high', 'status' => 'confirmed',
     ]));
-    Livewire::test(LeaveDescriptions::class)->call('undo', $otherReading->id)->assertNotFound();
-    Livewire::test(LeaveDescriptions::class)->assertSee(__('messages.leave_descriptions.undo'))
-        ->call('undo', $reading->id)->assertHasNoErrors();
-    Livewire::test(LeaveDescriptions::class)->call('undo', $rejectedReading->id)->assertHasNoErrors();
-    expect($reading->fresh()->status)->toBe('proposed')
-        ->and($rejectedReading->fresh()->status)->toBe('proposed')
+    Livewire::test(LeaveDescriptions::class)->assertSee('FORM-DECIDED')
+        ->assertSee('FORM-READING-REJECTED')->assertDontSee('foreign invented note')
+        ->assertDontSee(__('messages.leave_descriptions.undo'));
+    expect(method_exists(LeaveDescriptions::class, 'undo'))->toBeFalse()
+        ->and($reading->fresh()->status)->toBe('confirmed')
+        ->and($rejectedReading->fresh()->status)->toBe('rejected')
         ->and(app(TenantContext::class)->runForCompany($this->other, fn () => $otherReading->fresh()->status))->toBe('confirmed');
 });

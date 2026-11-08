@@ -6,7 +6,7 @@ use App\Filament\Admin\Resources\Leave\LeavePage;
 use App\Jobs\Leave\ReadLeaveDescriptionsJob;
 use App\Models\Branch;
 use App\Models\Leave\DescriptionReading;
-use App\Services\Leave\LeaveDescriptionDecisions;
+use App\Services\Leave\LeaveDescriptionEffects;
 use App\Services\Leave\LeaveDescriptionReader;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -43,8 +43,7 @@ class LeaveDescriptions extends LeavePage
     private function filtered(): Builder
     {
         $query = DescriptionReading::query()->with(['request.employee', 'request.leaveType', 'request.currentVersion'])
-            ->where('company_id', $this->company()->id)->whereHas('request',
-                fn (Builder $requests) => $requests->where('status', 'approved'));
+            ->where('company_id', $this->company()->id);
         if (in_array($this->category, LeaveDescriptionReader::CATEGORIES, true)) {
             $query->where('category', $this->category);
         }
@@ -81,8 +80,7 @@ class LeaveDescriptions extends LeavePage
     public function counts(): array
     {
         $companyId = $this->company()->id;
-        $query = DescriptionReading::query()->where('company_id', $companyId)
-            ->whereHas('request', fn (Builder $requests) => $requests->where('status', 'approved'));
+        $query = DescriptionReading::query()->where('company_id', $companyId);
 
         return [
             'categories' => (clone $query)->selectRaw('category, COUNT(*) AS total')->groupBy('category')->pluck('total', 'category')->all(),
@@ -91,10 +89,19 @@ class LeaveDescriptions extends LeavePage
         ];
     }
 
-    public function undo(int $id, LeaveDescriptionDecisions $service): void
+    public function hourlyOutcome(DescriptionReading $reading): string
     {
-        $reading = DescriptionReading::query()->where('company_id', $this->company()->id)->findOrFail($id);
-        $service->decide($reading, 'proposed', auth()->user());
+        $effects = app(LeaveDescriptionEffects::class);
+        if ($effects->applies($reading->request, $reading, 'hourly_settlement')) {
+            return 'applied';
+        }
+
+        if ($reading->status === 'rejected') {
+            return 'rejected';
+        }
+
+        return $effects->reason($reading->request, $reading)
+            ?? 'low_confidence';
     }
 
     public function retry(int $id, LeaveDescriptionReader $reader): void

@@ -4,6 +4,8 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 
 ---
 
+- Hourly leave notes with a resolved period and medium or high confidence apply while proposed; rejected readings never apply. Compensation still requires confirmation. Relative "last week" is the seven days before the request start, "this week" ends on it, "yesterday" is the prior day, and "last month" is the prior calendar month. Explicit dates and months win. (2026-11-08)
+
 - The single worker listens to `imports,assessments,default,summaries` in that order; an old default-only worker would strand import, assessment and summary jobs. (2026-11-08)
 - Assessment-triggered leave matching waits for the company's import and assessment burst, merging each employee's widest dates in a durable table; leave-import matching remains immediate. (2026-11-08)
 
