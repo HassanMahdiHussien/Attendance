@@ -6,6 +6,8 @@ use App\Jobs\Leave\ReconcileLeaveJob;
 use App\Models\Attendance\AttendanceExport;
 use App\Models\Attendance\DataIssue;
 use App\Models\Attendance\Day;
+use App\Models\Attendance\FollowUpCase;
+use App\Models\Attendance\PendingLeaveReconciliation;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\Leave\Allocation;
@@ -28,9 +30,11 @@ use App\Services\Leave\DayReconciliation;
 use App\Services\Leave\LeaveActions;
 use App\Services\Leave\LeaveSettings;
 use App\Services\Leave\LeaveTypes;
+use App\Services\Leave\PendingReconciliation;
 use App\Services\Leave\Reconciler;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -193,9 +197,42 @@ test('replay is idempotent and moving an office day removes its old allocation',
     expect(Allocation::query()->whereNull('superseded_by_run_id')->count())->toBe(0);
 });
 
-test('day assessment dispatches a scoped reconciliation job', function (): void {
+test('day assessment collects a scoped reconciliation job', function (): void {
+    config(['queue.default' => 'database']);
     event(new DaysAssessed($this->company->id, [$this->employee->id], '2026-10-19', '2026-10-20'));
-    Queue::assertPushed(ReconcileLeaveJob::class, fn (ReconcileLeaveJob $job): bool => $job->companyId === $this->company->id && $job->employeeIds === [$this->employee->id]);
+    Queue::assertPushed(ReconcileLeaveJob::class, fn (ReconcileLeaveJob $job): bool => $job->companyId === $this->company->id && $job->employeeIds === [] && $job->trigger === 'days');
+    expect(PendingLeaveReconciliation::query()->where('company_id', $this->company->id)->where('employee_id', $this->employee->id)->exists())->toBeTrue();
+
+    event(new DaysAssessed($this->company->id, [$this->employee->id], '2026-10-15', '2026-10-17'));
+    $pending = PendingLeaveReconciliation::query()->where('company_id', $this->company->id)->sole();
+    expect((string) $pending->getRawOriginal('from_date'))->toBe('2026-10-15')
+        ->and((string) $pending->getRawOriginal('to_date'))->toBe('2026-10-20')
+        ->and((int) $pending->revision)->toBe(1);
+});
+
+test('without a delaying queue an assessment replays leave straight away as before', function (): void {
+    event(new DaysAssessed($this->company->id, [$this->employee->id], '2026-10-19', '2026-10-20'));
+    Queue::assertPushed(ReconcileLeaveJob::class, fn (ReconcileLeaveJob $job): bool => $job->employeeIds === [$this->employee->id]);
+    expect(PendingLeaveReconciliation::query()->count())->toBe(0);
+});
+
+test('coalesced replay preserves allocations and cases from immediate replay', function (): void {
+    config(['queue.default' => 'database']);
+    reconciledRequest($this->employee, $this->type, 'FORM-COALESCED', '2026-10-19');
+    reconciledDay($this->employee, '2026-10-19', 'present', early: 180);
+    replayLeave($this->company, $this->employee);
+    $allocations = Allocation::query()->whereNull('superseded_by_run_id')->orderBy('id')
+        ->get()->map(fn ($row): array => Arr::only($row->getAttributes(), ['source_request_day_id', 'target_day_id', 'minutes']))->all();
+    $cases = FollowUpCase::query()->where('employee_id', $this->employee->id)
+        ->orderBy('id')->get()->map(fn ($row): array => Arr::only($row->getAttributes(), ['case_kind', 'status', 'work_date']))->all();
+    event(new DaysAssessed($this->company->id, [$this->employee->id], '2026-10-19', '2026-10-19'));
+    event(new DaysAssessed($this->company->id, [$this->employee->id], '2026-10-18', '2026-10-20'));
+    app(PendingReconciliation::class)->run($this->company,
+        app(Reconciler::class), new ReconcileLeaveJob($this->company->id, [], 'days'));
+    expect(Allocation::query()->whereNull('superseded_by_run_id')->orderBy('id')
+        ->get()->map(fn ($row): array => Arr::only($row->getAttributes(), ['source_request_day_id', 'target_day_id', 'minutes']))->all())->toEqual($allocations)
+        ->and(FollowUpCase::query()->where('employee_id', $this->employee->id)
+            ->orderBy('id')->get()->map(fn ($row): array => Arr::only($row->getAttributes(), ['case_kind', 'status', 'work_date']))->all())->toEqual($cases);
 });
 
 test('assessing a changed office day emits the affected employee and date', function (): void {

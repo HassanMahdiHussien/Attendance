@@ -69,7 +69,7 @@ RestartSec=3
 WantedBy=default.target
 EOF
 for unit in queue scheduler; do
-    if [[ $unit == queue ]]; then command='artisan queue:work --tries=3 --sleep=3 --memory=512'; else command='artisan schedule:work'; fi
+    if [[ $unit == queue ]]; then command='artisan queue:work --queue=imports,assessments,default,summaries --tries=3 --sleep=3 --memory=512'; else command='artisan schedule:work'; fi
     cat > "$units/att-$unit.service" <<EOF
 [Unit]
 Description=Attendance demo $unit

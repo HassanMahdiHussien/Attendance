@@ -28,7 +28,10 @@ class ImportLeaveBalanceJob implements ShouldBeUnique, ShouldQueue
 
     public int $uniqueFor = 3600;
 
-    public function __construct(public int $batchId) {}
+    public function __construct(public int $batchId)
+    {
+        $this->onQueue('imports');
+    }
 
     public function uniqueId(): string
     {

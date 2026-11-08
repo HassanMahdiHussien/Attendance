@@ -15,6 +15,7 @@ use App\Services\Attendance\Reporting\EmployeeFilterSearch;
 use App\Services\Attendance\Reporting\ExportKinds;
 use App\Services\Attendance\Reporting\HomeOverview;
 use App\Services\Attendance\Reporting\LastUpdate;
+use App\Services\Attendance\Reporting\ProcessingStatus;
 use App\Services\Attendance\Reporting\ReportFilters;
 use App\Services\Attendance\Reporting\ReportTiles;
 use App\Support\Tenancy\TenantContext;
@@ -167,6 +168,7 @@ class HrDashboard extends Component
             $employees = $this->employeeId === '' ? $search->find(auth()->user(), $company, $this->employeeSearch) : [];
             $managers = $this->managerId === '' ? $search->find(auth()->user(), $company, $this->managerSearch) : [];
             $freshness = $lastUpdate->for($filters);
+            $freshness['results_updating'] = app(ProcessingStatus::class)->for($company)['state'] === 'working';
             $tiles = ReportTiles::fromTotals($totals) + ReportTiles::overtime($overtimeTotals)
                 + app(FollowUpCases::class)->tileTotals($filters);
             $previous = $summary->totals($overview->previousFilters($company, $filters));

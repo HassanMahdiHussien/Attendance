@@ -4,6 +4,9 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 
 ---
 
+- The single worker listens to `imports,assessments,default,summaries` in that order; an old default-only worker would strand import, assessment and summary jobs. (2026-11-08)
+- Assessment-triggered leave matching waits for the company's import and assessment burst, merging each employee's widest dates in a durable table; leave-import matching remains immediate. (2026-11-08)
+
 - Time Management lists a night that is also Friday or a holiday in each matching sheet and tab; its time contributes to each matching category total, while overtime and the unique-day row count contribute once. (2026-11-07)
 
 - Stored employee-months cache the live attendance calculation; `attendance:month-summaries-verify` checks them against that calculation. (2026-11-05)

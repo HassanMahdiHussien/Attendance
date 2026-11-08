@@ -126,7 +126,7 @@ systemctl reload nginx
 
 step "Queue worker and scheduler"
 for unit in queue scheduler; do
-    if [[ $unit == queue ]]; then command='artisan queue:work --tries=3 --sleep=3'; else command='artisan schedule:work'; fi
+    if [[ $unit == queue ]]; then command='artisan queue:work --queue=imports,assessments,default,summaries --tries=3 --sleep=3'; else command='artisan schedule:work'; fi
     cat > "/etc/systemd/system/displanery-$unit.service" <<EOF
 [Unit]
 Description=Displanery dev $unit

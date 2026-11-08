@@ -10,7 +10,7 @@ class ReconciliationTriggers
 {
     public function daysAssessed(DaysAssessed $event): void
     {
-        $this->dispatch($event->companyId, $event->employeeIds, 'days', $event->from, $event->to);
+        app(PendingReconciliation::class)->collect($event->companyId, $event->employeeIds, $event->from, $event->to);
     }
 
     public function dispatch(int $companyId, array $employeeIds, string $trigger, ?string $from = null, ?string $to = null): void
@@ -26,7 +26,7 @@ class ReconciliationTriggers
         }
 
         // One employee's entire allocation chain is replayed whenever any of its inputs changes.
-        foreach (array_chunk($ids, 100) as $chunk) {
+        foreach (array_chunk($ids, 10) as $chunk) {
             ReconcileLeaveJob::dispatch($companyId, $chunk, $trigger, $from, $to)->afterCommit();
         }
     }

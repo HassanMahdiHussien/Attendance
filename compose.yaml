@@ -26,7 +26,7 @@ services:
             - mysql
     queue:
         image: 'sail-8.4/app'
-        command: 'php /var/www/html/artisan queue:work --tries=3 --sleep=3'
+        command: 'php /var/www/html/artisan queue:work --queue=imports,assessments,default,summaries --tries=3 --sleep=3'
         environment:
             WWWUSER: '${WWWUSER}'
             LARAVEL_SAIL: 1

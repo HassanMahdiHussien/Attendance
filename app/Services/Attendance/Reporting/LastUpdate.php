@@ -90,7 +90,7 @@ class LastUpdate
             'sources' => $sources, 'runs' => $runs,
             // The newest upload, so a finished import shows at once; results_updating covers the recalculation that follows.
             'last_data_update' => $knownTimes === [] ? null : max($knownTimes),
-            'results_updating' => $this->queuedWork($company)
+            'results_updating' => app(ProcessingStatus::class)->for($company)['state'] === 'working' || $this->queuedWork($company)
                 || ($punches !== null && ($cleanup === null || $punches > $cleanup || $assessment === null || $punches > $assessment))
                 || ($latestDeviceSetting !== null && ($cleanup === null || $latestDeviceSetting > $cleanup))
                 || ($cleanup !== null && ($assessment === null || $cleanup > $assessment))

@@ -1167,4 +1167,19 @@ return [
         ],
     ],
     'leave_entry_ui' => ['open_count' => ':count saved leave forms are waiting for submission'],
+    'processing_status' => [
+        'notice' => 'Results are still being calculated (step :step of 4). Numbers may change.',
+        'view_uploads' => 'View uploads',
+        'working' => 'Calculating results… step :step of 4: :phase',
+        'ready' => 'All results are calculated and ready',
+        'started' => 'Started',
+        'employees_left' => ':count employees left to match',
+        'months_left' => ':count months left to update',
+        'phases' => [
+            'reading_files' => 'Reading files',
+            'calculating_days' => 'Calculating attendance days',
+            'matching_leave' => 'Matching leave',
+            'updating_totals' => 'Updating totals',
+        ],
+    ],
 ];

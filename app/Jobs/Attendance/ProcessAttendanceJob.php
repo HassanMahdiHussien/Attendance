@@ -30,7 +30,9 @@ class ProcessAttendanceJob implements ShouldBeUnique, ShouldQueue
         public ?int $batchId = null,
         public ?int $deviceId = null,
         public ?string $revision = null,
-    ) {}
+    ) {
+        $this->onQueue('assessments');
+    }
 
     public function uniqueId(): string
     {

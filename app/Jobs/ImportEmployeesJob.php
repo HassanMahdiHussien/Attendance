@@ -33,7 +33,10 @@ class ImportEmployeesJob implements ShouldBeUnique, ShouldQueue
 
     public int $uniqueFor = 3600;
 
-    public function __construct(public int $runId) {}
+    public function __construct(public int $runId)
+    {
+        $this->onQueue('imports');
+    }
 
     public function uniqueId(): string
     {

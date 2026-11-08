@@ -1,5 +1,16 @@
 <x-filament-panels::page>
+    @php $processing = $this->processingStatus(); @endphp
     <div class="space-y-5" x-data="{ phase: 'idle', progress: 0, uploadError: false, dragging: 0 }" @if($this->hasPendingEmployeeRun()) wire:poll.3s="pollImport" @endif>
+        <section role="status" class="rounded-xl border border-line bg-white p-4 shadow-sm sm:p-5" @if($processing['state'] === 'working') wire:poll.5s @endif>
+            @if($processing['state'] === 'working')
+                <p class="font-semibold text-ink">{{ __('messages.processing_status.working', ['step' => $processing['step'], 'phase' => __('messages.processing_status.phases.'.$processing['phase'])]) }}</p>
+                @if($processing['phase'] === 'matching_leave' && $processing['employees_left'])<p class="mt-1 text-sm text-gray-600">{{ __('messages.processing_status.employees_left', ['count' => $processing['employees_left']]) }}</p>@endif
+                @if($processing['phase'] === 'updating_totals' && $processing['months_left'])<p class="mt-1 text-sm text-gray-600">{{ __('messages.processing_status.months_left', ['count' => $processing['months_left']]) }}</p>@endif
+                @if($processing['started_at'])<p class="mt-1 text-sm text-gray-600">{{ __('messages.processing_status.started') }} <bdi dir="ltr" class="font-mono">{{ \Carbon\CarbonImmutable::parse($processing['started_at'])->timezone('Asia/Baghdad')->format('H:i') }}</bdi></p>@endif
+            @else
+                <p class="font-semibold text-done-green">{{ __('messages.processing_status.ready') }} @if($processing['finished_at']) · <bdi dir="ltr" class="font-mono">{{ \Carbon\CarbonImmutable::parse($processing['finished_at'])->timezone('Asia/Baghdad')->format('H:i') }}</bdi>@endif</p>
+            @endif
+        </section>
         <p class="text-sm text-gray-600">{{ __('messages.clear_screens.upload_context') }}</p>
         <section class="rounded-xl border border-line bg-white p-4 shadow-sm sm:p-5"
             x-on:livewire-upload-start="phase = 'uploading'; progress = 0; uploadError = false"
@@ -46,7 +57,7 @@
                         @if($row['kind'] === 'announcement' && $row['source_id'])
                             <livewire:attendance.announcement-review :source-id="$row['source_id']" :key="'announcement-'.$row['source_id'].'-'.$index" />
                         @elseif($row['batch_id'] !== null)
-                            <p><x-ui.badge :tone="app(\App\Services\Attendance\Reporting\JobStatePresentation::class)->tone('completed')">{{ __('messages.upload_center.imported') }}</x-ui.badge> <a class="ui-link" href="{{ $this->batchUrl($index) }}">{{ __('messages.upload_center.view_batch') }} #{{ $row['batch_id'] }}</a></p>
+                            <p><x-ui.badge tone="indigo">{{ __('messages.upload_center.imported') }}</x-ui.badge> <a class="ui-link" href="{{ $this->batchUrl($index) }}">{{ __('messages.upload_center.view_batch') }} #{{ $row['batch_id'] }}</a></p>
                             @if($row['kind'] === 'leave' && ($row['description_count'] ?? 0) > 0)<p><a class="ui-link" href="{{ \App\Filament\Admin\Pages\Leave\LeaveDescriptions::getUrl(panel: 'admin', tenant: $this->company()) }}">{{ __('messages.leave_descriptions.review_count', ['count' => $row['description_count']]) }}</a></p>@endif
                         @else
                             @if($row['kind'] === 'employees' && ($row['run_id'] ?? null) && !$row['error'])

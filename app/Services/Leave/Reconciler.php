@@ -44,11 +44,24 @@ class Reconciler
     /** Open request-level issue keys of the employee being replayed, loaded once per replay. */
     private array $openRequestIssues = [];
 
+    private array $runPolicies = [];
+
+    private array $runLeaveCalendarRestDays = [5];
+
+    private ?Setting $runSetting = null;
+
     public function run(Company $company, array $employeeIds, string $trigger, ?string $from = null, ?string $to = null): ProcessingRun
     {
         abort_unless(app(TenantContext::class)->companyId() === $company->id, 403);
         $ids = array_values(array_unique(array_map('intval', $employeeIds)));
         sort($ids, SORT_NUMERIC);
+        $this->runPolicies = Policy::query()->where('company_id', $company->id)->orderBy('effective_from')->orderBy('version')->get()
+            ->map(fn (Policy $policy): array => [
+                'effective_from' => $policy->effective_from->toDateString(), 'version' => $policy->version,
+                'office_rest_days' => $policy->office_rest_days, 'shift_rest_days' => $policy->shift_rest_days,
+            ])->all();
+        $this->runSetting = Setting::query()->where('company_id', $company->id)->first();
+        $this->runLeaveCalendarRestDays = $this->runSetting?->leave_calendar_rest_days ?? [5];
         $run = ProcessingRun::create([
             'company_id' => $company->id, 'trigger_source' => $trigger,
             'scope' => ['employee_ids' => $ids, 'from' => $from, 'to' => $to], 'status' => 'processing', 'started_at' => now(),
@@ -104,11 +117,7 @@ class Reconciler
             ->map(fn (EmployeeVersion $version): array => [
                 'id' => $version->id, 'effective_from' => $version->effective_from->toDateString(), 'changes' => $version->changes,
             ])->all();
-        $policies = Policy::query()->where('company_id', $company->id)->orderBy('effective_from')->orderBy('version')->get()
-            ->map(fn (Policy $policy): array => [
-                'effective_from' => $policy->effective_from->toDateString(), 'version' => $policy->version,
-                'office_rest_days' => $policy->office_rest_days, 'shift_rest_days' => $policy->shift_rest_days,
-            ])->all();
+        $policies = $this->runPolicies;
         $decisions = RequestDecision::query()->where('company_id', $company->id)->where('employee_id', $employee->id)
             ->orWhere(function ($query) use ($requests, $company): void {
                 $query->where('company_id', $company->id)->whereIn('request_id', $requests->pluck('id'));
@@ -145,8 +154,8 @@ class Reconciler
         $plannedDays = [];
         $compensationRequests = [];
         $compensationIds = [];
-        $setting = Setting::query()->where('company_id', $company->id)->first();
-        $leaveCalendarRestDays = $setting?->leave_calendar_rest_days ?? [5];
+        $setting = $this->runSetting;
+        $leaveCalendarRestDays = $this->runLeaveCalendarRestDays;
         $methodsChanged = false;
         foreach ($requests as $request) {
             if ($request->leaveType?->consumes === 'rest_day_entitlement') {

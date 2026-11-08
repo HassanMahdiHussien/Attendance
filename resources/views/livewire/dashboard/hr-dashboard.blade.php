@@ -96,7 +96,7 @@
         @error('export') <p class="text-red-700">{{ $message }}</p> @enderror
     </details>
 
-    <details id="data-status" wire:ignore.self class="rounded-xl border border-line bg-white p-4" @if ($freshness['results_updating']) open @endif><summary class="cursor-pointer font-semibold">{{ __('messages.clear_screens.data_status') }}</summary>
+    <details id="data-status" wire:ignore.self class="rounded-xl border border-line bg-white p-4" @if ($freshness['results_updating']) wire:poll.15s open @endif><summary class="cursor-pointer font-semibold">{{ __('messages.clear_screens.data_status') }}</summary>
 
     @if ($totals['issues']['company_wide'] || $totals['meals']['non_employee'])
         <x-ui.card>

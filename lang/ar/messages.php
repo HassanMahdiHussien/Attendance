@@ -1167,4 +1167,19 @@ return [
         ],
     ],
     'leave_entry_ui' => ['open_count' => ':count استمارة إجازة محفوظة تنتظر التقديم'],
+    'processing_status' => [
+        'notice' => 'ما زالت النتائج قيد الحساب (الخطوة :step من 4). قد تتغير الأرقام.',
+        'view_uploads' => 'عرض الملفات المرفوعة',
+        'working' => 'جارٍ حساب النتائج… الخطوة :step من 4: :phase',
+        'ready' => 'اكتمل حساب جميع النتائج وهي جاهزة',
+        'started' => 'بدأ',
+        'employees_left' => 'بقي :count موظفًا لمطابقة الإجازات',
+        'months_left' => 'بقي :count شهرًا لتحديث المجاميع',
+        'phases' => [
+            'reading_files' => 'قراءة الملفات',
+            'calculating_days' => 'حساب أيام الحضور',
+            'matching_leave' => 'مطابقة الإجازات',
+            'updating_totals' => 'تحديث المجاميع',
+        ],
+    ],
 ];
