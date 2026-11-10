@@ -43,7 +43,8 @@ test('processing jobs and the worker use priority queues', function (): void {
         ->and((new BuildMonthSummariesJob(1))->queue)->toBe('summaries')
         ->and((new WarmResultCacheJob(1))->queue)->toBe('summaries');
     foreach (['deploy/dev-setup.sh', 'deploy/att-demo-deploy.sh', 'deploy/templates/supervisor-worker.conf', 'compose.yaml'] as $file) {
-        expect(file_get_contents(base_path($file)))->toContain('--queue=imports,assessments,default,summaries');
+        expect(file_get_contents(base_path($file)))->toContain('--queue=imports,assessments,default,summaries')
+            ->toContain('--queue=assessments,default,summaries');
     }
 });
 

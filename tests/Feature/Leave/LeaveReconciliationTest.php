@@ -16,6 +16,7 @@ use App\Models\Leave\DescriptionReading;
 use App\Models\Leave\ImportBatch;
 use App\Models\Leave\LeaveRequest;
 use App\Models\Leave\LeaveType;
+use App\Models\Leave\ProcessingRun;
 use App\Models\Leave\RequestDay;
 use App\Models\Leave\RequestDecision;
 use App\Models\Leave\RequestVersion;
@@ -227,8 +228,12 @@ test('replay is idempotent and moving an office day removes its old allocation',
 
 test('day assessment collects a scoped reconciliation job', function (): void {
     config(['queue.default' => 'database']);
+    config(['attendance.leave_matching_slots' => 3]);
     event(new DaysAssessed($this->company->id, [$this->employee->id], '2026-10-19', '2026-10-20'));
-    Queue::assertPushed(ReconcileLeaveJob::class, fn (ReconcileLeaveJob $job): bool => $job->companyId === $this->company->id && $job->employeeIds === [] && $job->trigger === 'days');
+    Queue::assertPushed(ReconcileLeaveJob::class, 3);
+    $jobs = Queue::pushed(ReconcileLeaveJob::class)->values();
+    expect($jobs->pluck('slot')->sort()->values()->all())->toBe([0, 1, 2])
+        ->and($jobs->map(fn (ReconcileLeaveJob $job): string => $job->uniqueId())->unique()->count())->toBe(3);
     expect(PendingLeaveReconciliation::query()->where('company_id', $this->company->id)->where('employee_id', $this->employee->id)->exists())->toBeTrue();
 
     event(new DaysAssessed($this->company->id, [$this->employee->id], '2026-10-15', '2026-10-17'));
@@ -236,6 +241,59 @@ test('day assessment collects a scoped reconciliation job', function (): void {
     expect((string) $pending->getRawOriginal('from_date'))->toBe('2026-10-15')
         ->and((string) $pending->getRawOriginal('to_date'))->toBe('2026-10-20')
         ->and((int) $pending->revision)->toBe(1);
+});
+
+test('a pending slot takes only rows not claimed by another slot', function (): void {
+    config(['queue.default' => 'database']);
+    $other = Employee::factory()->create(['company_id' => $this->company->id]);
+    $anotherCompany = Company::factory()->create();
+    app(TenantContext::class)->runForCompany($anotherCompany, function () use ($anotherCompany): void {
+        $anotherEmployee = Employee::factory()->create(['company_id' => $anotherCompany->id]);
+        app(PendingReconciliation::class)->collect($anotherCompany->id, [$anotherEmployee->id],
+            '2026-10-19', '2026-10-20');
+    });
+    $pending = app(PendingReconciliation::class);
+    $pending->collect($this->company->id, [$this->employee->id, $other->id], '2026-10-19', '2026-10-20');
+    PendingLeaveReconciliation::query()->where('company_id', $this->company->id)
+        ->where('employee_id', $this->employee->id)->update(['claim_token' => 'first-slot', 'claimed_at' => now()]);
+    $reconciler = Mockery::mock(Reconciler::class);
+    $reconciler->shouldReceive('run')->once()->withArgs(fn ($company, $ids): bool => $company->id === $this->company->id && $ids === [$other->id])
+        ->andReturnUsing(fn () => ProcessingRun::factory()->create(['company_id' => $this->company->id]));
+    $pending->run($this->company, $reconciler, new ReconcileLeaveJob($this->company->id, [], 'days', slot: 1));
+    expect(PendingLeaveReconciliation::query()->where('company_id', $this->company->id)
+        ->pluck('employee_id')->all())->toBe([$this->employee->id]);
+    expect(app(TenantContext::class)->runForCompany($anotherCompany,
+        fn () => PendingLeaveReconciliation::query()->where('company_id', $anotherCompany->id)->count()))->toBe(1);
+});
+
+test('a stale pending claim can be taken over', function (): void {
+    config(['queue.default' => 'database']);
+    app(PendingReconciliation::class)->collect($this->company->id, [$this->employee->id], '2026-10-19', '2026-10-20');
+    PendingLeaveReconciliation::query()->where('company_id', $this->company->id)
+        ->update(['claim_token' => 'dead-worker', 'claimed_at' => now()->subMinutes(16)]);
+    $reconciler = Mockery::mock(Reconciler::class);
+    $reconciler->shouldReceive('run')->once()
+        ->andReturnUsing(fn () => ProcessingRun::factory()->create(['company_id' => $this->company->id]));
+    app(PendingReconciliation::class)->run($this->company, $reconciler,
+        new ReconcileLeaveJob($this->company->id, [], 'days', slot: 2));
+    expect(PendingLeaveReconciliation::query()->where('company_id', $this->company->id)->exists())->toBeFalse();
+});
+
+test('a row merged during replay is released for another pass', function (): void {
+    config(['queue.default' => 'database']);
+    $pending = app(PendingReconciliation::class);
+    $pending->collect($this->company->id, [$this->employee->id], '2026-10-19', '2026-10-20');
+    $reconciler = Mockery::mock(Reconciler::class);
+    $reconciler->shouldReceive('run')->once()->andReturnUsing(function () use ($pending): ProcessingRun {
+        $pending->collect($this->company->id, [$this->employee->id], '2026-10-18', '2026-10-21');
+
+        return ProcessingRun::factory()->create(['company_id' => $this->company->id]);
+    });
+    $pending->run($this->company, $reconciler, new ReconcileLeaveJob($this->company->id, [], 'days', slot: 0));
+    $row = PendingLeaveReconciliation::query()->where('company_id', $this->company->id)->sole();
+    expect((int) $row->revision)->toBe(1)
+        ->and($row->claim_token)->toBeNull()
+        ->and($row->claimed_at)->toBeNull();
 });
 
 test('without a delaying queue an assessment replays leave straight away as before', function (): void {

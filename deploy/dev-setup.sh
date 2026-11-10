@@ -125,8 +125,10 @@ systemctl enable --now nginx
 systemctl reload nginx
 
 step "Queue worker and scheduler"
-for unit in queue scheduler; do
-    if [[ $unit == queue ]]; then command='artisan queue:work --queue=imports,assessments,default,summaries --tries=3 --sleep=3'; else command='artisan schedule:work'; fi
+for unit in queue queue-extra@ scheduler; do
+    if [[ $unit == queue ]]; then command='artisan queue:work --queue=imports,assessments,default,summaries --tries=3 --sleep=3';
+    elif [[ $unit == queue-extra@ ]]; then command='artisan queue:work --queue=assessments,default,summaries --tries=3 --sleep=3';
+    else command='artisan schedule:work'; fi
     cat > "/etc/systemd/system/displanery-$unit.service" <<EOF
 [Unit]
 Description=Displanery dev $unit
@@ -145,11 +147,11 @@ WantedBy=multi-user.target
 EOF
 done
 systemctl daemon-reload
-systemctl enable --now displanery-queue displanery-scheduler
+systemctl enable --now displanery-queue displanery-queue-extra@1 displanery-queue-extra@2 displanery-scheduler
 
 step "Done"
 php --version | head -1
 mysql --version
 node --version
 echo "Set DB_HOST=127.0.0.1 in .env, then run: php artisan migrate --pretend | head  (should list nothing to run)"
-echo "Restart the worker after code changes: sudo systemctl restart displanery-queue"
+echo "Restart workers after code changes: sudo systemctl restart displanery-queue displanery-queue-extra@1 displanery-queue-extra@2"

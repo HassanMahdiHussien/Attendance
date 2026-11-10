@@ -38,6 +38,22 @@ services:
             - laravel.test
             - mysql
         restart: unless-stopped
+    queue-extra:
+        image: 'sail-8.4/app'
+        command: 'php /var/www/html/artisan queue:work --queue=assessments,default,summaries --tries=3 --sleep=3'
+        deploy:
+            replicas: 2
+        environment:
+            WWWUSER: '${WWWUSER}'
+            LARAVEL_SAIL: 1
+        volumes:
+            - '.:/var/www/html'
+        networks:
+            - sail
+        depends_on:
+            - laravel.test
+            - mysql
+        restart: unless-stopped
     scheduler:
         image: 'sail-8.4/app'
         command: 'php /var/www/html/artisan schedule:work'

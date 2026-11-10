@@ -14,6 +14,7 @@ use App\Models\Attendance\ProcessingRun as AttendanceRun;
 use App\Models\Company;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class PendingReconciliation
 {
@@ -35,7 +36,10 @@ class PendingReconciliation
             DB::statement('INSERT INTO attendance_pending_leave_reconciliations (company_id, employee_id, from_date, to_date, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE from_date = LEAST(from_date, VALUES(from_date)), to_date = GREATEST(to_date, VALUES(to_date)), revision = revision + 1, updated_at = NOW()', [$companyId, $id, $from, $to]);
         }
         if ($ids !== []) {
-            ReconcileLeaveJob::dispatch($companyId, [], 'days')->delay(now()->addSeconds(10))->afterCommit();
+            foreach (range(0, max(1, (int) config('attendance.leave_matching_slots', 3)) - 1) as $slot) {
+                ReconcileLeaveJob::dispatch($companyId, [], 'days', null, null, $slot)
+                    ->delay(now()->addSeconds(10))->afterCommit();
+            }
         }
     }
 
@@ -93,13 +97,22 @@ class PendingReconciliation
     {
         abort_unless(app(TenantContext::class)->companyId() === $company->id, 403);
         if ($this->hasUpstreamWork($company)) {
-            ReconcileLeaveJob::dispatch($company->id, [], 'days')->delay(now()->addSeconds(10))->afterCommit();
+            ReconcileLeaveJob::dispatch($company->id, [], 'days', null, null, $job->slot)
+                ->delay(now()->addSeconds(10))->afterCommit();
 
             return;
         }
+        $token = (string) Str::uuid();
+        DB::update('UPDATE attendance_pending_leave_reconciliations SET claim_token = ?, claimed_at = NOW() WHERE company_id = ? AND (claim_token IS NULL OR claimed_at < ?) ORDER BY id LIMIT 10',
+            [$token, $company->id, now()->subMinutes(15)]);
         $rows = PendingLeaveReconciliation::query()->where('company_id', $company->id)
-            ->orderBy('id')->limit(10)->get();
+            ->where('claim_token', $token)->orderBy('id')->get();
         if ($rows->isEmpty()) {
+            if (PendingLeaveReconciliation::query()->where('company_id', $company->id)->exists()) {
+                ReconcileLeaveJob::dispatch($company->id, [], 'days', null, null, $job->slot)
+                    ->delay(now()->addMinutes(1))->afterCommit();
+            }
+
             return;
         }
         $reconciler->run($company, $rows->pluck('employee_id')->all(), 'days',
@@ -107,10 +120,17 @@ class PendingReconciliation
         // A row merged again while the replay ran keeps its newer revision and is replayed next time.
         foreach ($rows as $row) {
             PendingLeaveReconciliation::query()->where('company_id', $company->id)->whereKey($row->id)
-                ->where('revision', $row->revision)->delete();
+                ->where('revision', $row->revision)->where('claim_token', $token)->delete();
+            PendingLeaveReconciliation::query()->where('company_id', $company->id)->whereKey($row->id)
+                ->where('claim_token', $token)->update(['claim_token' => null, 'claimed_at' => null]);
         }
-        if (PendingLeaveReconciliation::query()->where('company_id', $company->id)->exists()) {
-            ReconcileLeaveJob::dispatch($company->id, [], 'days')->afterCommit();
+        $remaining = PendingLeaveReconciliation::query()->where('company_id', $company->id);
+        if ((clone $remaining)->whereNull('claim_token')->exists()) {
+            ReconcileLeaveJob::dispatch($company->id, [], 'days', null, null, $job->slot)->afterCommit();
+        } elseif ($remaining->exists()) {
+            // A claimed row can become stale after its worker dies; keep a slot available to recover it.
+            ReconcileLeaveJob::dispatch($company->id, [], 'days', null, null, $job->slot)
+                ->delay(now()->addMinutes(15))->afterCommit();
         }
     }
 }

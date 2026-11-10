@@ -15,4 +15,5 @@ return [
     'holidays' => ['ai_daily_cap' => 20],
     'leave_descriptions' => ['ai_daily_cap' => 80],
     'leave_entry' => ['notify_window_days' => 30],
+    'leave_matching_slots' => (int) env('ATTENDANCE_LEAVE_MATCHING_SLOTS', 3),
 ];

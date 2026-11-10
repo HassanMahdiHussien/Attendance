@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\UserRole;
+use App\Events\DaysAssessed;
 use App\Jobs\Attendance\AssessDaysJob;
 use App\Jobs\Leave\ReconcileLeaveJob;
 use App\Models\Attendance\AttendanceExport;
@@ -10,6 +11,7 @@ use App\Models\Attendance\Holiday;
 use App\Models\Attendance\HolidayVersion;
 use App\Models\Attendance\ImportBatch;
 use App\Models\Attendance\ManualPunch;
+use App\Models\Attendance\PendingLeaveReconciliation;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Employee;
@@ -94,7 +96,8 @@ test('only approved holidays change days and approval is versioned', function ()
     expect($totals['days']['holiday'])->toBe(1)
         ->and($totals['assessed_working_days'])->toBe(0);
     Queue::assertPushed(AssessDaysJob::class);
-    Queue::assertPushed(ReconcileLeaveJob::class);
+    Queue::assertNotPushed(ReconcileLeaveJob::class,
+        fn (ReconcileLeaveJob $job): bool => $job->trigger === 'holiday');
 });
 
 test('field work covers only selected people and gives no holiday or overtime credit', function (): void {
@@ -269,7 +272,7 @@ test('rejecting a draft records a version without changing attendance', function
     Queue::assertNotPushed(AssessDaysJob::class);
 });
 
-test('future-only holidays queue leave redistribution without an invalid assessment scope', function (): void {
+test('future-only holidays queue no assessment and no leave matching for employees without leave', function (): void {
     holidayEmployee($this->company, $this->branch);
     $holiday = holidayDraft($this->company, $this->actor, [
         'ranges' => [['from' => '2026-11-19', 'to' => '2026-11-19']],
@@ -278,7 +281,7 @@ test('future-only holidays queue leave redistribution without an invalid assessm
 
     app(Holidays::class)->approve($holiday, [], $this->actor, 'Published in advance');
     Queue::assertNotPushed(AssessDaysJob::class);
-    Queue::assertPushed(ReconcileLeaveJob::class);
+    Queue::assertNotPushed(ReconcileLeaveJob::class);
 });
 
 test('legal entity branch and pattern scopes use historical values and overlapping ids', function (): void {
@@ -416,15 +419,57 @@ test('editing and withdrawing a holiday supersedes the day and queues both recal
         ->and($replacement->changes['holiday_ids']['before'])->toBe([$holiday->id]);
     Bus::assertBatched(fn (PendingBatch $batch): bool => $batch->allowsFailures() && $batch->jobs->flatten()->contains(
         fn ($job): bool => $job instanceof AssessDaysJob && $job->scope['employee_ids'] === [$employee->id]
-            && $job->scope['from'] === '2026-10-18' && $job->scope['to'] === '2026-10-21')
-        && $batch->jobs->flatten()->contains(fn ($job): bool => $job instanceof ReconcileLeaveJob
-            && $job->employeeIds === [$employee->id] && $job->from === '2026-10-18' && $job->to === '2026-10-21'));
+            && $job->scope['from'] === '2026-10-18' && $job->scope['to'] === '2026-10-21'));
 
     app(Holidays::class)->withdraw($holiday->fresh(), $this->actor, 'Withdrawn notice');
     Bus::assertBatchCount(2);
     expect(HolidayVersion::query()->where('holiday_id', $holiday->id)->count())->toBe(4)
         ->and(app(HolidayCalendar::class)->forEmployeeDates($this->company, collect([$employee]),
             '2026-10-20', '2026-10-20'))->toBe([]);
+});
+
+test('holiday approval collects only overlapping leave requests and leaves assessment in its batch', function (): void {
+    config(['queue.default' => 'database']);
+    $overlap = holidayEmployee($this->company, $this->branch);
+    $outside = holidayEmployee($this->company, $this->branch);
+    holidayEmployee($this->company, $this->branch);
+    $type = LeaveType::factory()->create(['covers' => true, 'is_mapped' => true]);
+    foreach ([[$overlap, '2026-10-18', '2026-10-22', 'pending'], [$outside, '2026-11-01', '2026-11-02', 'approved']] as [$employee, $from, $to, $status]) {
+        LeaveRequest::factory()->create(['company_id' => $this->company->id,
+            'employee_id' => $employee->id, 'owner_code' => $employee->employee_code,
+            'leave_type_id' => $type->id, 'status' => $status, 'start_date' => $from, 'end_date' => $to]);
+    }
+    $holiday = holidayDraft($this->company, $this->actor);
+    app(Holidays::class)->approve($holiday, [], $this->actor, 'Published');
+
+    event(new DaysAssessed($this->company->id, [$overlap->id], '2026-10-19', '2026-10-19'));
+
+    expect(PendingLeaveReconciliation::query()->where('company_id', $this->company->id)
+        ->pluck('employee_id')->all())->toBe([$overlap->id])
+        ->and((int) PendingLeaveReconciliation::query()->where('company_id', $this->company->id)
+            ->where('employee_id', $overlap->id)->value('revision'))->toBe(1)
+        ->and($holiday->fresh()->reprocess_batch_id)->not->toBeNull();
+    Queue::assertNotPushed(ReconcileLeaveJob::class,
+        fn (ReconcileLeaveJob $job): bool => $job->trigger === 'holiday');
+});
+
+test('future holiday collects overlapping leave without creating an empty assessment batch', function (): void {
+    config(['queue.default' => 'database']);
+    $employee = holidayEmployee($this->company, $this->branch);
+    $type = LeaveType::factory()->create(['covers' => true, 'is_mapped' => true]);
+    LeaveRequest::factory()->create(['company_id' => $this->company->id, 'employee_id' => $employee->id,
+        'owner_code' => $employee->employee_code, 'leave_type_id' => $type->id,
+        'start_date' => '2026-11-01', 'end_date' => '2026-11-03']);
+    $holiday = holidayDraft($this->company, $this->actor,
+        ['ranges' => [['from' => '2026-11-02', 'to' => '2026-11-02']]]);
+    app(Holidays::class)->approve($holiday, [], $this->actor, 'Published');
+
+    expect($holiday->fresh()->reprocess_batch_id)->toBeNull()
+        ->and(PendingLeaveReconciliation::query()->where('company_id', $this->company->id)
+            ->pluck('employee_id')->all())->toBe([$employee->id]);
+    Queue::assertNotPushed(AssessDaysJob::class);
+    Queue::assertNotPushed(ReconcileLeaveJob::class,
+        fn (ReconcileLeaveJob $job): bool => $job->trigger === 'holiday');
 });
 
 test('all leave counting methods exclude holidays and never place minutes on one', function (): void {

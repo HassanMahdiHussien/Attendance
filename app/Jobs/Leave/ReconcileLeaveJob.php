@@ -28,6 +28,7 @@ class ReconcileLeaveJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
         public string $trigger,
         public ?string $from = null,
         public ?string $to = null,
+        public ?int $slot = null,
     ) {
         $this->onQueue('default');
     }
@@ -35,7 +36,7 @@ class ReconcileLeaveJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
     public function uniqueId(): string
     {
         if ($this->trigger === 'days' && $this->employeeIds === []) {
-            return 'pending:'.$this->companyId;
+            return 'pending:'.$this->companyId.':'.($this->slot ?? 0);
         }
         $ids = array_values(array_unique(array_map('intval', $this->employeeIds)));
         sort($ids, SORT_NUMERIC);

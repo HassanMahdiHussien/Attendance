@@ -36,10 +36,12 @@ if [[ -n $unknown ]]; then echo "WARNING: previous code does not know migrations
 if pgrep -f '^(/usr/bin/)?php[0-9.]* (/[^ ]*/)?artisan backup:run' >/dev/null; then echo "Backup running; refusing rollback"; exit 1; fi
 (cd "$active" && php artisan down --retry=15)
 sudo supervisorctl stop displanery-worker
+sudo -n supervisorctl stop 'displanery-worker-extra:*' || true
 ln -s "$previous" "$base/current.new"
 mv -Tf "$base/current.new" "$current"
 sudo systemctl reload php8.5-fpm
 sudo supervisorctl start displanery-worker
+sudo -n supervisorctl start 'displanery-worker-extra:*' || true
 (cd "$previous" && php artisan queue:restart)
 domain="$(sed -n 's/^APP_URL=https:\/\///p' "$base/shared/.env" | head -1)"
 curl_tls=()

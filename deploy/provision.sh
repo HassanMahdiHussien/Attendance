@@ -229,7 +229,7 @@ for key in backup_ed25519 github_deploy; do
 done
 chmod 0600 /home/deploy/.ssh/backup_ed25519 /home/deploy/.ssh/github_deploy
 cat > /etc/sudoers.d/displanery-deploy <<'EOF'
-deploy ALL=(root) NOPASSWD: /usr/bin/supervisorctl stop displanery-worker, /usr/bin/supervisorctl start displanery-worker, /usr/bin/supervisorctl restart displanery-worker, /usr/bin/systemctl reload php8.5-fpm
+deploy ALL=(root) NOPASSWD: /usr/bin/supervisorctl stop displanery-worker, /usr/bin/supervisorctl start displanery-worker, /usr/bin/supervisorctl restart displanery-worker, /usr/bin/supervisorctl stop displanery-worker-extra:*, /usr/bin/supervisorctl start displanery-worker-extra:*, /usr/bin/supervisorctl restart displanery-worker-extra:*, /usr/bin/systemctl reload php8.5-fpm
 EOF
 chmod 0440 /etc/sudoers.d/displanery-deploy
 visudo -cf /etc/sudoers.d/displanery-deploy

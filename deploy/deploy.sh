@@ -83,6 +83,7 @@ if (( pending == 1 )); then
     if [[ -L $current ]]; then (cd "$current" && php artisan down --retry=15); fi
     maintenance=1
     sudo supervisorctl stop displanery-worker || [[ ! -L $current ]]
+    sudo -n supervisorctl stop 'displanery-worker-extra:*' || true
     migration_started=1
     php artisan migrate --force
 fi
@@ -93,6 +94,7 @@ sudo systemctl reload php8.5-fpm
 # Both are no-ops when already running/up, and they bring the site back after a fix-forward
 # deploy that follows a failed migration (which left maintenance on and the worker stopped).
 sudo supervisorctl start displanery-worker
+sudo -n supervisorctl start 'displanery-worker-extra:*' || true
 php artisan queue:restart
 php artisan up
 curl "${curl_tls[@]}" --fail --silent --show-error --max-time 15 --resolve "$domain:443:127.0.0.1" "https://$domain/up" >/dev/null

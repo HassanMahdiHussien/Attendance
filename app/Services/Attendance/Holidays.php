@@ -3,7 +3,6 @@
 namespace App\Services\Attendance;
 
 use App\Jobs\Attendance\AssessDaysJob;
-use App\Jobs\Leave\ReconcileLeaveJob;
 use App\Models\Attendance\Holiday;
 use App\Models\Attendance\HolidaySource;
 use App\Models\Attendance\HolidayVersion;
@@ -11,9 +10,11 @@ use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\EmployeeVersion;
+use App\Models\Leave\LeaveRequest;
 use App\Models\User;
 use App\Services\AuditLogger;
 use App\Services\Employees\EmployeeHistory;
+use App\Services\Leave\PendingReconciliation;
 use App\Support\Tenancy\TenantContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Bus;
@@ -317,7 +318,14 @@ class Holidays
             $jobs[] = new AssessDaysJob($company->id, ['employee_ids' => $employeeIds, 'from' => $start,
                 'to' => min($end, $today)], 'holiday');
         }
-        $jobs[] = new ReconcileLeaveJob($company->id, $employeeIds, 'holiday', $start, $end);
+        $leaveIds = LeaveRequest::query()->where('company_id', $company->id)
+            ->whereIn('employee_id', $employeeIds)
+            ->where('start_date', '<=', $end)->where('end_date', '>=', $start)
+            ->distinct()->pluck('employee_id')->map(fn ($id): int => (int) $id)->all();
+        if ($leaveIds !== []) {
+            app(TenantContext::class)->runForCompany($company,
+                fn () => app(PendingReconciliation::class)->collect($company->id, $leaveIds, $start, $end));
+        }
 
         return $jobs;
     }
