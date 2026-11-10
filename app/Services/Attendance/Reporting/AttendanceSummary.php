@@ -11,12 +11,15 @@ use App\Models\Employee;
 use App\Models\EmployeeVersion;
 use App\Models\Leave\Allocation;
 use App\Models\Leave\Credit;
+use App\Models\Leave\EntitlementConsumption;
 use App\Models\Leave\LeaveRequest;
 use App\Models\Leave\RequestDay;
 use App\Models\Leave\RequestDecision;
 use App\Services\Attendance\OfficePolicy;
+use App\Services\Attendance\ShiftDisplay;
 use App\Services\Employees\EmployeeHistory;
 use App\Services\Leave\HoursSettlement;
+use App\Services\Leave\LeaveDescriptionEffects;
 use App\Support\Tenancy\TenantContext;
 use Carbon\CarbonImmutable;
 use Generator;
@@ -39,6 +42,11 @@ class AttendanceSummary
     {
         if ($this->hasDayFilters($filters) || $filters->caseState !== null || $filters->caseIssueType !== null) {
             return $this->totalsLive($filters);
+        }
+
+        if ($filters->to < CarbonImmutable::now('Asia/Baghdad')->toDateString()) {
+            return app(ResultCache::class)->remember('attendance_totals', $filters,
+                fn (): array => $this->totalsCached($filters), 86400);
         }
 
         return $this->totalsCached($filters);
@@ -299,6 +307,8 @@ class AttendanceSummary
                 ->whereIn('target_day_id', $days->pluck('id'))->whereNull('superseded_by_run_id')
                 ->orderBy('id')->get()->groupBy('target_day_id');
             $nothingDays = $this->nothingToReconcileDays($filters, [$employeeId]);
+            $compensation = $this->compensationNotes($filters, [$employeeId], $days->first()->work_date->toDateString(),
+                $days->last()->work_date->toDateString());
             foreach ($days as $day) {
                 $row = $this->project($day, $allocations->get($day->id, collect()),
                     isset($nothingDays[$employeeId.'|'.$day->work_date->toDateString()]), true, $blocked);
@@ -307,6 +317,7 @@ class AttendanceSummary
                     'source_credit_id' => $allocation->source_credit_id, 'target_kind' => $allocation->target_kind,
                     'minutes' => (int) $allocation->minutes, 'explanation' => $allocation->explanation,
                 ])->all();
+                $row['compensation_notes'] = $compensation[$employeeId.'|'.$day->work_date->toDateString()] ?? [];
                 yield $row;
             }
         }
@@ -319,16 +330,85 @@ class AttendanceSummary
         }
 
         $days = collect(iterator_to_array($this->selectedDays($filters, dayIds: $dayIds)));
+        if ($days->isEmpty()) {
+            return [];
+        }
         $allocations = $this->allocations($filters, $days->pluck('id')->all());
         $blocked = $allocations->isEmpty() && ! $this->hasToleranceCandidates($days) ? [] : $this->blockedKinds($filters, $days);
         $nothingDays = $this->nothingToReconcileDays($filters, $days->pluck('employee_id')->unique()->all());
+        $compensation = $this->compensationNotes($filters, $days->pluck('employee_id')->unique()->all(),
+            $days->min(fn (Day $day): string => $day->work_date->toDateString()),
+            $days->max(fn (Day $day): string => $day->work_date->toDateString()));
         $rows = [];
         foreach ($days as $day) {
             $rows[$day->id] = $this->project($day, $allocations->get($day->id, collect()),
                 isset($nothingDays[$day->employee_id.'|'.$day->work_date->toDateString()]), true, $blocked);
+            $rows[$day->id]['compensation_notes'] = $compensation[$day->employee_id.'|'.$day->work_date->toDateString()] ?? [];
         }
 
         return $rows;
+    }
+
+    private function compensationNotes(ReportFilters $filters, array $employeeIds, string $from, string $to): array
+    {
+        if ($employeeIds === []) {
+            return [];
+        }
+
+        $effects = app(LeaveDescriptionEffects::class);
+        $notes = [];
+        $consumptions = EntitlementConsumption::query()
+            ->with(['entitlement.sourceDay', 'request.leaveType', 'request.descriptionReading', 'requestDay'])
+            ->where('company_id', $filters->companyId)->whereIn('employee_id', $employeeIds)
+            ->whereNull('superseded_by_run_id')
+            ->where(function (Builder $query) use ($from, $to): void {
+                $query->whereHas('requestDay', fn (Builder $days) => $days->whereBetween('work_date', [$from, $to]))
+                    ->orWhereHas('entitlement', fn (Builder $days) => $days->whereBetween('work_date', [$from, $to]));
+            })->orderBy('id')->get();
+        foreach ($consumptions as $consumption) {
+            $request = $consumption->request;
+            $entitlement = $consumption->entitlement;
+            $requestDay = $consumption->requestDay;
+            if ($request === null || $entitlement === null || $requestDay === null) {
+                continue;
+            }
+            $workedDate = $entitlement->work_date->toDateString();
+            $leaveDate = $requestDay->work_date->toDateString();
+            $reading = $request->descriptionReading;
+            $applies = $reading !== null && $effects->applies($request, $reading, 'compensation_for_day');
+            $flagged = in_array('described_work_date_no_credit', $request->flags ?? [], true);
+            if ($leaveDate >= $from && $leaveDate <= $to && ! ($applies && $flagged)) {
+                $source = $entitlement->sourceDay;
+                $notes[$consumption->employee_id.'|'.$leaveDate][] = [
+                    'kind' => $applies && in_array($workedDate, $reading->worked_dates ?? [], true) ? 'checked' : 'used',
+                    'date' => $workedDate,
+                    'in' => $source?->first_in?->format('H:i'), 'out' => $source?->last_out?->format('H:i'),
+                ];
+            }
+            if ($workedDate >= $from && $workedDate <= $to) {
+                $notes[$consumption->employee_id.'|'.$workedDate][] = [
+                    'kind' => 'worked', 'number' => $request->external_id, 'date' => $leaveDate,
+                ];
+            }
+        }
+
+        $flaggedDays = RequestDay::query()->with(['request.leaveType', 'request.descriptionReading'])
+            ->where('company_id', $filters->companyId)->whereIn('employee_id', $employeeIds)
+            ->whereNull('superseded_by_run_id')->whereBetween('work_date', [$from, $to])
+            ->whereHas('request', fn (Builder $requests) => $requests->whereJsonContains('flags', 'described_work_date_no_credit'))
+            ->orderBy('id')->get();
+        foreach ($flaggedDays as $day) {
+            $request = $day->request;
+            $reading = $request?->descriptionReading;
+            if ($request === null || $reading === null || ! $effects->applies($request, $reading, 'compensation_for_day')) {
+                continue;
+            }
+            foreach ($reading->worked_dates ?? [] as $date) {
+                $notes[$day->employee_id.'|'.$day->work_date->toDateString()][] = ['kind' => 'missing', 'date' => $date];
+            }
+        }
+
+        return $notes;
     }
 
     public function drillDown(ReportFilters $filters, string $tile): array
@@ -344,7 +424,7 @@ class AttendanceSummary
     public function drillDownRows(ReportFilters $filters, string $tile): array
     {
         $this->assertCompany($filters);
-        $dayKey = $tile === 'absent_uncovered' || in_array($tile, ReportFilters::STATUSES, true) ? $tile : null;
+        $dayKey = in_array($tile, ['absent_uncovered', 'short_hours_alerts', 'late', 'early', 'remaining', ...ReportFilters::STATUSES], true) ? $tile : null;
         $rows = [];
         foreach ($this->perEmployee($filters) as $employee) {
             if (! $this->matchesTile($employee, $tile)) {
@@ -412,6 +492,7 @@ class AttendanceSummary
         if ($filters->workPatterns !== []) {
             $query->whereIn(DB::raw("JSON_UNQUOTE(JSON_EXTRACT(inputs, '$.work_pattern'))"), $filters->workPatterns);
         }
+        ShiftDisplay::filterDays($query, $filters->shifts);
         if ($filters->statuses !== []) {
             $query->whereIn('status', $filters->statuses);
         }
@@ -533,10 +614,14 @@ class AttendanceSummary
             $leave = $allocations->isEmpty() ? 0 : (int) $allocations->where('target_kind', $kind)->where('from_credit', 0)->sum('minutes');
             $credit = $allocations->isEmpty() ? 0 : (int) $allocations->where('target_kind', $kind)->where('from_credit', 1)->sum('minutes');
             $remaining = max(0, $gross[$kind] - $leave - $credit);
-            $settled = ($settlesHours || $withinTolerance) && in_array($kind, ['late', 'early', 'exit'], true)
-                && ! isset($blocked[$day->employee_id.'|'.$day->work_date->toDateString().'|'.$kind]) ? $remaining : 0;
-            $minutes[$kind] = ['gross' => $gross[$kind], 'reconciled_by_leave' => $leave,
-                'reconciled_by_credit' => $credit, 'settled_by_hours' => $settled, 'remaining' => $remaining - $settled];
+            $closable = in_array($kind, ['late', 'early', 'exit'], true)
+                && ! isset($blocked[$day->employee_id.'|'.$day->work_date->toDateString().'|'.$kind]);
+            $settled = $settlesHours && $closable ? $remaining : 0;
+            // Minutes inside HR's allowed tolerance are not lateness at all, so they leave the gross too:
+            // otherwise every total (cards, dashboard, reports) counts minutes the day rows call "within the allowed".
+            $tolerated = $withinTolerance && $closable ? $remaining : 0;
+            $minutes[$kind] = ['gross' => $gross[$kind] - $tolerated, 'reconciled_by_leave' => $leave,
+                'reconciled_by_credit' => $credit, 'settled_by_hours' => $settled, 'remaining' => $remaining - $settled - $tolerated];
         }
         $shortRemaining = max(0, (int) $day->short_minutes - array_sum(array_column($minutes, 'reconciled_by_leave'))
             - array_sum(array_column($minutes, 'reconciled_by_credit')));
@@ -607,6 +692,17 @@ class AttendanceSummary
         $row['day_ids'][$day['status']][] = $day['day_id'];
         if ($day['status'] === 'absent' && ! $day['flags']['absence_closed_by_request']) {
             $row['day_ids']['absent_uncovered'][] = $day['day_id'];
+        }
+        if ($day['flags']['short_hours']) {
+            $row['day_ids']['short_hours_alerts'][] = $day['day_id'];
+        }
+        foreach (['late', 'early'] as $kind) {
+            if ($day['minutes'][$kind]['gross'] > 0) {
+                $row['day_ids'][$kind][] = $day['day_id'];
+            }
+        }
+        if (array_sum(array_map(fn (string $kind): int => $day['minutes'][$kind]['remaining'], self::KINDS)) > 0) {
+            $row['day_ids']['remaining'][] = $day['day_id'];
         }
         if ($day['status'] === 'holiday_worked') {
             $row['holiday_work_minutes'] += (int) $day['observed']['presence'];
@@ -799,7 +895,7 @@ class AttendanceSummary
     private function nonEmployeeMeals(ReportFilters $filters): array
     {
         if ($filters->employeeIds !== [] || $filters->departments !== [] || $filters->managerEmployeeIds !== []
-            || $filters->workPatterns !== [] || $filters->statuses !== []) {
+            || $filters->workPatterns !== [] || $filters->shifts !== [] || $filters->statuses !== []) {
             return [];
         }
         $query = Meal::query()->where('company_id', $filters->companyId)->whereNull('employee_id')
@@ -974,7 +1070,7 @@ class AttendanceSummary
     private function hasDayFilters(ReportFilters $filters): bool
     {
         return $filters->branchIds !== [] || $filters->departments !== [] || $filters->managerEmployeeIds !== []
-            || $filters->workPatterns !== [] || $filters->statuses !== [];
+            || $filters->workPatterns !== [] || $filters->shifts !== [] || $filters->statuses !== [];
     }
 
     private function assertCompany(ReportFilters $filters): void

@@ -5,6 +5,7 @@ namespace App\Services\Attendance\Reporting;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Employee;
+use App\Services\Attendance\ShiftDisplay;
 use App\Support\Tenancy\TenantContext;
 use Carbon\CarbonImmutable;
 use DateTimeImmutable;
@@ -26,6 +27,7 @@ class ReportFilters
         public readonly array $departments = [],
         public readonly array $managerEmployeeIds = [],
         public readonly array $workPatterns = [],
+        public readonly array $shifts = [],
         public readonly array $statuses = [],
         public readonly ?string $caseState = null,
         public readonly ?string $caseIssueType = null,
@@ -49,6 +51,7 @@ class ReportFilters
         $managers = self::numbers($input['manager_employee_ids'] ?? [], 'manager_employee_ids');
         $departments = self::strings($input['departments'] ?? [], 'departments');
         $patterns = self::strings($input['work_patterns'] ?? [], 'work_patterns');
+        $shifts = self::strings($input['shifts'] ?? [], 'shifts');
         $statuses = self::strings($input['statuses'] ?? [], 'statuses');
         $caseState = $input['case_state'] ?? null;
         $caseIssueType = $input['case_issue_type'] ?? null;
@@ -57,13 +60,14 @@ class ReportFilters
             || ($managers !== [] && Employee::query()->where('company_id', $company->id)->whereIn('id', $managers)->count() !== count($managers))
             || ($branches !== [] && Branch::query()->where('company_id', $company->id)->whereIn('id', $branches)->count() !== count($branches))
             || array_diff($patterns, ['office', 'shift', 'security']) !== []
+            || array_diff($shifts, ShiftDisplay::KEYS) !== []
             || array_diff($statuses, self::STATUSES) !== []
             || ($caseState !== null && ! in_array($caseState, ['open_cases', 'open', 'waiting_manager', 'waiting_approver', 'waiting_hr', 'closed'], true))
             || ($caseIssueType !== null && ! in_array($caseIssueType, ['absence', 'late', 'early', 'exit', 'missing_punch', 'leave_entry'], true))) {
             throw ValidationException::withMessages(['filters' => __('messages.reporting.invalid_filters')]);
         }
 
-        return new self((int) $company->id, $from, $to, $ids, $branches, $departments, $managers, $patterns, $statuses,
+        return new self((int) $company->id, $from, $to, $ids, $branches, $departments, $managers, $patterns, $shifts, $statuses,
             $caseState, $caseIssueType);
     }
 
@@ -74,7 +78,8 @@ class ReportFilters
             'employee_ids' => $this->employeeIds, 'branch_ids' => $this->branchIds,
             'departments' => $this->departments, 'manager_employee_ids' => $this->managerEmployeeIds,
             'work_patterns' => $this->workPatterns, 'statuses' => $this->statuses,
-        ] + ($this->caseState === null ? [] : ['case_state' => $this->caseState])
+        ] + ($this->shifts === [] ? [] : ['shifts' => $this->shifts])
+            + ($this->caseState === null ? [] : ['case_state' => $this->caseState])
             + ($this->caseIssueType === null ? [] : ['case_issue_type' => $this->caseIssueType]);
     }
 

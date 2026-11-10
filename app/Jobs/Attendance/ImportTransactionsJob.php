@@ -31,7 +31,10 @@ class ImportTransactionsJob implements ShouldBeUnique, ShouldQueue
 
     public int $uniqueFor = 7800;
 
-    public function __construct(public int $batchId) {}
+    public function __construct(public int $batchId)
+    {
+        $this->onQueue('imports');
+    }
 
     public function uniqueId(): string
     {

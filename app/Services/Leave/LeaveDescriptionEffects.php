@@ -53,7 +53,15 @@ class LeaveDescriptionEffects
 
     public function applies(LeaveRequest $request, DescriptionReading $reading, string $category): bool
     {
-        return $reading->status === 'confirmed' && $reading->category === $category
-            && $this->reason($request, $reading) === null;
+        if ($reading->category !== $category || $this->reason($request, $reading) !== null) {
+            return false;
+        }
+
+        if (in_array($category, ['hourly_settlement', 'compensation_for_day'], true)) {
+            return in_array($reading->status, ['proposed', 'confirmed'], true)
+                && in_array($reading->confidence, ['high', 'medium'], true);
+        }
+
+        return $reading->status === 'confirmed';
     }
 }

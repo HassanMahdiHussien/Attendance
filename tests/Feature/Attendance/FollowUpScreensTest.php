@@ -151,7 +151,7 @@ test('case appears on the day and employee pages and HR can close it with a reas
         ->set('reason', 'Confirmed contact details')->call('save')->assertHasNoErrors();
     expect($this->employee->fresh()->email)->toBe('person@example.test');
 
-    Livewire::test(FollowUpCasesPage::class)->set('closeReason', 'Manager confirmed resolution')
+    Livewire::test(FollowUpCasesPage::class)->set('closeReasons.'.$this->case->id, 'Manager confirmed resolution')
         ->call('closeCase', $this->case->id)->assertHasNoErrors();
     expect($this->case->fresh()->state)->toBe('closed');
 });
@@ -249,7 +249,7 @@ test('notification mutations require an active user with the send gate', functio
 });
 
 test('another company case cannot be closed from the current panel', function (): void {
-    Livewire::test(FollowUpCasesPage::class)->set('closeReason', 'No access')
+    Livewire::test(FollowUpCasesPage::class)->set('closeReasons.'.$this->foreign->id, 'No access')
         ->call('closeCase', $this->foreign->id)->assertNotFound();
     Livewire::test(NotificationsPage::class)->call('preview', $this->foreignMessage->id)->assertNotFound();
     Livewire::test(ApproverMappingsPage::class)
@@ -272,4 +272,31 @@ test('company HR cannot open another tenant panel pages', function (): void {
     foreach ([FollowUpCasesPage::class, NotificationsPage::class, ApproverMappingsPage::class] as $page) {
         Livewire::test($page)->assertForbidden();
     }
+});
+
+test('HR can close a follow-up straight from the day and employee pages', function (): void {
+    Livewire::withQueryParams(['employee' => $this->employee->id, 'date' => '2026-10-21'])
+        ->test(DayDetail::class)->assertSee(__('messages.follow_up_ui.close'))
+        ->call('closeFollowUpCase', $this->case->id)->assertHasErrors(['closeReasons.'.$this->case->id])
+        ->set('closeReasons.'.$this->case->id, 'Manager confirmed by phone')
+        ->call('closeFollowUpCase', $this->case->id)->assertHasNoErrors();
+    expect($this->case->fresh()->state)->toBe('closed')
+        ->and($this->case->fresh()->closure_reason)->toBe('Manager confirmed by phone');
+
+    $second = FollowUpCase::factory()->create(['company_id' => $this->company->id,
+        'employee_id' => $this->employee->id, 'day_id' => $this->day->id, 'work_date' => '2026-10-22']);
+    Livewire::test(EmployeeFollowUp::class, ['employeeId' => $this->employee->id])
+        ->set('closeReasons.'.$second->id, 'Covered by leave on paper')
+        ->call('closeFollowUpCase', $second->id)->assertHasNoErrors();
+    expect($second->fresh()->state)->toBe('closed');
+});
+
+test('a case of another company cannot be closed from the day or employee page', function (): void {
+    Livewire::withQueryParams(['employee' => $this->employee->id, 'date' => '2026-10-21'])
+        ->test(DayDetail::class)->set('closeReasons.'.$this->foreign->id, 'No access')
+        ->call('closeFollowUpCase', $this->foreign->id)->assertNotFound();
+    Livewire::test(EmployeeFollowUp::class, ['employeeId' => $this->employee->id])
+        ->set('closeReasons.'.$this->foreign->id, 'No access')
+        ->call('closeFollowUpCase', $this->foreign->id)->assertNotFound();
+    expect($this->foreign->fresh()->state)->not->toBe('closed');
 });

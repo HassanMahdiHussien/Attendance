@@ -3,6 +3,7 @@
 namespace App\Jobs\Leave;
 
 use App\Models\Company;
+use App\Services\Leave\PendingReconciliation;
 use App\Services\Leave\Reconciler;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Bus\Batchable;
@@ -27,10 +28,16 @@ class ReconcileLeaveJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
         public string $trigger,
         public ?string $from = null,
         public ?string $to = null,
-    ) {}
+        public ?int $slot = null,
+    ) {
+        $this->onQueue('default');
+    }
 
     public function uniqueId(): string
     {
+        if ($this->trigger === 'days' && $this->employeeIds === []) {
+            return 'pending:'.$this->companyId.':'.($this->slot ?? 0);
+        }
         $ids = array_values(array_unique(array_map('intval', $this->employeeIds)));
         sort($ids, SORT_NUMERIC);
 
@@ -40,6 +47,12 @@ class ReconcileLeaveJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
     public function handle(Reconciler $reconciler): void
     {
         $company = Company::findOrFail($this->companyId);
+        if ($this->trigger === 'days' && $this->employeeIds === []) {
+            app(TenantContext::class)->runForCompany($company,
+                fn () => app(PendingReconciliation::class)->run($company, $reconciler, $this));
+
+            return;
+        }
         app(TenantContext::class)->runForCompany($company, fn () => $reconciler->run($company, $this->employeeIds, $this->trigger, $this->from, $this->to));
     }
 }

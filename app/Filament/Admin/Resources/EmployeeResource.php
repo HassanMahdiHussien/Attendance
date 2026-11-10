@@ -12,6 +12,7 @@ use App\Services\Employees\ExitReview;
 use App\Services\Employees\PatternRule;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
@@ -20,6 +21,8 @@ use Filament\Forms\Components\TimePicker;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 
 class EmployeeResource extends Resource
@@ -93,11 +96,18 @@ class EmployeeResource extends Resource
     public static function table(Table $table): Table
     {
         return $table->columns([
-            TextColumn::make('employee_code')->label(__('Number')),
-            TextColumn::make('name')->label(__('Employee')),
+            TextColumn::make('employee_code')->label(__('Number'))->searchable(),
+            TextColumn::make('name')->label(__('Employee'))->searchable(['name', 'name_en']),
             TextColumn::make('branch.name')->label(__('Branch')),
             TextColumn::make('department')->label(__('Department')),
             TextColumn::make('is_active')->label(__('Status'))->formatStateUsing(fn (bool $state): string => $state ? __('Active') : __('Inactive')),
+        ])->filters([
+            SelectFilter::make('branch_id')->label(__('Branch'))->options(fn (): array => Branch::query()
+                ->where('company_id', Filament::getTenant()->id)->orderBy('name')->pluck('name', 'id')->all()),
+            SelectFilter::make('department')->label(__('Department'))->options(fn (): array => Employee::query()
+                ->where('company_id', Filament::getTenant()->id)->whereNotNull('department')
+                ->distinct()->orderBy('department')->pluck('department', 'department')->all()),
+            TernaryFilter::make('is_active')->label(__('Status')),
         ])->recordActions([
             EditAction::make(),
             Action::make('startExitReview')->label(__('Start exit review'))->color('danger')->requiresConfirmation()

@@ -1,6 +1,12 @@
 <?php
 
 return [
+    'relative_periods' => [
+        'last_week' => ['last week', 'previous week', 'past week', 'الأسبوع الماضي', 'الاسبوع الماضي', 'الأسبوع السابق', 'الاسبوع السابق', 'الأسبوع الفائت', 'الاسبوع الفائت'],
+        'this_week' => ['this week', 'هذا الأسبوع', 'هذا الاسبوع'],
+        'yesterday' => ['yesterday', 'أمس', 'امس', 'البارحة'],
+        'last_month' => ['last month', 'previous month', 'الشهر الماضي', 'الشهر السابق'],
+    ],
     'months' => [
         1 => ['january', 'jan', 'يناير', 'كانون الثاني'],
         2 => ['february', 'feb', 'فبراير', 'شباط'],

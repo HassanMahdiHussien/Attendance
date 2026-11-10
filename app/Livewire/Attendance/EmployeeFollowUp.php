@@ -2,7 +2,9 @@
 
 namespace App\Livewire\Attendance;
 
+use App\Models\Attendance\FollowUpCase;
 use App\Models\Employee;
+use App\Services\Attendance\FollowUp\CaseSync;
 use App\Services\Attendance\FollowUp\FollowUpCases;
 use App\Services\Employees\EmployeeHistory;
 use App\Support\Tenancy\TenantContext;
@@ -23,6 +25,9 @@ class EmployeeFollowUp extends Component
     public string $effectiveDate = '';
 
     public string $reason = '';
+
+    /** @var array<int, string> */
+    public array $closeReasons = [];
 
     public function mount(int $employeeId): void
     {
@@ -49,6 +54,20 @@ class EmployeeFollowUp extends Component
         $this->email = $employee->email ?? '';
         $this->fallbackEmail = $employee->fallback_notification_email ?? '';
         $this->reason = '';
+    }
+
+    public function closeFollowUpCase(int $id, CaseSync $sync): void
+    {
+        $company = $this->employee()->company;
+        Gate::authorize('sendAttendanceNotifications', $company);
+        $this->validate(['closeReasons.'.$id => 'required|string|max:1000'],
+            ['closeReasons.'.$id.'.required' => __('messages.follow_up.reason_required')]);
+        app(TenantContext::class)->runForCompany($company, function () use ($company, $id, $sync): void {
+            $case = FollowUpCase::query()->where('company_id', $company->id)
+                ->where('employee_id', $this->employeeId)->findOrFail($id);
+            $sync->closeManually($case, $this->closeReasons[$id], auth()->user());
+        });
+        unset($this->closeReasons[$id]);
     }
 
     public function render(): View

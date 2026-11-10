@@ -202,7 +202,7 @@ test('overtime appears on the daily and detail pages and policy edits retain oth
 
 test('minor gap tolerance is versioned, visible and limited to sixty minutes', function (): void {
     Queue::fake([AssessDaysJob::class]);
-    Livewire::test(OfficePolicyPage::class)->assertSee('Minor gap tolerance')
+    Livewire::test(OfficePolicyPage::class)->assertSee('Allowed late and early minutes')
         ->assertSee('Applies to office, shift and security days')
         ->set('effectiveFrom', '2026-10-22')->set('minorGapToleranceMinutes', 61)
         ->set('reason', 'Invented policy review')->call('addVersion')->assertHasErrors(['minorGapToleranceMinutes']);
@@ -247,4 +247,42 @@ test('all office pages reject another tenant HR and admit a platform admin', fun
         }
         actingInAdminTenant($this, $this->actor, $this->company);
     }
+});
+
+test('saving a policy version confirms its date, lists the change and shows recalculation status', function (): void {
+    Queue::fake([AssessDaysJob::class]);
+    Livewire::test(OfficePolicyPage::class)->assertSee('Only days from this date use the new values')
+        ->set('effectiveFrom', '2026-10-22')->set('minorGapToleranceMinutes', 15)
+        ->set('reason', 'Invented tolerance test')->call('addVersion')->assertHasNoErrors()
+        ->assertNotified('Version 2 saved. It applies to days from 2026-10-22.');
+
+    // Tests rebuild months at once, so mark one as still waiting to see the in-progress line.
+    DB::table('attendance_month_summaries')->insertOrIgnore(['company_id' => $this->company->id,
+        'employee_id' => $this->employee->id, 'month' => '2026-09-01', 'version' => 1, 'is_dirty' => true,
+        'created_at' => now(), 'updated_at' => now()]);
+    DB::table('attendance_month_summaries')->where('company_id', $this->company->id)->update(['is_dirty' => true]);
+    Livewire::test(OfficePolicyPage::class)->assertSee('What changed')
+        ->assertSee('Allowed late and early minutes: 5 min → 15 min')
+        ->assertSee('employee-months are still being updated');
+
+    DB::table('attendance_month_summaries')->where('company_id', $this->company->id)->update(['is_dirty' => false]);
+    Livewire::test(OfficePolicyPage::class)->assertSee('All totals are up to date with the current policy.');
+});
+
+test('a back-dated version shows and saves the values in force on its date, keeping fields HR edited', function (): void {
+    Queue::fake([AssessDaysJob::class]);
+    Policy::factory()->create(['company_id' => $this->company->id, 'effective_from' => '2026-10-21',
+        'version' => 2, 'minor_gap_tolerance_minutes' => 15]);
+
+    Livewire::test(OfficePolicyPage::class)->assertSet('minorGapToleranceMinutes', 15)
+        ->set('effectiveFrom', '2026-10-20')->assertSet('minorGapToleranceMinutes', 5)
+        ->set('flexMinutes', 50)->set('effectiveFrom', '2026-10-21')
+        ->assertSet('minorGapToleranceMinutes', 15)->assertSet('flexMinutes', 50)
+        ->set('effectiveFrom', '2026-10-20')->set('minorGapToleranceMinutes', 12)
+        ->set('reason', 'Invented back-dated test')->call('addVersion')->assertHasNoErrors();
+
+    $latest = Policy::query()->where('company_id', $this->company->id)->orderByDesc('version')->firstOrFail();
+    expect($latest->effective_from->toDateString())->toBe('2026-10-20')
+        ->and($latest->minor_gap_tolerance_minutes)->toBe(12)
+        ->and($latest->flex_minutes)->toBe(50);
 });

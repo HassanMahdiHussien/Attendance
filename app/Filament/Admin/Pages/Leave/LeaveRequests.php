@@ -9,7 +9,9 @@ use App\Models\Leave\LeaveType;
 use App\Services\Attendance\Reporting\EmployeeFilterSearch;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\DB;
+use Livewire\Attributes\Url;
 
 class LeaveRequests extends LeavePage
 {
@@ -17,18 +19,24 @@ class LeaveRequests extends LeavePage
 
     protected string $view = 'filament.admin.pages.leave.requests';
 
+    #[Url]
     public string $status = '';
 
+    #[Url]
     public string $typeId = '';
 
+    #[Url]
     public string $employeeId = '';
 
     public string $employeeSearch = '';
 
+    #[Url]
     public string $from = '';
 
+    #[Url]
     public string $to = '';
 
+    #[Url]
     public string $flag = '';
 
     public static function getNavigationLabel(): string
@@ -126,7 +134,11 @@ class LeaveRequests extends LeavePage
         abort_unless((int) $request->company_id === (int) $this->company()->id, 404);
 
         return LeaveRequestDetail::getUrl(panel: 'admin', tenant: $this->company())
-            .'?'.http_build_query(['request' => $request->id]);
+            .'?'.http_build_query(['request' => $request->id, 'back' => [
+                'status' => $this->status, 'typeId' => $this->typeId, 'employeeId' => $this->employeeId,
+                'from' => $this->from, 'to' => $this->to, 'flag' => $this->flag,
+                'page' => Paginator::resolveCurrentPage(),
+            ]]);
     }
 
     public function displayStatus(LeaveRequest $request): string

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Admin\Pages\Leave;
 
+use App\Filament\Admin\Pages\Attendance\FollowUpCasesPage;
 use App\Filament\Admin\Resources\Leave\LeavePage;
 use App\Models\Attendance\DataIssue;
 use App\Models\Leave\Allocation;
@@ -25,6 +26,15 @@ class LeaveRequestDetail extends LeavePage
 
     #[Locked]
     public ?int $requestId = null;
+
+    #[Locked]
+    public array $backFilters = [];
+
+    #[Locked]
+    public array $backDescriptions = [];
+
+    #[Locked]
+    public array $backFollowUp = [];
 
     public string $reason = '';
 
@@ -54,10 +64,48 @@ class LeaveRequestDetail extends LeavePage
         $request = request()->query('request');
         abort_unless((is_string($request) || is_int($request)) && ctype_digit((string) $request), 404);
         $this->requestId = (int) $request;
+        $back = request()->query('back', []);
+        $this->backFilters = is_array($back) ? array_intersect_key($back, array_flip(['status', 'typeId', 'employeeId', 'from', 'to', 'flag', 'page'])) : [];
+        $descriptions = request()->query('back_descriptions', []);
+        $this->backDescriptions = is_array($descriptions) ? $descriptions : [];
+        $followUp = request()->query('back_follow_up', []);
+        $this->backFollowUp = is_array($followUp) ? $followUp : [];
         $record = $this->record();
         $this->startDate = $record->start_date?->toDateString() ?? '';
         $this->endDate = $record->end_date?->toDateString() ?? '';
         $this->durationDays = (string) $record->duration_days;
+    }
+
+    public function backUrl(): string
+    {
+        if ($this->backFollowUp !== []) {
+            $filters = array_filter(array_intersect_key($this->backFollowUp,
+                array_flip(['from', 'to', 'state', 'issueType', 'branchId', 'managerId', 'page'])),
+                fn ($value): bool => is_string($value) || is_int($value));
+
+            return FollowUpCasesPage::getUrl(panel: 'admin', tenant: $this->company()).'?'.http_build_query($filters);
+        }
+
+        if ($this->backDescriptions !== []) {
+            $filters = array_filter(array_intersect_key($this->backDescriptions,
+                array_flip(['category', 'branchId', 'from', 'to', 'page'])),
+                fn ($value): bool => is_string($value) || is_int($value));
+
+            return LeaveDescriptions::getUrl(panel: 'admin', tenant: $this->company()).'?'.http_build_query($filters);
+        }
+
+        $filters = array_filter($this->backFilters, fn ($value): bool => is_string($value) || is_int($value));
+
+        return LeaveRequests::getUrl(panel: 'admin', tenant: $this->company()).($filters === [] ? '' : '?'.http_build_query($filters));
+    }
+
+    public function backLabel(): string
+    {
+        if ($this->backFollowUp !== []) {
+            return __('messages.office_ui.back_to_follow_up');
+        }
+
+        return $this->backDescriptions !== [] ? __('messages.leave_ui.back_to_descriptions') : __('messages.leave_ui.back_to_requests');
     }
 
     public function record(): LeaveRequest

@@ -22,7 +22,10 @@ class AssessDaysJob implements ShouldBeUnique, ShouldQueue
 
     public int $uniqueFor = 7800;
 
-    public function __construct(public int $companyId, public array $scope, public string $trigger) {}
+    public function __construct(public int $companyId, public array $scope, public string $trigger)
+    {
+        $this->onQueue('assessments');
+    }
 
     public function uniqueId(): string
     {

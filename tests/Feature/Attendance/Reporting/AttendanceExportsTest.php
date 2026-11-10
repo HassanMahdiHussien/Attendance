@@ -219,8 +219,10 @@ test('each Excel kind writes a labelled private file with a detail total', funct
         $export->refresh();
         $rows = attendanceExportRows($export);
         expect($export->events()->latest('sequence')->value('state'))->toBe('completed')
-            ->and($rows[0][0])->toBe('التقرير')
-            ->and(collect($rows)->pluck(0))->toContain('الإجمالي');
+            ->and($rows[0][0])->toBe('التقرير');
+        if ($kind !== 'time_management') {
+            expect(collect($rows)->pluck(0))->toContain('الإجمالي');
+        }
         $archive = new ZipArchive;
         $archive->open(Storage::disk('local')->path($export->file_path));
         expect($archive->getFromName('xl/worksheets/sheet1.xml'))->toContain('rightToLeft="1"');

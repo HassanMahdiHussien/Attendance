@@ -14,6 +14,7 @@ use App\Filament\Admin\Pages\Attendance\HolidaysPage;
 use App\Filament\Admin\Pages\Attendance\NotificationsPage;
 use App\Filament\Admin\Pages\Attendance\OfficePolicyPage;
 use App\Filament\Admin\Pages\Attendance\ReviewQueue;
+use App\Filament\Admin\Pages\Attendance\TimeManagementPage;
 use App\Filament\Admin\Pages\Attendance\UploadCenter;
 use App\Filament\Admin\Pages\CompanySettings;
 use App\Filament\Admin\Pages\Leave\CreditLedger;
@@ -44,6 +45,7 @@ class AdminNav
         [AttendanceDevices::class, 'settings', 'heroicon-o-device-phone-mobile'],
         [AttendanceIssues::class, 'folder', 'heroicon-o-exclamation-triangle'],
         [AttendanceExportsPage::class, 'folder', 'heroicon-o-arrow-down-tray'],
+        [TimeManagementPage::class, 'folder', 'heroicon-o-clock'],
         [FollowUpCasesPage::class, 'folder', 'heroicon-o-clipboard-document-list'],
         [NotificationsPage::class, 'settings', 'heroicon-o-envelope'],
         [ApproverMappingsPage::class, 'settings', 'heroicon-o-user-plus'],
@@ -88,7 +90,7 @@ class AdminNav
         $groups = [
             'check' => [AttendanceBatches::class, AttendanceDevices::class, AttendanceIssues::class],
             'review' => [DailyAttendance::class, ReviewQueue::class, AttendancePunches::class, FollowUpCasesPage::class, LeaveRequests::class, LeaveDescriptions::class, CreditLedger::class],
-            'results' => [AttendanceExportsPage::class],
+            'results' => [TimeManagementPage::class, AttendanceExportsPage::class],
             'setup' => [EmployeeResource::class, CompanySettings::class, BranchResource::class, LocationResource::class, UserResource::class, OfficePolicyPage::class, HolidaysPage::class, NotificationsPage::class, ApproverMappingsPage::class, LeaveTypesPage::class, LeaveBatches::class],
         ];
         $result = [];

@@ -18,6 +18,7 @@ use App\Services\Attendance\Reporting\ReportFilters;
 use App\Services\Attendance\Reporting\ResultCache;
 use App\Support\Tenancy\TenantContext;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
@@ -77,6 +78,26 @@ test('cached overtime and coverage equal their live results', function (): void 
     expect($overtime->totals($this->filters))->toEqual($overtime->totalsLive($this->filters))
         ->and($update->for($this->filters)['coverage'])
         ->toEqual($cache->withoutCache(fn (): array => $update->for($this->filters)['coverage']));
+});
+
+test('closed partial month attendance totals reuse the cache and a dirty month refreshes them', function (): void {
+    $day = Day::factory()->create(['employee_id' => $this->employee->id, 'branch_id' => $this->branch->id,
+        'work_date' => '2026-10-04', 'status' => 'present']);
+    $filters = ReportFilters::fromArray($this->company, ['from' => '2026-10-01', 'to' => '2026-10-06']);
+    app(MonthSummaries::class)->markDirty($this->company->id, [$this->employee->id], '2026-10-04', '2026-10-04');
+    $summary = app(AttendanceSummary::class);
+    expect($summary->totals($filters)['minutes']['late']['gross'])->toBe(0);
+
+    DB::enableQueryLog();
+    DB::flushQueryLog();
+    $summary->totals($filters);
+    expect(collect(DB::getQueryLog())->filter(fn (array $query): bool => str_contains($query['query'], 'attendance_days'))->count())->toBe(0);
+
+    DB::flushQueryLog();
+    $day->update(['late_minutes' => 20]);
+    app(MonthSummaries::class)->markDirty($this->company->id, [$this->employee->id], '2026-10-04', '2026-10-04');
+    expect($summary->totals($filters)['minutes']['late']['gross'])->toBe(20);
+    DB::disableQueryLog();
 });
 
 test('coverage changes invalidate the cached panel', function (): void {

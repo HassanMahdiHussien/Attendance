@@ -43,7 +43,8 @@
                                 <a class="ui-link" href="{{ route('employees.show', $employee) }}">{{ $employee->name }} (<bdi dir="ltr">{{ $employee->employee_code }}</bdi>)</a>
                             @elseif ($request = $this->leaveRequestSubject($issue))
                                 <a class="ui-link" href="{{ \App\Filament\Admin\Pages\Leave\LeaveRequestDetail::getUrl(panel: 'admin', tenant: $this->company()).'?'.http_build_query(['request' => $request->id]) }}">{{ __('messages.attendance_ui.leave_request') }} <bdi dir="ltr">{{ $request->external_id ?: $request->id }}</bdi></a>
-                            @else <bdi dir="ltr">{{ $issue->subject_key }}</bdi> @endif
+                            @else {{ __('messages.attendance_ui.source_record') }} @endif
+                            <span class="mt-1 block max-w-md text-xs text-gray-600">{{ \Illuminate\Support\Str::limit((string) ($issue->details['explanation'] ?? $issue->details['reason'] ?? (\Illuminate\Support\Facades\Lang::has('messages.attendance_ui.issue_types.'.$issue->type) ? __('messages.attendance_ui.issue_types.'.$issue->type) : __('messages.attendance_ui.issue_no_explanation'))), 160) }} · <bdi dir="ltr">{{ $issue->date_from?->toDateString() ?? $issue->created_at?->toDateString() }}</bdi></span>
                         </x-ui.td>
                         <x-ui.td :label="__('messages.attendance_ui.state')"><x-ui.badge :tone="$issue->status === 'open' ? 'red' : 'green'">{{ __('messages.attendance_ui.issue_states.'.$issue->status) }}</x-ui.badge></x-ui.td>
                         <x-ui.td :label="__('messages.attendance_ui.actions')">

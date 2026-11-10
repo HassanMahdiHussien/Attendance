@@ -4,7 +4,16 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 
 ---
 
+- Hourly leave notes with a resolved period and compensation notes with worked dates apply at medium or high confidence while proposed; rejected readings never apply. Relative "last week" is the seven days before the request start, "this week" ends on it, "yesterday" is the prior day, and "last month" is the prior calendar month. Explicit dates and months win. (2026-11-08; compensation 2026-11-05)
+
+- The first worker listens to `imports,assessments,default,summaries` in that order; two more listen to `assessments,default,summaries` so imports remain serial. (2026-11-10)
+- Assessment-triggered leave matching waits for the company's import and assessment burst, merging each employee's widest dates in a durable table; leave-import matching remains immediate. (2026-11-08)
+- Holiday leave matching joins the pending queue, so its leave run is labelled `days` rather than `holiday`. (2026-11-10)
+
+- Time Management lists a night that is also Friday or a holiday in each matching sheet and tab; its time contributes to each matching category total, while overtime and the unique-day row count contribute once. (2026-11-07)
+
 - Stored employee-months cache the live attendance calculation; `attendance:month-summaries-verify` checks them against that calculation. (2026-11-05)
+- Closed partial reporting periods cache their totals against the touched month-summary versions and employee update timestamp; periods including today remain live. (2026-11-06)
 - The coverage-quality panel uses a 10-minute result cache because its assessable count depends on the clock crossing each day's closing time; sources, runs and updating state remain live. (2026-11-05)
 
 - Gross late, early or exit minutes can exceed leave + credit + remaining because present-day worked hours or the full-hours minor-gap tolerance settle the rest; neither creates an allocation. (2026-11-05)
@@ -109,7 +118,7 @@ Running log of deliberate, non-obvious decisions — so nobody "fixes" them late
 - Saved `Leave Entry` forms have per-form follow-up cases with a separate case key; the original employee-day cases keep their day key. Both enter one notification batch and can share a manager email. A saved form still covers nothing. (2026-11-04, spec 518)
 - When an hourly description names two nonadjacent months, its settlement period includes the intervening months; allocations use the range's oldest unreconciled minutes first. (2026-11-04, spec 518)
 - If all of a leave form's minutes settle the named earlier period, an absence on the form's own date stays uncovered. (2026-11-04, spec 518)
-- The leave notes page is read-only by owner decision on 2026-11-05, so its readings change no calculation even though the decision services remain.
+- The leave notes page is read-only by owner decision on 2026-11-05; viewing it changes no calculation, while eligible proposed readings affect reconciliation without a page decision.
 - `LeaveFile::suggest` ignores sort arrows in headers, because the report tool appends one to the sorted column (`MyForm: Record Type  ↑`).
 - `HolidayClient` and `ClaudeChatModel` pass a Guzzle client with a timeout, because the Anthropic SDK's `timeout` option is advisory and a hung call stalls the whole queue.
 - `LeaveDescriptionReader` reads 25 items per call and splits a failing batch, because batches of 50 stalled past the time limit on real data. A refusal from the API (for example no credit) stops the run instead of spending the daily cap.

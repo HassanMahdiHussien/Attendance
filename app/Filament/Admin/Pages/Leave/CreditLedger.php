@@ -11,10 +11,14 @@ use App\Models\Leave\Setting;
 use App\Services\Attendance\Reporting\EmployeeFilterSearch;
 use App\Services\Leave\LeaveActions;
 use App\Services\Leave\LeaveSettings;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use Livewire\WithPagination;
 
 class CreditLedger extends LeavePage
 {
+    use WithPagination;
+
     protected static ?string $slug = 'leave/credits';
 
     protected string $view = 'filament.admin.pages.leave.credits';
@@ -32,6 +36,8 @@ class CreditLedger extends LeavePage
     public array $leaveCalendarRestDays = [5];
 
     public string $calendarReason = '';
+
+    private array $usedByCredit = [];
 
     public static function getNavigationLabel(): string
     {
@@ -60,6 +66,7 @@ class CreditLedger extends LeavePage
     public function updatedEmployeeSearch(): void
     {
         $this->employeeId = '';
+        $this->resetLedgerPages();
     }
 
     public function chooseEmployee(int $id, EmployeeFilterSearch $search): void
@@ -67,6 +74,7 @@ class CreditLedger extends LeavePage
         $selected = $search->selected(auth()->user(), $this->company(), $id);
         $this->employeeId = (string) $selected['id'];
         $this->employeeSearch = $selected['name'].' · '.$selected['code'];
+        $this->resetLedgerPages();
     }
 
     public function clearEmployee(): void
@@ -74,6 +82,14 @@ class CreditLedger extends LeavePage
         $this->company();
         $this->employeeId = '';
         $this->employeeSearch = '';
+        $this->resetLedgerPages();
+    }
+
+    private function resetLedgerPages(): void
+    {
+        foreach (['creditPage', 'deductionPage', 'reversalPage'] as $page) {
+            $this->resetPage($page);
+        }
     }
 
     public function employee(): ?Employee
@@ -82,46 +98,44 @@ class CreditLedger extends LeavePage
             ->findOrFail((int) $this->employeeId) : null;
     }
 
-    public function credits(): array
+    public function credits(): LengthAwarePaginator
     {
         $employee = $this->employee();
-        if ($employee === null) {
-            return [];
-        }
+        abort_unless($employee !== null, 404);
 
-        return Credit::query()->with('sourceDay.request')->where('company_id', $this->company()->id)
+        $page = Credit::query()->with('sourceDay.request')->where('company_id', $this->company()->id)
             ->where('employee_id', $employee->id)->whereNull('superseded_by_run_id')
-            ->orderBy('id')->get()->all();
+            ->orderBy('id')->paginate(25, pageName: 'creditPage');
+        $this->usedByCredit = DB::table('leave_allocations')->where('company_id', $this->company()->id)
+            ->whereIn('source_credit_id', $page->getCollection()->pluck('id'))->whereNull('superseded_by_run_id')
+            ->selectRaw('source_credit_id, SUM(minutes) AS used')->groupBy('source_credit_id')->pluck('used', 'source_credit_id')->all();
+
+        return $page;
     }
 
-    public function deductions(): array
+    public function deductions(): LengthAwarePaginator
     {
         $employee = $this->employee();
-        if ($employee === null) {
-            return [];
-        }
+        abort_unless($employee !== null, 404);
 
         return Allocation::query()->with(['targetDay', 'sourceCredit.sourceDay.request'])
             ->where('company_id', $this->company()->id)->where('employee_id', $employee->id)
-            ->whereNotNull('source_credit_id')->whereNull('superseded_by_run_id')->orderBy('id')->get()->all();
+            ->whereNotNull('source_credit_id')->whereNull('superseded_by_run_id')->orderBy('id')->paginate(25, pageName: 'deductionPage');
     }
 
-    public function reversals(): array
+    public function reversals(): LengthAwarePaginator
     {
         $employee = $this->employee();
-        if ($employee === null) {
-            return [];
-        }
+        abort_unless($employee !== null, 404);
 
         return RequestDecision::query()->where('company_id', $this->company()->id)
             ->where('employee_id', $employee->id)->whereIn('decision', ['reverse_deduction', 'withdraw'])
-            ->latest('id')->get()->all();
+            ->latest('id')->paginate(25, pageName: 'reversalPage');
     }
 
     public function creditUsed(int $creditId): int
     {
-        return (int) DB::table('leave_allocations')->where('company_id', $this->company()->id)
-            ->where('source_credit_id', $creditId)->whereNull('superseded_by_run_id')->sum('minutes');
+        return (int) ($this->usedByCredit[$creditId] ?? 0);
     }
 
     public function isWithdrawn(RequestDecision $decision): bool

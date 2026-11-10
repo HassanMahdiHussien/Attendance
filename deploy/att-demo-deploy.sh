@@ -68,8 +68,10 @@ RestartSec=3
 [Install]
 WantedBy=default.target
 EOF
-for unit in queue scheduler; do
-    if [[ $unit == queue ]]; then command='artisan queue:work --tries=3 --sleep=3 --memory=512'; else command='artisan schedule:work'; fi
+for unit in queue queue-extra@ scheduler; do
+    if [[ $unit == queue ]]; then command='artisan queue:work --queue=imports,assessments,default,summaries --tries=3 --sleep=3 --memory=512';
+    elif [[ $unit == queue-extra@ ]]; then command='artisan queue:work --queue=assessments,default,summaries --tries=3 --sleep=3 --memory=512';
+    else command='artisan schedule:work'; fi
     cat > "$units/att-$unit.service" <<EOF
 [Unit]
 Description=Attendance demo $unit
@@ -83,7 +85,7 @@ WantedBy=default.target
 EOF
 done
 systemctl --user daemon-reload
-systemctl --user stop att-queue att-scheduler 2>/dev/null || true
+systemctl --user stop att-queue att-queue-extra@1 att-queue-extra@2 att-scheduler 2>/dev/null || true
 
 echo "== Migrating"
 if [[ $RESEED == 1 ]]; then
@@ -96,11 +98,11 @@ fi
 php artisan filament:assets >/dev/null
 php artisan optimize:clear >/dev/null
 php artisan optimize >/dev/null
-systemctl --user enable att-web att-queue att-scheduler >/dev/null 2>&1
-systemctl --user restart att-web att-queue att-scheduler
+systemctl --user enable att-web att-queue att-queue-extra@1 att-queue-extra@2 att-scheduler >/dev/null 2>&1
+systemctl --user restart att-web att-queue att-queue-extra@1 att-queue-extra@2 att-scheduler
 sleep 2
 code="$(curl -s -o /dev/null -w '%{http_code}' -H "Host: $DOMAIN" "http://127.0.0.1:$PORT/up" || true)"
-echo "== Done: local health check /up -> HTTP $code; services: $(systemctl --user is-active att-web att-queue att-scheduler | tr '\n' ' ')"
+echo "== Done: local health check /up -> HTTP $code; services: $(systemctl --user is-active att-web att-queue att-queue-extra@1 att-queue-extra@2 att-scheduler | tr '\n' ' ')"
 loginctl show-user "$USER" -p Linger 2>/dev/null | grep -q 'Linger=yes' \
     || echo "NOTE: services stop when $USER logs out or the laptop reboots, until $USER logs in again. Once, with sudo: loginctl enable-linger $USER"
 REMOTE

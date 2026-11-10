@@ -23,7 +23,10 @@ class WarmResultCacheJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 
     public int $timeout = 420;
 
-    public function __construct(public int $companyId) {}
+    public function __construct(public int $companyId)
+    {
+        $this->onQueue('summaries');
+    }
 
     public function uniqueId(): string
     {

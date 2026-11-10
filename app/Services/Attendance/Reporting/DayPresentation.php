@@ -102,6 +102,27 @@ class DayPresentation
             }
         }
 
+        foreach ($perDayRow['compensation_notes'] ?? [] as $note) {
+            $noteDate = CarbonImmutable::parse($note['date'])->locale(app()->getLocale())->translatedFormat('D j M');
+            if ($note['kind'] === 'missing') {
+                $problems[] = __('messages.day_presentation.compensation_missing', ['date' => $noteDate]);
+                $tone = 'amber';
+                $needsReview = true;
+            } elseif ($note['kind'] === 'worked') {
+                $problems[] = __('messages.day_presentation.compensation_worked_day', [
+                    'number' => $note['number'], 'date' => $noteDate,
+                ]);
+            } elseif ($note['kind'] === 'checked') {
+                $key = $note['in'] !== null && $note['out'] !== null
+                    ? 'compensation_checked_times' : 'compensation_checked';
+                $problems[] = __('messages.day_presentation.'.$key, [
+                    'date' => $noteDate, 'in' => $note['in'], 'out' => $note['out'],
+                ]);
+            } else {
+                $problems[] = __('messages.day_presentation.compensation_used', ['date' => $noteDate]);
+            }
+        }
+
         $date = CarbonImmutable::parse($perDayRow['work_date'])->locale(app()->getLocale());
         $noPunches = ! $perDayRow['first_in'] && ! $perDayRow['last_out'];
         $worked = $status === 'field_work' ? $this->duration->format(480)

@@ -10,6 +10,7 @@ use App\Models\Branch;
 use App\Models\Company;
 use App\Models\EmployeeImportRun;
 use App\Services\Attendance\HolidaySources;
+use App\Services\Attendance\Reporting\ProcessingStatus;
 use App\Services\Attendance\TransactionFile;
 use App\Services\Attendance\TransactionImport;
 use App\Services\Attendance\UploadDetector;
@@ -34,6 +35,11 @@ class UploadCenter extends AttendancePage
     protected static ?string $slug = 'upload';
 
     protected string $view = 'filament.admin.pages.attendance.upload-center';
+
+    public function processingStatus(): array
+    {
+        return app(ProcessingStatus::class)->for($this->company());
+    }
 
     public array $files = [];
 

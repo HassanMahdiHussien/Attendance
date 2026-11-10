@@ -5,7 +5,11 @@ namespace App\Filament\Admin\Pages\Attendance;
 use App\Filament\Admin\Resources\Attendance\AttendancePage;
 use App\Models\Attendance\Policy;
 use App\Services\Attendance\OfficePolicy;
+use App\Services\Attendance\Reporting\DurationText;
+use Filament\Notifications\Notification;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Locked;
 
 class OfficePolicyPage extends AttendancePage
@@ -75,7 +79,32 @@ class OfficePolicyPage extends AttendancePage
     {
         parent::mount();
         $this->effectiveFrom = today('Asia/Baghdad')->toDateString();
-        $policy = app(OfficePolicy::class)->asOf($this->company(), $this->effectiveFrom);
+        $this->fillFrom(app(OfficePolicy::class)->asOf($this->company(), $this->effectiveFrom));
+        $this->initialValues = $this->values();
+    }
+
+    // A new version starts from the version in force on its own date, so the form must show that version's values:
+    // otherwise a back-dated save shows today's values but stores the older ones. Fields HR already edited stay.
+    public function updatedEffectiveFrom(): void
+    {
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $this->effectiveFrom) !== 1) {
+            return;
+        }
+        $edited = [];
+        foreach ($this->values() as $field => $value) {
+            if ($value !== ($this->initialValues[$field] ?? null)) {
+                $edited[Str::camel($field)] = $this->{Str::camel($field)};
+            }
+        }
+        $this->fillFrom(app(OfficePolicy::class)->asOf($this->company(), $this->effectiveFrom));
+        $this->initialValues = $this->values();
+        foreach ($edited as $property => $value) {
+            $this->{$property} = $value;
+        }
+    }
+
+    private function fillFrom(?Policy $policy): void
+    {
         if ($policy !== null) {
             $this->officeStart = substr($policy->office_start, 0, 5);
             $this->flexMinutes = $policy->flex_minutes;
@@ -98,7 +127,6 @@ class OfficePolicyPage extends AttendancePage
             $this->restDayHalfMinutes = $policy->rest_day_half_minutes;
             $this->restDayFullMinutes = $policy->rest_day_full_minutes;
         }
-        $this->initialValues = $this->values();
     }
 
     public function current(): ?Policy
@@ -135,15 +163,52 @@ class OfficePolicyPage extends AttendancePage
             'restDayFullMinutes' => 'required|integer|min:1|max:1440',
         ]);
         $values = $this->values();
-        $changed = [];
-        foreach ($values as $field => $value) {
-            if ($value !== ($this->initialValues[$field] ?? null)) {
-                $changed[$field] = $value;
-            }
-        }
-        $officePolicy->add($this->company(), $changed, $this->effectiveFrom, auth()->user(), $this->reason);
+        // Save exactly what the form shows. Sending only the fields HR edited let a back-dated version take the
+        // untouched fields from the version in force on that earlier date, so a value on screen was silently not saved.
+        $policy = $officePolicy->add($this->company(), $values, $this->effectiveFrom, auth()->user(), $this->reason);
         $this->initialValues = $values;
         $this->reason = '';
+        Notification::make()->success()->title(__('messages.office_ui.saved_version', [
+            'version' => $policy->version, 'date' => $policy->effective_from->toDateString(),
+        ]))->body(__('messages.office_ui.saved_version_body'))->send();
+    }
+
+    // Months still waiting for their totals to be rebuilt; zero means every page shows the new policy.
+    public function recalculatingMonths(): int
+    {
+        return DB::table('attendance_month_summaries')->where('company_id', $this->company()->id)
+            ->where('is_dirty', true)->count();
+    }
+
+    /** What each version changed compared with the version before it, so HR can see that a save took effect. */
+    public function changes(Policy $policy): array
+    {
+        $previous = Policy::query()->where('company_id', $this->company()->id)
+            ->where('version', '<', $policy->version)->orderByDesc('version')->first();
+        if ($previous === null) {
+            return [];
+        }
+        $lines = [];
+        foreach (array_keys(OfficePolicy::DEFAULTS) as $field) {
+            if ($field === 'compensatory_rest_days' || $previous->{$field} == $policy->{$field}) {
+                continue;
+            }
+            $lines[] = str_replace(' ('.__('messages.clear_screens.minutes_unit').')', '', __('messages.office_ui.policy_fields.'.$field))
+                .': '.$this->policyValue($field, $previous->{$field}).' → '.$this->policyValue($field, $policy->{$field});
+        }
+
+        return $lines;
+    }
+
+    private function policyValue(string $field, mixed $value): string
+    {
+        return match (true) {
+            is_bool($value) => __('messages.office_ui.'.($value ? 'yes' : 'no')),
+            in_array($field, ['office_rest_days', 'shift_rest_days'], true) => implode(', ', array_map(fn ($day) => __('messages.office_ui.weekdays.'.$day), (array) $value)),
+            is_array($value) => implode(', ', $value),
+            str_ends_with($field, '_minutes') => app(DurationText::class)->format((int) $value),
+            default => substr((string) $value, 0, 5),
+        };
     }
 
     private function values(): array

@@ -87,10 +87,10 @@ class Overtime
         }
     }
 
-    public function dayRows(ReportFilters $filters): Generator
+    public function dayRows(ReportFilters $filters, array $dayIds = []): Generator
     {
         $this->assertCompany($filters);
-        foreach ($this->summary->selectedDays($filters, columns: self::DAY_COLUMNS) as $day) {
+        foreach ($this->summary->selectedDays($filters, columns: self::DAY_COLUMNS, dayIds: $dayIds) as $day) {
             yield [
                 'day_id' => (int) $day->id, 'employee_id' => (int) $day->employee_id,
                 'work_date' => $day->work_date->toDateString(),
@@ -101,11 +101,11 @@ class Overtime
         }
     }
 
-    public function entitlements(ReportFilters $filters, ?string $asOf = null): Generator
+    public function entitlements(ReportFilters $filters, ?string $asOf = null, array $dayIds = []): Generator
     {
         $this->assertCompany($filters);
         $asOf ??= today('Asia/Baghdad')->toDateString();
-        foreach ($this->matchingEntitlements($filters, $filters) as $entitlements) {
+        foreach ($this->matchingEntitlements($filters, $filters, dayIds: $dayIds) as $entitlements) {
             yield from $this->entitlementRows($filters, $entitlements, $asOf);
         }
     }
@@ -195,10 +195,11 @@ class Overtime
         }
     }
 
-    private function matchingEntitlements(ReportFilters $filters, ReportFilters $sourceFilters, ?string $through = null): Generator
+    private function matchingEntitlements(ReportFilters $filters, ReportFilters $sourceFilters, ?string $through = null, array $dayIds = []): Generator
     {
         $query = RestDayEntitlement::query()->where('company_id', $filters->companyId)
             ->whereNull('superseded_by_run_id')
+            ->when($dayIds !== [], fn ($query) => $query->whereIn('source_day_id', $dayIds))
             ->when($filters->employeeIds !== [], fn ($query) => $query->whereIn('employee_id', $filters->employeeIds))
             ->when($through !== null, fn ($query) => $query->where('work_date', '<=', $through));
         $lastId = 0;

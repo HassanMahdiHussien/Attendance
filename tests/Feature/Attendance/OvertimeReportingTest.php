@@ -12,6 +12,7 @@ use App\Models\Leave\LeaveRequest;
 use App\Services\Attendance\Overtime;
 use App\Services\Attendance\Reporting\AttendanceSummary;
 use App\Services\Attendance\Reporting\ReportFilters;
+use App\Services\Attendance\Reporting\ResultCache;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -135,7 +136,8 @@ test('entitlement source days retain historical filters and current balance rule
 
 test('overtime query count does not grow with unrelated historical days', function (): void {
     $company = Company::factory()->create();
-    app(TenantContext::class)->runForCompany($company, function () use ($company): void {
+    // Measures the uncached work: a closed past range would otherwise be served from the result cache.
+    app(TenantContext::class)->runForCompany($company, fn () => app(ResultCache::class)->withoutCache(function () use ($company): void {
         $employee = Employee::factory()->create();
         $filters = ReportFilters::fromArray($company, ['from' => '2026-10-16', 'to' => '2026-10-16']);
         Day::factory()->create(['employee_id' => $employee->id, 'work_date' => '2026-10-16']);
@@ -160,5 +162,5 @@ test('overtime query count does not grow with unrelated historical days', functi
         expect($count($before, 'attendance_days'))->toBe($count($after, 'attendance_days'))
             ->and($count($before, 'attendance_rest_day_entitlements'))->toBe($count($after, 'attendance_rest_day_entitlements'))
             ->and($count($after, 'attendance_rest_day_entitlements'))->toBeLessThanOrEqual(2);
-    });
+    }));
 });

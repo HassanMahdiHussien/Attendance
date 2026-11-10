@@ -108,3 +108,5 @@
             </section>
         </div>
     </div>
+
+<livewire:attendance.processing-notice />

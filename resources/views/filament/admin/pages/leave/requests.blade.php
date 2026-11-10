@@ -33,7 +33,7 @@
                     <x-ui.td :label="__('messages.leave_ui.employee')">{{ $request->employee?->name ?? __('messages.leave_ui.unknown_employee') }} <bdi dir="ltr">{{ $request->owner_code }}</bdi></x-ui.td>
                     <x-ui.td :label="__('messages.leave_ui.type')">{{ $request->leaveType?->name ?? '—' }}</x-ui.td>
                     <x-ui.td :label="__('messages.leave_ui.dates')">{{ $request->start_date?->toDateString() }} – {{ $request->end_date?->toDateString() }}</x-ui.td>
-                    <x-ui.td :label="__('messages.leave_ui.duration')">{{ $request->duration_days ?? '—' }}</x-ui.td>
+                    <x-ui.td :label="__('messages.leave_ui.duration')"><bdi dir="ltr">{{ $request->duration_days ?? '—' }}</bdi> @if ($request->duration_days !== null){{ __('messages.leave_balance_ui.days') }}@endif</x-ui.td>
                     <x-ui.td :label="__('messages.leave_ui.status')"><x-ui.badge :tone="match ($displayStatus) { 'approved' => 'green', 'rejected' => 'red', 'pending' => 'indigo', default => 'gray' }">{{ __('messages.leave_ui.statuses.'.$displayStatus) }}</x-ui.badge></x-ui.td>
                     <x-ui.td :label="__('messages.leave_ui.approver')">{{ $displayStatus === 'pending' ? $request->approver_name : '—' }}</x-ui.td>
                 </tr>

@@ -31,7 +31,7 @@
                 $description = $request?->currentVersion?->values['description'] ?? '';
             @endphp
             <x-ui.card>
-                <p class="font-semibold">{{ $request?->employee?->name ?? __('messages.leave_ui.unknown_employee') }} · <bdi dir="ltr">{{ $request?->external_id }}</bdi></p>
+                <p class="font-semibold">@if ($request?->employee)<a class="ui-link" href="{{ route('employees.show', $request->employee) }}">{{ $request->employee->name }}</a>@else{{ __('messages.leave_ui.unknown_employee') }}@endif · @if ($request)<a class="ui-link" href="{{ \App\Filament\Admin\Pages\Leave\LeaveRequestDetail::getUrl(panel: 'admin', tenant: $this->company()).'?'.http_build_query(['request' => $request->id, 'back_descriptions' => ['category' => $category, 'branchId' => $branchId, 'from' => $from, 'to' => $to, 'page' => \Illuminate\Pagination\Paginator::resolveCurrentPage()]]) }}"><bdi dir="ltr">{{ $request->external_id }}</bdi></a>@endif</p>
                 <p class="text-sm text-gray-600">{{ $request?->leaveType?->name }} · <bdi dir="ltr">{{ $request?->start_date?->toDateString() }} – {{ $request?->end_date?->toDateString() }}</bdi> · {{ $request?->duration_days }} {{ __('messages.leave_balance_ui.days') }}</p>
                 <p class="mt-3 text-sm font-medium">{{ __('messages.leave_descriptions.employee_wrote') }}</p>
                 <p class="whitespace-pre-wrap break-words" dir="auto">{{ $description }}</p>
@@ -62,15 +62,13 @@
                     @if ($reading->hours !== null){{ __('messages.leave_descriptions.hours_suffix', ['hours' => (float) $reading->hours]) }}@endif
                 </p>
                 @if ($reading->confidence === 'low')<p class="mt-1 text-xs text-gray-500">{{ __('messages.leave_descriptions.low_confidence') }}</p>@endif
+                @if ($reading->category === 'hourly_settlement')<p class="mt-2 text-sm font-medium">{{ __('messages.leave_descriptions.outcomes.'.$this->hourlyOutcome($reading)) }}</p>@endif
                 @if (in_array('described_work_date_no_credit', $request?->flags ?? [], true))<p class="mt-2 text-sm text-amber-800">{{ __('messages.leave_descriptions.no_rest_credit', ['date' => implode(', ', $reading->worked_dates ?? [])]) }}</p>@endif
                 @if (in_array('described_period_shortfall', $request?->flags ?? [], true))<p class="mt-2 text-sm text-amber-800">{{ __('messages.leave_descriptions.period_shortfall') }}</p>@endif
-                @if ($reading->error_code)<p class="mt-2 text-sm text-red-700">{{ $reading->error_code === 'ai_unavailable' ? __('messages.leave_descriptions.ai_unavailable') : __('messages.leave_descriptions.failed').' ('.$reading->error_code.')' }}</p>@endif
+                @if ($reading->error_code)<p class="mt-2 text-sm text-red-700">{{ __('messages.leave_descriptions.errors.'.(in_array($reading->error_code, ['ai_unavailable', 'read_failed'], true) ? $reading->error_code : 'other')) }}</p>@endif
                 <div class="mt-3 flex flex-wrap items-center gap-2">
                     @if ($reading->error_code)<button type="button" wire:click="retry({{ $reading->id }})" class="ui-control rounded-lg border border-line px-3 py-2">{{ __('messages.leave_descriptions.retry') }}</button>@endif
-                    @if (in_array($reading->status, ['confirmed', 'rejected'], true))
-                        <span class="text-xs text-gray-500">{{ __('messages.leave_descriptions.statuses.'.$reading->status) }}</span>
-                        <button type="button" wire:click="undo({{ $reading->id }})" class="ui-control rounded-lg border border-line px-3 py-2">{{ __('messages.leave_descriptions.undo') }}</button>
-                    @endif
+                    @if (in_array($reading->status, ['confirmed', 'rejected'], true))<span class="text-xs text-gray-500">{{ __('messages.leave_descriptions.statuses.'.$reading->status) }}</span>@endif
                 </div>
             </x-ui.card>
         @empty

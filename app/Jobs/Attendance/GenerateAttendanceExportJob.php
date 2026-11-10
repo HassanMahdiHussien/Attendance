@@ -8,6 +8,7 @@ use App\Services\Attendance\Reporting\AttendanceExports;
 use App\Services\Attendance\Reporting\AttendanceSummary;
 use App\Services\Attendance\Reporting\ExportData;
 use App\Services\Attendance\Reporting\ReportFilters;
+use App\Services\Attendance\Reporting\TimeManagementDisplay;
 use App\Services\AuditLogger;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Bus\Queueable;
@@ -91,6 +92,9 @@ class GenerateAttendanceExportJob implements ShouldQueue
 
     private function xlsx(AttendanceExport $export, Company $company, ReportFilters $filters, ExportData $data, AttendanceSummary $summary, string $path): int
     {
+        if ($export->kind === 'time_management') {
+            return $this->timeManagementXlsx($export, $company, $filters, $data, $path);
+        }
         $writer = new Writer;
         $writer->openToFile($path);
         $columns = $data->columns($export->kind);
@@ -172,29 +176,68 @@ class GenerateAttendanceExportJob implements ShouldQueue
         return $count;
     }
 
-    private function rightToLeftSheet(string $path): void
+    private function timeManagementXlsx(AttendanceExport $export, Company $company, ReportFilters $filters, ExportData $data, string $path): int
+    {
+        $report = $data->timeManagement($filters);
+        $totals = $report['totals'];
+        $writer = new Writer;
+        $writer->openToFile($path);
+        try {
+            foreach (['night', 'friday', 'holiday'] as $index => $type) {
+                $sheet = $index === 0 ? $writer->getCurrentSheet() : $writer->addNewSheetAndMakeItCurrent();
+                $sheet->setName(__('messages.export_ui.time_management.'.$type.'_sheet'));
+                foreach ($data->header($export, $company, $filters) as $header) {
+                    $writer->addRow(Row::fromValues($header));
+                }
+                $writer->addRow(Row::fromValues(['']));
+                $writer->addRow(Row::fromValues(array_map(fn (string $column): string => __('messages.export_ui.columns.'.$column), ExportData::TIME_MANAGEMENT_COLUMNS)));
+                foreach ($report[$type] as $day) {
+                    $writer->addRow(Row::fromValues(array_values($day)));
+                }
+            }
+
+            $writer->addNewSheetAndMakeItCurrent()->setName(__('messages.export_ui.time_management.totals_sheet'));
+            $writer->addRow(Row::fromValues(array_map(fn (string $column): string => __('messages.export_ui.columns.'.$column), ExportData::TIME_MANAGEMENT_TOTAL_COLUMNS)));
+            foreach ($totals as $row) {
+                $writer->addRow(Row::fromValues(array_values($row)));
+            }
+            $writer->addRow(Row::fromValues(array_values(app(TimeManagementDisplay::class)->totalRow($totals))));
+        } finally {
+            $writer->close();
+        }
+        if ($export->locale === 'ar') {
+            $this->rightToLeftSheet($path, 4);
+        }
+
+        return app(TimeManagementDisplay::class)->dayCount($report);
+    }
+
+    private function rightToLeftSheet(string $path, int $sheetCount = 1): void
     {
         $archive = new ZipArchive;
         if ($archive->open($path) !== true) {
             throw new RuntimeException('Could not open the generated spreadsheet.');
         }
         try {
-            $xml = $archive->getFromName('xl/worksheets/sheet1.xml');
-            if ($xml === false) {
-                throw new RuntimeException('Could not find the generated worksheet.');
-            }
-            if (str_contains($xml, 'rightToLeft="1"')) {
-                return;
-            }
-            if (preg_match('/<sheetViews\b/', $xml) === 1) {
-                $xml = preg_replace('/\srightToLeft="[^"]*"/', '', $xml);
-                $xml = preg_replace('/(<sheetView\b)([^>]*?)(\/?>)/', '$1 rightToLeft="1"$2$3', $xml, 1);
-            } else {
-                $xml = preg_replace('/(<worksheet\b[^>]*>)/', '$1<sheetViews><sheetView workbookViewId="0" rightToLeft="1"/></sheetViews>', $xml, 1);
-            }
-            if ($xml === null || ! str_contains($xml, 'rightToLeft="1"')
-                || ! $archive->addFromString('xl/worksheets/sheet1.xml', $xml)) {
-                throw new RuntimeException('Could not set the worksheet direction.');
+            for ($sheet = 1; $sheet <= $sheetCount; $sheet++) {
+                $name = 'xl/worksheets/sheet'.$sheet.'.xml';
+                $xml = $archive->getFromName($name);
+                if ($xml === false) {
+                    throw new RuntimeException('Could not find the generated worksheet.');
+                }
+                if (str_contains($xml, 'rightToLeft="1"')) {
+                    continue;
+                }
+                if (preg_match('/<sheetViews\b/', $xml) === 1) {
+                    $xml = preg_replace('/\srightToLeft="[^"]*"/', '', $xml);
+                    $xml = preg_replace('/(<sheetView\b)([^>]*?)(\/?>)/', '$1 rightToLeft="1"$2$3', $xml, 1);
+                } else {
+                    $xml = preg_replace('/(<worksheet\b[^>]*>)/', '$1<sheetViews><sheetView workbookViewId="0" rightToLeft="1"/></sheetViews>', $xml, 1);
+                }
+                if ($xml === null || ! str_contains($xml, 'rightToLeft="1"')
+                    || ! $archive->addFromString($name, $xml)) {
+                    throw new RuntimeException('Could not set the worksheet direction.');
+                }
             }
         } finally {
             $archive->close();

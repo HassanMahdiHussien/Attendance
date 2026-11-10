@@ -6,6 +6,8 @@ use App\Jobs\Leave\ReconcileLeaveJob;
 use App\Models\Attendance\AttendanceExport;
 use App\Models\Attendance\DataIssue;
 use App\Models\Attendance\Day;
+use App\Models\Attendance\FollowUpCase;
+use App\Models\Attendance\PendingLeaveReconciliation;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\Leave\Allocation;
@@ -14,6 +16,7 @@ use App\Models\Leave\DescriptionReading;
 use App\Models\Leave\ImportBatch;
 use App\Models\Leave\LeaveRequest;
 use App\Models\Leave\LeaveType;
+use App\Models\Leave\ProcessingRun;
 use App\Models\Leave\RequestDay;
 use App\Models\Leave\RequestDecision;
 use App\Models\Leave\RequestVersion;
@@ -26,11 +29,14 @@ use App\Services\Attendance\Reporting\ExportData;
 use App\Services\Attendance\Reporting\ReportFilters;
 use App\Services\Leave\DayReconciliation;
 use App\Services\Leave\LeaveActions;
+use App\Services\Leave\LeaveDescriptionReader;
 use App\Services\Leave\LeaveSettings;
 use App\Services\Leave\LeaveTypes;
+use App\Services\Leave\PendingReconciliation;
 use App\Services\Leave\Reconciler;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -88,7 +94,7 @@ test('same day leave settles a balance and surplus credit pays later lateness', 
     expect($credit->explanation['request'])->toBe('FORM-A')->and($credit->minutes)->toBe(15);
 });
 
-test('confirmed hourly period takes older minutes first and undo and cancellation replay cleanly', function (): void {
+test('proposed hourly period takes older minutes first and rejection and cancellation replay cleanly', function (): void {
     $this->type->update(['name' => 'Overtime Equivelant Leave']);
     $request = reconciledRequest($this->employee, $this->type, 'INVENTED-HOURS', '2026-10-19');
     $batch = ImportBatch::factory()->create(['company_id' => $this->company->id]);
@@ -106,7 +112,7 @@ test('confirmed hourly period takes older minutes first and undo and cancellatio
     reconciledDay($this->employee, '2026-10-19', 'present', early: 180);
     replayLeave($this->company, $this->employee);
     $before = (int) Allocation::query()->whereNull('superseded_by_run_id')->where('target_day_id', $july->id)->sum('minutes');
-    expect($before)->toBe(60);
+    expect($before)->toBe(120);
     $reading->update(['status' => 'confirmed']);
     replayLeave($this->company, $this->employee);
     expect((int) Allocation::query()->whereNull('superseded_by_run_id')->where('target_day_id', $july->id)->sum('minutes'))->toBe(120)
@@ -130,12 +136,39 @@ test('confirmed hourly period takes older minutes first and undo and cancellatio
     $active = Allocation::query()->whereNull('superseded_by_run_id')->pluck('id')->all();
     replayLeave($this->company, $this->employee);
     expect(Allocation::query()->whereNull('superseded_by_run_id')->pluck('id')->all())->toBe($active);
-    $reading->update(['status' => 'proposed']);
+    $reading->update(['status' => 'rejected']);
     replayLeave($this->company, $this->employee);
     expect((int) Allocation::query()->whereNull('superseded_by_run_id')->where('target_day_id', $july->id)->sum('minutes'))->toBe(60);
     app(LeaveActions::class)->cancel($request, 'Invented correction', $this->actor);
     replayLeave($this->company, $this->employee);
     expect(Allocation::query()->whereNull('superseded_by_run_id')->count())->toBe(0);
+});
+
+test('hours last week cover Sunday early leave before January absence', function (): void {
+    $this->type->update(['name' => 'Annual Leave']);
+    $request = reconciledRequest($this->employee, $this->type, 'FORM-WEEK', '2026-11-02');
+    $batch = ImportBatch::factory()->create(['company_id' => $this->company->id]);
+    $version = RequestVersion::factory()->create(['company_id' => $this->company->id,
+        'request_id' => $request->id, 'batch_id' => $batch->id, 'row_number' => 2,
+        'values' => ['description' => 'Hours last week'], 'raw_values' => []]);
+    $request->update(['current_version_id' => $version->id]);
+    $period = app(LeaveDescriptionReader::class)->hourlyPeriod('Hours last week', '2026-11-02', 'high');
+    DescriptionReading::create(['company_id' => $this->company->id, 'request_id' => $request->id,
+        'text_hash' => hash('sha256', 'Hours last week'), 'category' => 'hourly_settlement',
+        'worked_dates' => [], 'status' => 'proposed'] + $period);
+    $old = reconciledDay($this->employee, '2026-01-05', 'absent');
+    $sunday = reconciledDay($this->employee, '2026-11-01', 'present', early: 72);
+    reconciledDay($this->employee, '2026-11-02', 'present');
+    replayLeave($this->company, $this->employee);
+
+    $periodAllocation = Allocation::query()->whereNull('superseded_by_run_id')
+        ->where('target_day_id', $sunday->id)->sole();
+    $creditAllocation = Allocation::query()->whereNull('superseded_by_run_id')
+        ->where('target_day_id', $old->id)->firstOrFail();
+    expect($periodAllocation->minutes)->toBe(72)
+        ->and($periodAllocation->explanation['code'])->toBe('leave_description_period')
+        ->and($creditAllocation->minutes)->toBe(168)
+        ->and($creditAllocation->source_credit_id)->not->toBeNull();
 });
 
 test('a half day leaves four hours of absence and a full day closes it', function (): void {
@@ -193,9 +226,99 @@ test('replay is idempotent and moving an office day removes its old allocation',
     expect(Allocation::query()->whereNull('superseded_by_run_id')->count())->toBe(0);
 });
 
-test('day assessment dispatches a scoped reconciliation job', function (): void {
+test('day assessment collects a scoped reconciliation job', function (): void {
+    config(['queue.default' => 'database']);
+    config(['attendance.leave_matching_slots' => 3]);
     event(new DaysAssessed($this->company->id, [$this->employee->id], '2026-10-19', '2026-10-20'));
-    Queue::assertPushed(ReconcileLeaveJob::class, fn (ReconcileLeaveJob $job): bool => $job->companyId === $this->company->id && $job->employeeIds === [$this->employee->id]);
+    Queue::assertPushed(ReconcileLeaveJob::class, 3);
+    $jobs = Queue::pushed(ReconcileLeaveJob::class)->values();
+    expect($jobs->pluck('slot')->sort()->values()->all())->toBe([0, 1, 2])
+        ->and($jobs->map(fn (ReconcileLeaveJob $job): string => $job->uniqueId())->unique()->count())->toBe(3);
+    expect(PendingLeaveReconciliation::query()->where('company_id', $this->company->id)->where('employee_id', $this->employee->id)->exists())->toBeTrue();
+
+    event(new DaysAssessed($this->company->id, [$this->employee->id], '2026-10-15', '2026-10-17'));
+    $pending = PendingLeaveReconciliation::query()->where('company_id', $this->company->id)->sole();
+    expect((string) $pending->getRawOriginal('from_date'))->toBe('2026-10-15')
+        ->and((string) $pending->getRawOriginal('to_date'))->toBe('2026-10-20')
+        ->and((int) $pending->revision)->toBe(1);
+});
+
+test('a pending slot takes only rows not claimed by another slot', function (): void {
+    config(['queue.default' => 'database']);
+    $other = Employee::factory()->create(['company_id' => $this->company->id]);
+    $anotherCompany = Company::factory()->create();
+    app(TenantContext::class)->runForCompany($anotherCompany, function () use ($anotherCompany): void {
+        $anotherEmployee = Employee::factory()->create(['company_id' => $anotherCompany->id]);
+        app(PendingReconciliation::class)->collect($anotherCompany->id, [$anotherEmployee->id],
+            '2026-10-19', '2026-10-20');
+    });
+    $pending = app(PendingReconciliation::class);
+    $pending->collect($this->company->id, [$this->employee->id, $other->id], '2026-10-19', '2026-10-20');
+    PendingLeaveReconciliation::query()->where('company_id', $this->company->id)
+        ->where('employee_id', $this->employee->id)->update(['claim_token' => 'first-slot', 'claimed_at' => now()]);
+    $reconciler = Mockery::mock(Reconciler::class);
+    $reconciler->shouldReceive('run')->once()->withArgs(fn ($company, $ids): bool => $company->id === $this->company->id && $ids === [$other->id])
+        ->andReturnUsing(fn () => ProcessingRun::factory()->create(['company_id' => $this->company->id]));
+    $pending->run($this->company, $reconciler, new ReconcileLeaveJob($this->company->id, [], 'days', slot: 1));
+    expect(PendingLeaveReconciliation::query()->where('company_id', $this->company->id)
+        ->pluck('employee_id')->all())->toBe([$this->employee->id]);
+    expect(app(TenantContext::class)->runForCompany($anotherCompany,
+        fn () => PendingLeaveReconciliation::query()->where('company_id', $anotherCompany->id)->count()))->toBe(1);
+});
+
+test('a stale pending claim can be taken over', function (): void {
+    config(['queue.default' => 'database']);
+    app(PendingReconciliation::class)->collect($this->company->id, [$this->employee->id], '2026-10-19', '2026-10-20');
+    PendingLeaveReconciliation::query()->where('company_id', $this->company->id)
+        ->update(['claim_token' => 'dead-worker', 'claimed_at' => now()->subMinutes(16)]);
+    $reconciler = Mockery::mock(Reconciler::class);
+    $reconciler->shouldReceive('run')->once()
+        ->andReturnUsing(fn () => ProcessingRun::factory()->create(['company_id' => $this->company->id]));
+    app(PendingReconciliation::class)->run($this->company, $reconciler,
+        new ReconcileLeaveJob($this->company->id, [], 'days', slot: 2));
+    expect(PendingLeaveReconciliation::query()->where('company_id', $this->company->id)->exists())->toBeFalse();
+});
+
+test('a row merged during replay is released for another pass', function (): void {
+    config(['queue.default' => 'database']);
+    $pending = app(PendingReconciliation::class);
+    $pending->collect($this->company->id, [$this->employee->id], '2026-10-19', '2026-10-20');
+    $reconciler = Mockery::mock(Reconciler::class);
+    $reconciler->shouldReceive('run')->once()->andReturnUsing(function () use ($pending): ProcessingRun {
+        $pending->collect($this->company->id, [$this->employee->id], '2026-10-18', '2026-10-21');
+
+        return ProcessingRun::factory()->create(['company_id' => $this->company->id]);
+    });
+    $pending->run($this->company, $reconciler, new ReconcileLeaveJob($this->company->id, [], 'days', slot: 0));
+    $row = PendingLeaveReconciliation::query()->where('company_id', $this->company->id)->sole();
+    expect((int) $row->revision)->toBe(1)
+        ->and($row->claim_token)->toBeNull()
+        ->and($row->claimed_at)->toBeNull();
+});
+
+test('without a delaying queue an assessment replays leave straight away as before', function (): void {
+    event(new DaysAssessed($this->company->id, [$this->employee->id], '2026-10-19', '2026-10-20'));
+    Queue::assertPushed(ReconcileLeaveJob::class, fn (ReconcileLeaveJob $job): bool => $job->employeeIds === [$this->employee->id]);
+    expect(PendingLeaveReconciliation::query()->count())->toBe(0);
+});
+
+test('coalesced replay preserves allocations and cases from immediate replay', function (): void {
+    config(['queue.default' => 'database']);
+    reconciledRequest($this->employee, $this->type, 'FORM-COALESCED', '2026-10-19');
+    reconciledDay($this->employee, '2026-10-19', 'present', early: 180);
+    replayLeave($this->company, $this->employee);
+    $allocations = Allocation::query()->whereNull('superseded_by_run_id')->orderBy('id')
+        ->get()->map(fn ($row): array => Arr::only($row->getAttributes(), ['source_request_day_id', 'target_day_id', 'minutes']))->all();
+    $cases = FollowUpCase::query()->where('employee_id', $this->employee->id)
+        ->orderBy('id')->get()->map(fn ($row): array => Arr::only($row->getAttributes(), ['case_kind', 'status', 'work_date']))->all();
+    event(new DaysAssessed($this->company->id, [$this->employee->id], '2026-10-19', '2026-10-19'));
+    event(new DaysAssessed($this->company->id, [$this->employee->id], '2026-10-18', '2026-10-20'));
+    app(PendingReconciliation::class)->run($this->company,
+        app(Reconciler::class), new ReconcileLeaveJob($this->company->id, [], 'days'));
+    expect(Allocation::query()->whereNull('superseded_by_run_id')->orderBy('id')
+        ->get()->map(fn ($row): array => Arr::only($row->getAttributes(), ['source_request_day_id', 'target_day_id', 'minutes']))->all())->toEqual($allocations)
+        ->and(FollowUpCase::query()->where('employee_id', $this->employee->id)
+            ->orderBy('id')->get()->map(fn ($row): array => Arr::only($row->getAttributes(), ['case_kind', 'status', 'work_date']))->all())->toEqual($cases);
 });
 
 test('assessing a changed office day emits the affected employee and date', function (): void {
