@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Attendance\EmployeeAttendance;
 use App\Models\Attendance\DataIssue;
 use App\Models\Attendance\Day;
 use App\Models\Attendance\RestDayEntitlement;
@@ -15,11 +16,14 @@ use App\Models\Leave\LeaveType;
 use App\Models\Leave\RequestVersion;
 use App\Models\User;
 use App\Services\Attendance\Overtime;
+use App\Services\Attendance\Reporting\AttendanceSummary;
+use App\Services\Attendance\Reporting\DayPresentation;
 use App\Services\Attendance\Reporting\ReportFilters;
 use App\Services\Leave\LeaveActions;
 use App\Services\Leave\Reconciler;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Queue;
+use Livewire\Livewire;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 beforeEach(function (): void {
@@ -68,6 +72,13 @@ function overtimeEntitlement(Employee $employee, string $date, float $quantity):
 function replayOvertimeLeave(Company $company, Employee $employee): void
 {
     app(Reconciler::class)->run($company, [$employee->id], 'test');
+}
+
+function compensationReading(LeaveRequest $request, string $date, string $confidence = 'high', string $status = 'proposed'): DescriptionReading
+{
+    return DescriptionReading::create(['company_id' => $request->company_id, 'request_id' => $request->id,
+        'text_hash' => hash('sha256', $request->external_id.$date), 'category' => 'compensation_for_day',
+        'worked_dates' => [$date], 'confidence' => $confidence, 'status' => $status]);
 }
 
 test('half-day requests split one full entitlement and an identical replay changes no rows', function (): void {
@@ -140,7 +151,7 @@ test('reconciliation rejects a company outside the tenant context', function ():
     });
 });
 
-test('confirmed worked date changes replay and undo restores the earlier entitlement choice', function (): void {
+test('proposed worked date takes its named Friday and rejected or low confidence falls back to oldest', function (): void {
     $this->type->update(['name' => 'Compensation Leave']);
     $old = overtimeEntitlement($this->employee, '2026-10-02', 1.0);
     $worked = overtimeEntitlement($this->employee, '2026-10-09', 1.0);
@@ -150,16 +161,71 @@ test('confirmed worked date changes replay and undo restores the earlier entitle
         'request_id' => $request->id, 'batch_id' => $batch->id, 'row_number' => 2,
         'values' => ['description' => 'compensation 09.10.2026'], 'raw_values' => []]);
     $request->update(['current_version_id' => $version->id]);
-    $reading = DescriptionReading::create(['company_id' => $this->company->id,
-        'request_id' => $request->id, 'text_hash' => hash('sha256', 'compensation 09.10.2026'),
-        'category' => 'compensation_for_day', 'worked_dates' => ['2026-10-09'],
-        'confidence' => 'high', 'status' => 'proposed']);
-    replayOvertimeLeave($this->company, $this->employee);
-    expect(EntitlementConsumption::query()->whereNull('superseded_by_run_id')->sole()->entitlement_id)->toBe($old->id);
-    $reading->update(['status' => 'confirmed']);
+    $reading = compensationReading($request, '2026-10-09');
     replayOvertimeLeave($this->company, $this->employee);
     expect(EntitlementConsumption::query()->whereNull('superseded_by_run_id')->sole()->entitlement_id)->toBe($worked->id);
-    $reading->update(['status' => 'proposed']);
+    $reading->update(['confidence' => 'low']);
     replayOvertimeLeave($this->company, $this->employee);
     expect(EntitlementConsumption::query()->whereNull('superseded_by_run_id')->sole()->entitlement_id)->toBe($old->id);
+    $reading->update(['confidence' => 'high', 'status' => 'rejected']);
+    replayOvertimeLeave($this->company, $this->employee);
+    expect(EntitlementConsumption::query()->whereNull('superseded_by_run_id')->sole()->entitlement_id)->toBe($old->id);
+});
+
+test('two notes naming one Friday spend it once and flag the second request', function (): void {
+    $this->type->update(['name' => 'Compensation Leave']);
+    $old = overtimeEntitlement($this->employee, '2026-10-02', 1.0);
+    $named = overtimeEntitlement($this->employee, '2026-10-09', 1.0);
+    $first = overtimeRequest($this->employee, $this->type, 'COMP-FIRST', '2026-10-15', 1.0);
+    $second = overtimeRequest($this->employee, $this->type, 'COMP-SECOND', '2026-10-16', 1.0);
+    compensationReading($first, '2026-10-09');
+    compensationReading($second, '2026-10-09');
+    replayOvertimeLeave($this->company, $this->employee);
+
+    $used = EntitlementConsumption::query()->whereNull('superseded_by_run_id')->get()->keyBy('request_id');
+    expect($used)->toHaveCount(2)
+        ->and($used[$first->id]->entitlement_id)->toBe($named->id)
+        ->and($used[$second->id]->entitlement_id)->toBe($old->id)
+        ->and($second->fresh()->flags)->toContain('described_work_date_no_credit');
+});
+
+test('a note naming an unworked Friday is flagged even when another credit is available', function (): void {
+    $this->type->update(['name' => 'Compensation Leave']);
+    $old = overtimeEntitlement($this->employee, '2026-10-02', 1.0);
+    $request = overtimeRequest($this->employee, $this->type, 'COMP-UNWORKED', '2026-10-15', 1.0);
+    Day::factory()->create(['company_id' => $this->company->id, 'employee_id' => $this->employee->id,
+        'work_date' => '2026-10-15', 'status' => 'absent']);
+    compensationReading($request, '2026-10-09');
+    replayOvertimeLeave($this->company, $this->employee);
+
+    expect(EntitlementConsumption::query()->whereNull('superseded_by_run_id')->sole()->entitlement_id)->toBe($old->id)
+        ->and($request->fresh()->flags)->toContain('described_work_date_no_credit');
+    $filters = ReportFilters::fromArray($this->company, ['from' => '2026-10-15', 'to' => '2026-10-15']);
+    $day = collect(iterator_to_array(app(AttendanceSummary::class)->perDay($filters, $this->employee->id)))->sole();
+    $presentation = app(DayPresentation::class)->from($day);
+    expect($presentation['needs_review'])->toBeTrue()
+        ->and($presentation['tone'])->toBe('amber')
+        ->and($presentation['problems'])->toContain('Note names Fri 9 Oct but no free worked day was found (not worked or already used)');
+});
+
+test('employee attendance shows checked leave and worked-day notes', function (): void {
+    $this->type->update(['name' => 'Compensation Leave']);
+    $entitlement = overtimeEntitlement($this->employee, '2026-10-09', 1.0);
+    $entitlement->sourceDay->update(['first_in' => '2026-10-09 08:00:00', 'last_out' => '2026-10-09 17:00:00']);
+    Day::factory()->create(['company_id' => $this->company->id, 'employee_id' => $this->employee->id,
+        'work_date' => '2026-10-15', 'status' => 'absent']);
+    $request = overtimeRequest($this->employee, $this->type, 'COMP-CHECKED', '2026-10-15', 1.0);
+    compensationReading($request, '2026-10-09');
+    replayOvertimeLeave($this->company, $this->employee);
+
+    app()->setLocale('en');
+    Livewire::withQueryParams(['from' => '2026-10-01', 'to' => '2026-10-31'])
+        ->test(EmployeeAttendance::class, ['employeeId' => $this->employee->id])
+        ->call('setDayFilter', 'all')
+        ->assertSee('Compensation for Fri 9 Oct checked: worked 08:00–17:00, used once')
+        ->assertSee('Used by leave COMP-CHECKED on Thu 15 Oct');
+    foreach (['compensation_checked_times', 'compensation_checked', 'compensation_missing',
+        'compensation_used', 'compensation_worked_day'] as $key) {
+        expect(trans("messages.day_presentation.$key", [], 'ar'))->not->toBe("messages.day_presentation.$key");
+    }
 });

@@ -52,7 +52,7 @@ function hourlyNoteFixture(Company $company, Employee $employee, LeaveType $type
         'worked_dates' => [], 'confidence' => 'low', 'status' => $status]);
 }
 
-test('hourly proposals apply only with confidence and a valid period while compensation still requires confirmation', function (): void {
+test('hourly and compensation proposals apply with sufficient confidence and valid details', function (): void {
     $reading = hourlyNoteFixture($this->company, $this->employee, $this->type);
     $effects = app(LeaveDescriptionEffects::class);
     $request = $reading->request;
@@ -68,9 +68,44 @@ test('hourly proposals apply only with confidence and a valid period while compe
 
     $this->type->update(['name' => 'Compensation Leave']);
     $reading->update(['category' => 'compensation_for_day', 'worked_dates' => ['2026-10-30'], 'status' => 'proposed']);
-    expect($effects->applies($request->fresh(), $reading->fresh(), 'compensation_for_day'))->toBeFalse();
+    expect($effects->applies($request->fresh(), $reading->fresh(), 'compensation_for_day'))->toBeTrue();
     $reading->update(['status' => 'confirmed']);
     expect($effects->applies($request->fresh(), $reading->fresh(), 'compensation_for_day'))->toBeTrue();
+    $reading->update(['status' => 'rejected']);
+    expect($effects->applies($request->fresh(), $reading->fresh(), 'compensation_for_day'))->toBeFalse();
+    $reading->update(['status' => 'proposed', 'confidence' => 'low']);
+    expect($effects->applies($request->fresh(), $reading->fresh(), 'compensation_for_day'))->toBeFalse();
+});
+
+test('compensation refresh counts applicable readings and queues each employee once within the company', function (): void {
+    $this->type->update(['name' => 'Compensation Leave']);
+    $first = hourlyNoteFixture($this->company, $this->employee, $this->type);
+    $first->update(['category' => 'compensation_for_day', 'worked_dates' => ['2026-10-30'], 'confidence' => 'high']);
+    $second = hourlyNoteFixture($this->company, $this->employee, $this->type);
+    $second->update(['category' => 'compensation_for_day', 'worked_dates' => ['2026-10-23'], 'confidence' => 'medium']);
+    $rejected = hourlyNoteFixture($this->company, $this->employee, $this->type);
+    $rejected->update(['category' => 'compensation_for_day', 'worked_dates' => ['2026-10-16'],
+        'confidence' => 'high', 'status' => 'rejected']);
+    $other = Company::factory()->create();
+    app(TenantContext::class)->runForCompany($other, function () use ($other): void {
+        $employee = Employee::factory()->create(['company_id' => $other->id]);
+        $type = LeaveType::factory()->create(['company_id' => $other->id, 'name' => 'Compensation Leave']);
+        $reading = hourlyNoteFixture($other, $employee, $type);
+        $reading->update(['category' => 'compensation_for_day', 'worked_dates' => ['2026-10-30'], 'confidence' => 'high']);
+    });
+
+    app(TenantContext::class)->clear();
+    $this->artisan('attendance:leave-notes-refresh-compensation', ['--company' => $this->company->id, '--dry-run' => true])
+        ->expectsOutputToContain('Compensation notes applying: 2; employees to replay: 1.')
+        ->assertExitCode(0);
+    Queue::assertNotPushed(ReconcileLeaveJob::class);
+
+    $this->artisan('attendance:leave-notes-refresh-compensation', ['--company' => $this->company->id])
+        ->expectsOutputToContain('Compensation notes applying: 2; employees to replay: 1.')
+        ->assertExitCode(0);
+    Queue::assertPushed(ReconcileLeaveJob::class, 1);
+    Queue::assertPushed(ReconcileLeaveJob::class, fn (ReconcileLeaveJob $job): bool => $job->companyId === $this->company->id
+        && $job->employeeIds === [$this->employee->id] && $job->trigger === 'description');
 });
 
 test('reading a relative hourly note queues reconciliation without confirmation', function (): void {

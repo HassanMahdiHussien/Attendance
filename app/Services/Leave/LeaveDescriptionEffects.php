@@ -57,7 +57,7 @@ class LeaveDescriptionEffects
             return false;
         }
 
-        if ($category === 'hourly_settlement') {
+        if (in_array($category, ['hourly_settlement', 'compensation_for_day'], true)) {
             return in_array($reading->status, ['proposed', 'confirmed'], true)
                 && in_array($reading->confidence, ['high', 'medium'], true);
         }
